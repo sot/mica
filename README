@@ -1,0 +1,11 @@
+Mica: a new (all-powerful) package that gives us a MICroscope on
+Aspect.
+
+E.g.:
+
+mica.vv : V&V analysis
+mica.runasp : run custom pipeline
+mica.report : produce reports on obsid(s).  This would normally drive
+mica.vv.
+mica.archive : fetch L1 aspect products and store locally
+mica.trend : trending plots
