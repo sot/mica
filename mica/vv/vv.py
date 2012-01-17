@@ -49,14 +49,22 @@ def get_obspar(obsparfile):
     return obspar
 
 
-class Obi:
+r2a = 206264.81
+d2r = 0.017453293
+M0 = 10.32
+C0 = 5263.0
+dyz_big_lim = 0.7
+frac_dyz_lim = 0.05
+
+
+class Obi(object):
     def __init__(self, obsparfile, obsdir):
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
         self.find_aspect_intervals()
         self.process_aspect_intervals()
-        for slot in range(0, 8):
-            self.plot_slot(slot)
+        self.slot = self.concat_slot_data()
+        #self.plots = [self.plot_slot(slot) for slot in range(0, 8)]
 
     def find_aspect_intervals(self):
         obsdir = self.obsdir
@@ -78,34 +86,64 @@ class Obi:
         for aiid in self.aiids:
             self.aspect_intervals.append(AspectInterval(aiid, self.obsdir))
 
+    def concat_slot_data(self):
+        all_slot = {}
+        for slot in range(0, 8):
+            for d in ('qual', 'dy', 'dz', 'mag', 'time'):
+                slotval = [i.deltas[slot][d] for i in self.aspect_intervals]
+                all_slot[slot][d] = np.concatenate(slotval)
+        guide_slots = self.aspect_intervals[0].gsprop.slot
+        guide_status = self.aspect_intervals[0].gsprop.id_status
+        fid_slots = self.aspect_intervals[0].fidprop.slot
+        fid_status = self.aspect_intervals[0].fidprop.id_status
+        for ai in self.aspect_intervals[1:]:
+            if len(guide_slots) != len(ai.gsprop.slot):
+                raise ValueError("differing guide slots across aspect intervals")
+            if (len(guide_slots) == len(ai.gsprop.slot)
+                & (not np.all(guide_slots == ai.gsprop.slot))):
+                raise ValueError("differing guide slots across aspect intervals")
+            if (len(guide_slots) == len(ai.gsprop.slot)
+                & (not np.all(guide_status == ai.gsprop.id_status))):
+                raise ValueError("differing guide status across aspect intervals")
+            if len(fid_slots) != len(ai.fidprop.slot):
+                raise ValueError("differing fid slots across aspect intervals")
+            if (len(fid_slots) == len(ai.fidprop.slot)
+                & (not np.all(fid_slots == ai.fidprop.slot))):
+                raise ValueError("differing fid slots across aspect intervals")
+            if (len(fid_slots) == len(ai.fidprop.slot)
+                & (not np.all(fid_status == ai.fidprop.id_status))):
+                raise ValueError("differing fid status across aspect intervals")
+
+        for gs in guide_slots:
+            all_slot[gs]['type'] = 'guide'
+        for fs in fid_slots:
+            all_slot[fs]['type'] = 'fid'
+        return all_slot
+
     def plot_slot(self, slot):
         y = None
         z = None
         xy_range = None
-        qual = np.concatenate(
-            [interv.deltas[slot]['qual'] for interv in self.aspect_intervals])
-        dy = np.concatenate(
-            [interv.deltas[slot]['dy'] for interv in self.aspect_intervals])
-        dz = np.concatenate(
-            [interv.deltas[slot]['dy'] for interv in self.aspect_intervals])
-        mag = np.concatenate(
-            [interv.deltas[slot]['mag'] for interv in self.aspect_intervals])
-        time = np.concatenate(
-            [interv.deltas[slot]['time'] for interv in self.aspect_intervals])
+        (qual, dy, dz, mag, time) = [self.slot[slot][x] for x in 
+                                     ['qual', 'dy', 'dz', 'mag', 'time']]
         ai_starts = [interv.deltas[slot]['time'][0]
                      for interv in self.aspect_intervals]
-
         time0 = time[0]
         dy0 = np.median(dy)
         dz0 = np.median(dz)
 
         fig = plt.figure(num=slot, figsize=(12, 10))
         #fid_plot = np.abs(np.max(y) - np.min(y)) > 1e-6
-        #fid_plot = slot < 3
+        fid_plot = slot < 3
         ok = qual == 0
         bad = qual != 0
 
-        #if fid_plot:
+        if fid_plot and not xy_range:
+            xy_range = 0.1
+            circ_rad = 0.05
+        else:
+            xy_range = 1.0
+            circ_rad = 0.7
         #    xmarg = [10, 10]
         #    ystyl = 8
         #else:
@@ -119,19 +157,21 @@ class Obi:
 
         labelfontsize = 10
 
-        ayz = fig.add_axes([.05, .7, .20, .20])
+        ayz = fig.add_axes([.05, .25, .20, .20])
         ayz.plot(dy[ok], dz[ok], 'g.')
         ayz.plot(dy[bad], dz[bad], 'r.')
         ayz.set_aspect('equal', 'datalim')
         plt.setp(ayz.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayz.get_xticklabels(), fontsize=labelfontsize)
+        circle = plt.Circle((dy0, dz0), radius=circ_rad)
+        ayz.add_patch(circle)
         ayz.set_xlabel('Y offset (arcsec)')
         ayz.set_ylabel('Z offset (arcsec)')
 
-        ayzf = fig.add_axes([.05, .25, .20, .20])
+        ayzf = fig.add_axes([.05, .7, .20, .20])
         ayzf.plot(dy[ok], dz[ok], 'g.')
         ayzf.plot(dy[bad], dz[bad], 'r.')
-        ayzf.set_aspect('equal', 'datalim')
+        ayzf.set_aspect('equal')
         plt.setp(ayzf.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayzf.get_xticklabels(), fontsize=labelfontsize)
         ayzf.set_xlabel('Y offset (arcsec)')
@@ -286,10 +326,6 @@ class AspectInterval:
 
         print 'Calculating fid solution quality'
 
-        r2a = 206264.81
-        d2r = 0.017453293
-        M0 = 10.32
-        C0 = 5263.0
 
         lsi0_stt = [h_fidpr['LSI0STT%d' % x] for x in [1, 2, 3]]
         stt0_stf = [h_fidpr['STT0STF%d' % x] for x in [1, 2, 3]]
@@ -374,9 +410,6 @@ class AspectInterval:
     def calc_guide_deltas(self):
         from Quaternion import Quat
 
-        M0 = 10.32
-        C0 = 5263.0
-        r2a = 180. * 3600. / 3.14159265
         asol = self.asol
         cen = self.cen
         gsprop = self.gsprop
@@ -438,3 +471,108 @@ class AspectInterval:
 
 
         
+#import unittest
+#from nose.tools import eq_ as 
+import operator as op
+from functools import partial
+
+class ObiTest(object):
+    def __init__(self, obi=None):
+        self.obi = obi
+        self.tests = []
+
+#    def fid_checks(self):
+#        obi = self.obi
+#        slot_list = np.array([s for s in obi.slot if obi.slot[s]['type'] == 'fid'])
+#
+#        stest = dict(val=len(slot_list) > 0,
+#                     name="has fid lights",
+#                     id="test_has_fid_lights",
+#                     slots=slot_list.tolist())
+#        self.tests.append(stest)
+#        
+#        dy_med = np.array([np.median(obi.slot[s]['dy']) for s in slot_list])
+#        dz_med = np.array([np.median(obi.slot[s]['dz']) for s in slot_list])
+#        med_limit = 0.4
+#        med_idx = np.unique(np.hstack([np.flatnonzero(dy_med > med_limit),
+#                                      np.flatnonzero(dz_med > med_limit)]))
+#        med_slots = slot_list[med_idx]
+#        stest = dict(val=len(med_slots),
+#                     name="one or more fid slots mean residual > %f" % med_limit,
+#                     id="test_n_fid_med",
+#                     slots=med_slots.tolist())
+#        self.tests.append(stest)
+#
+#        dy_rms = np.array([np.std(obi.slot[s]['dy']) for s in slot_list])
+#        dz_rms = np.array([np.std(obi.slot[s]['dz']) for s in slot_list])
+#        rms_limit = 0.05
+#        rms_idx = np.unique(np.hstack([np.flatnonzero(dy_rms > rms_limit),
+#                                      np.flatnonzero(dz_rms > rms_limit)]))
+#        rms_slots = slot_list[rms_idx]
+#        stest = dict(val=len(rms_slots),
+#                     name="one or more fid slots RMS dev > %f" % rms_limit,
+#                     id="test_n_fid_rms",
+#                     slots=rms_slots.tolist())
+#        self.tests.append(stest)
+#
+#
+#
+#    def star_checks(self):
+#        obi = self.obi
+#        slot_list = np.array([s for s in obi.slot if obi.slot[s]['type'] == 'guide'])
+#        dy_rms = np.array([np.std(obi.slot[s]['dy']) for s in slot_list])
+#        dz_rms = np.array([np.std(obi.slot[s]['dz']) for s in slot_list])
+#        high_limit = 0.4
+#        high_idx = np.unique(np.hstack([np.flatnonzero(dy_rms > high_limit),
+#                                      np.flatnonzero(dz_rms > high_limit)]))
+#        high_slots = slot_list[high_idx]
+#        low_limit = 0.25
+#        low_idx = np.unique(np.hstack([np.flatnonzero(dy_rms > low_limit),
+#                                      np.flatnonzero(dz_rms > low_limit)]))
+#        low_slots = slot_list[low_idx]
+#        stest = dict(val=len(high_slots) > 2,
+#                     name="two or more star slots rms > %f" % high_limit,
+#                     id="test_n_star_high_rms",
+#                     slots=high_slots.tolist())
+#        self.tests.append(stest)
+#        stest = dict(val=len(low_slots) > 2,
+#                     name="two or more star slots rms > %f" % low_limit,
+#                     id="test_n_star_low_rms",
+#                     slots=low_slots.tolist())
+#        self.tests.append(stest)
+#        stest = dict(val=((len(high_slots) == 1) & (len(low_slots) == 1)), 
+#                     name="one star with rms > %f" % high_limit,
+#                     id="test_one_star_high_rms",
+#                     slots=high_slots.tolist())
+#        self.tests.append(stest)
+#
+#        max_rad = 1.5
+#        dy_med = np.array([np.median(obi.slot[s]['dy']) for s in slot_list])
+#        dz_med = np.array([np.median(obi.slot[s]['dz']) for s in slot_list])
+#        rad_offset_idx = np.flatnonzero(np.sqrt(dy_med**2 + dz_med**2) > max_rad)
+#        rad_slots = slot_list[rad_offset_idx]
+#        stest = dict(val=len(rad_slots) == 0,
+#                     name="all stars rad offset < %f" % max_rad,
+#                     id="test_no_star_max_rad",
+#                     slots=rad_slots.tolist())
+#        self.tests.append(stest)
+#        stest = dict(val=len(rad_slots) == 1,
+#                     name="one star radial offset  > %f" % max_rad,
+#                     id="test_one_star_max_rad",
+#                     slots=rad_slots.tolist())
+#        self.tests.append(stest)
+#        stest = dict(val=len(rad_slots) > 1,
+#                     name="radial offset of star(s) > %f" % max_rad,
+#                     id="test_multi_star_max_rad",
+#                     slots=rad_slots.tolist())
+#        self.tests.append(stest)
+#
+#        dyz_big_lim = 0.7
+#        frac_dyz_lim = 0.05
+#        dy_big = np.array([obi.slot[s]['dy']
+#                                - np.median(obi.slot[s]['dy']) 
+#                                > dyz_big_lim for s in slot_list])
+#        dz_big = np.array([obi.slot[s]['dz'] 
+#                                - np.median(obi.slot[s]['dz']) 
+#                                > dyz_big_lim for s in slot_list])
+#        raise ValueError
