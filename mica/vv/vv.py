@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 import re
 import pyfits
@@ -53,8 +54,24 @@ r2a = 206264.81
 d2r = 0.017453293
 M0 = 10.32
 C0 = 5263.0
+
+enc_rad_1 = 0.68
+enc_rad_2 = 0.99
 dyz_big_lim = 0.7
 frac_dyz_lim = 0.05
+
+data_cols = ['qual', 'dy', 'dz', 'mag', 'time', 
+             'ang_y_sm', 'ang_y', 'ang_z_sm', 'ang_z']
+
+
+def rms(data, median):
+    return np.sqrt(np.mean((data - median)**2))
+
+
+def frac_bad(data, median, limit):
+    big_offset = (data - median) > limit
+    frac_bad = np.count_nonzero(big_offset)/len(data)
+    return frac_bad
 
 
 class Obi(object):
@@ -63,8 +80,13 @@ class Obi(object):
         self.obsdir = obsdir
         self.find_aspect_intervals()
         self.process_aspect_intervals()
-        self.slot = self.concat_slot_data()
+        self.slot = dict()
+        self.concat_slot_data()
+        self.check_intervals()
+        self.agg_slot_data()
+
         #self.plots = [self.plot_slot(slot) for slot in range(0, 8)]
+
 
     def find_aspect_intervals(self):
         obsdir = self.obsdir
@@ -87,45 +109,76 @@ class Obi(object):
             self.aspect_intervals.append(AspectInterval(aiid, self.obsdir))
 
     def concat_slot_data(self):
-        all_slot = {}
+        all_slot = self.slot
         for slot in range(0, 8):
-            for d in ('qual', 'dy', 'dz', 'mag', 'time'):
+            cslot = dict()
+            for d in data_cols:
                 slotval = [i.deltas[slot][d] for i in self.aspect_intervals]
-                all_slot[slot][d] = np.concatenate(slotval)
-        guide_slots = self.aspect_intervals[0].gsprop.slot
-        guide_status = self.aspect_intervals[0].gsprop.id_status
-        fid_slots = self.aspect_intervals[0].fidprop.slot
-        fid_status = self.aspect_intervals[0].fidprop.id_status
-        for ai in self.aspect_intervals[1:]:
-            if len(guide_slots) != len(ai.gsprop.slot):
-                raise ValueError("differing guide slots across aspect intervals")
-            if (len(guide_slots) == len(ai.gsprop.slot)
-                & (not np.all(guide_slots == ai.gsprop.slot))):
-                raise ValueError("differing guide slots across aspect intervals")
-            if (len(guide_slots) == len(ai.gsprop.slot)
-                & (not np.all(guide_status == ai.gsprop.id_status))):
-                raise ValueError("differing guide status across aspect intervals")
-            if len(fid_slots) != len(ai.fidprop.slot):
-                raise ValueError("differing fid slots across aspect intervals")
-            if (len(fid_slots) == len(ai.fidprop.slot)
-                & (not np.all(fid_slots == ai.fidprop.slot))):
-                raise ValueError("differing fid slots across aspect intervals")
-            if (len(fid_slots) == len(ai.fidprop.slot)
-                & (not np.all(fid_status == ai.fidprop.id_status))):
-                raise ValueError("differing fid status across aspect intervals")
+                cslot[d] = np.concatenate(slotval)
+            all_slot[slot] = cslot
 
-        for gs in guide_slots:
+
+    def agg_slot_data(self):
+        all_slot = self.slot
+        for slot_id in all_slot:
+            slot = all_slot[slot_id]
+            # these should only be calculated over good data, right?
+            for axdir in ['dy', 'dz', 'mag']:
+                data = slot[axdir][slot['qual'] == 0]
+                smean = np.mean(data)
+                slot['%s_mean' % axdir] = smean
+                med = np.median(data)
+                slot['%s_med' % axdir] = med
+                srms = rms(data, med)
+                slot['%s_rms' % axdir] = srms
+                bad_frac = frac_bad(data, med, dyz_big_lim)
+                slot['frac_%s_big' % axdir] = bad_frac
+            slot['rad_off'] = np.sqrt(slot['dy_med']**2
+                                      + slot['dz_med']**2)
+            slot['n_pts'] = len(slot['dy'])
+            if slot['type'] == 'fid':
+                slot['mean_y'] = np.mean(slot['ang_y_sm'])
+                slot['mean_z'] = np.mean(slot['ang_z_sm'])
+            else:
+                slot['mean_y'] = np.mean(slot['ang_y'])
+                slot['mean_z'] = np.mean(slot['ang_z'])
+
+
+
+    def check_intervals(self):
+        all_slot = self.slot
+        # check for weirdness across intervals
+        slot_list = {}
+        slot_status = {}
+        for t in ('gsprop', 'fidprop'):
+            slot_list[t] = getattr(self.aspect_intervals[0], t).slot
+            slot_status[t] = getattr(self.aspect_intervals[0], t).id_status
+            for ai in self.aspect_intervals[1:]:
+                if len(slot_list[t]) != len(getattr(ai, t).slot):
+                    raise ValueError(
+                        "differing %s slots across aspect intervals" % t)
+                if (len(slot_list[t]) == len(getattr(ai, t).slot)
+                    & (not np.all(slot_list[t] == getattr(ai, t).slot))):
+                    raise ValueError(
+                        "differing %s slots across aspect intervals" % t)
+                if (len(slot_list[t]) == len(getattr(ai, t).slot)
+                    & (not np.all(slot_status[t] == getattr(ai, t).id_status))):
+                    raise ValueError(
+                        "differing %s status across aspect intervals" % t)
+        for gs in slot_list['gsprop']:
             all_slot[gs]['type'] = 'guide'
-        for fs in fid_slots:
+        for fs in slot_list['fidprop']:
             all_slot[fs]['type'] = 'fid'
-        return all_slot
+
+        self.guide_slots = slot_list['gsprop']
+        self.fid_slots = slot_list['fidprop']
+        
 
     def plot_slot(self, slot):
         y = None
         z = None
         xy_range = None
-        (qual, dy, dz, mag, time) = [self.slot[slot][x] for x in 
-                                     ['qual', 'dy', 'dz', 'mag', 'time']]
+        (qual, dy, dz, mag, time) = [self.slot[slot][x] for x in data_cols]
         ai_starts = [interv.deltas[slot]['time'][0]
                      for interv in self.aspect_intervals]
         time0 = time[0]
@@ -232,7 +285,7 @@ class Obi(object):
         return fig
 
 
-class AspectInterval:
+class AspectInterval(object):
     def __init__(self, aiid, obsdir, opt=None):
         self.aiid = aiid
         self.obsdir = obsdir
@@ -300,6 +353,7 @@ class AspectInterval:
         print 'Reading Centroids'
         cen = read_table(glob(
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
+        # do we want the other algs?
         self.cen = cen[(cen['alg'] == opt['alg'])
                   & (cen['time'] >= asol[0]['time'])
                   & (cen['time'] <= asol[-1]['time'])]
@@ -325,7 +379,6 @@ class AspectInterval:
         #dr = 2.0
 
         print 'Calculating fid solution quality'
-
 
         lsi0_stt = [h_fidpr['LSI0STT%d' % x] for x in [1, 2, 3]]
         stt0_stf = [h_fidpr['STT0STF%d' % x] for x in [1, 2, 3]]
@@ -404,7 +457,11 @@ class AspectInterval:
                                             dy=dy,
                                             dz=dz,
                                             mag=mag,
-                                            qual=qual
+                                            qual=qual,
+                                            ang_y_sm=ceni['ang_y_sm'],
+                                            ang_z_sm=ceni['ang_z_sm'],
+                                            ang_y=ceni['ang_y'],
+                                            ang_z=ceni['ang_z'],
                                             )
 
     def calc_guide_deltas(self):
@@ -427,6 +484,7 @@ class AspectInterval:
             ceni = cen[ok]
             q_atti = q_att[ok]
             print 'Found %d centroids ' % len(ceni)
+            # use ang_y or ang_y_sm?
             dy = np.zeros_like(ceni['ang_y'])
             dz = np.zeros_like(ceni['ang_z'])
             for i in range(0, len(ceni)):
@@ -463,11 +521,16 @@ class AspectInterval:
                         err = "Bad gspr interval not contained in ceni range"
                         raise ValueError(err)
 
-            self.deltas[star['slot']]= {'dy': dy,
-                                        'dz': dz,
-                                        'time': ceni['time'],
-                                        'mag': mag,
-                                        'qual': qual}
+            self.deltas[star['slot']]= dict(dy=dy,
+                                             dz=dz,
+                                             time=ceni['time'],
+                                             mag=mag,
+                                             qual=qual,
+                                            ang_y_sm=ceni['ang_y_sm'],
+                                            ang_z_sm=ceni['ang_z_sm'],
+                                            ang_y=ceni['ang_y'],
+                                            ang_z=ceni['ang_z'],
+                                            )
 
 
         
@@ -476,11 +539,126 @@ class AspectInterval:
 import operator as op
 from functools import partial
 
+high_limits = dict(fid=dict(dy_rms=0.05,
+                            dz_rms=0.05,
+                            dy_med=0.4,
+                            dz_med=0.4,
+                            rad_off=0.4),
+                   guide=dict(dy_rms=0.4,
+                              dz_rms=0.4,
+                              rad_off=1.5,
+                              frac_dy_big=0.05,
+                              frac_dz_big=0.05))
+low_limits = dict(fid=dict(),
+                  guide=dict(dy_rms=0.25,
+                             dz_rms=0.25))
+
+
+med_cols = ['dy_med', 'dz_med', 'rad_off']
+rms_cols = ['dy_rms', 'dz_rms', 'dy_rms_low', 'dz_rms_low']
+frac_cols = ['frac_dy_big', 'frac_dz_big']
+
+
+
 class ObiTest(object):
     def __init__(self, obi=None):
         self.obi = obi
         self.tests = []
 
+
+    def slot_checks(self):
+        obi_slot_check = {}
+        for slot_id in self.obi.slot:
+            slot_check = {}
+            slot = self.obi.slot[slot_id]
+            hlim = high_limits[slot['type']]
+            llim = low_limits[slot['type']]
+            for check in hlim:
+                stest = dict(name='%s' % (check),
+                             success=slot[check] < hlim[check],
+                             have=slot[check],
+                             limit=hlim[check],
+                             param=check)
+                slot_check[stest['name']] = stest
+            for check in llim:
+                stest = dict(name='%s_low' % (check),
+                             success=slot[check] < llim[check],
+                             have=slot[check],
+                             limit=llim[check],
+                             param=check)
+                slot_check[stest['name']] = stest
+            obi_slot_check[slot_id] = slot_check
+        self.checks = obi_slot_check
+
+    def slot_table(self):
+        checks = self.checks
+        
+
+#    def set_disposition(self, disp):
+#        weight = {'OK' : 1,
+#                  'ReproNoDD' : 2
+#                  'Hold' : 3}
+#        if disp in weight:
+#            if (not overall_status in self 
+#                or weight[self.overall_status] < weight[disp]):
+#                self.overall_status = disp
+#        else:
+#            raise ValueError('status must be OK, ReproNoDD, or Hold')
+#
+#
+#    def disposition_checks(self):
+#        obi = self.obi
+#        set_disposition('OK')
+#        status = dict(slot=dict(),
+#                      warn=[])
+#        for slot_id in range(0, 8):
+#            checks = self.checks[slot_id]
+#            status['slot'][slot_id] = ''
+#            for c in checks:
+#                lowmatch = re.match('.*_low$', c)
+#                if not lowmatch and not checks[c]['success']:
+#                    status['slot'][slot_id] = 'fail check %s' % c
+#                    status['warn'].append('slot %d fail check %s' % (slot_id, c))
+#        all_dy_rms = np.array([obi.slot[s]['dy_rms'] for s in obi.guide_slots])
+#        all_dz_rms = np.array([obi.slot[s]['dz_rms'] for s in obi.guide_slots])
+#        n04 = (np.count_nonzero(all_dy_rms > 0.4) + 
+#               np.count_nonzero(all_dz_rms > 0.4))
+#        n025 = (np.count_nonzero(all_dy_rms > 0.25) + 
+#                np.count_nonzero(all_dz_rms > 0.25))
+#        if (n04 > 2):
+#            status['warn'].append('2 or more stars with RMS > 0.4')
+#        if (n025 > 2)
+#            status['warn'].append('2 or more stars with RMS > 0.4')
+#        if (n04 == 1 & n025 == 1):
+#            set_disposition('ReproNoDD')
+#            status['warn'].append('repro without bad slot')
+#        
+#        if (np.count_nonzero(all_dy_rms > 0.25) + 
+#            np.count_nonzero(all_dz_rms > 0.25)) > 2:
+#            status['warn'].append('2 or more stars with RMS > 0.25')
+#        if (np.count_nonzero(all_dy_rms > 0.4)  + 
+#            np.count_nonzero(all_dz_rms > 0.25)) > 2:
+#            status['warn'].append('2 or more stars with RMS > 0.4')
+#
+#            
+#        self.status = status
+
+        #for fslot in obi.fid_slots:
+        #    checks = self.checks[fslot]
+        #    for c in checks:
+        #        lowmatch = re.match('.*_low$', c)
+        #        if not lowmatch and checks[c]['val'] == False:
+        #            status['overall'] = False
+        #            status['slot'][fslot] = False
+
+                    
+        
+    
+
+                
+        
+        
+        
 #    def fid_checks(self):
 #        obi = self.obi
 #        slot_list = np.array([s for s in obi.slot if obi.slot[s]['type'] == 'fid'])
