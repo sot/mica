@@ -53,7 +53,6 @@ def get_ver_num(obsid, version='default'):
     # this is obi agnostic, all obis should be same
     # version anyway...
     tempdir = tempfile.mkdtemp()
-    print tempdir
     arc5.sendline("reset")
     arc5.sendline("cd %s" % tempdir)
     arc5.sendline("obsid=%d" % obsid)
@@ -117,17 +116,15 @@ def update_link(obsid):
 
     # set up directory for data
     chunk_dir = ("%05d" % obsid)[0:2]
-
+    chunk_dir_path = os.path.join(archive_dir, chunk_dir)
     obs_ln = os.path.join(archive_dir, chunk_dir, "%05d" % obsid)
-
     obs_ln_last = os.path.join(archive_dir, chunk_dir,
                                "%05d_last" % obsid)
-
+    
     if default_ver is not None:
         def_ver_dir = os.path.join(archive_dir, chunk_dir,
                                    '%05d_v%02d' % (obsid, default_ver))
         # link the default version
-        chunk_dir_path = os.path.join(archive_dir, chunk_dir)
         logger.info("ln -sf %s %s" % (
                 os.path.relpath(def_ver_dir, chunk_dir_path),
                 obs_ln))
@@ -135,29 +132,32 @@ def update_link(obsid):
                 os.path.relpath(def_ver_dir, chunk_dir_path),
                 obs_ln))
 
-    if last_ver is not None:
-        last_ver_dir = os.path.join(archive_dir, chunk_dir,
-                                    '%05d_v%02d' % (obsid, last_ver))
-        # if last and default are different, and we have last
-        # make a link to it
-        if last_ver != default_ver:
-            if os.path.exists(last_ver_dir):
-                obs_ln_last = os.path.join(archive_dir, chunk_dir,
-                                           "%05d_last" % obsid)
-                logger.info("ln -sf %s %s" % (
-                        os.path.relpath(last_ver_dir, chunk_dir_path),
-                        obs_ln_last))
-                bash("ln -sf %s %s" % (
-                        os.path.relpath(last_ver_dir, chunk_dir_path),
-                        obs_ln_last))
-        else:
-            # if default and last are the same and we have a last link
-            # delete it
-            if os.path.exists(obs_ln_last):
-                logger.info("removing outdated link %s"
-                            % obs_ln_last)
-                os.remove(obs_ln_last)
+    # nothing to do if last_ver undefined
+    if last_ver is None:
+        return
 
+    last_ver_dir = os.path.join(archive_dir, chunk_dir,
+                                '%05d_v%02d' % (obsid, last_ver))
+    # if last and default are different, and we have last data,
+    # make a link to it
+    if last_ver != default_ver:
+        if os.path.exists(last_ver_dir):
+            obs_ln_last = os.path.join(archive_dir, chunk_dir,
+                                       "%05d_last" % obsid)
+            logger.info("ln -sf %s %s" % (
+                    os.path.relpath(last_ver_dir, chunk_dir_path),
+                    obs_ln_last))
+            bash("ln -sf %s %s" % (
+                    os.path.relpath(last_ver_dir, chunk_dir_path),
+                    obs_ln_last))
+    else:
+        # if default and last are the same and we have a last link,
+        # delete it
+        if os.path.exists(obs_ln_last):
+            logger.info("removing outdated link %s"
+                        % obs_ln_last)
+            os.remove(obs_ln_last)
+            
 
 def get_prov_data():
     # find obsids that have a "_last" link and check to see if
