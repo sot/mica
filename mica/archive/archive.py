@@ -29,6 +29,9 @@ def get_options():
                       type='int')
     parser.add_option("--version",
                       default='last')
+    parser.add_option("--firstrun",
+                      action='store_true',
+                      help="for archive init., ignore rev in aspect_1 table")
     opt, args = parser.parse_args()
     return opt, args
 
@@ -189,7 +192,12 @@ def main(opt):
     for obs in prov_data:
         logger.info("running get_asp for prov obsid %d ver %s, "
                     % (obs['obsid'], obs['revision']))
-        get_asp(obs['obsid'], obs['revision'], newonly=True)
+        try:
+            get_asp(obs['obsid'], obs['revision'])
+        except ValueError as ve:
+            logger.info("skipping %d, default ver not available"
+                        % obs['obsid'])
+            logger.debug(ve)
         update_link(obs['obsid'])
 
     # if no obsid specified, try to retrieve all asp_1 runs
@@ -205,9 +213,17 @@ def main(opt):
     for obs in todo:
         logger.info("running get_asp for obsid %d aspect run on %s"
                     % (obs['obsid'], obs['ap_date']))
-        # let's not pass the revision and thus just get
-        # released data when run in update mode
-        get_asp(obs['obsid'], version='default')
+        if opt.firstrun:
+            # ignore aspect_1 table versions and just try for default
+            # also ignore errors in this case
+            try:
+                get_asp(obs['obsid'], version='default')
+            except ValueError as ve:
+                logger.info("skipping %d, default ver not available"
+                            % obs['obsid'])
+                logger.debug(ve)
+        else:
+            get_asp(obs['obsid'], version=obs['revision'])
         update_link(obs['obsid'])
     if not len(todo):
         logger.info("No new aspect_1 data")
