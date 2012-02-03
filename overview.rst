@@ -62,6 +62,17 @@ ACA img0 data
  *Define structure and content of ACA img0 archive*.  (If it is needed
   at all... how big would it be?)
 
+ * The perigee_health_plots project presently grabs ACA0 data during
+   ERs and stores it in an file archive by the time of the start of the
+   8x8 data interval.  These data are useful for high resolution
+   temperature analysis.  Rate ~5 to 7GB per year.
+ * If we want to configure something like a web plugin for aca_movie,
+   we may want a full local archive of L0 data.  If we have ~ 25Ms of
+   observing time, I think we can expect ~60G ACA0/year, but that
+   isn't a well-tested estimate.
+
+
+
 L0 derived products
 --------------------
 
@@ -159,52 +170,3 @@ collection objects, or by calling a general function that retrieves all
 defined items.  New test or topic definitions may also be passed directly
 to the aggregator.
 
-Example: Acquisition Report
-----------------------------
-::
-
-  acq = mica.acq(obsid=?????)
-
-The acq function would run the acq tests on the obsid acquisition
-statistics data, general acquisitions statistics, and starcheck catalog
-data and return a container object with everything.  Everything would
-include:
-
-* Annotated data tables from each type of included data
-* Annotated test table
-* A starcheck plot
-* A test result plot
-* The data used to make those plots
-
-Tests could include:
-
-* on a per-star basis:
-
-  * was this star acquired
-  * was this star part of an acquisition anomaly
-  * did we acquire this star in an earlier observation but now failed
-  * is the star delta magnitude outside the 95% percentile
-
-* on a per-obsid basis:
-
-  * does this obsid have an acquisition anomaly
-  * does this obsid have an acquisition failure
-  * how many
-
-The test directive would also mark any features of interest on a
-new star catalog plot extended from the starcheck plot.
-
-The acq test template includes directives for how these data may be
-organized into an html report and how they may be placed in a file
-archive/cache.  Each test/entry also includes a directive for how it
-should generalize itself if called for a collection of obsids.
-
-Example: Collective Acquisition Report
----------------------------------------
-::
-
-  acq = mica.collective_acq(obsid_list)
-
-The collective_acq template instructs collection of acq objects for the
-obsids in obsid_list, gathers those data, and provides methods to at least
-recreate the current acq_stats_reports for an arbitrary set of obsids.
