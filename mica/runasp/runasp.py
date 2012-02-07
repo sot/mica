@@ -186,10 +186,10 @@ def link_files(dir, indir, outdir, istart, istop, obiroot, skip_slot=None):
                         continue
                     aca0 = re.search('aca.*_(\d)_img0', mfile)
                     if skip_slot and aca0:
-                        for sslot in skip_slot:
-                            if int(aca0.group(1)) == sslot:
-                                #print "skipping slot file on %s" % mfile
-                                continue
+                        aca_file_slot = int(aca0.group(1))
+                        if aca_file_slot in skip_slot:
+                            #print "skipping slot file on %s" % mfile
+                            continue
                 obsparmatch = re.match('.*obs0a\.par', mfile)
                 if obsparmatch:
                     obimatch = re.match('.*axaf%s_obs0a\.par' % obiroot, mfile)
