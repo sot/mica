@@ -8,6 +8,7 @@ import shutil
 import Ska.DBI
 from Ska.Shell import bash
 import numpy as np
+from Chandra.Time import DateTime
 
 
 archive_dir = "."
@@ -17,8 +18,119 @@ apstat = Ska.DBI.DBI(dbi='sybase', server='sqlocc', database='axafapstat')
 arc5 = Ska.arc5gl.Arc5gl()
 #arc5.echo = True
 logger = logging.getLogger('asp1 fetch')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
+
+
+# borrowed from eng_archive
+archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content', 
+                      'ascdsver', 'revision', 'date')
+
+import itertools
+import pyfits
+
+def get_arch_info(i, f, archfiles, db):
+    """Read filename ``f`` with index ``i`` (position within list of filenames).  The
+    file has type ``filetype`` and will be added to MSID file at row index ``row``.
+    ``colnames`` is the list of column names for the content type (not used here).
+    """
+    # Check if filename is already in archfiles.  If so then abort further processing.
+    filename = os.path.basename(f)
+    #if db.fetchall('SELECT filename FROM archfiles WHERE filename=?', (filename,)):
+    #    logger.verbose('File %s already in archfiles - unlinking and skipping' % f)
+    #    os.unlink(f)
+    #    return None
+
+    # Read FITS archive file and accumulate data into dats list and header into headers dict
+    logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
+    hdus = pyfits.open(f)
+    hdu = hdus[1]
+
+    # Accumlate relevant info about archfile that will be ingested into
+    # MSID h5 files.  Commit info before h5 ingest so if there is a failure
+    # the needed info will be available to do the repair.
+    archfiles_row = dict((x, hdu.header.get(x.upper())) for x in archfiles_hdr_cols)
+    archfiles_row['checksum'] = hdu._checksum
+    archfiles_row['filename'] = filename
+    archfiles_row['filetime'] = int(re.search(r'(\d+)', archfiles_row['filename']).group(1))
+    filedate = DateTime(archfiles_row['filetime']).date
+    year, doy = (int(x) for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
+    archfiles_row['year'] = year
+    archfiles_row['doy'] = doy
+    hdus.close()
+    return archfiles_row
+
+
+
+def move_archive_files(filetype, archfiles):
+    ft['content'] = filetype.content.lower()
+
+    stagedir = arch_files['stagedir'].abs
+    if not os.path.exists(stagedir):
+        os.makedirs(stagedir)
+
+    for f in archfiles:
+        if not os.path.exists(f):
+            continue
+        ft['basename'] = os.path.basename(f)
+        tstart = re.search(r'(\d+)', str(ft['basename'])).group(1)
+        datestart = DateTime(tstart).date
+        ft['year'], ft['doy'] = re.search(r'(\d\d\d\d):(\d\d\d)', datestart).groups()
+
+        archdir = arch_files['archdir'].abs
+        archfile = arch_files['archfile'].abs
+
+        if not os.path.exists(archdir):
+            os.makedirs(archdir)
+
+        if not os.path.exists(archfile):
+            logger.info('mv %s %s' % (os.path.abspath(f), archfile))
+            if not opt.dry_run:
+                if not opt.occ:
+                    shutil.copy2(f, stagedir)
+                shutil.move(f, archfile)
+
+        if os.path.exists(f):
+            logger.verbose('Unlinking %s' % os.path.abspath(f))
+            os.unlink(f)
+
+def get_archive_files(filetype):
+    """Update FITS file archive with arc5gl and ingest files into msid (HDF5) archive"""
+    
+    # If running on the OCC GRETA network the cwd is a staging directory that
+    # could already have files.  Also used in testing.
+    # Don't return more than opt.max_arch_files files at once because of memory
+    # issues on gretasot.  This only comes up when there has been some problem or stoppage.
+    files = sorted(glob.glob(filetype['fileglob']))
+    if opt.occ or files:
+        return sorted(files)[:opt.max_arch_files]
+
+    # Retrieve CXC archive files in a temp directory with arc5gl
+    arc5 = Ska.arc5gl.Arc5gl()
+
+    # Get datestart as the most-recent file time from archfiles table
+    db = Ska.DBI.DBI(dbi='sqlite', server=msid_files['archfiles'].abs)
+    vals = db.fetchone("select max(filetime) from archfiles")
+    datestart = DateTime(vals['max(filetime)'])
+
+    # End time for archive queries (minimum of start + max_query_days and NOW)
+    datestop = DateTime(opt.date_now)
+
+    # For instrum==EPHEM break queries into time ranges no longer than
+    # 100000 sec each.  EPHEM files are at least 7 days long and generated
+    # no more often than every ~3 days so this should work.
+    n_queries = (1 if filetype['instrum'] != 'EPHEM'
+          else 1 + round((datestop.secs - datestart.secs) / 100000.))
+    times = np.linspace(datestart.secs, datestop.secs, n_queries + 1)
+
+    logger.info('********** %s %s **********' % (ft['content'], time.ctime()))
+
+    for t0, t1 in zip(times[:-1], times[1:]):
+        arc5.sendline('tstart=%s' % DateTime(t0).date)
+        arc5.sendline('tstop=%s' % DateTime(t1).date)
+        arc5.sendline('get %s' % filetype['arc5gl_query'].lower())
+
+    return sorted(glob.glob(filetype['fileglob']))
 
 
 def get_options():
@@ -104,10 +216,20 @@ def get_asp(obsid, version='last'):
     arc5.sendline("version=%s" % version)
     arc5.sendline("get asp1")
     logger.info("copying asp1 from %s to %s" % (tempdir, obs_dir))
-    for afile in glob(os.path.join(tempdir, "*")):
-        shutil.copy(afile, obs_dir)
-        os.remove(afile)
+    archfiles = glob(os.path.join(tempdir, "*"))
+    db = Ska.DBI.DBI(dbi='sqlite', server='archfiles.db3', autocommit=False)
+    existing = db.fetchall("select * from archfiles where obsid = %d and revision = '%s'"
+                           % (obsid, version))
+    for i, f in enumerate(archfiles):
+        if len(existing) and f in existing['filename']:
+            raise ValueError()
+        arch_info = get_arch_info(i, f, archfiles, db)
+        arch_info['obsid'] = obsid
+        db.insert(arch_info, 'archfiles')
+        shutil.copy(f, obs_dir)
+        os.remove(f)
     os.removedirs(tempdir)
+    db.commit()
     return obs_dir, chunk_dir
 
 
