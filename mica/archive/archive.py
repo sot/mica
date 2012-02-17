@@ -94,43 +94,6 @@ def move_archive_files(filetype, archfiles):
             logger.verbose('Unlinking %s' % os.path.abspath(f))
             os.unlink(f)
 
-def get_archive_files(filetype):
-    """Update FITS file archive with arc5gl and ingest files into msid (HDF5) archive"""
-    
-    # If running on the OCC GRETA network the cwd is a staging directory that
-    # could already have files.  Also used in testing.
-    # Don't return more than opt.max_arch_files files at once because of memory
-    # issues on gretasot.  This only comes up when there has been some problem or stoppage.
-    files = sorted(glob.glob(filetype['fileglob']))
-    if opt.occ or files:
-        return sorted(files)[:opt.max_arch_files]
-
-    # Retrieve CXC archive files in a temp directory with arc5gl
-    arc5 = Ska.arc5gl.Arc5gl()
-
-    # Get datestart as the most-recent file time from archfiles table
-    db = Ska.DBI.DBI(dbi='sqlite', server=msid_files['archfiles'].abs)
-    vals = db.fetchone("select max(filetime) from archfiles")
-    datestart = DateTime(vals['max(filetime)'])
-
-    # End time for archive queries (minimum of start + max_query_days and NOW)
-    datestop = DateTime(opt.date_now)
-
-    # For instrum==EPHEM break queries into time ranges no longer than
-    # 100000 sec each.  EPHEM files are at least 7 days long and generated
-    # no more often than every ~3 days so this should work.
-    n_queries = (1 if filetype['instrum'] != 'EPHEM'
-          else 1 + round((datestop.secs - datestart.secs) / 100000.))
-    times = np.linspace(datestart.secs, datestop.secs, n_queries + 1)
-
-    logger.info('********** %s %s **********' % (ft['content'], time.ctime()))
-
-    for t0, t1 in zip(times[:-1], times[1:]):
-        arc5.sendline('tstart=%s' % DateTime(t0).date)
-        arc5.sendline('tstop=%s' % DateTime(t1).date)
-        arc5.sendline('get %s' % filetype['arc5gl_query'].lower())
-
-    return sorted(glob.glob(filetype['fileglob']))
 
 
 def get_options():
