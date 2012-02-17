@@ -171,8 +171,21 @@ def get_prov_data():
     for cdir in chunk_dirs:
         last_links = glob(os.path.join(cdir, "*_last"))
         for link in last_links:
-            lmatch = re.search('(\d{5})_last', link)
+            lmatch = re.search('(\d{5})_last$', link)
             if lmatch:
+                obs = dict(obsid=int(lmatch.group(1)),
+                           revision='default')
+                todo_obs.append(obs)
+    return todo_obs
+
+def get_broken_data():
+    chunk_dirs = glob(os.path.join(archive_dir, "??"))
+    todo_obs = []
+    for cdir in chunk_dirs:
+        default_links = glob(os.path.join(cdir, "?????"))
+        for link in default_links:
+            lmatch = re.search('(\d{5})$', link)
+            if not os.path.exists(link):
                 obs = dict(obsid=int(lmatch.group(1)),
                            revision='default')
                 todo_obs.append(obs)
@@ -187,10 +200,11 @@ def main(opt):
         return
 
     # look for all previous "provisional" aspect solutions
-    # and update if possible
+    # and broken links and and update if possible
     prov_data = get_prov_data()
+    prov_data.extend(get_broken_data())
     for obs in prov_data:
-        logger.info("running get_asp for prov obsid %d ver %s, "
+        logger.info("running get_asp for obsid %d ver %s, "
                     % (obs['obsid'], obs['revision']))
         try:
             get_asp(obs['obsid'], obs['revision'])
