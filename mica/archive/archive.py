@@ -128,12 +128,16 @@ def update_link(obsid):
         def_ver_dir = os.path.join(archive_dir, chunk_dir,
                                    '%05d_v%02d' % (obsid, default_ver))
         # link the default version
-        logger.info("ln -sf %s %s" % (
+        logger.info("linking %s -> %s" % (
                 os.path.relpath(def_ver_dir, chunk_dir_path),
                 obs_ln))
-        bash("ln -sf %s %s" % (
+        # don't use os.path.exists here because if we have a broken
+        # link we want to remove it too
+        if os.path.islink(obs_ln):
+            os.unlink(obs_ln)
+        os.symlink(
                 os.path.relpath(def_ver_dir, chunk_dir_path),
-                obs_ln))
+                obs_ln)
 
     # nothing to do if last_ver undefined
     if last_ver is None:
@@ -147,12 +151,14 @@ def update_link(obsid):
         if os.path.exists(last_ver_dir):
             obs_ln_last = os.path.join(archive_dir, chunk_dir,
                                        "%05d_last" % obsid)
-            logger.info("ln -sf %s %s" % (
+            logger.info("linking %s -> %s" % (
                     os.path.relpath(last_ver_dir, chunk_dir_path),
                     obs_ln_last))
-            bash("ln -sf %s %s" % (
+            if os.path.islink(obs_ln_last):
+                os.unlink(obs_ln_last)
+            os.symlink(
                     os.path.relpath(last_ver_dir, chunk_dir_path),
-                    obs_ln_last))
+                    obs_ln_last)
     else:
         # if default and last are the same and we have a last link,
         # delete it
@@ -239,12 +245,11 @@ def main(opt):
         else:
             get_asp(obs['obsid'], version=obs['revision'])
         update_link(obs['obsid'])
+        last_id_fh = open(last_id_file, 'w')
+        last_id_fh.write("%d" % obs['aspect_1_id'])
+        last_id_fh.close()
     if not len(todo):
         logger.info("No new aspect_1 data")
-    else:
-        last_id_fh = open(last_id_file, 'w')
-        last_id_fh.write("%d" % todo[-1]['aspect_1_id'])
-        last_id_fh.close()
 
 
 if __name__ == '__main__':
