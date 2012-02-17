@@ -34,12 +34,8 @@ def get_arch_info(i, f, archfiles, db):
     file has type ``filetype`` and will be added to MSID file at row index ``row``.
     ``colnames`` is the list of column names for the content type (not used here).
     """
-    # Check if filename is already in archfiles.  If so then abort further processing.
+
     filename = os.path.basename(f)
-    #if db.fetchall('SELECT filename FROM archfiles WHERE filename=?', (filename,)):
-    #    logger.verbose('File %s already in archfiles - unlinking and skipping' % f)
-    #    os.unlink(f)
-    #    return None
 
     # Read FITS archive file and accumulate data into dats list and header into headers dict
     logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
