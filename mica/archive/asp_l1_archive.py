@@ -6,38 +6,42 @@ import re
 import logging
 import shutil
 import Ska.DBI
-from Ska.Shell import bash
+#from Ska.Shell import bash
 import numpy as np
 from Chandra.Time import DateTime
+import Ska.File
 
-
-archive_dir = "."
-last_id_file = os.path.join(archive_dir, 'last_asp1_id.txt')
+# archive_dir set by main()
+archive_dir = None
+arc5 = Ska.arc5gl.Arc5gl()
 aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
 apstat = Ska.DBI.DBI(dbi='sybase', server='sqlocc', database='axafapstat')
-arc5 = Ska.arc5gl.Arc5gl()
-#arc5.echo = True
+
 logger = logging.getLogger('asp1 fetch')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 
 # borrowed from eng_archive
-archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content', 
+archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content',
                       'ascdsver', 'revision', 'date')
 
-import itertools
+#import itertools
 import pyfits
 
+
 def get_arch_info(i, f, archfiles, db):
-    """Read filename ``f`` with index ``i`` (position within list of filenames).  The
-    file has type ``filetype`` and will be added to MSID file at row index ``row``.
-    ``colnames`` is the list of column names for the content type (not used here).
+
+    """Read filename ``f`` with index ``i`` (position within list of
+    filenames).  The file has type ``filetype`` and will be added to
+    MSID file at row index ``row``.  ``colnames`` is the list of
+    column names for the content type (not used here).
     """
 
     filename = os.path.basename(f)
 
-    # Read FITS archive file and accumulate data into dats list and header into headers dict
+    # Read FITS archive file and accumulate data into dats list and
+    # header into headers dict
     logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
     hdus = pyfits.open(f)
     hdu = hdus[1]
@@ -146,7 +150,7 @@ def get_asp(obsid, version='last'):
         return
 
     # get data
-    tempdir = tempfile.mkdtemp()
+    tempdir = Ska.File.TempDir().name
     arc5.sendline("reset")
     arc5.sendline("cd %s" % tempdir)
     logger.info("retrieving data for %d in %s" % (obsid, tempdir))
