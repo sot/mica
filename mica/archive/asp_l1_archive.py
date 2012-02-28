@@ -45,66 +45,52 @@ def get_arch_info(i, f, archfiles, db):
     # Accumlate relevant info about archfile that will be ingested into
     # MSID h5 files.  Commit info before h5 ingest so if there is a failure
     # the needed info will be available to do the repair.
-    archfiles_row = dict((x, hdu.header.get(x.upper())) for x in archfiles_hdr_cols)
+    archfiles_row = dict((x, hdu.header.get(x.upper()))
+                         for x in archfiles_hdr_cols)
     archfiles_row['checksum'] = hdu._checksum
     archfiles_row['filename'] = filename
-    archfiles_row['filetime'] = int(re.search(r'(\d+)', archfiles_row['filename']).group(1))
+    archfiles_row['filetime'] = int(
+        re.search(r'(\d+)', archfiles_row['filename']).group(1))
     filedate = DateTime(archfiles_row['filetime']).date
-    year, doy = (int(x) for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
+    year, doy = (int(x)
+                 for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
     archfiles_row['year'] = year
     archfiles_row['doy'] = doy
     hdus.close()
     return archfiles_row
 
 
-
-def move_archive_files(filetype, archfiles):
-    ft['content'] = filetype.content.lower()
-
-    stagedir = arch_files['stagedir'].abs
-    if not os.path.exists(stagedir):
-        os.makedirs(stagedir)
-
-    for f in archfiles:
-        if not os.path.exists(f):
-            continue
-        ft['basename'] = os.path.basename(f)
-        tstart = re.search(r'(\d+)', str(ft['basename'])).group(1)
-        datestart = DateTime(tstart).date
-        ft['year'], ft['doy'] = re.search(r'(\d\d\d\d):(\d\d\d)', datestart).groups()
-
-        archdir = arch_files['archdir'].abs
-        archfile = arch_files['archfile'].abs
-
-        if not os.path.exists(archdir):
-            os.makedirs(archdir)
-
-        if not os.path.exists(archfile):
-            logger.info('mv %s %s' % (os.path.abspath(f), archfile))
-            if not opt.dry_run:
-                if not opt.occ:
-                    shutil.copy2(f, stagedir)
-                shutil.move(f, archfile)
-
-        if os.path.exists(f):
-            logger.verbose('Unlinking %s' % os.path.abspath(f))
-            os.unlink(f)
-
-
-
 def get_options():
-    from optparse import OptionParser
-    parser = OptionParser()
-    parser.set_defaults()
-    parser.add_option("--obsid",
-                      type='int')
-    parser.add_option("--version",
-                      default='last')
-    parser.add_option("--firstrun",
-                      action='store_true',
-                      help="for archive init., ignore rev in aspect_1 table")
-    opt, args = parser.parse_args()
-    return opt, args
+#    from optparse import OptionParser
+#    parser = OptionParser()
+    import argparse
+    import ConfigParser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--conf-file",
+                        help="Config file",
+                        metavar="FILE",
+                        default="archive.conf")
+    # if we've got any of the below-defined options
+    # they go into remaining_argv instead of throwing an error
+    args, remaining_argv = parser.parse_known_args()
+    defaults = dict(version='last')
+    if args.conf_file:
+        config = ConfigParser.SafeConfigParser()
+        config.read([args.conf_file])
+        defaults = dict(config.items("asp_l1_defaults"))
+    parser.set_defaults(**defaults)
+    parser.add_argument("--obsid",
+                        type=int)
+    parser.add_argument("--version",
+                        default='last')
+    parser.add_argument("--firstrun",
+                        action='store_true',
+                        help="for archive init., ignore rev in aspect_1 table")
+    parser.add_argument("--data-root")
+    parser.add_argument("--temp-root")
+    
+    opt = parser.parse_args(remaining_argv)
+    return opt 
 
 
 def get_file_ver(tempdir, fileglob="*fidpr1*fits*"):
@@ -272,9 +258,12 @@ def get_todo_from_links():
     return todo_obs
 
 
-
-
 def main(opt):
+
+    global archive_dir
+    archive_dir = opt.data_root
+    last_id_file = os.path.join(archive_dir, 'last_asp1_id.txt')
+
     # if an obsid is requested, just do that
     if opt.obsid:
         get_asp(opt.obsid, version=opt.version)
@@ -328,5 +317,5 @@ def main(opt):
 
 
 if __name__ == '__main__':
-    opt, args = get_options()
+    opt = get_options()
     main(opt)
