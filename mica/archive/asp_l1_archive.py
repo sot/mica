@@ -162,19 +162,22 @@ def get_asp(obsid, version='last'):
     arc5.sendline("get asp1")
     logger.info("copying asp1 from %s to %s" % (tempdir, obs_dir))
     archfiles = glob(os.path.join(tempdir, "*"))
-    db = Ska.DBI.DBI(dbi='sqlite', server='archfiles.db3', autocommit=False)
-    existing = db.fetchall("select * from archfiles where obsid = %d and revision = '%s'"
-                           % (obsid, version))
-    for i, f in enumerate(archfiles):
-        if len(existing) and f in existing['filename']:
-            raise ValueError()
-        arch_info = get_arch_info(i, f, archfiles, db)
-        arch_info['obsid'] = obsid
-        db.insert(arch_info, 'archfiles')
-        shutil.copy(f, obs_dir)
-        os.remove(f)
-    os.removedirs(tempdir)
-    db.commit()
+    if archfiles:
+        db = Ska.DBI.DBI(dbi='sqlite', server='archfiles.db3',
+                         autocommit=False)
+        existing = db.fetchall(
+            "select * from archfiles where obsid = %d and revision = '%s'"
+            % (obsid, version))
+        for i, f in enumerate(archfiles):
+            if len(existing) and f in existing['filename']:
+                raise ValueError()
+            arch_info = get_arch_info(i, f, archfiles, db)
+            arch_info['obsid'] = obsid
+            db.insert(arch_info, 'archfiles')
+            shutil.copy(f, obs_dir)
+            #os.remove(f)
+    #os.removedirs(tempdir)
+        db.commit()
     return obs_dir, chunk_dir
 
 
