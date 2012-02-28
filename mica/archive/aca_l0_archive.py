@@ -176,16 +176,28 @@ def get_arch_info(i, f, archfiles, db):
 
 
 def get_options():
-    from optparse import OptionParser
-    parser = OptionParser()
-    parser.set_defaults()
-    parser.add_option("--data-root",
-                      default="data")
-    parser.add_option("--temp-root",
-                      default="temp")
-    opt, args = parser.parse_args()
-    return opt, args
-
+    import argparse
+    import ConfigParser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--conf-file",
+                        help="Config file",
+                        metavar="FILE",
+                        default="archive.conf")
+    # if we've got any of the below-defined options
+    # they go into remaining_argv instead of throwing an error
+    args, remaining_argv = parser.parse_known_args()
+    defaults = dict()
+    if args.conf_file:
+        config = ConfigParser.SafeConfigParser()
+        config.read([args.conf_file])
+        defaults = dict(config.items("aca_l0_defaults"))
+    parser.set_defaults(**defaults)
+    parser.add_argument("--data-root")
+    parser.add_argument("--temp-root")
+    parser.add_argument("--datestart")
+    parser.add_argument("--datestop")
+    opt = parser.parse_args(remaining_argv)
+    return opt
 
 def main(opt):
 
@@ -198,16 +210,18 @@ def main(opt):
         os.makedirs(contentdir)
     archdb = os.path.join(contentdir, 'archfiles.db3')
 
-    # Get datestart as the most-recent file time from archfiles table
     db = Ska.DBI.DBI(dbi='sqlite', server=archdb, autocommit=False)
-    # will need min-of-max-slot-datestart
-    last_time = min([db.fetchone("select max(filetime) from archfiles where slot = %d" 
-                                 % s)['max(filetime)'] for s in range(0, 8)])
-    if last_time:
-        datestart = DateTime(last_time)
+    if opt.datestart:
+        datestart = DateTime(opt.datestart)
     else:
-        datestart = DateTime(-2)
-    datestop = DateTime()
+        # Get datestart as the most-recent file time from archfiles table
+        # will need min-of-max-slot-datestart
+        last_time = min([db.fetchone("select max(filetime) from archfiles where slot = %d" 
+                                     % s)['max(filetime)'] for s in range(0, 8)])
+
+        datestart = DateTime(last_time)
+    
+    datestop = DateTime(opt.datestop)
 
     print dirname
     with Ska.File.chdir(dirname):
@@ -220,5 +234,5 @@ def main(opt):
     db.commit()
 
 if __name__ == '__main__':
-    opt, args = get_options()
+    opt = get_options()
     main(opt)
