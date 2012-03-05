@@ -103,7 +103,9 @@ def read_archfile(i, f, archfiles, db):
     year, doy = (int(x) for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
     archfiles_row['year'] = year
     archfiles_row['doy'] = doy
+    archfiles_row['rows'] = len(hdu.data)
     hdus.close()
+
 
     return  archfiles_row
 
@@ -203,7 +205,7 @@ def main(opt):
 
     tmpdir = Ska.File.TempDir(dir=opt.temp_root)
     dirname = tmpdir.name
-
+    #dirname = '/data/aca/archive/temp/manual/'
     filetype = filetypes[0]
     contentdir = os.path.join(opt.data_root, filetype['content'].lower())
     if not os.path.exists(contentdir):
@@ -226,6 +228,7 @@ def main(opt):
     print dirname
     with Ska.File.chdir(dirname):
         archfiles = get_archive_files(filetype, datestart, datestop)
+        #archfiles = glob(os.path.join(dirname, '*'))
         for i, f in enumerate(archfiles):
             arch_info = read_archfile(i, f, archfiles, db)
             if arch_info:

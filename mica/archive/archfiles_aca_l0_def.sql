@@ -14,6 +14,7 @@ CREATE TABLE archfiles (
   ascdsver        text ,
   revision        int ,
   date            text not null,
+  rows            int not null,
   imgsize         int not null,
   slot            int not null,
   CONSTRAINT pk_archfiles PRIMARY KEY (filename)
