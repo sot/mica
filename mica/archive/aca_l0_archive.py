@@ -1,19 +1,21 @@
 import os
-import Ska.arc5gl
-#import tempfile
 from glob import glob
 import re
 import logging
 import shutil
-import Ska.DBI
-#from Ska.Shell import bash
+import time
+import pyfits
 import numpy as np
+import argparse
+from configobj import ConfigObj
+
+import Ska.DBI
+import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
-import time
 
-arc5 = Ska.arc5gl.Arc5gl()
-logger = logging.getLogger('asp1 fetch')
+
+logger = logging.getLogger('aca0 fetch')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
@@ -23,13 +25,29 @@ archfiles_hdr_cols = ('tstart', 'tstop', 'startmjf', 'startmnf',
                       'tlmver', 'ascdsver', 'revision', 'date',
                       'imgsize')
 
-#import itertools
-import pyfits
 
 dtype = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
          ('arc5gl_query', '|S27'), ('fileglob', '|S9')]
 filetypes = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
                                dtype=dtype)
+
+
+def get_options():
+    parser = argparse.ArgumentParser(
+        description="Fetch aca level 0 products and make a file archive")
+    config = ConfigObj("aca0.conf")
+    defaults = dict(config)
+    parser.set_defaults(**defaults)
+    parser.add_argument("--data-root",
+                        help="parent directory for all data")
+    parser.add_argument("--temp-root",
+                        help="parent temp directory")
+    parser.add_argument("--datestart",
+                        help="start date for retrieve (defaults to max date of archived files)")
+    parser.add_argument("--datestop",
+                        help="stop date for retrieve (defaults to now)")
+    opt = parser.parse_args()
+    return opt
 
 
 def get_archive_files(filetype, datestart, datestop):
@@ -174,32 +192,6 @@ def get_arch_info(i, f, archfiles, db):
     hdus.close()
     return archfiles_row
 
-
-
-
-def get_options():
-    import argparse
-    import ConfigParser
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--conf-file",
-                        help="Config file",
-                        metavar="FILE",
-                        default="archive.conf")
-    # if we've got any of the below-defined options
-    # they go into remaining_argv instead of throwing an error
-    args, remaining_argv = parser.parse_known_args()
-    defaults = dict()
-    if args.conf_file:
-        config = ConfigParser.SafeConfigParser()
-        config.read([args.conf_file])
-        defaults = dict(config.items("aca_l0_defaults"))
-    parser.set_defaults(**defaults)
-    parser.add_argument("--data-root")
-    parser.add_argument("--temp-root")
-    parser.add_argument("--datestart")
-    parser.add_argument("--datestop")
-    opt = parser.parse_args(remaining_argv)
-    return opt
 
 def main(opt):
 
