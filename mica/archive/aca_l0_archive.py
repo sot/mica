@@ -6,8 +6,10 @@ import shutil
 import time
 import pyfits
 import numpy as np
+import numpy.ma as ma
 import argparse
 from configobj import ConfigObj
+
 
 import Ska.DBI
 import Ska.arc5gl
@@ -31,11 +33,27 @@ dtype = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
 filetypes = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
                                dtype=dtype)
 
+aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'), ('MNF', '>i4'),
+             ('END_INTEG_TIME', '>f8'), ('INTEG', '>f4'), ('GLBSTAT', '|u1'),
+             ('COMMCNT', '|u1'), ('COMMPROG', '|u1'), ('IMGFID1', '|u1'),
+             ('IMGNUM1', '|u1'), ('IMGFUNC1', '|u1'), ('IMGSTAT', '|u1'),
+             ('IMGROW0', '>i2'), ('IMGCOL0', '>i2'), ('IMGSCALE', '>i2'),
+             ('BGDAVG', '>i2'), ('IMGFID2', '|u1'), ('IMGNUM2', '|u1'),
+             ('IMGFUNC2', '|u1'), ('BGDRMS', '>i2'), ('TEMPCCD', '>f4'),
+             ('TEMPHOUS', '>f4'), ('TEMPPRIM', '>f4'), ('TEMPSEC', '>f4'),
+             ('BGDSTAT', '|u1'), ('IMGFID3', '|u1'), ('IMGNUM3', '|u1'),
+             ('IMGFUNC3', '|u1'), ('IMGFID4', '|u1'), ('IMGNUM4', '|u1'),
+             ('IMGFUNC4', '|u1'), ('IMGRAW', '>f4', (64,)), ('HD3TLM62', '|u1'),
+             ('HD3TLM63', '|u1'), ('HD3TLM64', '|u1'), ('HD3TLM65', '|u1'),
+             ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
+             ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
+             ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1')]
+
+config = ConfigObj("aca0.conf")
 
 def get_options():
     parser = argparse.ArgumentParser(
         description="Fetch aca level 0 products and make a file archive")
-    config = ConfigObj("aca0.conf")
     defaults = dict(config)
     parser.set_defaults(**defaults)
     parser.add_argument("--data-root",
@@ -48,6 +66,54 @@ def get_options():
                         help="stop date for retrieve (defaults to now)")
     opt = parser.parse_args()
     return opt
+
+def get_slot_data(tstart, tstop, slot, imgsize=[4,6,8],
+                  db=None, data_root=config['data_root']):
+    if not db:
+        dbfile = os.path.join(config['data_root'], 'archfiles.db3')
+        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+    data_files = get_interval_files(tstart, tstop, slot, imgsize, db)
+    if not len(data_files):
+        # return an empty masked array
+        return ma.zeros(0, dtype=aca_dtype)
+    rows = np.sum(data_files['rows'])
+    zero_row = ma.zeros(1, dtype=aca_dtype)
+    zero_row.mask = True
+    all_rows = zero_row.repeat(rows)
+    rowcount = 0
+    for f in data_files:
+        fp = os.path.join(data_root,
+                          str(f['year']), str(f['doy']), f['filename'])
+        hdu = pyfits.open(fp)
+        chunk = hdu[1].data
+        for fname in all_rows.dtype.names:
+            if fname == 'IMGRAW':
+                continue
+            if fname in chunk.dtype.names:
+                all_rows[fname][rowcount:rowcount+len(chunk)] = chunk.field(fname)
+                all_rows[fname][rowcount:rowcount+len(chunk)].mask = False
+        imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
+        all_rows['IMGRAW'].reshape(rows,8,8)[
+            rowcount:rowcount+len(chunk), 0:imgsize, 0:imgsize] = (
+            chunk.field('IMGRAW').reshape(len(chunk), imgsize, imgsize))
+        rowcount += len(chunk)
+    return all_rows
+
+def get_interval_files(tstart, tstop, slot, imgsize=[4,6,8], db=None):
+    if not db:
+        dbfile = os.path.join(config['data_root'], 'archfiles.db3')
+        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+    tstart = DateTime(tstart).secs
+    tstop = DateTime(tstop).secs
+    imgsize_str = ','.join([str(x) for x in imgsize])
+    db_query = ('SELECT * FROM archfiles '
+                'WHERE tstop > %f '
+                'AND tstart < %f '
+                'AND slot == %d '
+                'AND imgsize in (%s) '
+                'order by filetime asc ' 
+                % (tstart,tstop, slot, imgsize_str))
+    return db.fetchall(db_query)
 
 
 def get_archive_files(filetype, datestart, datestop):
@@ -197,9 +263,7 @@ def main(opt):
 
     tmpdir = Ska.File.TempDir(dir=opt.temp_root)
     dirname = tmpdir.name
-    #dirname = '/data/aca/archive/temp/manual/'
-    filetype = filetypes[0]
-    contentdir = os.path.join(opt.data_root, filetype['content'].lower())
+    contentdir = os.path.join(opt.data_root)
     if not os.path.exists(contentdir):
         os.makedirs(contentdir)
     archdb = os.path.join(contentdir, 'archfiles.db3')
