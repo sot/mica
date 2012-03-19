@@ -288,6 +288,7 @@ def main(opt):
             logger.info("skipping %d, default ver not available"
                         % obs['obsid'])
             logger.debug(ve)
+            continue
         update_link(obs['obsid'])
 
     # if no obsid specified, try to retrieve all asp_1 runs
@@ -314,6 +315,7 @@ def main(opt):
                 logger.info("skipping %d, default ver not available"
                             % obs['obsid'])
                 logger.debug(ve)
+                continue
         else:
             get_asp(obs['obsid'], version=obs['revision'])
         update_link(obs['obsid'])
