@@ -32,6 +32,66 @@ archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content',
 
 config = ConfigObj('asp1.conf')
 
+## http://notemagnet.blogspot.com/2009/09/following-symlinks-in-python.html
+#def readlinkabs(l):
+#    """
+#    Return an absolute path for the destination 
+#    of a symlink
+#    """
+#    assert (os.path.islink(l))
+#    p = os.path.normpath(os.readlink(l))
+#    if os.path.isabs(p):
+#        return p
+#    return os.path.join(os.path.dirname(l), p)
+
+def get_dir(obsid, data_root=config['data_root']):
+    dirmap = get_obs_dirs(obsid, data_root)
+    return dirmap['default']
+
+
+def get_obs_dirs(obsid, data_root=config['data_root']):
+    strobs = "%05d" % obsid
+    chunk_dir = strobs[0:2]
+    topdir = os.path.join(data_root, chunk_dir)
+    dirmap = {}
+    verdirs = glob(os.path.join(topdir, "%s_v*" % strobs))
+    for v in verdirs:
+        nmatch = re.search("%s_v(\d{2})" % strobs, v)
+        if nmatch:
+            dirmap[int(nmatch.group(1))] = v
+    lastdirs = glob(os.path.join(topdir, "%s_last" % strobs))
+    defdirs = glob(os.path.join(topdir, "%s" % strobs))
+    if defdirs:
+        dirmap['default'] = defdirs[0]
+    if lastdirs:
+        dirmap['last'] = lastdirs[0]
+    else:
+        dirmap['last'] = defdirs[0]
+    return dirmap
+
+
+#def get_obsid_dir(obsid, version='default',
+#                  data_root=config['data_root']):
+#    strobs = "%05d" % obsid
+#    chunk_dir = strobs[0:2]
+#    nmatch = re.match('\d+', str(version))
+#    if version == 'last':
+#        obsdir = os.path.join(data_root, chunk_dir, "%05d_last" % obsid)
+#        if os.path.exists(obsdir):
+#            return obsdir
+#        else:
+#            version = 'default'
+#    if version == 'default':
+#        obsdir = os.path.join(data_root, chunk_dir, strobs)
+#    elif nmatch:
+#        obsdir = os.path.join(data_root, chunk_dir, "%05d_v%02d"
+#                              % (obsid, int(version)))
+#    if os.path.exists(obsdir):
+#        return obsdir
+#    else:
+#        return None
+
+    
 
 def get_arch_info(i, f, archfiles, db):
 
