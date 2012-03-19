@@ -1,13 +1,16 @@
 import os
-import Ska.arc5gl
 import tempfile
 from glob import glob
 import re
 import logging
 import shutil
-import Ska.DBI
-#from Ska.Shell import bash
 import numpy as np
+import pyfits
+import argparse
+from configobj import ConfigObj
+
+import Ska.arc5gl
+import Ska.DBI
 from Chandra.Time import DateTime
 import Ska.File
 
@@ -26,8 +29,6 @@ logger.addHandler(logging.StreamHandler())
 archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content',
                       'ascdsver', 'revision', 'date')
 
-#import itertools
-import pyfits
 
 
 def get_arch_info(i, f, archfiles, db):
@@ -67,8 +68,6 @@ def get_arch_info(i, f, archfiles, db):
 def get_options():
 #    from optparse import OptionParser
 #    parser = OptionParser()
-    import argparse
-    import ConfigParser
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--conf-file",
                         help="Config file",
