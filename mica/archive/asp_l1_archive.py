@@ -30,6 +30,7 @@ logger.addHandler(logging.StreamHandler())
 archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content',
                       'ascdsver', 'revision', 'date')
 
+config = ConfigObj('asp1.conf')
 
 
 def get_arch_info(i, f, archfiles, db):
@@ -69,31 +70,25 @@ def get_arch_info(i, f, archfiles, db):
 def get_options():
 #    from optparse import OptionParser
 #    parser = OptionParser()
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--conf-file",
-                        help="Config file",
-                        metavar="FILE",
-                        default="archive.conf")
-    # if we've got any of the below-defined options
-    # they go into remaining_argv instead of throwing an error
-    args, remaining_argv = parser.parse_known_args()
-    defaults = dict(version='last')
-    if args.conf_file:
-        config = ConfigParser.SafeConfigParser()
-        config.read([args.conf_file])
-        defaults = dict(config.items("asp_l1_defaults"))
+    parser = argparse.ArgumentParser(
+        description="Fetch aspect level 1 products and make a file archive")
+
+    defaults = dict(config)
     parser.set_defaults(**defaults)
     parser.add_argument("--obsid",
-                        type=int)
+                        type=int,
+                        help="specific obsid to process")
     parser.add_argument("--version",
-                        default='last')
+                        default='last',
+                        help="specific processing version to retrieve")
     parser.add_argument("--firstrun",
                         action='store_true',
                         help="for archive init., ignore rev in aspect_1 table")
-    parser.add_argument("--data-root")
-    parser.add_argument("--temp-root")
-    
-    opt = parser.parse_args(remaining_argv)
+    parser.add_argument("--data-root",
+                        help="parent directory for all data")
+    parser.add_argument("--temp-root",
+                        help="parent temp directory")
+    opt = parser.parse_args()
     return opt 
 
 
@@ -125,6 +120,8 @@ def get_ver_num(obsid, version='default'):
     # just fetch the aspect solution to start
     arc5.sendline("get asp1{fidprops}")
     version = get_file_ver(tempdir)
+    if not version:
+        raise ValueError("Version not defined")
     for afile in glob(os.path.join(tempdir, "*")):
         os.remove(afile)
     os.removedirs(tempdir)
@@ -150,7 +147,8 @@ def get_asp(obsid, version='last'):
         return
 
     # get data
-    tempdir = Ska.File.TempDir().name
+    tempdirobj = Ska.File.TempDir(dir='/data/aca/archive/temp')
+    tempdir = tempdirobj.name
     arc5.sendline("reset")
     arc5.sendline("cd %s" % tempdir)
     logger.info("retrieving data for %d in %s" % (obsid, tempdir))
@@ -166,8 +164,11 @@ def get_asp(obsid, version='last'):
     arc5.sendline("get asp1")
     logger.info("copying asp1 from %s to %s" % (tempdir, obs_dir))
     archfiles = glob(os.path.join(tempdir, "*"))
+    if not len(archfiles):
+        raise ValueError
     if archfiles:
-        db = Ska.DBI.DBI(dbi='sqlite', server='archfiles.db3',
+        db_file = os.path.join(archive_dir, 'archfiles.db3')
+        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
                          autocommit=False)
         existing = db.fetchall(
             "select * from archfiles where obsid = %d and revision = '%s'"
