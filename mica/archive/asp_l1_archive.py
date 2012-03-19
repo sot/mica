@@ -14,11 +14,12 @@ import Ska.DBI
 from Chandra.Time import DateTime
 import Ska.File
 
-# archive_dir set by main()
+# these are set as globals in main()
 archive_dir = None
-arc5 = Ska.arc5gl.Arc5gl()
-aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-apstat = Ska.DBI.DBI(dbi='sybase', server='sqlocc', database='axafapstat')
+arc5 = None
+aca_db = None
+apstat = None
+SKA = os.environ['SKA']
 
 logger = logging.getLogger('asp1 fetch')
 logger.setLevel(logging.INFO)
@@ -268,6 +269,13 @@ def main(opt):
 
     global archive_dir
     archive_dir = opt.data_root
+    global arc5
+    arc5 = Ska.arc5gl.Arc5gl()
+    global aca_db
+    aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+    global apstat
+    apstat = Ska.DBI.DBI(dbi='sybase', server='sqlocc', database='axafapstat')
+
     last_id_file = os.path.join(archive_dir, 'last_asp1_id.txt')
 
     # if an obsid is requested, just do that
