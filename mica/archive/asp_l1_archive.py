@@ -293,9 +293,11 @@ def main(opt):
     # if no obsid specified, try to retrieve all asp_1 runs
     # since tool last run
     # use an aspect_1_id in a file
-    last_id_fh = open(last_id_file)
-    last_id = int(last_id_fh.read().rstrip())
-    last_id_fh.close()
+    last_id = 0
+    if os.path.exists(last_id_file):
+        last_id_fh = open(last_id_file)
+        last_id = int(last_id_fh.read().rstrip())
+        last_id_fh.close()
     todo = apstat.fetchall("""select * from aspect_1
                               where aspect_1_id > %d
                               order by aspect_1_id"""
