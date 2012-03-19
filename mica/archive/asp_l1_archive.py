@@ -172,9 +172,16 @@ def get_ver_num(obsid, version='default'):
     # this is obi agnostic, all obis should be same
     # version anyway...
     tempdir = tempfile.mkdtemp()
+    # if multi-obi, we'll need to be specific
     arc5.sendline("reset")
     arc5.sendline("cd %s" % tempdir)
     arc5.sendline("obsid=%d" % obsid)
+    obis = apstat.fetchall(
+        "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
+    if len(obis) > 1:
+        minobi = np.min(obis['obi'])
+        logger.info("limiting arc5gl to obi %d" % minobi)
+        arc5.sendline("obi=%d" % minobi)
     if version != 'default':
         arc5.sendline("version=%s" % version)
     # just fetch the aspect solution to start
