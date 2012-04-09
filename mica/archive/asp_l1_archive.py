@@ -7,7 +7,7 @@ import shutil
 import numpy as np
 import pyfits
 import argparse
-from configobj import ConfigObj
+#from configobj import ConfigObj
 
 import Ska.arc5gl
 import Ska.DBI
@@ -30,7 +30,10 @@ logger.addHandler(logging.StreamHandler())
 archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content',
                       'ascdsver', 'revision', 'date')
 
-config = ConfigObj('asp1.conf')
+#config = ConfigObj('asp1.conf')
+config = dict(data_root='/data/aca/archive/asp1',
+              temp_root='/data/aca/archive/temp')
+
 
 ## http://notemagnet.blogspot.com/2009/09/following-symlinks-in-python.html
 #def readlinkabs(l):
@@ -214,7 +217,7 @@ def get_asp(obsid, version='last'):
         return
 
     # get data
-    tempdirobj = Ska.File.TempDir(dir='/data/aca/archive/temp')
+    tempdirobj = Ska.File.TempDir(dir=opt.temp_root)
     tempdir = tempdirobj.name
     arc5.sendline("reset")
     arc5.sendline("cd %s" % tempdir)
