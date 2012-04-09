@@ -64,6 +64,9 @@ def get_options():
                         help="start date for retrieve (defaults to max date of archived files)")
     parser.add_argument("--datestop",
                         help="stop date for retrieve (defaults to now)")
+    parser.add_argument("--days-at-once",
+                        type=float,
+                        help="if over this number, bin to chunks of this number of days")
     opt = parser.parse_args()
     return opt
 
@@ -269,19 +272,37 @@ def main(opt):
                                      % s)['max(filetime)'] for s in range(0, 8)])
 
         datestart = DateTime(last_time)
-    
     datestop = DateTime(opt.datestop)
 
-    print dirname
-    with Ska.File.chdir(dirname):
-        archfiles = get_archive_files(filetype, datestart, datestop)
-        #archfiles = glob(os.path.join(dirname, '*'))
-        for i, f in enumerate(archfiles):
-            arch_info = read_archfile(i, f, archfiles, db)
-            if arch_info:
-                move_archive_files(filetype, [f], opt)
-                db.insert(arch_info, 'archfiles')
-    db.commit()
+    padding_seconds = 10000
+    tstop = datestop.secs
+    for tstart in np.arange(datestart.day_start().secs, 
+                            datestop.day_end().secs, 
+                            opt.days_at_once * 86400):
+
+        # set times for a chunk
+        range_tstart = tstart - padding_seconds
+        range_tstop = tstart + opt.days_at_once * 86400
+        if range_tstop > datestop.day_end().secs:
+            range_tstop = datestop.day_end().secs
+        range_tstop += padding_seconds
+        print DateTime(range_tstart).date + " " + DateTime(range_tstop).date
+        # make a temporary director
+        tmpdir = Ska.File.TempDir(dir=opt.temp_root)
+        dirname = tmpdir.name
+        print dirname
+        # get the files
+        with Ska.File.chdir(dirname):
+            archfiles = get_archive_files(filetype,
+                                          DateTime(range_tstart),
+                                          DateTime(range_tstop))
+            #archfiles = glob(os.path.join(dirname, '*'))
+            for i, f in enumerate(archfiles):
+                arch_info = read_archfile(i, f, archfiles, db)
+                if arch_info:
+                    move_archive_files(filetype, [f], opt)
+                    db.insert(arch_info, 'archfiles')
+        db.commit()
 
 if __name__ == '__main__':
     opt = get_options()
