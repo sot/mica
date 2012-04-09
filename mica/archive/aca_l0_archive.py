@@ -202,7 +202,6 @@ def move_archive_files(filetype, archfiles, opt):
         year, doy = re.search(r'(\d\d\d\d):(\d\d\d)', datestart).groups()
 
         archdir = os.path.abspath(os.path.join(opt.data_root, 
-                                               filetype['content'].lower(),
                                                year,
                                                doy))
         archfile = os.path.abspath(os.path.join(archdir, basename))
@@ -255,8 +254,6 @@ def get_arch_info(i, f, archfiles, db):
 
 def main(opt):
 
-    tmpdir = Ska.File.TempDir(dir=opt.temp_root)
-    dirname = tmpdir.name
     contentdir = os.path.join(opt.data_root)
     if not os.path.exists(contentdir):
         os.makedirs(contentdir)
