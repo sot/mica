@@ -49,7 +49,11 @@ aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'), ('MNF', '>i4')
              ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
              ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1')]
 
-config = ConfigObj("aca0.conf")
+#config = ConfigObj("aca0.conf")
+config = dict(data_root='/data/aca/archive/aca0',
+              temp_root='/data/aca/archive/temp',
+              days_at_once=30.0)
+
 
 def get_options():
     parser = argparse.ArgumentParser(
