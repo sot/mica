@@ -30,8 +30,8 @@ archfiles_hdr_cols = ('tstart', 'tstop', 'startmjf', 'startmnf',
 
 dtype = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
          ('arc5gl_query', '|S27'), ('fileglob', '|S9')]
-filetypes = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
-                               dtype=dtype)
+filetype = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
+                               dtype=dtype)[0]
 
 aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'), ('MNF', '>i4'),
              ('END_INTEG_TIME', '>f8'), ('INTEG', '>f4'), ('GLBSTAT', '|u1'),
