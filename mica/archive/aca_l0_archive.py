@@ -130,17 +130,8 @@ def get_archive_files(filetype, datestart, datestop):
     # Retrieve CXC archive files in a temp directory with arc5gl
     arc5 = Ska.arc5gl.Arc5gl(echo=True)
 
-    # For *ephem0 the query needs to extend well into the future
-    # to guarantee getting all available files.  This is the archives fault.
-    if filetype['level'] == 'L0' and filetype['instrum'] == 'EPHEM':
-        datestop = datestop + 50
-
-    # For instrum==EPHEM break queries into time ranges no longer than
-    # 100000 sec each.  EPHEM files are at least 7 days long and generated
-    # no more often than every ~3 days so this should work.
-    n_queries = (1 if filetype['instrum'] != 'EPHEM'
-          else 1 + round((datestop.secs - datestart.secs) / 100000.))
-    times = np.linspace(datestart.secs, datestop.secs, n_queries + 1)
+	n_queries = 1
+	times = np.linspace(datestart.secs, datestop.secs, n_queries + 1)
 
     logger.info('********** %s %s **********' % (filetype['content'], time.ctime()))
 
