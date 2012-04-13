@@ -56,12 +56,15 @@ def get_obs_dirs(obsid, data_root=config['data_root']):
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
     topdir = os.path.join(data_root, chunk_dir)
-    dirmap = {}
+    dirmap = dict(revisions=[])
     verdirs = glob(os.path.join(topdir, "%s_v*" % strobs))
+    if not verdirs:
+        return None
     for v in verdirs:
         nmatch = re.search("%s_v(\d{2})" % strobs, v)
         if nmatch:
             dirmap[int(nmatch.group(1))] = v
+            dirmap['revisions'].append(int(nmatch.group(1)))
     lastdirs = glob(os.path.join(topdir, "%s_last" % strobs))
     defdirs = glob(os.path.join(topdir, "%s" % strobs))
     if defdirs:
@@ -69,7 +72,8 @@ def get_obs_dirs(obsid, data_root=config['data_root']):
     if lastdirs:
         dirmap['last'] = lastdirs[0]
     else:
-        dirmap['last'] = defdirs[0]
+        if defdirs:
+            dirmap['last'] = defdirs[0]
     return dirmap
 
 
