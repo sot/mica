@@ -38,7 +38,7 @@ config = dict(data_root='/data/aca/archive/asp1',
 ## http://notemagnet.blogspot.com/2009/09/following-symlinks-in-python.html
 #def readlinkabs(l):
 #    """
-#    Return an absolute path for the destination 
+#    Return an absolute path for the destination
 #    of a symlink
 #    """
 #    assert (os.path.islink(l))
@@ -94,7 +94,6 @@ def get_obs_dirs(obsid, data_root=config['data_root']):
 #    else:
 #        return None
 
-    
 
 def get_arch_info(i, f, archfiles, db):
 
@@ -152,7 +151,7 @@ def get_options():
     parser.add_argument("--temp-root",
                         help="parent temp directory")
     opt = parser.parse_args()
-    return opt 
+    return opt
 
 
 def get_file_ver(tempdir, fileglob="*fidpr1*fits*"):
