@@ -260,8 +260,7 @@ def move_archive_files(filetype, archfiles, opt):
 #    return archfiles_row
 
 
-def main(opt):
-
+def update_archive(opt):
     contentdir = os.path.join(opt.data_root)
     if not os.path.exists(contentdir):
         os.makedirs(contentdir)
@@ -307,6 +306,11 @@ def main(opt):
                     db.insert(arch_info, 'archfiles')
         db.commit()
 
-if __name__ == '__main__':
+
+def main():
     opt = get_options()
-    main(opt)
+    update_archive(opt)
+
+
+if __name__ == '__main__':
+    main()
