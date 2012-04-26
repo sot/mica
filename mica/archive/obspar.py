@@ -170,7 +170,6 @@ archfiles_hdr_cols = [
 import csv
 import gzip
 
-
 def parse_obspar(file):
     convert = {'i': int,
                'r': float,
@@ -233,42 +232,6 @@ def get_obs_dirs(obsid, data_root):
     else:
         dirmap['last'] = defdirs[0]
     return dirmap
-
-
-
-def get_arch_info(i, f, archfiles):
-
-    """Read filename ``f`` with index ``i`` (position within list of
-    filenames).  The file has type ``filetype`` and will be added to
-    MSID file at row index ``row``.  ``colnames`` is the list of
-    column names for the content type (not used here).
-    """
-    
-    filename = os.path.basename(f)
-    raise ValueError
-
-    # Read FITS archive file and accumulate data into dats list and
-    # header into headers dict
-    logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
-    hdus = pyfits.open(f)
-    hdu = hdus[1]
-
-    # Accumlate relevant info about archfile that will be ingested into
-    # MSID h5 files.  Commit info before h5 ingest so if there is a failure
-    # the needed info will be available to do the repair.
-    archfiles_row = dict((x, hdu.header.get(x.upper()))
-                         for x in archfiles_hdr_cols)
-    archfiles_row['checksum'] = hdu._checksum
-    archfiles_row['filename'] = filename
-    archfiles_row['filetime'] = int(
-        re.search(r'(\d+)', archfiles_row['filename']).group(1))
-    filedate = DateTime(archfiles_row['filetime']).date
-    year, doy = (int(x)
-                 for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
-    archfiles_row['year'] = year
-    archfiles_row['doy'] = doy
-    hdus.close()
-    return archfiles_row
 
 
 def get_file_ver(tempdir, fileglob, ver_regex):
@@ -334,7 +297,6 @@ def get_arch(obsid, version='last'):
         os.makedirs(obs_dir)
     else:
         logger.info("obsid dir %s already exists" % obs_dir)
-#        return
 
     # get data
     tempdirobj = Ska.File.TempDir(dir=opt.temp_root)
@@ -364,17 +326,6 @@ def get_arch(obsid, version='last'):
             "select * from archfiles where obsid = %d and revision = '%s'"
             % (obsid, version))
         for i, f in enumerate(archfiles):
-            #if config['gunzip']:
-            #    print "gunzip"
-            #    import gzip
-            #    f_in = gzip.open(f, 'rb')
-            #    par_content = f_in.read()
-            #    f_in.close()
-            #    gunzip_name = re.sub('.gz$', '', f)
-            #    f_out = open(gunzip_name, 'w')
-            #    f_out.write(par_content)
-            #    f_out.close()
-            #    f = gunzip_name
             obspar = get_obspar_info(i, f, archfiles)
             arch_info = dict()
             [arch_info.update({col: obspar[col]})
