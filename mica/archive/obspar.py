@@ -480,6 +480,16 @@ def update_archive(opt):
         logger.info("running get_obs for obsid %d run on %s"
                     % (obs['obsid'], obs['ap_date']))
         if opt.firstrun:
+            # if I've already got a later version, skip
+            have = get_obs_dirs(obs['obsid'], archive_dir)
+            if have:
+                max_rev = max(have['revisions'])
+                print "%d vs %d" % (max_rev, obs['revision'])
+                if max_rev >= obs['revision']:
+                    logger.info("skipping %d, firstrun and already have newer rev"
+                                % obs['obsid'])
+                    continue
+
             # ignore aspect_1 table versions and just try for default
             # also ignore errors in this case
             try:
