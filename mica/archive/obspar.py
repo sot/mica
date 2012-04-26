@@ -299,8 +299,8 @@ def get_arch(obsid, version='last'):
         logger.info("obsid dir %s already exists" % obs_dir)
 
     # get data
-    tempdirobj = Ska.File.TempDir(dir=opt.temp_root)
-    tempdir = tempdirobj.name
+    tempdirobj = Ska.File.TempDir(dir=temp_root)
+    tempdir = os.path.abspath(tempdirobj.name)
     arc5.sendline("reset")
     arc5.sendline("cd %s" % tempdir)
     logger.info("retrieving data for %d in %s" % (obsid, tempdir))
@@ -446,7 +446,7 @@ def update_archive(opt):
     last_id_file = os.path.join(archive_dir, 'last_id.txt')
     # if an obsid is requested, just do that
     if opt.obsid:
-        get_arch(opt.obsid, version=opt.version)
+        get_arch(opt.obsid, opt.version, opt.temp_root)
         update_link(opt.obsid)
         return
 
@@ -457,7 +457,7 @@ def update_archive(opt):
         logger.info("running get_asp for obsid %d ver %s, "
                     % (obs['obsid'], obs['revision']))
         try:
-            get_arch(obs['obsid'], obs['revision'])
+            get_arch(obs['obsid'], obs['revision'], opt.temp_root)
         except ValueError as ve:
             logger.info("skipping %d, default ver not available"
                         % obs['obsid'])
@@ -485,15 +485,15 @@ def update_archive(opt):
             # ignore aspect_1 table versions and just try for default
             # also ignore errors in this case
             try:
-                get_arch(obs['obsid'], version='default')
+                get_arch(obs['obsid'], 'default', opt.temp_root)
             except ValueError as ve:
                 logger.info("skipping %d, default ver not available"
                             % obs['obsid'])
                 logger.debug(ve)
                 continue
         else:
-            get_arch(obs['obsid'], version=obs['revision'])
-            update_link(obs['obsid'])
+            get_arch(obs['obsid'], obs['revision'], opt.temp_root)
+        update_link(obs['obsid'])
         last_id_fh = open(last_id_file, 'w')
         last_id_fh.write("%d" % obs[config['apstat_id']])
         last_id_fh.close()
