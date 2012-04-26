@@ -323,10 +323,17 @@ def get_arch(obsid, version='last', temp_root=None):
     arc5.sendline("get %s" % config['full'])
     logger.info("copying asp1 from %s to %s" % (tempdir, obs_dir))
     archfiles = glob(os.path.join(tempdir, "*"))
- #   if not len(archfiles):
- #       raise ValueError
+    if not archfiles:
+        raise ValueError("Retrieved no files")
     if archfiles:
-        db_file = os.path.join(archive_dir, 'archfiles.db3')
+        db_file = os.path.join(os.path.abspath(archive_dir), 'archfiles.db3')
+        if not os.path.exists(db_file):
+            db_sql = os.path.join(os.environ['SKA_DATA'],
+                                  'mica', 'obspar_def.sql')
+            db_init_cmds = file(db_sql).read()
+            db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                             autocommit=False)
+            db.execute(db_init_cmds, commit=True)
         db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
                          autocommit=False)
         existing = db.fetchall(
