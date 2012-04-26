@@ -402,6 +402,7 @@ def update_link(obsid):
 
 
 def get_todo_from_links(archive_dir):
+    logger.info("Checking for updates to obsids with provisional data")
     chunk_dirs = glob(os.path.join(archive_dir, "??"))
     todo_obs = []
     for cdir in chunk_dirs:
@@ -452,7 +453,7 @@ def update_archive(opt):
     # and broken links and and update if possible
     prov_data = get_todo_from_links(archive_dir)
     for obs in prov_data:
-        logger.info("running get_asp for obsid %d ver %s, "
+        logger.info("running get_arch for obsid %d ver %s, "
                     % (obs['obsid'], obs['revision']))
         try:
             get_arch(obs['obsid'], obs['revision'], opt.temp_root)
@@ -469,15 +470,18 @@ def update_archive(opt):
     if os.path.exists(last_id_file):
         last_id_fh = open(last_id_file)
         last_id = int(last_id_fh.read().rstrip())
+        logger.info("using %d for last_id" % last_id)
         last_id_fh.close()
     query_vars = dict(config)
     query_vars.update({'last_id': last_id})
-    todo = apstat.fetchall("""select * from %(apstat_table)s
+    apstat_query = ("""select * from %(apstat_table)s
                               where %(apstat_id)s > %(last_id)d
                               order by %(apstat_id)s"""
-                           % query_vars)
+                    % query_vars)
+    logger.debug(apstat_query)
+    todo = apstat.fetchall(apstat_query)
     for obs in todo:
-        logger.info("running get_obs for obsid %d run on %s"
+        logger.info("running get_arch for obsid %d run on %s"
                     % (obs['obsid'], obs['ap_date']))
         if opt.firstrun:
             # if I've already got a later version, skip
