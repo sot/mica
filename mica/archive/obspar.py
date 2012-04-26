@@ -433,8 +433,6 @@ def set_env(opt):
     archive_dir = opt.data_root
     global arc5
     arc5 = Ska.arc5gl.Arc5gl()
-    global aca_db
-    aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
     global apstat
     apstat = Ska.DBI.DBI(dbi='sybase', server='sqlsao', database='axafapstat')
 
