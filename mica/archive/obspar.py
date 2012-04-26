@@ -273,7 +273,7 @@ def get_ver_num(obsid, version='default'):
         arc5.sendline("obi=%d" % minobi)
     if version != 'default':
         arc5.sendline("version=%s" % version)
-    # just fetch the aspect solution to start
+    # just a small file to start
     arc5.sendline("get %s" % config['small'])
     version = get_file_ver(tempdir,
                            config['small_glob'],
