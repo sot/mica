@@ -11,6 +11,30 @@ import Ska.arc5gl
 import Ska.DBI
 from Chandra.Time import DateTime
 import Ska.File
+# these are set as globals in main()
+archive_dir = None
+arc5 = None
+#aca_db = None
+apstat = None
+SKA = os.environ['SKA']
+
+logger = logging.getLogger('fetch')
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
+
+
+#from configobj import ConfigObj
+#config = ConfigObj("obspar.conf")
+config = dict(data_root='./data/aca/archive/obspar',
+              temp_root='./data/aca/archive/tempobs',
+              apstat_table='obidet_0_5',
+              apstat_id='obidet_0_5_id',
+              label='obspar',
+              small='obspar',
+              small_glob='axaff*par*',
+              small_ver_regex='axaff\d{5}_\d{3}N(\d{3}).*',
+              full='obspar')
+
 
 archfiles_hdr_cols = [
 'filename',
@@ -450,16 +474,6 @@ def get_todo_from_links(archive_dir):
 
 
 
-# these are set as globals in main()
-archive_dir = None
-arc5 = None
-aca_db = None
-apstat = None
-SKA = os.environ['SKA']
-
-logger = logging.getLogger('fetch')
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
 
 
 def set_env(opt):
@@ -479,7 +493,6 @@ def update_archive(opt):
     set_env(opt)
 
     last_id_file = os.path.join(archive_dir, 'last_id.txt')
-
     # if an obsid is requested, just do that
     if opt.obsid:
         get_arch(opt.obsid, version=opt.version)
@@ -535,20 +548,6 @@ def update_archive(opt):
         last_id_fh.close()
     if not len(todo):
         logger.info("No new data")
-
-#from configobj import ConfigObj
-#config = ConfigObj("obspar.conf")
-config = dict(data_root='/data/aca/archive/obspar',
-              temp_root='/data/aca/archive/tempobs',
-              apstat_table='obidet_0_5',
-              apstat_id='obidet_0_5_id',
-              label='obspar',
-              small='obspar',
-              small_glob='axaff*par*',
-              small_ver_regex='axaff\d{5}_\d{3}N(\d{3}).*',
-              full='obspar',
-              gunzip=False)
-
 
 def get_options():
 #    from optparse import OptionParser
