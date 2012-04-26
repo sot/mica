@@ -208,12 +208,15 @@ def get_obspar_info(i, f, archfiles):
     return obspar
     
 
-def get_dir(obsid, data_root):
+def get_dir(obsid, data_root=config['data_root']):
+    """Return the latest released directory for an obsid."""
     dirmap = get_obs_dirs(obsid, data_root)
     return dirmap['default']
 
 
-def get_obs_dirs(obsid, data_root):
+def get_obs_dirs(obsid, data_root=config['data_root']):
+    """Return a dictionary of all of the directories available for an obsid."""
+
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
     topdir = os.path.join(data_root, chunk_dir)
@@ -284,7 +287,7 @@ def get_ver_num(obsid, version='default'):
     return version
 
 
-def get_arch(obsid, version='last'):
+def get_arch(obsid, version='last', temp_root=None):
     n_version = get_ver_num(obsid, version=version)
     if n_version is None:
         raise ValueError("No %s data for ver %s" 
