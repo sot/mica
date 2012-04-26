@@ -474,7 +474,7 @@ def set_env(opt):
     apstat = Ska.DBI.DBI(dbi='sybase', server='sqlsao', database='axafapstat')
 
 
-def main(opt):
+def update_archive(opt):
 
     set_env(opt)
 
@@ -577,6 +577,9 @@ def get_options():
     return opt 
 
 
-if __name__ == '__main__':
+def main():
     opt = get_options()
-    main(opt)
+    update_archive(opt)
+
+if __name__ == '__main__':
+    main()
