@@ -420,21 +420,12 @@ def get_todo_from_links(archive_dir):
     todo_obs = []
     for cdir in chunk_dirs:
         last_links = glob(os.path.join(cdir, "?????_last"))
-        obs_links = glob(os.path.join(cdir, "?????"))
         for link in last_links:
             lmatch = re.search('(\d{5})(_last)?$', link)
             if lmatch:
                 obs = dict(obsid=int(lmatch.group(1)),
                            revision='default')
                 todo_obs.append(obs)
-        for link in obs_links:
-            if not os.path.exists(link):
-                lmatch = re.search('(\d{5})$', link)
-                if lmatch:
-                    obs = dict(obsid=int(lmatch.group(1)),
-                               revision='default')
-                    todo_obs.append(obs)
-
     return todo_obs
 
 
