@@ -321,7 +321,6 @@ def get_arch(obsid, version='last', temp_root=None):
         arc5.sendline("obi=%d" % minobi)
     arc5.sendline("version=%s" % version)
     arc5.sendline("get %s" % config['full'])
-    logger.info("copying asp1 from %s to %s" % (tempdir, obs_dir))
     archfiles = glob(os.path.join(tempdir, "*"))
     if not archfiles:
         raise ValueError("Retrieved no files")
