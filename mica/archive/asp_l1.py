@@ -21,7 +21,7 @@ aca_db = None
 apstat = None
 SKA = os.environ['SKA']
 
-logger = logging.getLogger('asp1 fetch')
+logger = logging.getLogger('asp_l1 fetch')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
@@ -201,7 +201,7 @@ def get_ver_num(obsid, version='default'):
     return version
 
 
-def get_asp(obsid, version='last'):
+def get_asp(obsid, version='last', temp_root=None):
     n_version = get_ver_num(obsid, version=version)
     if n_version is None:
         raise ValueError("No ASP1 for ver %s" % version)
@@ -220,7 +220,7 @@ def get_asp(obsid, version='last'):
         return
 
     # get data
-    tempdirobj = Ska.File.TempDir(dir=opt.temp_root)
+    tempdirobj = Ska.File.TempDir(dir=temp_root)
     tempdir = tempdirobj.name
     arc5.sendline("reset")
     arc5.sendline("cd %s" % tempdir)
@@ -317,6 +317,7 @@ def update_link(obsid):
 
 
 def get_todo_from_links():
+    logger.info("Looking for 'todo' links")
     chunk_dirs = glob(os.path.join(archive_dir, "??"))
     todo_obs = []
     for cdir in chunk_dirs:
@@ -339,11 +340,12 @@ def get_todo_from_links():
     return todo_obs
 
 
-def main(opt):
+def update_archive(opt):
 
     global archive_dir
     archive_dir = opt.data_root
     global arc5
+    logger.info("initializing arc5gl")
     arc5 = Ska.arc5gl.Arc5gl()
     global aca_db
     aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
@@ -354,7 +356,7 @@ def main(opt):
 
     # if an obsid is requested, just do that
     if opt.obsid:
-        get_asp(opt.obsid, version=opt.version)
+        get_asp(opt.obsid, opt.version, opt.temp_root)
         update_link(opt.obsid)
         return
 
@@ -365,7 +367,7 @@ def main(opt):
         logger.info("running get_asp for obsid %d ver %s, "
                     % (obs['obsid'], obs['revision']))
         try:
-            get_asp(obs['obsid'], obs['revision'])
+            get_asp(obs['obsid'], obs['revision'], opt.temp_root)
         except ValueError as ve:
             logger.info("skipping %d, default ver not available"
                         % obs['obsid'])
@@ -392,14 +394,14 @@ def main(opt):
             # ignore aspect_1 table versions and just try for default
             # also ignore errors in this case
             try:
-                get_asp(obs['obsid'], version='default')
+                get_asp(obs['obsid'], 'default', opt.temp_root)
             except ValueError as ve:
                 logger.info("skipping %d, default ver not available"
                             % obs['obsid'])
                 logger.debug(ve)
                 continue
         else:
-            get_asp(obs['obsid'], version=obs['revision'])
+            get_asp(obs['obsid'], obs['revision'], opt.temp_root)
         update_link(obs['obsid'])
         last_id_fh = open(last_id_file, 'w')
         last_id_fh.write("%d" % obs['aspect_1_id'])
@@ -407,7 +409,9 @@ def main(opt):
     if not len(todo):
         logger.info("No new aspect_1 data")
 
+def main():
+    opt = get_options()
+    update_archive(opt)
 
 if __name__ == '__main__':
-    opt = get_options()
-    main(opt)
+    main()
