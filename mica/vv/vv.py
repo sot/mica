@@ -235,8 +235,10 @@ class Obi(object):
             plottime = time / 1000.
 
         labelfontsize = 10
+        axes = dict()
 
         ayz = fig.add_axes([.05, .25, .20, .20])
+        axes['yz'] = ayz
         ayz.plot(dy[ok], dz[ok], 'g.')
         ayz.plot(dy[bad], dz[bad], 'r.')
         ayz.set_aspect('equal', 'datalim')
@@ -248,6 +250,7 @@ class Obi(object):
         ayz.set_ylabel('Z offset (arcsec)')
 
         ayzf = fig.add_axes([.05, .7, .20, .20])
+        axes['yz_fixed'] = ayzf
         ayzf.plot(dy[ok], dz[ok], 'g.')
         ayzf.plot(dy[bad], dz[bad], 'r.')
         ayzf.set_aspect('equal')
@@ -260,7 +263,8 @@ class Obi(object):
             ayzf.set_ylim([dz0 - xy_range, dz0 + xy_range])
 
         ay = fig.add_axes([.32, .7, .62, .25])
-        ay.plot(plottime[ok], dy[ok], color='green')
+        axes['dy'] = ay
+        ay.plot(plottime[ok], dy[ok], color='green', marker='.', linestyle='')
         ay.plot(plottime[bad], dy[bad], 'r.')
         plt.setp(ay.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ay.get_xticklabels(), visible=False)
@@ -279,7 +283,8 @@ class Obi(object):
                      color='blue')
 
         az = fig.add_axes([.32, .4, .62, .25], sharex=ay)
-        az.plot(plottime[ok], dz[ok], color='green')
+        axes['dz'] = az
+        az.plot(plottime[ok], dz[ok], color='green', marker='.')
         az.plot(plottime[bad], dz[bad], 'r.')
         plt.setp(az.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(az.get_xticklabels(), visible=False)
@@ -298,6 +303,7 @@ class Obi(object):
                      color='blue')
 
         am = fig.add_axes([.32, .1, .62, .25], sharex=ay)
+        axes['mag'] = am
         plt.setp(am.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(am.get_xticklabels(), fontsize=labelfontsize)
         am.plot(plottime[ok], mag[ok], color='green')
@@ -308,6 +314,7 @@ class Obi(object):
             am.plot([s_t, s_t], am.get_ylim(), color='blue',
                     linestyle='dashed')
         am.grid()
+        self.slot[slot]['axes'] = axes
         return fig
 
 
