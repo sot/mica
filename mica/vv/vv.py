@@ -70,7 +70,7 @@ def rms(data, median):
 
 def frac_bad(data, median, limit):
     big_offset = (data - median) > limit
-    frac_bad = np.count_nonzero(big_offset)/len(data)
+    frac_bad = len(np.flatnonzero(big_offset)) / len(data)
     return frac_bad
 
 
@@ -302,7 +302,7 @@ class AspectInterval(object):
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
         prop_all = read_table(gsfile)
         good = prop_all['id_status'] == 'GOOD      '
-        if np.count_nonzero(good) == 0:
+        if len(np.flatnonzero(good)) == 0:
             raise ValueError("No good %s stars" % propname)
         prop = prop_all[good]
 
