@@ -4,6 +4,7 @@ import re
 import pyfits
 from glob import glob
 import numpy as np
+import numpy.ma as ma
 from Ska.Table import read_table
 from scipy.signal import medfilt as medfilt
 
