@@ -203,7 +203,8 @@ class Obi(object):
         y = None
         z = None
         xy_range = None
-        (qual, dy, dz, mag, time) = [self.slot[slot][x] for x in data_cols]
+        (qual, dy, dz, mag, time) = [self.slot[slot][x] for x in 
+                                     ['qual', 'dy', 'dz', 'mag', 'time']]
         ai_starts = [interv.deltas[slot]['time'][0]
                      for interv in self.aspect_intervals]
         time0 = time[0]
