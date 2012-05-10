@@ -531,6 +531,21 @@ class AspectInterval(object):
                                             ang_y=ceni['ang_y'],
                                             ang_z=ceni['ang_z'],
                                             )
+    def calc_sim_offset(self):
+        mm2a = 20.0
+        max_d_dyz = 0.2
+        max_drift = 3.0
+        max_abs_sim = 10
+        abs_sim_dy0 = 8.0
+        abs_sim_dz0 = 8.0
+        n_med = 21
+        medf_dy = medfilt(self.asol.dy * mm2a, kernel_size=n_med)
+        medf_dz = medfilt(self.asol.dz * mm2a, kernel_size=n_med)
+        d_dy = abs(medf_dy[1:] - medf_dy[:-1])
+        d_dz = abs(medf_dz[1:] - medf_dz[:-1])
+        self.sim['time'] = self.asol['time'][:-1]
+        self.sim['d_dy'] = d_dy
+        self.sim['d_dz'] = d_dz
 
 
         
