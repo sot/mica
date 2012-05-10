@@ -90,34 +90,51 @@ class Obi(object):
 
         #self.plots = [self.plot_slot(slot) for slot in range(0, 8)]
 
+    def aiid_from_asol(self, asol_file, obsdir):            
+        hdulist = pyfits.open(asol_file)
+        header = hdulist[1].header
+            # skip files that aren't in the obspar range
+        if ((self.obspar['tstart'] >= header['TSTOP'])
+            or (self.obspar['tstop'] <= header['TSTART'])):
+            return None
+        aiid_match = re.search('(pcadf\d+[^_]*)_', asol_file)
+        if aiid_match:
+            return dict(id=aiid_match.group(1),
+                        dir=obsdir)
+                                       
 
     def find_aspect_intervals(self):
         obsdir = self.obsdir
         asol_files = sorted(glob(os.path.join(obsdir, 'pcad*asol*')))
         self.aiids = []
-        for file in asol_files:
-            hdulist = pyfits.open(file)
-            header = hdulist[1].header
-            # skip files that aren't in the obspar range
-            if ((self.obspar['tstart'] >= header['TSTOP'])
-                or (self.obspar['tstop'] <= header['TSTART'])):
-                continue
-            aiid_match = re.search('(pcadf\d+N\d{3})', file)
-            if aiid_match:
-                self.aiids.append(aiid_match.group(0))
+        if len(asol_files):
+            for file in asol_files:
+                self.aiids.append(self.aiid_from_asol(file, obsdir))
+        ASP_dirs = sorted(glob(os.path.join(obsdir, 'ASP_L1__*')))
+        if len(ASP_dirs):
+            for dir in ASP_dirs:
+                max_out = max(sorted(glob(os.path.join(dir, 'out*'))))
+                asol_files = sorted(glob(os.path.join(max_out, 'pcad*asol*')))
+                if len(asol_files):
+                    for file in asol_files:
+                        self.aiids.append(self.aiid_from_asol(file, max_out))
+            
 
     def process_aspect_intervals(self):
         self.aspect_intervals = []
         for aiid in self.aiids:
-            self.aspect_intervals.append(AspectInterval(aiid, self.obsdir))
+            self.aspect_intervals.append(
+                AspectInterval(aiid['id'], aiid['dir']))
 
     def concat_slot_data(self):
         all_slot = self.slot
         for slot in range(0, 8):
             cslot = dict()
             for d in data_cols:
-                slotval = [i.deltas[slot][d] for i in self.aspect_intervals]
-                cslot[d] = np.concatenate(slotval)
+                slotval = [i.deltas[slot][d] for i in self.aspect_intervals
+                           if slot in i.deltas]
+                if len(slotval):
+                    cslot[d] = np.concatenate(slotval)
             all_slot[slot] = cslot
 
 
@@ -294,9 +311,9 @@ class Obi(object):
 
 
 class AspectInterval(object):
-    def __init__(self, aiid, obsdir, opt=None):
+    def __init__(self, aiid, aspdir, opt=None):
         self.aiid = aiid
-        self.obsdir = obsdir
+        self.aspdir = aspdir
         self.opt = opt if opt else {'obc': None, 'alg': 8, 'noacal': None}
         self.read_in_data()
         self.deltas = {}
@@ -304,7 +321,7 @@ class AspectInterval(object):
         self.calc_guide_deltas()
 
     def get_prop(self, propname, propstring):
-        datadir = self.obsdir
+        datadir = self.aspdir
         print 'Reading %s stars' % propname
         gsfile = glob(os.path.join(
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
@@ -327,7 +344,7 @@ class AspectInterval(object):
 
     def read_in_data(self):
         aiid = self.aiid
-        datadir = self.obsdir
+        datadir = self.aspdir
         opt = self.opt
 
         (self.gsprop, self.gspr_info, self.h_gspr) \
