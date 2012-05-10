@@ -69,6 +69,8 @@ def rms(data, median):
 
 
 def frac_bad(data, median, limit):
+    if len(data) == 0:
+        return None
     big_offset = (data - median) > limit
     frac_bad = len(np.flatnonzero(big_offset)) / len(data)
     return frac_bad
