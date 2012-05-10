@@ -124,9 +124,14 @@ class Obi(object):
         all_slot = self.slot
         for slot_id in all_slot:
             slot = all_slot[slot_id]
+            if not ('dy' in slot and 'dz' in slot and 'mag' in slot):
+                continue
             # these should only be calculated over good data, right?
+            qual = dict(dy=slot['qual'],
+                        dz=slot['qual'],
+                        mag=slot['mag_qual'])
             for axdir in ['dy', 'dz', 'mag']:
-                data = slot[axdir][slot['qual'] == 0]
+                data = slot[axdir][qual[axdir] == 0]
                 smean = np.mean(data)
                 slot['%s_mean' % axdir] = smean
                 med = np.median(data)
@@ -135,8 +140,8 @@ class Obi(object):
                 slot['%s_rms' % axdir] = srms
                 bad_frac = frac_bad(data, med, dyz_big_lim)
                 slot['frac_%s_big' % axdir] = bad_frac
-            slot['rad_off'] = np.sqrt(slot['dy_med']**2
-                                      + slot['dz_med']**2)
+            slot['rad_off'] = np.sqrt(slot['dy_med'] ** 2
+                                      + slot['dz_med'] ** 2)
             slot['n_pts'] = len(slot['dy'])
             if slot['type'] == 'fid':
                 slot['mean_y'] = np.mean(slot['ang_y_sm'])
@@ -449,11 +454,15 @@ class AspectInterval(object):
                     else:
                         err = "Bad fidpr interval not contained in ceni range"
                         raise ValueError(err)
-
-            mag = medfilt(M0 - 2.5
-                          * np.log10(ceni['counts'][ceni['counts'] > 10.0]
-                                     / integ_time
-                                     / C0), 3)
+                
+            mag = ma.zeros(len(ceni['counts']))
+            mag[:] = ma.masked
+            good_mag = medfilt(M0 - 2.5
+                               * np.log10(ceni['counts'][ceni['counts'] > 10.0]
+                                          / integ_time
+                                          / C0), 3)
+            mag[ceni['counts'] > 10] = good_mag
+            mag[ceni['counts'] > 10].mask = False
 
             self.deltas[fid['slot']] = dict(time=ceni['time'],
                                             dy=dy,
@@ -501,10 +510,14 @@ class AspectInterval(object):
                 zag = np.arctan2(d_aca[2], d_aca[0]) * r2a
                 dy[i] = ceni[i]['ang_y'] * 3600 - yag
                 dz[i] = ceni[i]['ang_z'] * 3600 - zag
-            mag = medfilt(M0 - 2.5
-                          * np.log10(ceni['counts'][ceni['counts'] > 10.0]
-                                     / integ_time
-                                     / C0), 3)
+            mag = ma.zeros(len(ceni['counts']))
+            mag.mask = True
+            good_mag = medfilt(M0 - 2.5
+                               * np.log10(ceni['counts'][ceni['counts'] > 10.0]
+                                          / integ_time
+                                          / C0), 3)
+            mag[ceni['counts'] > 10] = good_mag
+            mag[ceni['counts'] > 10].mask = False
 
             qual = ceni['status'].copy()
             slot_fidpr = [pr for pr in self.gspr_info
