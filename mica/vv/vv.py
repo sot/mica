@@ -60,12 +60,12 @@ enc_rad_2 = 0.99
 dyz_big_lim = 0.7
 frac_dyz_lim = 0.05
 
-data_cols = ['qual', 'dy', 'dz', 'mag', 'time', 
+data_cols = ['qual', 'dy', 'dz', 'mag', 'time',
              'ang_y_sm', 'ang_y', 'ang_z_sm', 'ang_z']
 
 
 def rms(data, median):
-    return np.sqrt(np.mean((data - median)**2))
+    return np.sqrt(np.mean((data - median) ** 2))
 
 
 def frac_bad(data, median, limit):
@@ -522,10 +522,10 @@ class AspectInterval(object):
                         raise ValueError(err)
 
             self.deltas[star['slot']]= dict(dy=dy,
-                                             dz=dz,
-                                             time=ceni['time'],
-                                             mag=mag,
-                                             qual=qual,
+                                            dz=dz,
+                                            time=ceni['time'],
+                                            mag=mag,
+                                            qual=qual,
                                             ang_y_sm=ceni['ang_y_sm'],
                                             ang_z_sm=ceni['ang_z_sm'],
                                             ang_y=ceni['ang_y'],
