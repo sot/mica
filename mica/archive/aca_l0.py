@@ -117,20 +117,23 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
     return all_rows
 
 
-def get_interval_files(tstart, tstop, slot, imgsize=[4, 6, 8], db=None):
+def get_interval_files(tstart, tstop,
+                       slots=[0, 1, 2, 3, 4, 5, 6, 7], 
+                       imgsize=[4, 6, 8], db=None):
     if not db:
         dbfile = os.path.join(config['data_root'], 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
     tstart = DateTime(tstart).secs
     tstop = DateTime(tstop).secs
     imgsize_str = ','.join([str(x) for x in imgsize])
+    slot_str = ','.join([str(x) for x in slots])
     db_query = ('SELECT * FROM archfiles '
                 'WHERE tstop > %f '
                 'AND tstart < %f '
-                'AND slot == %d '
+                'AND slot in (%s) '
                 'AND imgsize in (%s) '
                 'order by filetime asc '
-                % (tstart, tstop, slot, imgsize_str))
+                % (tstart, tstop, slot_str, imgsize_str))
     return db.fetchall(db_query)
 
 
