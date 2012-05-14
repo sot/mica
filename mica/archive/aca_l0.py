@@ -97,7 +97,9 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
     rowcount = 0
     for f in data_files:
         fp = os.path.join(data_root,
-                          str(f['year']), str(f['doy']), f['filename'])
+                          str(f['year']),
+                          "{0:03d}".format(f['doy']),
+                          f['filename'])
         hdu = pyfits.open(fp)
         chunk = hdu[1].data
         for fname in all_rows.dtype.names:
