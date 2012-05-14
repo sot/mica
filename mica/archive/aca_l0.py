@@ -49,7 +49,10 @@ aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('HD3TLM63', '|u1'), ('HD3TLM64', '|u1'), ('HD3TLM65', '|u1'),
              ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
              ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
-             ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1')]
+             ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
+             ('IMGSIZE', '>i4'),
+             ]
+
 
 #config = ConfigObj("aca0.conf")
 config = dict(data_root='/data/aca/archive/aca0',
@@ -82,7 +85,8 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
     if not db:
         dbfile = os.path.join(config['data_root'], 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
-    data_files = get_interval_files(tstart, tstop, slot, imgsize, db)
+    data_files = get_interval_files(tstart, tstop, slots=[slot],
+                                    imgsize=imgsize, db=db)
     if not len(data_files):
         # return an empty masked array
         return ma.zeros(0, dtype=aca_dtype)
@@ -97,7 +101,7 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
         hdu = pyfits.open(fp)
         chunk = hdu[1].data
         for fname in all_rows.dtype.names:
-            if fname == 'IMGRAW':
+            if fname == 'IMGRAW' or fname == 'IMGSIZE':
                 continue
             if fname in chunk.dtype.names:
                 all_rows[fname][rowcount:(rowcount + len(chunk))] \
@@ -105,6 +109,7 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
                 all_rows[fname][rowcount:(rowcount + len(chunk))].mask \
                     = False
         imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
+        all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = imgsize
         all_rows['IMGRAW'].reshape(rows, 8, 8)[
             rowcount:(rowcount + len(chunk)), 0:imgsize, 0:imgsize] = (
             chunk.field('IMGRAW').reshape(len(chunk), imgsize, imgsize))
