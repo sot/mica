@@ -6,8 +6,9 @@ import obsid_archive
 
 #from configobj import ConfigObj
 #config = ConfigObj("obspar.conf")
-config = dict(data_root='./data/aca/archive/obspar',
-              temp_root='./data/aca/archive/tempobs',
+config = dict(data_root='/data/aca/archive/obspar',
+              temp_root='/data/aca/archive/tempobs',
+              sql_def='obspar_def.sql',
               apstat_table='obidet_0_5',
               apstat_id='obidet_0_5_id',
               label='obspar',
@@ -174,7 +175,13 @@ def get_options():
     return opt 
 
 
+def get_dir(obsid):
+    archive = obsid_archive.ObsArchive(dict(config))
+    return archive.get_dir(obsid)
 
+def get_obs_dirs(obsid):
+    archive = obsid_archive.ObsArchive(dict(config))
+    return archive.get_obs_dirs(obsid)
 
 def main():
     opt = get_options()
