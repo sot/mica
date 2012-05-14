@@ -92,7 +92,7 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
         return ma.zeros(0, dtype=aca_dtype)
     rows = np.sum(data_files['rows'])
     zero_row = ma.zeros(1, dtype=aca_dtype)
-    zero_row.mask = True
+    zero_row.mask = ma.masked
     all_rows = zero_row.repeat(rows)
     rowcount = 0
     for f in data_files:
@@ -106,8 +106,6 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
             if fname in chunk.dtype.names:
                 all_rows[fname][rowcount:(rowcount + len(chunk))] \
                     = chunk.field(fname)
-                all_rows[fname][rowcount:(rowcount + len(chunk))].mask \
-                    = False
         imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
         all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = imgsize
         all_rows['IMGRAW'].reshape(rows, 8, 8)[
