@@ -546,12 +546,12 @@ class AspectInterval(object):
             mag[ceni['counts'] > 10].mask = False
 
             qual = ceni['status'].copy()
-            slot_fidpr = [pr for pr in self.gspr_info
+            slot_gspr = [pr for pr in self.gspr_info
                           if pr['slot'] == star['slot']]
-            if not slot_fidpr:
+            if not slot_gspr:
                 err = "No GSPR info found for slot %d" % star['slot']
                 raise ValueError(err)
-            for pr in slot_fidpr:
+            for pr in slot_gspr:
                 if pr['id_status'] != 'GOOD      ':
                     bad = ((ceni['time'] >= pr['tstart'])
                            & (ceni['time'] <= pr['tstop']))
