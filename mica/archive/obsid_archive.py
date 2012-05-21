@@ -423,7 +423,7 @@ class ObsArchive:
                         % (obs['obsid'], obs['ap_date']))
             if config['firstrun']:
                 # if I've already got a later version, skip
-                have = get_obs_dirs(obs['obsid'], archive_dir)
+                have = self.get_obs_dirs(obs['obsid'])
                 if have:
                     max_rev = max(have['revisions'])
                     print "%d vs %d" % (max_rev, obs['revision'])
