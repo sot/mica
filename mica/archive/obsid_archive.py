@@ -67,7 +67,7 @@ class ObsArchive:
 
 
     def get_obspar_info(self, i, f, archfiles):
-        logger = self._logger
+        logger = self.logger
         filename = os.path.basename(f)
         logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
         obspar = get_obspar(f)
@@ -128,7 +128,7 @@ class ObsArchive:
     def get_ver_num(self, obsid, version='default'):
         arc5 = self._arc5
         apstat = self._apstat
-        logger = self._logger
+        logger = self.logger
         config = self.config
         # this is obi agnostic, all obis should be same
         # version anyway...u
@@ -211,7 +211,7 @@ class ObsArchive:
     def get_arch(self, obsid, version='last'):
         arc5 = self._arc5
         apstat = self._apstat
-        logger = self._logger
+        logger = self.logger
         config = self.config
         temp_root = config['temp_root']
 
@@ -291,7 +291,7 @@ class ObsArchive:
     def update_link(self, obsid):
         arc5 = self._arc5
         apstat = self._apstat
-        logger = self._logger
+        logger = self.logger
         config = self.config
         archive_dir = config['data_root']
 
@@ -350,7 +350,7 @@ class ObsArchive:
                 os.remove(obs_ln_last)
 
     def get_todo_from_links(self, archive_dir):
-        logger = self._logger
+        logger = self.logger
         logger.info("Checking for updates to obsids with provisional data")
         chunk_dirs = glob(os.path.join(archive_dir, "??"))
         todo_obs = []
@@ -367,7 +367,7 @@ class ObsArchive:
     def update(self):
         self.set_env()
         config = self._config
-        logger = self._logger
+        logger = self.logger
         archive_dir = config['data_root']
         apstat = self._apstat
 
