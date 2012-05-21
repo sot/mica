@@ -10,7 +10,7 @@ CREATE TABLE archfiles (
   caldbver        text ,
   content         text ,
   revision        int ,
-  obsid           int ,
+  obsid           int not null,
   date            text not null,
 
   CONSTRAINT pk_archfiles PRIMARY KEY (filename)
