@@ -46,6 +46,8 @@ def get_obspar(obsparfile):
     return obspar
 
 
+class ProductVersionError(Exception):
+    pass
     
 class ObsArchive:
     def __init__(self, config):
@@ -153,7 +155,7 @@ class ObsArchive:
                                config['small_ver_regex'],
                                )
         if not version:
-            raise ValueError("Version not defined")
+            raise ProductVersionError("Version not defined")
         for afile in glob(os.path.join(tempdir, "*")):
             os.remove(afile)
         os.removedirs(tempdir)
@@ -217,7 +219,7 @@ class ObsArchive:
 
         n_version = self.get_ver_num(obsid, version=version)
         if n_version is None:
-            raise ValueError("No %s data for ver %s" 
+            raise ProductVersionError("No %s data for ver %s" 
                              % (config['label'], version))
         # use numeric version instead of 'last' or 'default'
         version = n_version
@@ -375,7 +377,12 @@ class ObsArchive:
         # if an obsid is requested, just do that
         if 'obsid' in config and config['obsid']:
             self.get_arch(config['obsid'], config['version'])
-            self.update_link(config['obsid'])
+            try:
+                self.update_link(config['obsid'])
+            except ProductVersionError as ve:
+                logger.debug(ve)
+                logger.info("Could not determine link versions for %d"
+                            % config['obsid'])
             return
 
         # look for all previous "provisional" aspect solutions
@@ -386,7 +393,7 @@ class ObsArchive:
                         % (obs['obsid'], obs['revision']))
             try:
                 self.get_arch(obs['obsid'], obs['revision'])
-            except ValueError as ve:
+            except ProductVersionError as ve:
                 logger.info("skipping %d, default ver not available"
                             % obs['obsid'])
                 logger.debug(ve)
@@ -427,7 +434,7 @@ class ObsArchive:
                 # also ignore errors in this case
                 try:
                     self.get_arch(obs['obsid'], 'default')
-                except ValueError as ve:
+                except ProductVersionError as ve:
                     logger.info("skipping %d, default ver not available"
                                 % obs['obsid'])
                     logger.debug(ve)
