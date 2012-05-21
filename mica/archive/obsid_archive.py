@@ -252,6 +252,8 @@ class ObsArchive:
             arc5.sendline("obi=%d" % minobi)
         arc5.sendline("version=%s" % version)
         arc5.sendline("get %s" % config['full'])
+        arc5.sendline("dataset=pipelog")
+        arc5.sendline("go")
         archfiles = glob(os.path.join(tempdir, "*"))
         if not archfiles:
             raise ValueError("Retrieved no files")
@@ -273,6 +275,11 @@ class ObsArchive:
                 "select * from archfiles where obsid = %d and revision = '%s'"
                 % (obsid, version))
             for i, f in enumerate(archfiles):
+                # just copy the log files without inserting in db
+                if re.match('.+log.gz', f):
+                    shutil.copy(f, obs_dir)
+                    os.remove(f)
+                    continue
                 arch_info = self.get_arch_info(i, f, archfiles)
                 arch_info['obsid'] = obsid
                 if (len(existing)
