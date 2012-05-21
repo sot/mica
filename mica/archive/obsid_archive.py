@@ -273,10 +273,8 @@ class ObsArchive:
                 "select * from archfiles where obsid = %d and revision = '%s'"
                 % (obsid, version))
             for i, f in enumerate(archfiles):
-                obspar = self.get_obspar_info(i, f, archfiles)
-                arch_info = dict()
-                [arch_info.update({col: obspar[col]})
-                for col in config['cols'] if col in obspar]
+                arch_info = self.get_arch_info(i, f, archfiles)
+                arch_info['obsid'] = obsid
                 if (len(existing)
                    and arch_info['filename'] in existing['filename']):
                     print "skipping %s" % f
