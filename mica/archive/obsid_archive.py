@@ -259,8 +259,10 @@ class ObsArchive:
             db_file = os.path.join(os.path.abspath(config['data_root']),
                                    'archfiles.db3')
             if not os.path.exists(db_file):
+                logger.info("creating archfiles db from %s"
+                            % config['sql_def'])
                 db_sql = os.path.join(os.environ['SKA_DATA'],
-                                      'mica', 'obspar_def.sql')
+                                      'mica', config['sql_def'])
                 db_init_cmds = file(db_sql).read()
                 db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
                                  autocommit=False)
