@@ -159,6 +159,55 @@ class ObsArchive:
         os.removedirs(tempdir)
         return version
 
+    def get_fits_info(self, i, f, archfiles):
+        """Read filename ``f`` with index ``i`` (position within list of
+        filenames).  The file has type ``filetype`` and will be added to
+        MSID file at row index ``row``.  ``colnames`` is the list of
+        column names for the content type (not used here).
+        """
+        logger = self.logger
+        config = self.config
+        filename = os.path.basename(f)
+
+        # Read FITS archive file and accumulate data into dats list and
+        # header into headers dict
+        logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
+        hdus = pyfits.open(f)
+        hdu = hdus[1]
+
+        # Accumlate relevant info about archfile that will be ingested into
+        # MSID h5 files.  Commit info before h5 ingest so if there is a failure
+        # the needed info will be available to do the repair.
+        archfiles_row = dict((x, hdu.header.get(x.upper()))
+                             for x in config['cols'])
+        archfiles_row['checksum'] = hdu._checksum
+        archfiles_row['filename'] = filename
+        archfiles_row['filetime'] = int(
+            re.search(r'(\d+)', archfiles_row['filename']).group(1))
+        filedate = DateTime(archfiles_row['filetime']).date
+        year, doy = (int(x)
+                     for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
+        archfiles_row['year'] = year
+        archfiles_row['doy'] = doy
+        hdus.close()
+        return archfiles_row
+
+    
+    def get_obspar_info(self, i, f, archfiles):
+        obspar = self.get_obspar_info(i, f, archfiles)
+        arch_info = dict()
+        [arch_info.update({col: obspar[col]})
+         for col in config['cols'] if col in obspar]
+        return arch_info
+
+
+    def get_arch_info(self, i, f, archfiles):
+        config = self.config
+        if config['full'] == 'obspar':
+            return self.get_obspar_info(i, f, archfiles)
+        else:
+            return self.get_fits_info(i, f, archfiles)
+
     def get_arch(self, obsid, version='last'):
         arc5 = self._arc5
         apstat = self._apstat
