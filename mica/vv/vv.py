@@ -72,7 +72,7 @@ data_cols = ['qual', 'dy', 'dz', 'mag', 'time',
 def frac_bad(data, median, limit):
     if len(data) == 0:
         return None
-    big_offset = (data - median) > limit
+    big_offset = abs(data - median) > limit
     frac_bad = len(np.flatnonzero(big_offset)) / len(data)
     return frac_bad
 
@@ -591,6 +591,7 @@ class AspectInterval(object):
         self.sim['time'] = self.asol['time'][:-1]
         self.sim['d_dy'] = d_dy
         self.sim['d_dz'] = d_dz
+
 
 
         
