@@ -65,8 +65,8 @@ data_cols = ['qual', 'dy', 'dz', 'mag', 'time',
              'ang_y_sm', 'ang_y', 'ang_z_sm', 'ang_z']
 
 
-def rms(data, median):
-    return np.sqrt(np.mean((data - median) ** 2))
+#def rms(data, median):
+#    return np.sqrt(np.mean((data - median) ** 2))
 
 
 def frac_bad(data, median, limit):
@@ -134,7 +134,10 @@ class Obi(object):
                 slotval = [i.deltas[slot][d] for i in self.aspect_intervals
                            if slot in i.deltas]
                 if len(slotval):
-                    cslot[d] = np.concatenate(slotval)
+                    if isinstance(slotval[0], np.ma.MaskedArray):
+                        cslot[d] = ma.concatenate(slotval)
+                    else:
+                        cslot[d] = np.concatenate(slotval)
             all_slot[slot] = cslot
 
 
@@ -146,18 +149,23 @@ class Obi(object):
                 continue
             # these should only be calculated over good data, right?
             qual = dict(dy=slot['qual'],
-                        dz=slot['qual'],
-                        mag=slot['mag_qual'])
+                        dz=slot['qual'])
             for axdir in ['dy', 'dz', 'mag']:
-                data = slot[axdir][qual[axdir] == 0]
-                smean = np.mean(data)
+                if axdir == 'mag':
+                    data = slot['mag']
+                else:
+                    data = ma.array(slot[axdir])
+                    data[qual[axdir] != 0] = ma.masked
+                smean = ma.mean(data)
                 slot['%s_mean' % axdir] = smean
-                med = np.median(data)
+                med = ma.median(data)
                 slot['%s_med' % axdir] = med
-                srms = rms(data, med)
+                srms = ma.sqrt(ma.mean(data - med) ** 2)
                 slot['%s_rms' % axdir] = srms
                 bad_frac = frac_bad(data, med, dyz_big_lim)
                 slot['frac_%s_big' % axdir] = bad_frac
+
+            slot['frac_%s_big' % axdir] = bad_frac
             slot['rad_off'] = np.sqrt(slot['dy_med'] ** 2
                                       + slot['dz_med'] ** 2)
             slot['n_pts'] = len(slot['dy'])
@@ -488,8 +496,6 @@ class AspectInterval(object):
                                           / integ_time
                                           / C0), 3)
             mag[ceni['counts'] > 10] = good_mag
-            mag[ceni['counts'] > 10].mask = False
-
             self.deltas[fid['slot']] = dict(time=ceni['time'],
                                             dy=dy,
                                             dz=dz,
@@ -537,14 +543,12 @@ class AspectInterval(object):
                 dy[i] = ceni[i]['ang_y'] * 3600 - yag
                 dz[i] = ceni[i]['ang_z'] * 3600 - zag
             mag = ma.zeros(len(ceni['counts']))
-            mag.mask = True
+            mag[:] = ma.masked
             good_mag = medfilt(M0 - 2.5
                                * np.log10(ceni['counts'][ceni['counts'] > 10.0]
                                           / integ_time
                                           / C0), 3)
             mag[ceni['counts'] > 10] = good_mag
-            mag[ceni['counts'] > 10].mask = False
-
             qual = ceni['status'].copy()
             slot_gspr = [pr for pr in self.gspr_info
                           if pr['slot'] == star['slot']]
