@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import os
 import logging
 import obsid_archive
 
@@ -22,10 +21,7 @@ config = dict(data_root='/data/aca/archive/asp1',
               full='asp1')
 
 
-
 def get_options():
-#    from optparse import OptionParser
-#    parser = OptionParser()
     import argparse
     parser = argparse.ArgumentParser(
         description="Fetch aspect level 1 products and make a file archive")
@@ -47,16 +43,18 @@ def get_options():
     parser.add_argument("--proctype",
                         default="asp1")
     opt = parser.parse_args()
-    return opt 
+    return opt
 
 
 def get_dir(obsid):
     archive = obsid_archive.ObsArchive(dict(config))
     return archive.get_dir(obsid)
 
+
 def get_obs_dirs(obsid):
     archive = obsid_archive.ObsArchive(dict(config))
     return archive.get_obs_dirs(obsid)
+
 
 def main():
     opt = get_options()
