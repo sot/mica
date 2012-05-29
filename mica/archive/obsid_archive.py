@@ -17,6 +17,7 @@ import Ska.File
 import csv
 import gzip
 
+
 def parse_obspar(file):
     convert = {'i': int,
                'r': float,
@@ -30,13 +31,13 @@ def parse_obspar(file):
                                           'def1', 'def2', 'descr'),
                               dialect='excel')
 
-
     for row in obs_read:
         row['value'] = convert[row['type']](row['value'])
         row['name'] = row['name'].replace('-', '_')
         yield row
 
     return
+
 
 def get_obspar(obsparfile):
     """Get the obspar for obsid starting at tstart.  Return as a dict."""
@@ -48,7 +49,8 @@ def get_obspar(obsparfile):
 
 class ProductVersionError(Exception):
     pass
-    
+
+
 class ObsArchive:
     def __init__(self, config):
         self._config = config
@@ -67,7 +69,6 @@ class ObsArchive:
         self._apstat = Ska.DBI.DBI(dbi='sybase', server='sqlsao',
                                    database='axafapstat')
 
-
     def get_obspar_info(self, i, f, archfiles):
         logger = self.logger
         filename = os.path.basename(f)
@@ -77,7 +78,6 @@ class ObsArchive:
         obspar['filename'] = filename
         return obspar
 
-
     def get_dir(self, obsid):
         """Return the latest released directory for an obsid."""
         data_root = self._config['data_root']
@@ -85,7 +85,7 @@ class ObsArchive:
         return dirmap['default']
 
     def get_obs_dirs(self, obsid):
-        """Return a dictionary of all of the directories available for an obsid."""
+        """Return a dictionary of the directories available for an obsid."""
         data_root = self._config['data_root']
         strobs = "%05d" % obsid
         chunk_dir = strobs[0:2]
@@ -109,7 +109,6 @@ class ObsArchive:
             if defdirs:
                 dirmap['last'] = defdirs[0]
         return dirmap
-
 
     @staticmethod
     def get_file_ver(tempdir, fileglob, ver_regex):
@@ -187,21 +186,20 @@ class ObsArchive:
         archfiles_row['filetime'] = int(
             re.search(r'(\d+)', archfiles_row['filename']).group(1))
         filedate = DateTime(archfiles_row['filetime']).date
-        year, doy = (int(x)
-                     for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
+        year, doy = (
+            int(x) for x
+            in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
         archfiles_row['year'] = year
         archfiles_row['doy'] = doy
         hdus.close()
         return archfiles_row
 
-    
     def get_obspar_info(self, i, f, archfiles):
         obspar = self.get_obspar_info(i, f, archfiles)
         arch_info = dict()
         [arch_info.update({col: obspar[col]})
          for col in config['cols'] if col in obspar]
         return arch_info
-
 
     def get_arch_info(self, i, f, archfiles):
         config = self.config
@@ -219,7 +217,7 @@ class ObsArchive:
 
         n_version = self.get_ver_num(obsid, version=version)
         if n_version is None:
-            raise ProductVersionError("No %s data for ver %s" 
+            raise ProductVersionError("No %s data for ver %s"
                              % (config['label'], version))
         # use numeric version instead of 'last' or 'default'
         version = n_version
@@ -295,11 +293,8 @@ class ObsArchive:
             db.commit()
         return obs_dir, chunk_dir
 
-
     # this needs help
     def update_link(self, obsid):
-        arc5 = self._arc5
-        apstat = self._apstat
         logger = self.logger
         config = self.config
         archive_dir = config['data_root']
@@ -433,8 +428,9 @@ class ObsArchive:
                     max_rev = max(have['revisions'])
                     print "%d vs %d" % (max_rev, obs['revision'])
                     if max_rev >= obs['revision']:
-                        logger.info("skipping %d, firstrun and already have newer rev"
-                                    % obs['obsid'])
+                        logger.info(
+                            "skipping %d, firstrun and already have newer rev"
+                            % obs['obsid'])
                         continue
 
                 # ignore aspect_1 table versions and just try for default
