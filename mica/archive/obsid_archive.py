@@ -69,7 +69,7 @@ class ObsArchive:
         self._apstat = Ska.DBI.DBI(dbi='sybase', server='sqlsao',
                                    database='axafapstat')
 
-    def get_obspar_info(self, i, f, archfiles):
+    def get_all_obspar_info(self, i, f, archfiles):
         logger = self.logger
         filename = os.path.basename(f)
         logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
@@ -81,7 +81,7 @@ class ObsArchive:
     def get_dir(self, obsid):
         """Return the latest released directory for an obsid."""
         data_root = self._config['data_root']
-        dirmap = get_obs_dirs(obsid, data_root)
+        dirmap = self.get_obs_dirs(obsid)
         return dirmap['default']
 
     def get_obs_dirs(self, obsid):
@@ -195,11 +195,10 @@ class ObsArchive:
         return archfiles_row
 
     def get_obspar_info(self, i, f, archfiles):
-        obspar = self.get_obspar_info(i, f, archfiles)
-        arch_info = dict()
-        [arch_info.update({col: obspar[col]})
-         for col in config['cols'] if col in obspar]
-        return arch_info
+        """Wrap get_all_obspar_info to just return cols in config['cols']"""
+        obspar = self.get_all_obspar_info(i, f, archfiles)
+        return {col: obspar[col]
+                for col in self.config['cols'] if col in obspar}
 
     def get_arch_info(self, i, f, archfiles):
         config = self.config
