@@ -420,6 +420,7 @@ class ObsArchive:
         for obs in todo:
             logger.info("running get_arch for obsid %d run on %s"
                         % (obs['obsid'], obs['ap_date']))
+            get_rev = obs['revision']
             if config['firstrun']:
                 # if I've already got a later version, skip
                 have = self.get_obs_dirs(obs['obsid'])
@@ -431,19 +432,17 @@ class ObsArchive:
                             "skipping %d, firstrun and already have newer rev"
                             % obs['obsid'])
                         continue
+                else:
+                    get_rev = 'default'
 
-                # ignore aspect_1 table versions and just try for default
-                # also ignore errors in this case
-                try:
-                    self.get_arch(obs['obsid'], 'default')
-                except ProductVersionError as ve:
-                    logger.info("skipping %d, default ver not available"
-                                % obs['obsid'])
-                    logger.debug(ve)
-                    continue
-            else:
-                self.get_arch(obs['obsid'], obs['revision'])
-            self.update_link(obs['obsid'])
+            try:
+                self.get_arch(obs['obsid'], get_rev)
+                self.update_link(obs['obsid'])
+            except ProductVersionError as ve:
+                logger.info("skipping %d, default ver not available"
+                            % obs['obsid'])
+                logger.debug(ve)
+                continue
             last_id_fh = open(last_id_file, 'w')
             last_id_fh.write("%d" % obs[config['apstat_id']])
             last_id_fh.close()
