@@ -164,13 +164,11 @@ def get_options():
                         help="specific processing version to retrieve")
     parser.add_argument("--firstrun",
                         action='store_true',
-                        help="for archive init., ignore rev in aspect_1 table")
+                        help="for archive init., ignore revisions")
     parser.add_argument("--data-root",
                         help="parent directory for all data")
     parser.add_argument("--temp-root",
                         help="parent temp directory")
-    parser.add_argument("--proctype",
-                        default="asp1")
     opt = parser.parse_args()
     return opt 
 
