@@ -181,7 +181,7 @@ class ObsArchive:
         # the needed info will be available to do the repair.
         archfiles_row = dict((x, hdu.header.get(x.upper()))
                              for x in config['cols'])
-        archfiles_row['checksum'] = hdu._checksum
+        archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
         archfiles_row['filename'] = filename
         archfiles_row['filetime'] = int(
             re.search(r'(\d+)', archfiles_row['filename']).group(1))
