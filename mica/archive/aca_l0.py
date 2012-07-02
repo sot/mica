@@ -183,7 +183,7 @@ def read_archfile(i, f, archfiles, db):
     # the needed info will be available to do the repair.
     archfiles_row = dict((x, hdu.header.get(x.upper()))
                          for x in archfiles_hdr_cols)
-    archfiles_row['checksum'] = hdu._checksum
+    archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
     #archfiles_row['rowstart'] = row
     #archfiles_row['rowstop'] = row + len(dat)
     imgsize_sq = hdu.data[0].field('IMGRAW').shape[0]
