@@ -32,7 +32,11 @@ def parse_obspar(file):
                               dialect='excel')
 
     for row in obs_read:
-        row['value'] = convert[row['type']](row['value'])
+        if ((row['value'] == '')
+            and ((row['type'] == 'r') or (row['type'] == 'i'))):
+            row['value'] = None
+        else:
+            row['value'] = convert[row['type']](row['value'])
         row['name'] = row['name'].replace('-', '_')
         yield row
 
