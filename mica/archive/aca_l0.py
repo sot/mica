@@ -57,7 +57,8 @@ aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
 #config = ConfigObj("aca0.conf")
 config = dict(data_root='/data/aca/archive/aca0',
               temp_root='/data/aca/archive/temp',
-              days_at_once=30.0)
+              days_at_once=30.0,
+              sql_def='archfiles_aca_l0_def.sql')
 
 
 def get_options():
@@ -273,7 +274,15 @@ def update_archive(opt):
     if not os.path.exists(contentdir):
         os.makedirs(contentdir)
     archdb = os.path.join(contentdir, 'archfiles.db3')
-
+    if not os.path.exists(archdb):
+        logger.info("creating archfiles db from %s"
+                    % config['sql_def'])
+        db_sql = os.path.join(os.environ['SKA_DATA'],
+                              'mica', config['sql_def'])
+        db_init_cmds = file(db_sql).read()
+        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                         autocommit=False)
+        db.execute(db_init_cmds, commit=True)
     db = Ska.DBI.DBI(dbi='sqlite', server=archdb, autocommit=False)
     if opt.datestart:
         datestart = DateTime(opt.datestart)
