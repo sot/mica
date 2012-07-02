@@ -138,6 +138,38 @@ def get_interval_files(tstart, tstop,
     return db.fetchall(db_query)
 
 
+
+
+def rebuild_database(db=None, db_file=None):
+    if db is None and db_file is None:
+        raise ValueError
+    if db is None and db_file is not None:
+        logger.info("creating archfiles db from %s"
+                    % config['sql_def'])
+        db_sql = os.path.join(os.environ['SKA_DATA'],
+                              'mica', config['sql_def'])
+        db_init_cmds = file(db_sql).read()
+        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                         autocommit=False)
+        db.execute(db_init_cmds, commit=True)
+
+    year_dirs = sorted(glob(
+            os.path.join(config['data_root'], '[12][0-9][0-9][0-9]')))
+    for ydir in year_dirs:
+        day_dirs = sorted(glob(
+                os.path.join(ydir, '[0-3][0-9][0-9]')))
+        for ddir in day_dirs:
+            archfiles = sorted(glob(
+                    os.path.join(ddir, '*_img0*')))
+            db.execute("begin transaction")
+            for i, f in enumerate(archfiles):
+                arch_info = read_archfile(i, f, archfiles, db)
+                if arch_info:
+                    db.insert(arch_info, 'archfiles')
+            db.commit()
+                
+                         
+
 def get_archive_files(filetype, datestart, datestop):
     """Update FITS file archive with arc5gl and ingest files into msid (HDF5) archive"""
 
