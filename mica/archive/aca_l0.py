@@ -128,13 +128,19 @@ def get_interval_files(tstart, tstop,
     tstop = DateTime(tstop).secs
     imgsize_str = ','.join([str(x) for x in imgsize])
     slot_str = ','.join([str(x) for x in slots])
+    # a composite index isn't as fast as just doing a padded search on one
+    # index first (tstart).  This gets extra files to make sure we don't miss the 
+    # case where tstart is in the middle of an interval, but drastically
+    # reduces the size of the bsearch on the tstop index
+    tstart_pad = 10 * 86400
     db_query = ('SELECT * FROM archfiles '
-                'WHERE tstop > %f '
+                'WHERE tstart >= %f - %f '
                 'AND tstart < %f '
+                'AND tstop > %f '
                 'AND slot in (%s) '
                 'AND imgsize in (%s) '
                 'order by filetime asc '
-                % (tstart, tstop, slot_str, imgsize_str))
+                % (tstart, tstart_pad, tstop, tstart, slot_str, imgsize_str))
     return db.fetchall(db_query)
 
 
