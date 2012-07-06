@@ -7,6 +7,8 @@ import numpy as np
 import numpy.ma as ma
 from Ska.Table import read_table
 from scipy.signal import medfilt as medfilt
+import mica.archive.asp_l1 as asp_l1_arch
+import mica.archive.obspar as obspar_arch
 
 import matplotlib
 if __name__ == '__main__':
@@ -16,6 +18,15 @@ import matplotlib.pyplot as plt
 # borrowed from telem_archive
 import csv
 import gzip
+
+
+def get_arch_vv(obsid, version='default'):
+    asp_l1_dirs = asp_l1_arch.get_obs_dirs(obsid)
+    l1_dir = asp_l1_dirs[version]
+    obspar_dirs = obspar_arch.get_obs_dirs(obsid)
+    obspar_file = glob(os.path.join(obspar_dirs[version],
+                                    'axaf*par*'))[0]
+    return Obi(obspar_file, l1_dir)
 
 
 def parse_obspar(file):
