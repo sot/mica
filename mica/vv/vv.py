@@ -243,6 +243,7 @@ class Obi(object):
         else:
             xy_range = 1.0
             circ_rad = 0.7
+
         #    xmarg = [10, 10]
         #    ystyl = 8
         #else:
@@ -370,6 +371,8 @@ class AspectInterval(object):
         self.deltas = {}
         self._calc_fid_deltas()
         self._calc_guide_deltas()
+        self.sim = {}
+        self._calc_sim_offset()
 
     def _get_prop(self, propname, propstring):
         datadir = self.aspdir
