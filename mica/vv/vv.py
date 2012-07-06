@@ -92,16 +92,16 @@ class Obi(object):
     def __init__(self, obsparfile, obsdir):
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
-        self.find_aspect_intervals()
-        self.process_aspect_intervals()
+        self._find_aspect_intervals()
+        self._process_aspect_intervals()
         self.slot = dict()
-        self.concat_slot_data()
-        self.check_intervals()
-        self.agg_slot_data()
+        self._concat_slot_data()
+        self._check_intervals()
+        self._agg_slot_data()
 
         #self.plots = [self.plot_slot(slot) for slot in range(0, 8)]
 
-    def aiid_from_asol(self, asol_file, obsdir):            
+    def _aiid_from_asol(self, asol_file, obsdir):
         hdulist = pyfits.open(asol_file)
         header = hdulist[1].header
             # skip files that aren't in the obspar range
@@ -112,15 +112,14 @@ class Obi(object):
         if aiid_match:
             return dict(id=aiid_match.group(1),
                         dir=obsdir)
-                                       
 
-    def find_aspect_intervals(self):
+    def _find_aspect_intervals(self):
         obsdir = self.obsdir
         asol_files = sorted(glob(os.path.join(obsdir, 'pcad*asol*')))
         self.aiids = []
         if len(asol_files):
             for file in asol_files:
-                self.aiids.append(self.aiid_from_asol(file, obsdir))
+                self.aiids.append(self._aiid_from_asol(file, obsdir))
         ASP_dirs = sorted(glob(os.path.join(obsdir, 'ASP_L1__*')))
         if len(ASP_dirs):
             for dir in ASP_dirs:
@@ -128,16 +127,15 @@ class Obi(object):
                 asol_files = sorted(glob(os.path.join(max_out, 'pcad*asol*')))
                 if len(asol_files):
                     for file in asol_files:
-                        self.aiids.append(self.aiid_from_asol(file, max_out))
-            
+                        self.aiids.append(self._aiid_from_asol(file, max_out))
 
-    def process_aspect_intervals(self):
+    def _process_aspect_intervals(self):
         self.aspect_intervals = []
         for aiid in self.aiids:
             self.aspect_intervals.append(
                 AspectInterval(aiid['id'], aiid['dir']))
 
-    def concat_slot_data(self):
+    def _concat_slot_data(self):
         all_slot = self.slot
         for slot in range(0, 8):
             cslot = dict()
@@ -151,8 +149,7 @@ class Obi(object):
                         cslot[d] = np.concatenate(slotval)
             all_slot[slot] = cslot
 
-
-    def agg_slot_data(self):
+    def _agg_slot_data(self):
         all_slot = self.slot
         for slot_id in all_slot:
             slot = all_slot[slot_id]
@@ -187,9 +184,7 @@ class Obi(object):
                 slot['mean_y'] = np.mean(slot['ang_y'])
                 slot['mean_z'] = np.mean(slot['ang_z'])
 
-
-
-    def check_intervals(self):
+    def _check_intervals(self):
         all_slot = self.slot
         # check for weirdness across intervals
         slot_list = {}
@@ -342,12 +337,12 @@ class AspectInterval(object):
         self.aiid = aiid
         self.aspdir = aspdir
         self.opt = opt if opt else {'obc': None, 'alg': 8, 'noacal': None}
-        self.read_in_data()
+        self._read_in_data()
         self.deltas = {}
-        self.calc_fid_deltas()
-        self.calc_guide_deltas()
+        self._calc_fid_deltas()
+        self._calc_guide_deltas()
 
-    def get_prop(self, propname, propstring):
+    def _get_prop(self, propname, propstring):
         datadir = self.aspdir
         print 'Reading %s stars' % propname
         gsfile = glob(os.path.join(
@@ -369,15 +364,15 @@ class AspectInterval(object):
                              tstop=header['TSTOP']))
         return (prop, info, header)
 
-    def read_in_data(self):
+    def _read_in_data(self):
         aiid = self.aiid
         datadir = self.aspdir
         opt = self.opt
 
         (self.gsprop, self.gspr_info, self.h_gspr) \
-            = self.get_prop('guide', 'gspr')
+            = self._get_prop('guide', 'gspr')
         (self.fidprop, self.fidpr_info, self.h_fidpr) \
-            = self.get_prop('fid', 'fidpr')
+            = self._get_prop('fid', 'fidpr')
 
         print 'Reading aspect solution'
         if opt['obc']:
@@ -414,7 +409,7 @@ class AspectInterval(object):
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         self.integ_time = self.cenhdulist[1].header['INTGTIME']
 
-    def calc_fid_deltas(self):
+    def _calc_fid_deltas(self):
         asol = self.asol
         h_fidpr = self.h_fidpr
         aca_misalign = self.aca_misalign
@@ -518,7 +513,7 @@ class AspectInterval(object):
                                             ang_z=ceni['ang_z'],
                                             )
 
-    def calc_guide_deltas(self):
+    def _calc_guide_deltas(self):
         from Quaternion import Quat
 
         asol = self.asol
@@ -587,7 +582,7 @@ class AspectInterval(object):
                                             ang_y=ceni['ang_y'],
                                             ang_z=ceni['ang_z'],
                                             )
-    def calc_sim_offset(self):
+    def _calc_sim_offset(self):
         mm2a = 20.0
         max_d_dyz = 0.2
         max_drift = 3.0
