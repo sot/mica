@@ -14,6 +14,7 @@ import matplotlib
 if __name__ == '__main__':
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.rcParams['lines.markeredgewidth'] = 0
 
 # borrowed from telem_archive
 import csv
@@ -222,14 +223,19 @@ class Obi(object):
         ai_starts = [interv.deltas[slot]['time'][0]
                      for interv in self.aspect_intervals]
         time0 = time[0]
+        timepad = 0.05
         dy0 = np.median(dy)
         dz0 = np.median(dz)
 
-        fig = plt.figure(num=slot, figsize=(12, 10))
+        fig = plt.figure(num=slot, figsize=(14, 10))
         #fid_plot = np.abs(np.max(y) - np.min(y)) > 1e-6
         fid_plot = slot < 3
         ok = qual == 0
         bad = qual != 0
+
+        if fid_plot:
+            y = self.slot[slot]['ang_y_sm']
+            z = self.slot[slot]['ang_z_sm']
 
         if fid_plot and not xy_range:
             xy_range = 0.1
@@ -247,41 +253,57 @@ class Obi(object):
             plottime = (time - time0) / 1000.
         else:
             plottime = time / 1000.
-
+        timepad = 0.05 * (plottime[-1] - plottime[0])
         labelfontsize = 10
         axes = dict()
 
-        ayz = fig.add_axes([.05, .25, .20, .20])
+        ayz = fig.add_axes([.05, .7, .20, .20])
+
         axes['yz'] = ayz
         ayz.plot(dy[ok], dz[ok], 'g.')
         ayz.plot(dy[bad], dz[bad], 'r.')
-        ayz.set_aspect('equal', 'datalim')
+        ayz.set_aspect('equal')
+        ayz.grid()
         plt.setp(ayz.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayz.get_xticklabels(), fontsize=labelfontsize)
-        circle = plt.Circle((dy0, dz0), radius=circ_rad)
-        ayz.add_patch(circle)
-        ayz.set_xlabel('Y offset (arcsec)')
+        ayz.set_xlabel('Y offset (arcsec)')        
         ayz.set_ylabel('Z offset (arcsec)')
+        # make the all-range plot have equal dimensions
+        xlims = ayz.get_xlim()
+        ylims = ayz.get_ylim()
+        xrange = xlims[-1] - xlims[0]
+        yrange = ylims[-1] - ylims[0]
+        x0 = np.mean(xlims)
+        y0 = np.mean(ylims)
+        extent = max(xrange, yrange)/2.0
+        ayz.set_xlim(x0 - extent, x0 + extent)
+        ayz.set_ylim(y0 - extent, y0 + extent)
+        
 
-        ayzf = fig.add_axes([.05, .7, .20, .20])
+
+        ayzf = fig.add_axes([.05, .25, .20, .20])
         axes['yz_fixed'] = ayzf
         ayzf.plot(dy[ok], dz[ok], 'g.')
         ayzf.plot(dy[bad], dz[bad], 'r.')
         ayzf.set_aspect('equal')
+        ayzf.grid()
         plt.setp(ayzf.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayzf.get_xticklabels(), fontsize=labelfontsize)
+        circle = plt.Circle((dy0, dz0), radius=circ_rad, fill=False)
+        ayzf.add_patch(circle)
         ayzf.set_xlabel('Y offset (arcsec)')
         ayzf.set_ylabel('Z offset (arcsec)')
         if xy_range is not None:
             ayzf.set_xlim([dy0 - xy_range, dy0 + xy_range])
             ayzf.set_ylim([dz0 - xy_range, dz0 + xy_range])
 
-        ay = fig.add_axes([.32, .7, .62, .25])
+        ay = fig.add_axes([.30, .7, .62, .25])
         axes['dy'] = ay
         ay.plot(plottime[ok], dy[ok], color='green', marker='.', linestyle='')
         ay.plot(plottime[bad], dy[bad], 'r.')
         plt.setp(ay.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ay.get_xticklabels(), visible=False)
+        ay.set_ylabel('Y offsets(dy) (arcsec)')
         for t in ai_starts:
             s_t = (t - time0) / 1000.
             ay.plot([s_t, s_t], ay.get_ylim(), color='blue',
@@ -295,13 +317,15 @@ class Obi(object):
             ay2.yaxis.set_major_formatter(ay2y_formatter)
             plt.setp(ay2.get_yticklabels(), fontsize=labelfontsize,
                      color='blue')
+            ay2.set_ylabel('centroid y angle', color='blue')
 
-        az = fig.add_axes([.32, .4, .62, .25], sharex=ay)
+        az = fig.add_axes([.30, .4, .62, .25], sharex=ay)
         axes['dz'] = az
         az.plot(plottime[ok], dz[ok], color='green', marker='.')
         az.plot(plottime[bad], dz[bad], 'r.')
         plt.setp(az.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(az.get_xticklabels(), visible=False)
+        az.set_ylabel('Z offsets(dz) (arcsec)')
         for t in ai_starts:
             s_t = (t - time0) / 1000.
             az.plot([s_t, s_t], az.get_ylim(), color='blue',
@@ -315,8 +339,9 @@ class Obi(object):
             az2.yaxis.set_major_formatter(az2y_formatter)
             plt.setp(az2.get_yticklabels(), fontsize=labelfontsize,
                      color='blue')
+            az2.set_ylabel('centroid z angle', color='blue')
 
-        am = fig.add_axes([.32, .1, .62, .25], sharex=ay)
+        am = fig.add_axes([.30, .1, .62, .25], sharex=ay)
         axes['mag'] = am
         plt.setp(am.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(am.get_xticklabels(), fontsize=labelfontsize)
@@ -328,6 +353,10 @@ class Obi(object):
             am.plot([s_t, s_t], am.get_ylim(), color='blue',
                     linestyle='dashed')
         am.grid()
+        am.set_ylabel('Magnitude(mag)')
+        am.set_xlabel('Time(ksec)')
+        ay.autoscale(enable=False, axis='x')
+        ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         self.slot[slot]['axes'] = axes
         return fig
 
