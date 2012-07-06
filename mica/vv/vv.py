@@ -201,8 +201,8 @@ class Obi(object):
                     & (not np.all(slot_list[t] == getattr(ai, t).slot))):
                     raise ValueError(
                         "differing %s slots across aspect intervals" % t)
-                if (len(slot_list[t]) == len(getattr(ai, t).slot)
-                    & (not np.all(slot_status[t] == getattr(ai, t).id_status))):
+                if (len(slot_list[t]) == len(getattr(ai, t).slot) &
+                    (not np.all(slot_status[t] == getattr(ai, t).id_status))):
                     raise ValueError(
                         "differing %s status across aspect intervals" % t)
         for gs in slot_list['gsprop']:
@@ -212,13 +212,12 @@ class Obi(object):
 
         self.guide_slots = slot_list['gsprop']
         self.fid_slots = slot_list['fidprop']
-        
 
     def plot_slot(self, slot):
         y = None
         z = None
         xy_range = None
-        (qual, dy, dz, mag, time) = [self.slot[slot][x] for x in 
+        (qual, dy, dz, mag, time) = [self.slot[slot][x] for x in
                                      ['qual', 'dy', 'dz', 'mag', 'time']]
         ai_starts = [interv.deltas[slot]['time'][0]
                      for interv in self.aspect_intervals]
