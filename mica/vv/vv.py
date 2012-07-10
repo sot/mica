@@ -562,23 +562,17 @@ class AspectInterval(object):
             print 'Processing star in slot %(slot)d' % star
             ok = cen['slot'] == star['slot']
             ceni = cen[ok]
-            q_atti = q_att[ok]
+            q_atts = Quat(q_att[ok])
+            Ts = q_atts.transform
             print 'Found %d centroids ' % len(ceni)
             # use ang_y or ang_y_sm?
-            dy = np.zeros_like(ceni['ang_y'])
-            dz = np.zeros_like(ceni['ang_z'])
-            for i in range(0, len(ceni)):
-                att = Quat(q_atti[i])
-                T = att.transform
-                # IDL was:
-                #d_aca = aca_misalign ## T ## gsprop[i].pos_eci
-                #  ;         MNC2ACA     *  ECI2MNC  *    ECI
-                d_aca = np.dot(np.dot(aca_misalign,
-                                      T.transpose()), star['pos_eci'])
-                yag = np.arctan2(d_aca[1], d_aca[0]) * r2a
-                zag = np.arctan2(d_aca[2], d_aca[0]) * r2a
-                dy[i] = ceni[i]['ang_y'] * 3600 - yag
-                dz[i] = ceni[i]['ang_z'] * 3600 - zag
+            #inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)
+            d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0,2,1)),
+                           star['pos_eci']).transpose()
+            yag = np.arctan2(d_aca[:,1], d_aca[:,0]) * r2a
+            zag = np.arctan2(d_aca[:,2], d_aca[:,0]) * r2a
+            dy = ceni['ang_y'] * 3600 - yag
+            dz = ceni['ang_z'] * 3600 - zag
             mag = ma.zeros(len(ceni['counts']))
             mag[:] = ma.masked
             good_mag = medfilt(M0 - 2.5
