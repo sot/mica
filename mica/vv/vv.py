@@ -389,10 +389,13 @@ class AspectInterval(object):
         header = hdulist[1].header
         proptable = read_table(os.path.join(datadir, gsfile))
         for gs in proptable:
-            info.append(dict(slot=gs['slot'],
-                             id_status=gs['id_status'],
-                             tstart=header['TSTART'],
-                             tstop=header['TSTOP']))
+            saveprop = dict(slot=gs['slot'],
+                            id_status=gs['id_status'],
+                            tstart=header['TSTART'],
+                            tstop=header['TSTOP'])
+            if 'type' in gs.dtype.names:
+                saveprop['type'] = gs['type']
+            info.append(saveprop)
 
         return (prop, info, header)
 
