@@ -393,6 +393,7 @@ class AspectInterval(object):
                              id_status=gs['id_status'],
                              tstart=header['TSTART'],
                              tstop=header['TSTOP']))
+
         return (prop, info, header)
 
     def _read_in_data(self):
@@ -405,14 +406,18 @@ class AspectInterval(object):
         (self.fidprop, self.fidpr_info, self.h_fidpr) \
             = self._get_prop('fid', 'fidpr')
 
-        print 'Reading aspect solution'
+        print 'Reading aspect solution and header'
         #if opt['obc']:
         #    asol = read_table(glob(
         #            os.path.join(datadir, "%s_osol1.fits*" % aiid))[0])
         #else:
-        asol = read_table(glob(
-                    os.path.join(datadir, "%s_asol1.fits*" % aiid))[0])
-        self.asol = asol
+        asol_file = glob(
+            os.path.join(datadir, "%s_asol1.fits*" % aiid))[0]
+        asol = read_table(asol_file)
+        hdulist = pyfits.open(asol_file)
+        header = hdulist[1].header
+        self.asol_header = header
+        self.asol = asol            
 
         print 'Reading aspect quality'
         self.aqual = read_table(glob(
