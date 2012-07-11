@@ -154,6 +154,7 @@ class Obi(object):
         all_slot = self.slot
         for slot_id in all_slot:
             slot = all_slot[slot_id]
+            slot['slot'] = slot_id
             if not ('dy' in slot and 'dz' in slot and 'mag' in slot):
                 continue
             # these should only be calculated over good data, right?
