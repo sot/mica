@@ -185,6 +185,14 @@ class Obi(object):
                 raise ValueError
         return {'obsid': int(obsid),
                 'revision': revision,
+                'tstart': self.obspar['tstart'],
+                'tstop': self.obspar['tstop'],
+                'sim_z' : self.obspar['sim_z'],
+                'sim_z_offset': self.obspar['sim_z_offset'],
+                'ra_pnt': self.obspar['ra_pnt'],
+                'dec_pnt': self.obspar['dec_pnt'],
+                'roll_pnt': self.obspar['roll_pnt'],
+                'instrument': self.obspar['detnam'],
                 'intervals': ai_list,
                 'slots': self._just_slot_data() }
 
@@ -214,8 +222,9 @@ class Obi(object):
         save = self._info()
         # add obsid and revision to the slot dict
         for slot in save['slots']:
-            slot.update(obsid=save['obsid'])
-            slot.update(revision=save['revision'])
+            slot.update(dict((k,save[k]) 
+                             for k in self.table.dtype.names
+                             if k in save))
             slot.update(most_recent=0)
         # make a recarray
         save_rec = np.rec.fromrecords(
