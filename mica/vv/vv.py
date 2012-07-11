@@ -16,6 +16,7 @@ import matplotlib
 if __name__ == '__main__':
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+# get rid of the black edges on the plot markers
 plt.rcParams['lines.markeredgewidth'] = 0
 
 config = dict(h5_arch='/data/aca/archive/vv/vv.h5',
@@ -29,6 +30,9 @@ def get_table():
     return tbl
 
 def get_arch_vv(obsid, version='default'):
+    """
+    Get obsid paths from mica.archive and create mica.vv.Obi object
+    """
     asp_l1_dirs = asp_l1_arch.get_obs_dirs(obsid)
     l1_dir = asp_l1_dirs[version]
     obspar_dirs = obspar_arch.get_obs_dirs(obsid)
@@ -49,6 +53,9 @@ import csv
 import gzip
 
 def parse_obspar(file):
+    """
+    Parse obspar. 
+    """
     convert = {'i': int,
                'r': float,
                's': str}
@@ -102,6 +109,9 @@ save_asol_header = ['ASCDSVER', 'CALDBVER', 'DATE', 'OBI_NUM', 'OBS_ID',
 
 
 def frac_bad(data, median, limit):
+    """
+    Count data points more than limit from median
+    """
     if len(data) == 0:
         return None
     big_offset = abs(data - median) > limit
