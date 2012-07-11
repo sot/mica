@@ -99,10 +99,136 @@ class Obi(object):
         self._process_aspect_intervals()
         self.slot = dict()
         self._concat_slot_data()
-        self._check_intervals()
+        self._check_over_intervals()
+        self._label_slots()
         self._agg_slot_data()
 
         #self.plots = [self.plot_slot(slot) for slot in range(0, 8)]
+    def set_dbh(self, dbhandle, slot_table='vv_slots'):
+        self.db = dbhandle
+        self.slot_table = slot_table
+
+    def set_tbl(self, table):
+        self.table = table
+
+#    def _save_slot_pkl(self, file='vv_slot.pkl'):
+#        """
+#        save the slot residuals as a pkl
+#        """
+#        pickle.dump(self.slot, open(file, 'w'))
+#
+    def _just_slot_data(self):
+        """
+        get just the aggregate values for a slot
+        """
+        slist = []
+        for slot_id in range(0, 8):
+            slot = self.slot[slot_id]
+            if not 'n_pts' in slot:
+                continue
+            # ignore the arrays
+            save = dict((k, v) for k,v in slot.iteritems() 
+                        if type(v) not in [np.ndarray, np.ma.core.MaskedArray])
+            slist.append(save)
+        return slist
+
+    def _aiid_info(self, save_cols=save_asol_header):
+        """
+        grab some values from the asol header for the top level
+        """
+        slist = []
+        for ai in self.aspect_intervals:
+            asol_header = ai.asol_header
+            save = dict((k, asol_header[k]) for k in save_cols)
+            slist.append(save)
+        return slist
+
+    def _info(self):
+        """
+        get labels for top level
+        """
+        ai_list = self._aiid_info()
+        obsid = ai_list[0]['OBS_ID']
+        revision = ai_list[0]['REVISION']
+        for ai in ai_list:
+            if ai['OBS_ID'] != obsid:
+                raise ValueError
+            if ai['REVISION'] != revision:
+                raise ValueError
+        return {'obsid': int(obsid),
+                'revision': revision,
+                'intervals': ai_list,
+                'slots': self._just_slot_data() }
+
+    def _save_info_file(self, file='vv_agg.json'):
+        save = self._info()
+        jfile = open(file, 'w')
+        jfile.write(json.dumps(save, sort_keys=True, indent=4))
+        jfile.close()
+
+    def slots_to_db(self):
+        save = self._info()
+        in_db = self.db.fetchall("""select * from %s where
+                                    obsid = %d and revision = %d"""
+                                 % (self.slot_table, 
+                                    save['obsid'], save['revision']))
+        if len(in_db):
+            self.db.execute("""delete from %s where
+                               obsid = %d and revision = %d"""
+                            % (self.slot_table,
+                               save['obsid'], save['revision']))
+        for slot in save['slots']:
+            slot.update(obsid=save['obsid'])
+            slot.update(revision=save['revision'])
+            self.db.insert(slot, self.slot_table)
+
+    def slots_to_table(self):
+        save = self._info()
+        # add obsid and revision to the slot dict
+        for slot in save['slots']:
+            slot.update(obsid=save['obsid'])
+            slot.update(revision=save['revision'])
+            slot.update(most_recent=0)
+        # make a recarray
+        save_rec = np.rec.fromrecords(
+            [[slot[k] for k in self.table.dtype.names]
+             for slot in save['slots']],
+            dtype = self.table.dtype)
+
+        have_obsid_coord = self.table.getWhereList('(obsid == %d)' 
+                                                  % (save['obsid']),
+                                                  sort=True)
+        # if there are previous records for this obsid
+        if len(have_obsid_coord):
+            # mark all records for the obsid as old (or not most_recent)
+            print "obsid %d is in table" % save['obsid']
+            obsid_rec = self.table.readCoordinates(have_obsid_coord)
+            obsid_rec['most_recent'] = 0
+            self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
+            # if we already have the revision, update in place
+            if np.any(obsid_rec['revision'] == save['revision']):
+                rev_coord = self.table.getWhereList('(obsid == %d) & (revision == %d)' 
+                                                    % (save['obsid'], save['revision']),
+                                                    sort=True)
+                if len(rev_coord) != len(save_rec):
+                    raise ValueError("Could not update; different number of slots")
+                print "updating obsid %d rev %d in place" % (save['obsid'], save['revision'])
+                self.table.modifyCoordinates(rev_coord, save_rec)
+            # and retag the max revision with most_recent = 1
+            max_rev = max(np.max(obsid_rec['revision']), save['revision'])
+            max_rev_coord = self.table.getWhereList('(obsid == %d) & (revision == %d)'
+                                                    % (save['obsid'], max_rev))
+            print "tagging obsid %d rev %d as most recent" % (save['obsid'], max_rev)
+            max_rev_rec = self.table.readCoordinates(max_rev_coord)
+            max_rev_rec['most_recent'] = 1
+            self.table.modifyCoordinates(max_rev_coord, max_rev_rec)
+        else:
+            save_rec['most_recent'] = 1
+            self.table.append(save_rec)
+        self.table.flush()
+        
+
+
 
     def _aiid_from_asol(self, asol_file, obsdir):
         hdulist = pyfits.open(asol_file)
