@@ -2,6 +2,8 @@ from __future__ import division
 import os
 import re
 import pyfits
+import pickle
+import json
 from glob import glob
 import numpy as np
 import numpy.ma as ma
@@ -16,10 +18,15 @@ if __name__ == '__main__':
 import matplotlib.pyplot as plt
 plt.rcParams['lines.markeredgewidth'] = 0
 
-# borrowed from telem_archive
-import csv
-import gzip
+config = dict(h5_arch='/data/aca/archive/vv/vv.h5',
+              h5_table='vv',
+              )
 
+import tables
+def get_table():
+    h5 = tables.openFile(config['h5_arch'], 'a')
+    tbl = h5.getNode('/', config['h5_table'])
+    return tbl
 
 def get_arch_vv(obsid, version='default'):
     asp_l1_dirs = asp_l1_arch.get_obs_dirs(obsid)
@@ -29,6 +36,17 @@ def get_arch_vv(obsid, version='default'):
                                     'axaf*par*'))[0]
     return Obi(obspar_file, l1_dir)
 
+def process(obsid, version='default'):
+    obi = get_arch_vv(obsid, version)
+    tbl = get_table()
+    obi.set_tbl(tbl)
+    obi.slots_to_table()
+    return obi
+
+
+# borrowed from telem_archive
+import csv
+import gzip
 
 def parse_obspar(file):
     convert = {'i': int,
