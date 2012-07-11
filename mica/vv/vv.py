@@ -440,6 +440,19 @@ class AspectInterval(object):
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         self.integ_time = self.cenhdulist[1].header['INTGTIME']
 
+    def _read_in_log(self):
+        aiid = self.aiid
+        datadir = self.aspdir
+        opt = self.opt
+        id_end = re.match('\w+(\D\d+N\d{3})', aiid).group(1)
+        logfile = glob(os.path.join(datadir, "*%s.log*" % id_end))[0]
+        try:
+            lines = gzip.open(logfile).readlines()
+        except IOError:
+            lines = open(logfile).readlines()
+        self.log = lines
+
+
     def _calc_fid_deltas(self):
         asol = self.asol
         h_fidpr = self.h_fidpr
