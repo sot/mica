@@ -587,16 +587,18 @@ class AspectInterval(object):
                 err = "No GSPR info found for slot %d" % star['slot']
                 raise ValueError(err)
             for pr in slot_gspr:
-                if pr['id_status'] != 'GOOD      ':
-                    bad = ((ceni['time'] >= pr['tstart'])
-                           & (ceni['time'] <= pr['tstop']))
-                    n_bad = len(np.flatnonzero(bad))
-                    if n_bad:
-                        qual[bad] = 1
-                    else:
-                        err = "Bad gspr interval not contained in ceni range"
-                        raise ValueError(err)
+                if pr['id_status'] == 'GOOD      ':
+                    continue
+                bad = ((ceni['time'] >= pr['tstart'])
+                       & (ceni['time'] <= pr['tstop']))
+                n_bad = len(np.flatnonzero(bad))
+                if n_bad:
+                    qual[bad] = 1
+                else:
+                    err = "Bad gspr interval not contained in ceni range"
+                    raise ValueError(err)
 
+            
             self.deltas[star['slot']]= dict(dy=dy,
                                             dz=dz,
                                             time=ceni['time'],
