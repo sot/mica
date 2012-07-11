@@ -406,11 +406,11 @@ class AspectInterval(object):
             = self._get_prop('fid', 'fidpr')
 
         print 'Reading aspect solution'
-        if opt['obc']:
-            asol = read_table(glob(
-                    os.path.join(datadir, "%s_osol1.fits*" % aiid))[0])
-        else:
-            asol = read_table(glob(
+        #if opt['obc']:
+        #    asol = read_table(glob(
+        #            os.path.join(datadir, "%s_osol1.fits*" % aiid))[0])
+        #else:
+        asol = read_table(glob(
                     os.path.join(datadir, "%s_asol1.fits*" % aiid))[0])
         self.asol = asol
 
