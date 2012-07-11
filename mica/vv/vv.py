@@ -27,7 +27,7 @@ import tables
 def get_table():
     h5 = tables.openFile(config['h5_arch'], 'a')
     tbl = h5.getNode('/', config['h5_table'])
-    return tbl
+    return tbl, h5
 
 def get_arch_vv(obsid, version='default'):
     """
@@ -42,9 +42,12 @@ def get_arch_vv(obsid, version='default'):
 
 def process(obsid, version='default'):
     obi = get_arch_vv(obsid, version)
-    tbl = get_table()
+    tbl, h5 = get_table()
     obi.set_tbl(tbl)
     obi.slots_to_table()
+    tbl.flush()
+    h5.flush()
+    h5.close()
     return obi
 
 
