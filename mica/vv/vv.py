@@ -357,8 +357,7 @@ class Obi(object):
         am.set_xlabel('Time(ksec)')
         ay.autoscale(enable=False, axis='x')
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
-        self.slot[slot]['axes'] = axes
-        return fig
+        return fig, axes
 
 
 class AspectInterval(object):
