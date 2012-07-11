@@ -76,6 +76,8 @@ frac_dyz_lim = 0.05
 data_cols = ['qual', 'dy', 'dz', 'mag', 'time',
              'ang_y_sm', 'ang_y', 'ang_z_sm', 'ang_z']
 
+save_asol_header = ['ASCDSVER', 'CALDBVER', 'DATE', 'OBI_NUM', 'OBS_ID',
+                    'REVISION', 'TSTART', 'TSTOP']
 
 #def rms(data, median):
 #    return np.sqrt(np.mean((data - median) ** 2))
