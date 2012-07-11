@@ -185,33 +185,44 @@ class Obi(object):
                 slot['mean_y'] = np.mean(slot['ang_y'])
                 slot['mean_z'] = np.mean(slot['ang_z'])
 
-    def _check_intervals(self):
-        all_slot = self.slot
-        # check for weirdness across intervals
-        slot_list = {}
-        slot_status = {}
+    def _label_slots(self):
+        ai = self.aspect_intervals[0]
+        self.guide_list = getattr(ai, 'gsprop').slot
+        self.fid_list = getattr(ai, 'fidprop').slot
+        for gs in getattr(ai, 'gsprop'):
+            self.slot[gs.slot]['type'] = gs.type
+        for fl in getattr(ai, 'fidprop'):
+            self.slot[fl.slot]['type'] = 'FID'
+
+    def _check_over_intervals(self):
+        """
+        Check all aspect intervals and confirm that slots don't
+        drop out, change status, or change type.
+        """
         for t in ('gsprop', 'fidprop'):
-            slot_list[t] = getattr(self.aspect_intervals[0], t).slot
-            slot_status[t] = getattr(self.aspect_intervals[0], t).id_status
+            slot_id = getattr(self.aspect_intervals[0], t).slot
+            slot_status = getattr(self.aspect_intervals[0], t).id_status
+            slot_type = 'FID'
+            if t == 'gsprop':
+                slot_type = getattr(self.aspect_intervals[0], t).type
             for ai in self.aspect_intervals[1:]:
-                if len(slot_list[t]) != len(getattr(ai, t).slot):
+                if len(slot_id) != len(getattr(ai, t).slot):
                     raise ValueError(
                         "differing %s slots across aspect intervals" % t)
-                if (len(slot_list[t]) == len(getattr(ai, t).slot)
-                    & (not np.all(slot_list[t] == getattr(ai, t).slot))):
+                if (len(slot_id) == len(getattr(ai, t).slot)
+                    & (not np.all(slot_id == getattr(ai, t).slot))):
                     raise ValueError(
                         "differing %s slots across aspect intervals" % t)
-                if (len(slot_list[t]) == len(getattr(ai, t).slot) &
-                    (not np.all(slot_status[t] == getattr(ai, t).id_status))):
+                if (len(slot_id) == len(getattr(ai, t).slot) &
+                    (not np.all(slot_status == getattr(ai, t).id_status))):
                     raise ValueError(
                         "differing %s status across aspect intervals" % t)
-        for gs in slot_list['gsprop']:
-            all_slot[gs]['type'] = 'guide'
-        for fs in slot_list['fidprop']:
-            all_slot[fs]['type'] = 'fid'
+                if t == 'gsprop':
+                    if ((len(slot_id) == len(getattr(ai, t).slot)) &
+                        (not np.all(slot_type == getattr(ai, t).type))):
+                        raise ValueError(
+                            "differing %s type across aspect intervals" % t)
 
-        self.guide_slots = slot_list['gsprop']
-        self.fid_slots = slot_list['fidprop']
 
     def plot_slot(self, slot):
         y = None
