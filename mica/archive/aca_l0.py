@@ -109,11 +109,11 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
             if fname in chunk.dtype.names:
                 all_rows[fname][rowcount:(rowcount + len(chunk))] \
                     = chunk.field(fname)
-        imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
-        all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = imgsize
+        f_imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
+        all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = f_imgsize
         all_rows['IMGRAW'].reshape(rows, 8, 8)[
-            rowcount:(rowcount + len(chunk)), 0:imgsize, 0:imgsize] = (
-            chunk.field('IMGRAW').reshape(len(chunk), imgsize, imgsize))
+            rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
+            chunk.field('IMGRAW').reshape(len(chunk), f_imgsize, f_imgsize))
         rowcount += len(chunk)
     return all_rows
 
@@ -225,8 +225,8 @@ def read_archfile(i, f, archfiles, db):
     archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
     #archfiles_row['rowstart'] = row
     #archfiles_row['rowstop'] = row + len(dat)
-    imgsize_sq = hdu.data[0].field('IMGRAW').shape[0]
-    archfiles_row['imgsize'] = int(np.sqrt(imgsize_sq))
+    imgsize = hdu.data[0].field('IMGRAW').shape[0]
+    archfiles_row['imgsize'] = int(imgsize)
     archfiles_row['slot'] = int(re.search(
             r'acaf\d+N\d{3}_(\d)_img0.fits(\.gz)?',
             filename).group(1))
