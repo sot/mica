@@ -81,8 +81,27 @@ def get_options():
 
 
 def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
-                  db=None, data_root=config['data_root'],
-	              columns=aca_dtype_names):
+                  db=None,
+                  data_root=config['data_root'],
+                  columns=aca_dtype_names,
+                  ):
+    """
+    For a the given parameters, retrieve telemetry and construct a
+    masked array of the MSIDs available in that telemetry
+
+    :param tstart: start time of requested interval
+    :param tstop: stop time of requested interval
+    :param slot: slot number (in the range 0 -> 7)
+    :param imgsize: list of desired image sizes
+    :param db: handle to archive lookup table
+    :param data_root: parent directory that contains archfiles.db3
+                      (for use when db handle not available)
+    :param columns: list of desired columns in the ACA0 telemetry
+                    (defaults to all in 8x8 telemetry)
+
+    :returns: data structure for slot
+    :rtype: numpy masked recarray
+    """
     if not db:
         dbfile = os.path.join(config['data_root'], 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
@@ -122,8 +141,22 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
 
 
 def get_interval_files(tstart, tstop,
-                       slots=[0, 1, 2, 3, 4, 5, 6, 7], 
+                       slots=[0, 1, 2, 3, 4, 5, 6, 7],
                        imgsize=[4, 6, 8], db=None):
+    """
+    Retrieve list of files from ACA0 archive lookup table that
+    match arguments.
+
+    :param tstart: start time of requested interval
+    :param tstop: stop time of requested interval
+    :param slots: list of desired image slots to retrieve in interval
+    :param imgsize: list of desired image sizes
+    :param db: handle to archive lookup table
+
+    :returns: interval files
+    :rtype: list
+    """
+
     if not db:
         dbfile = os.path.join(config['data_root'], 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
@@ -132,9 +165,9 @@ def get_interval_files(tstart, tstop,
     imgsize_str = ','.join([str(x) for x in imgsize])
     slot_str = ','.join([str(x) for x in slots])
     # a composite index isn't as fast as just doing a padded search on one
-    # index first (tstart).  This gets extra files to make sure we don't miss the 
-    # case where tstart is in the middle of an interval, but drastically
-    # reduces the size of the bsearch on the tstop index
+    # index first (tstart).  This gets extra files to make sure we don't
+    # miss the case where tstart is in the middle of an interval, but
+    # drastically reduces the size of the bsearch on the tstop index
     tstart_pad = 10 * 86400
     db_query = ('SELECT * FROM archfiles '
                 'WHERE tstart >= %f - %f '
@@ -147,9 +180,11 @@ def get_interval_files(tstart, tstop,
     return db.fetchall(db_query)
 
 
-
-
-def rebuild_database(db=None, db_file=None):
+def _rebuild_database(db=None, db_file=None):
+    """
+    Utility routine to rebuild the file lookup database using the 
+    package defaults and the files in the archive.
+    """
     if db is None and db_file is None:
         raise ValueError
     if db is None and db_file is not None:
@@ -175,12 +210,24 @@ def rebuild_database(db=None, db_file=None):
                 if arch_info:
                     db.insert(arch_info, 'archfiles')
             db.commit()
-                
-                         
+
 
 def get_archive_files(filetype, datestart, datestop):
-    """Update FITS file archive with arc5gl and ingest files into msid (HDF5) archive"""
+    """
+    Update FITS file archive with arc5gl and ingest files into file archive
 
+    :param filetype: a dictionary (or dictionary-like) object with keys for
+                     'level', 'instrum', 'content', 'arc5gl_query' 
+                     and 'fileglob' for arc5gl.  For ACA0:
+                     {'level': 'L0', 'instrum': 'PCAD', 'content': 'ACADATA',
+                     'arc5gl_query': 'ACA0', 'fileglob': '*fits.gz'}
+    :param datestart: beginning of interval to retrieve 
+    :param datestop: end of interval to retrieve
+
+    :returns: retrieved file names
+    :rtype: list
+    """
+    
     # Retrieve CXC archive files in a temp directory with arc5gl
     arc5 = Ska.arc5gl.Arc5gl(echo=True)
     logger.info('********** %s %s **********' 
@@ -194,12 +241,24 @@ def get_archive_files(filetype, datestart, datestop):
 
 
 def read_archfile(i, f, archfiles, db):
-    """Read filename ``f`` with index ``i`` (position within list of filenames).  The
-    file has type ``filetype`` and will be added to MSID file at row index ``row``.
-    ``colnames`` is the list of column names for the content type (not used here).
     """
-    # Check if filename is already in archfiles.
-    # If so then abort further processing.
+    Read FITS filename ``f`` with index ``i`` (position within list of filenames)
+    and get dictionary of values to store in file lookup database.  These values
+    include all header items in ``archfiles_hdr_cols`` plus the header checksum,
+    the image slot as determined by the filename, the imagesize as determined 
+    by IMGRAW, the year, day-of-year, and number of data rows in the file.
+
+    :param i: index of file f within list of files archfiles
+    :param f: filename
+    :param archfiles: list of filenames for this batch
+    :param db: database handle for file lookup database (Ska.DBI handle)
+
+    :returns: info for a file.
+    :rtype: dictionary 
+    """
+
+    # Check if filename is already in file lookup table
+    # If so then delete temporary file and abort further processing.
     filename = os.path.basename(f)
     if db.fetchall('SELECT filename FROM archfiles WHERE filename=?',
                    (filename,)):
@@ -208,14 +267,13 @@ def read_archfile(i, f, archfiles, db):
         os.unlink(f)
         return None
 
-    # Read FITS archive file and accumulate data into dats list and header into headers dict
     logger.info('Reading (%d / %d) %s' % (i, len(archfiles), filename))
     hdus = pyfits.open(f)
     hdu = hdus[1]
 
-    # Accumlate relevant info about archfile that will be ingested into
-    # MSID h5 files.  Commit info before h5 ingest so if there is a failure
-    # the needed info will be available to do the repair.
+    # Accumlate relevant info about archfile that will be ingested 
+    # (this is borrowed from eng-archive but is set to archive to a 
+    # database table instead of an h5 table in this version)
     archfiles_row = dict((x, hdu.header.get(x.upper()))
                          for x in archfiles_hdr_cols)
     archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
@@ -234,25 +292,29 @@ def read_archfile(i, f, archfiles, db):
     archfiles_row['doy'] = doy
     archfiles_row['rows'] = len(hdu.data)
     hdus.close()
-    return  archfiles_row
+    return archfiles_row
 
 
-def move_archive_files(filetype, archfiles, opt):
-
-    if not os.path.exists(opt.data_root):
-        os.makedirs(opt.data_root)
-
+def move_archive_files(filetype, archfiles, data_root):
+    """
+    Move ACA L0 files into the file archive into directories
+    by YYYY/DOY under the specified data_root
+    
+    """
+    if not os.path.exists(data_root):
+        os.makedirs(data_root)
     for f in archfiles:
         if not os.path.exists(f):
             continue
         basename = os.path.basename(f)
+        # use the timestamp right from the ACA0 filename
         tstart = re.search(r'(\d+)', str(basename)).group(1)
         datestart = DateTime(tstart).date
         year, doy = re.search(r'(\d\d\d\d):(\d\d\d)', datestart).groups()
-
-        archdir = os.path.abspath(os.path.join(opt.data_root,
+        archdir = os.path.abspath(os.path.join(data_root,
                                                year,
                                                doy))
+        # construct the destination filepath/name
         archfile = os.path.abspath(os.path.join(archdir, basename))
         if not os.path.exists(archdir):
             os.makedirs(archdir)
@@ -267,12 +329,18 @@ def move_archive_files(filetype, archfiles, opt):
 
 
 
-
-def update_archive(opt):
-    contentdir = os.path.join(opt.data_root)
+def update_archive(datestart, datestop,
+                   data_root, temp_root, days_at_once):
+    """
+    Retrieve ACA0 telemetry files from the CXC archive, store in the 
+    Ska/ACA archive, and update database of files.
+    """
+    contentdir = data_root
     if not os.path.exists(contentdir):
         os.makedirs(contentdir)
     archdb = os.path.join(contentdir, 'archfiles.db3')
+    # if the database of the archived files does not exist,
+    # make it
     if not os.path.exists(archdb):
         logger.info("creating archfiles db from %s"
                     % config['sql_def'])
@@ -282,9 +350,11 @@ def update_archive(opt):
         db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
                          autocommit=False)
         db.execute(db_init_cmds, commit=True)
+    # open a handle to file database with autocommit turned off
+    # to allow control of commits in batches
     db = Ska.DBI.DBI(dbi='sqlite', server=archdb, autocommit=False)
-    if opt.datestart:
-        datestart = DateTime(opt.datestart)
+    if datestart:
+        datestart = DateTime(datestart)
     else:
         # Get datestart as the most-recent file time from archfiles table
         # will need min-of-max-slot-datestart
@@ -292,24 +362,26 @@ def update_archive(opt):
                     "select max(filetime) from archfiles where slot = %d"
                     % s)['max(filetime)'] for s in range(0, 8)])
         datestart = DateTime(last_time)
-    datestop = DateTime(opt.datestop)
+    datestop = DateTime(datestop)
     padding_seconds = 10000
+    # loop over the specified time range in chunks of 
+    # days_at_once in seconds with some padding
     for tstart in np.arange(datestart.day_start().secs,
                             datestop.day_end().secs,
-                            opt.days_at_once * 86400):
-
+                            days_at_once * 86400):
         # set times for a chunk
         range_tstart = tstart - padding_seconds
-        range_tstop = tstart + opt.days_at_once * 86400
+        range_tstop = tstart + days_at_once * 86400
         if range_tstop > datestop.day_end().secs:
             range_tstop = datestop.day_end().secs
         range_tstop += padding_seconds
-        print DateTime(range_tstart).date + " " + DateTime(range_tstop).date
+        logger.info("Fetching from %s to %s" % (DateTime(range_tstart).date, 
+                                                DateTime(range_tstop).date))
         # make a temporary directory
-        tmpdir = Ska.File.TempDir(dir=opt.temp_root)
+        tmpdir = Ska.File.TempDir(dir=temp_root)
         dirname = tmpdir.name
-        print dirname
-        # get the files
+        logger.info("Files save to temp dir %s" % dirname)
+        # get the files, store in file archive, and record in database
         with Ska.File.chdir(dirname):
             archfiles = get_archive_files(filetype,
                                           DateTime(range_tstart),
@@ -317,14 +389,18 @@ def update_archive(opt):
             for i, f in enumerate(archfiles):
                 arch_info = read_archfile(i, f, archfiles, db)
                 if arch_info:
-                    move_archive_files(filetype, [f], opt)
+                    move_archive_files(filetype, [f], data_root)
                     db.insert(arch_info, 'archfiles')
         db.commit()
 
 
 def main():
+    """
+    Command line interface to fetch ACA L0 telemetry from the CXC Archive
+    and store it in the Ska archive.
+    """
     opt = get_options()
-    update_archive(opt)
+    update_archive(vars(opt))
 
 
 if __name__ == '__main__':
