@@ -138,10 +138,15 @@ class ObsArchive:
         return obspar
 
     def get_dir(self, obsid):
-        """Return the latest released directory for an obsid."""
-        data_root = self._config['data_root']
+        """
+        Return the latest released directory for an obsid
+	    Return None if there are no 'default' / released products.
+        """
         dirmap = self.get_obs_dirs(obsid)
-        return dirmap['default']
+        if 'default' in dirmap:
+            return dirmap['default']
+        else:
+            return None
 
     def get_obs_dirs(self, obsid):
         """
