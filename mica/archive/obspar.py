@@ -1,23 +1,20 @@
 #!/usr/bin/env python
+"""
+Script to update Ska file archive obspars.  Module
+also provides methods to retrieve the directory (or directories)
+for an obsid.
 
+This uses the obsid_archive module with a configuration specific
+to the obspar products.
+
+"""
 import os
 import logging
 import obsid_archive
+from glob import glob
 
-#from configobj import ConfigObj
-#config = ConfigObj("obspar.conf")
-config = dict(data_root='/data/aca/archive/obspar',
-              temp_root='/data/aca/archive/tempobs',
-              sql_def='obspar_def.sql',
-              apstat_table='obidet_0_5',
-              apstat_id='obidet_0_5_id',
-              label='obspar',
-              small='obspar',
-              small_glob='axaff*par*',
-              small_ver_regex='axaff\d{5}_\d{3}N(\d{3}).*',
-              full='obspar')
-
-
+# these keys are available in the obspar and will be included in the
+# file lookup table (archfiles)
 archfiles_hdr_cols = [
 'filename',
 'obsid',
@@ -148,12 +145,34 @@ archfiles_hdr_cols = [
 'obspar_type',
 'obspar_stat']
 
+config = dict(data_root='/data/aca/archive/obspar',
+              temp_root='/data/aca/archive/tempobs',
+              sql_def='obspar_def.sql',
+              apstat_table='obidet_0_5',
+              apstat_id='obidet_0_5_id',
+              label='obspar',
+              small='obspar',
+              small_glob='axaff*par*',
+              small_ver_regex='axaff\d{5}_\d{3}N(\d{3}).*',
+              full='obspar',
+              cols=archfiles_hdr_cols)
+
+
 def get_options():
-#    from optparse import OptionParser
-#    parser = OptionParser()
     import argparse
-    parser = argparse.ArgumentParser(
-        description="Fetch aspect level 1 products and make a file archive")
+    desc = \
+"""
+Run the update process to get new obspars, save them in the Ska
+file archive, and include records of them in the file lookup database.
+This is intended to be run as a cron task, and in regular processing,
+the update will fetch and ingest all telemetry since the task's last run.
+Options also provided to fetch and ingest specific obsids and versions.
+
+See the ``config`` in the obspar.py file and the config description in
+obsid_archive for more information on the obspar default config if parameters
+without command-line options need to be changed.
+"""
+    parser = argparse.ArgumentParser(description=desc)
     defaults = dict(config)
     parser.set_defaults(**defaults)
     parser.add_argument("--obsid",
@@ -170,20 +189,57 @@ def get_options():
     parser.add_argument("--temp-root",
                         help="parent temp directory")
     opt = parser.parse_args()
-    return opt 
+    return opt
+
+# set up an archive object with default config for use by the other
+# get_* methods
+archive = obsid_archive.ObsArchive(config)
 
 
 def get_dir(obsid):
-    archive = obsid_archive.ObsArchive(dict(config))
+    """
+    Get obspar directory for default/released products for an obsid.
+
+    :param obsid: obsid
+    :returns: directory
+    :rtype: string
+    """
     return archive.get_dir(obsid)
 
 def get_obs_dirs(obsid):
-    archive = obsid_archive.ObsArchive(dict(config))
+    """
+    Get all obspar directories for an obsid in the Ska file archive.
+
+    :param obsid: obsid
+    :returns: map of obsid version to directories
+    :rtype: dictionary
+    """
     return archive.get_obs_dirs(obsid)
 
+def get_obspar(obsid, version='default'):
+    """
+    Get location of requested obsid's obspar.
+
+    :param obsid: obsid
+    :param version: processing version/revision
+
+    :returns: path of obspar or None
+    """
+    dirs = archive.get_obs_dirs(obsid)
+    if version in dirs:
+        obsparfiles = glob(os.path.join(dirs[version], 'axaff*par*'))
+        if len(obsparfiles):
+            return obsparfiles[0]
+    return None
+
+
 def main():
+    """
+    Run the update process to get new obspars, save them in the Ska
+    file archive, and include new entries in the file lookup database.
+    """
     opt = get_options()
-    config = dict(opt.__dict__, cols=archfiles_hdr_cols)
+    config = vars(opt)
     archive = obsid_archive.ObsArchive(config)
     archive.logger.setLevel(logging.INFO)
     archive.logger.addHandler(logging.StreamHandler())
