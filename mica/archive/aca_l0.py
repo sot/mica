@@ -8,7 +8,6 @@ import pyfits
 import numpy as np
 import numpy.ma as ma
 import argparse
-from configobj import ConfigObj
 
 
 import Ska.DBI
@@ -162,7 +161,6 @@ def rebuild_database(db=None, db_file=None):
         db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
                          autocommit=False)
         db.execute(db_init_cmds, commit=True)
-
     year_dirs = sorted(glob(
             os.path.join(config['data_root'], '[12][0-9][0-9][0-9]')))
     for ydir in year_dirs:
@@ -185,16 +183,12 @@ def get_archive_files(filetype, datestart, datestop):
 
     # Retrieve CXC archive files in a temp directory with arc5gl
     arc5 = Ska.arc5gl.Arc5gl(echo=True)
-    n_queries = 1
-    times = np.linspace(datestart.secs, datestop.secs, n_queries + 1)
-
     logger.info('********** %s %s **********' 
                 % (filetype['content'], time.ctime()))
 
-    for t0, t1 in zip(times[:-1], times[1:]):
-        arc5.sendline('tstart=%s' % DateTime(t0).date)
-        arc5.sendline('tstop=%s' % DateTime(t1).date)
-        arc5.sendline('get %s' % filetype['arc5gl_query'].lower())
+    arc5.sendline('tstart=%s' % DateTime(datestart).date)
+    arc5.sendline('tstop=%s' % DateTime(datestop).date)
+    arc5.sendline('get %s' % filetype['arc5gl_query'].lower())
 
     return sorted(glob(filetype['fileglob']))
 
@@ -207,7 +201,6 @@ def read_archfile(i, f, archfiles, db):
     # Check if filename is already in archfiles.
     # If so then abort further processing.
     filename = os.path.basename(f)
-    colnames = archfiles_hdr_cols
     if db.fetchall('SELECT filename FROM archfiles WHERE filename=?',
                    (filename,)):
         logger.info(
@@ -219,7 +212,6 @@ def read_archfile(i, f, archfiles, db):
     logger.info('Reading (%d / %d) %s' % (i, len(archfiles), filename))
     hdus = pyfits.open(f)
     hdu = hdus[1]
-    #dat = converters.convert(hdu.data, filetype['content'])
 
     # Accumlate relevant info about archfile that will be ingested into
     # MSID h5 files.  Commit info before h5 ingest so if there is a failure
@@ -227,8 +219,6 @@ def read_archfile(i, f, archfiles, db):
     archfiles_row = dict((x, hdu.header.get(x.upper()))
                          for x in archfiles_hdr_cols)
     archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
-    #archfiles_row['rowstart'] = row
-    #archfiles_row['rowstop'] = row + len(dat)
     imgsize = hdu.data[0].field('IMGRAW').shape[0]
     archfiles_row['imgsize'] = int(imgsize)
     archfiles_row['slot'] = int(re.search(
@@ -264,15 +254,11 @@ def move_archive_files(filetype, archfiles, opt):
                                                year,
                                                doy))
         archfile = os.path.abspath(os.path.join(archdir, basename))
-
         if not os.path.exists(archdir):
             os.makedirs(archdir)
 
         if not os.path.exists(archfile):
             logger.info('mv %s %s' % (os.path.abspath(f), archfile))
-#            if not opt.dry_run:
-#                if not opt.occ:
-#            shutil.copy2(f, stagedir)
             shutil.move(f, archfile)
 
         if os.path.exists(f):
@@ -280,35 +266,6 @@ def move_archive_files(filetype, archfiles, opt):
             os.unlink(f)
 
 
-#def get_arch_info(i, f, archfiles, db):
-#    """Read filename ``f`` with index ``i`` (position within list of filenames).  The
-#    file has type ``filetype`` and will be added to MSID file at row index ``row``.
-#    ``colnames`` is the list of column names for the content type (not used here).
-#    """
-#
-#    filename = os.path.basename(f)
-#    # Read FITS archive file and accumulate data into dats list and header into headers dict
-#    logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
-#    hdus = pyfits.open(f)
-#    hdu = hdus[1]
-#
-#    # Accumlate relevant info about archfile that will be ingested into
-#    # MSID h5 files.  Commit info before h5 ingest so if there is a failure
-#    # the needed info will be available to do the repair.
-#    archfiles_row = dict((x, hdu.header.get(x.upper()))
-#                         for x in archfiles_hdr_cols)
-#    archfiles_row['checksum'] = hdu._checksum
-#    archfiles_row['filename'] = filename
-#    archfiles_row['filetime'] = int(
-#        re.search(r'(\d+)', archfiles_row['filename']).group(1))
-#    filedate = DateTime(archfiles_row['filetime']).date
-#    year, doy = (int(x)
-#                 for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
-#    archfiles_row['year'] = year
-#    archfiles_row['doy'] = doy
-#    
-#    hdus.close()
-#    return archfiles_row
 
 
 def update_archive(opt):
@@ -357,7 +314,6 @@ def update_archive(opt):
             archfiles = get_archive_files(filetype,
                                           DateTime(range_tstart),
                                           DateTime(range_tstop))
-            #archfiles = glob(os.path.join(dirname, '*'))
             for i, f in enumerate(archfiles):
                 arch_info = read_archfile(i, f, archfiles, db)
                 if arch_info:
