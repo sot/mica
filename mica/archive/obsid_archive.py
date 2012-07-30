@@ -543,8 +543,9 @@ class ObsArchive:
             last_id = int(last_id_fh.read().rstrip())
             logger.info("using %d for last_id" % last_id)
             last_id_fh.close()
-        query_vars = dict(config)
-        query_vars.update({'last_id': last_id})
+        query_vars = {'apstat_table': config['apstat_table'],
+                      'apstat_id': config['apstat_id'],
+                      'last_id': last_id}
         apstat_query = ("""select * from %(apstat_table)s
                                   where %(apstat_id)s > %(last_id)d
                                   order by %(apstat_id)s"""
