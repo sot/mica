@@ -368,7 +368,7 @@ def move_archive_files(filetype, archfiles, data_root):
 
 
 
-def update_archive(datestart, datestop,
+def update_archive(datestart, datestop, sql_def,
                    data_root, temp_root, days_at_once):
     """
     Retrieve ACA0 telemetry files from the CXC archive, store in the 
@@ -439,7 +439,9 @@ def main():
     and store it in the Ska archive.
     """
     opt = get_options()
-    update_archive(vars(opt))
+    kwargs = vars(opt)
+    config.update(kwargs)
+    update_archive(**kwargs)
 
 
 if __name__ == '__main__':
