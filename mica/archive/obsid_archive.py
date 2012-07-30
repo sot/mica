@@ -369,44 +369,41 @@ class ObsArchive:
         archfiles = glob(os.path.join(tempdir, "*"))
         if not archfiles:
             raise ValueError("Retrieved no files")
-        if archfiles:
-            db_file = os.path.join(os.path.abspath(config['data_root']),
-                                   'archfiles.db3')
-            if not os.path.exists(db_file):
-                logger.info("creating archfiles db from %s"
-                            % config['sql_def'])
-                db_sql = os.path.join(os.environ['SKA_DATA'],
-                                      'mica', config['sql_def'])
-                db_init_cmds = file(db_sql).read()
-                db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
-                                 autocommit=False)
-                db.execute(db_init_cmds, commit=True)
+        db_file = os.path.join(os.path.abspath(config['data_root']),
+                               'archfiles.db3')
+        if not os.path.exists(db_file):
+            logger.info("creating archfiles db from %s"
+                        % config['sql_def'])
+            db_sql = os.path.join(os.environ['SKA_DATA'],
+                                  'mica', config['sql_def'])
+            db_init_cmds = file(db_sql).read()
             db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
                              autocommit=False)
-            existing = db.fetchall(
-                "select * from archfiles where obsid = %d and revision = '%s'"
-                % (obsid, version))
-            for i, f in enumerate(archfiles):
-                # just copy the log files without inserting in db
-                if re.match('.+log.gz', f):
-                    shutil.copy(f, obs_dir)
-                    os.remove(f)
-                    continue
-                arch_info = self.get_arch_info(i, f, archfiles)
-                arch_info['obsid'] = obsid
-                if (len(existing)
-                   and arch_info['filename'] in existing['filename']):
-                    print "skipping %s" % f
-                    os.remove(f)
-                    continue
-
-                db.insert(arch_info, 'archfiles')
+            db.execute(db_init_cmds, commit=True)
+        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                         autocommit=False)
+        existing = db.fetchall(
+            "select * from archfiles where obsid = %d and revision = '%s'"
+            % (obsid, version))
+        for i, f in enumerate(archfiles):
+            # just copy the log files without inserting in db
+            if re.match('.+log.gz', f):
                 shutil.copy(f, obs_dir)
                 os.remove(f)
-        #os.removedirs(tempdir)
-            db.commit()
-        return obs_dir, chunk_dir
+                continue
+            arch_info = self.get_arch_info(i, f, archfiles)
+            arch_info['obsid'] = obsid
+            if (len(existing)
+               and arch_info['filename'] in existing['filename']):
+                print "skipping %s" % f
+                os.remove(f)
+                continue
 
+            db.insert(arch_info, 'archfiles')
+            shutil.copy(f, obs_dir)
+            os.remove(f)
+        db.commit()
+        return obs_dir
     # this needs help
     def update_link(self, obsid):
         """
