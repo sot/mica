@@ -1,3 +1,7 @@
+"""
+Generalized module for fetching and archiving obsid-organized
+telemetry such as asp_l1 and obspar products.
+"""
 import os
 import tempfile
 from glob import glob
@@ -19,6 +23,14 @@ import gzip
 
 
 def parse_obspar(file):
+    """
+    Return the rows of an IRAF formatted obspar as a dictionary.
+
+    :param file: obspar file
+
+    :returns: row of obspar
+    :rtype: dictionary generator
+    """
     convert = {'i': int,
                'r': float,
                's': str}
@@ -32,6 +44,7 @@ def parse_obspar(file):
                               dialect='excel')
 
     for row in obs_read:
+        # this empty-string '' hack is not present in the original
         if ((row['value'] == '')
             and ((row['type'] == 'r') or (row['type'] == 'i'))):
             row['value'] = None
@@ -56,6 +69,40 @@ class ProductVersionError(Exception):
 
 
 class ObsArchive:
+    """
+    Object to store configuration, logging, and processing tasks
+    to fetch obsid telemetry from the CXC archive and store in a Ska
+    file archive, while logging the archive files to a file lookup
+    database.
+
+    :param config: configuration dictionary
+    :returns: ObsArchive instance
+
+    The configuration dictionary may have these key/values:
+
+    * data_root: directory for products
+                (example /data/aca/archive/asp1)
+    * temp_root: directory for temporary storage of fetched
+                telemetry
+    * cols: headers that will be included in file lookup table
+    * sql_def: sql file to build file lookup archfiles table
+    * apstat_table: axafapstat database table from which to find
+                   new processing (by id)
+    * apstat_id: field in apstat_table to use as unique CXCDS
+                processing id
+    * label: label of product type for log messages
+    * small: arc5gl keyword/filetype for small file from products
+            (example asp1{fidprops}).  This will be retrieved with
+            "get %s" % config['small'] and the retrieved files will
+            be used to determine product version.
+    * small_glob: glob to match files retrieved by
+                 "get %s" % config[small]
+                 (example '*fidpr*')
+    * small_ver_regex: regular expression to search for version from
+                     retrieved files (example 'pacdf\d+N(\d{3})_')
+    * full: arc5gl keyword for products (example 'asp1')
+    """
+
     def __init__(self, config):
         self._config = config
         self._logger = logging.getLogger('ObsArchive')
@@ -69,11 +116,19 @@ class ObsArchive:
         return self._logger
 
     def set_env(self):
+        """
+        Set environment included an arc5gl handle and
+        and a handle to the axafapstat database
+        """
         self._arc5 = Ska.arc5gl.Arc5gl()
         self._apstat = Ska.DBI.DBI(dbi='sybase', server='sqlsao',
                                    database='axafapstat')
 
     def get_all_obspar_info(self, i, f, archfiles):
+        """
+        Read obspar and add 'obsid' and 'filename' keys to the dictionary
+        i and archfiles are just passed to make the logging prettier.
+        """
         logger = self.logger
         filename = os.path.basename(f)
         logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
@@ -89,7 +144,10 @@ class ObsArchive:
         return dirmap['default']
 
     def get_obs_dirs(self, obsid):
-        """Return a dictionary of the directories available for an obsid."""
+        """
+        Return a dictionary of the directories available for an obsid.
+        This is just done with a glob in the data directories.
+        """
         data_root = self._config['data_root']
         strobs = "%05d" % obsid
         chunk_dir = strobs[0:2]
@@ -116,6 +174,18 @@ class ObsArchive:
 
     @staticmethod
     def get_file_ver(tempdir, fileglob, ver_regex):
+        """
+        Determine the version/revision of a set of archived files from
+        their file names.
+
+        :param tempdir: directory containing files
+        :param fileglob: glob to match files in question
+        :param ver_regex: regular expression to pull out version
+                          from the set of files
+
+        :returns: version number
+        :rtype: integer
+        """
         files = glob(os.path.join(tempdir, fileglob))
         if not files:
             return None
@@ -131,6 +201,16 @@ class ObsArchive:
         return version
 
     def get_ver_num(self, obsid, version='default'):
+        """
+        Determine the version number associated with the current released
+        products or with the products referenced by "version=last".
+
+        :param obsid: obsid
+        :param version: version string ('default'|'last')
+
+        :returns: version
+        :rtype: integer
+        """
         arc5 = self._arc5
         apstat = self._apstat
         logger = self.logger
@@ -151,7 +231,7 @@ class ObsArchive:
             arc5.sendline("obi=%d" % minobi)
         if version != 'default':
             arc5.sendline("version=%s" % version)
-        # just a small file to start
+        # just get a small file
         arc5.sendline("get %s" % config['small'])
         version = self.get_file_ver(tempdir,
                                config['small_glob'],
@@ -165,24 +245,29 @@ class ObsArchive:
         return version
 
     def get_fits_info(self, i, f, archfiles):
-        """Read filename ``f`` with index ``i`` (position within list of
-        filenames).  The file has type ``filetype`` and will be added to
-        MSID file at row index ``row``.  ``colnames`` is the list of
-        column names for the content type (not used here).
+        """
+        Read FITS file ``f`` with index ``i`` (position within list of
+        filenames ``archfiles``) and get dictionary of values to store
+        in file lookup database.  This values include all header key/value
+        pairs with keys in ``config[cols]`` plus the header checksum,
+        the filename, the year, and day-of-year.
+
+        :param i: index of file f within list of files archfiles
+        :param f: filename
+        :param archfiles: list of filenames for this batch
+
+        :returns: info for a file
+        :rtype: dictionary
         """
         logger = self.logger
         config = self.config
         filename = os.path.basename(f)
 
-        # Read FITS archive file and accumulate data into dats list and
-        # header into headers dict
         logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
         hdus = pyfits.open(f)
         hdu = hdus[1]
 
-        # Accumlate relevant info about archfile that will be ingested into
-        # MSID h5 files.  Commit info before h5 ingest so if there is a failure
-        # the needed info will be available to do the repair.
+        # Accumulate relevant info about archfile that will be ingested
         archfiles_row = dict((x, hdu.header.get(x.upper()))
                              for x in config['cols'])
         archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
@@ -199,12 +284,19 @@ class ObsArchive:
         return archfiles_row
 
     def get_obspar_info(self, i, f, archfiles):
-        """Wrap get_all_obspar_info to just return cols in config['cols']"""
+        """
+        Wrap get_all_obspar_info() and just include columns in config['cols']
+        """
         obspar = self.get_all_obspar_info(i, f, archfiles)
         return {col: obspar[col]
                 for col in self.config['cols'] if col in obspar}
 
     def get_arch_info(self, i, f, archfiles):
+        """
+        Get information for a file for the file lookup table/database.
+        For obspars, call the get_obspar_info() method.
+        For FITS files, call get_fits_info() method.
+        """
         config = self.config
         if config['full'] == 'obspar':
             return self.get_obspar_info(i, f, archfiles)
@@ -212,17 +304,30 @@ class ObsArchive:
             return self.get_fits_info(i, f, archfiles)
 
     def get_arch(self, obsid, version='last'):
+        """
+        Retrieve telemetry for an observation from the CXC archive and
+        store in the Ska file archive.
+
+        :param obsid: obsid
+        :param version: 'default', 'last', or revision/version number
+        :returns: obsid directory in Ska file archive
+        :rtype: directory string
+        """
+
         arc5 = self._arc5
         apstat = self._apstat
         logger = self.logger
         config = self.config
         temp_root = config['temp_root']
 
+        # get a numeric version
+        # do this even if passed a numeric version, as this will
+        # check to see if the version is available
         n_version = self.get_ver_num(obsid, version=version)
         if n_version is None:
             raise ProductVersionError("No %s data for ver %s"
                              % (config['label'], version))
-        # use numeric version instead of 'last' or 'default'
+        # use the numeric version instead of 'last' or 'default'
         version = n_version
 
         # set up directory for data
@@ -244,7 +349,7 @@ class ObsArchive:
         arc5.sendline("cd %s" % tempdir)
         logger.info("retrieving data for %d in %s" % (obsid, tempdir))
         arc5.sendline("obsid=%d" % obsid)
-        # if multi-obi, we'll need to be specific
+        # if multi-obi, limit to just the first obi
         obis = apstat.fetchall(
             "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
         if len(obis) > 1:
@@ -253,6 +358,7 @@ class ObsArchive:
             arc5.sendline("obi=%d" % minobi)
         arc5.sendline("version=%s" % version)
         arc5.sendline("get %s" % config['full'])
+        # get the log too
         arc5.sendline("dataset=pipelog")
         arc5.sendline("go")
         archfiles = glob(os.path.join(tempdir, "*"))
@@ -298,6 +404,20 @@ class ObsArchive:
 
     # this needs help
     def update_link(self, obsid):
+        """
+        Create links in the obsid data directories to make it easy to find
+        the current 'default'/released data, all versions that have been
+        archived, and the 'last'/unreleased/provisional data if available.
+
+        This is designed so that if obsid 5 has released data in version 1
+        and provisional data in version 2, that the directories and links
+        will look like:
+
+        directory 00005_v01
+        directory 00005_v02
+        link      00005 -> 00005_v01
+        link      00005_last -> 00005_v02
+        """
         logger = self.logger
         config = self.config
         archive_dir = config['data_root']
@@ -306,7 +426,7 @@ class ObsArchive:
         default_ver = self.get_ver_num(obsid, 'default')
         last_ver = self.get_ver_num(obsid, 'last')
 
-        # set up directory for data
+        # directories for this obsid are in 'chunk_dir'
         chunk_dir = ("%05d" % obsid)[0:2]
         chunk_dir_path = os.path.join(archive_dir, chunk_dir)
         obs_ln = os.path.join(archive_dir, chunk_dir, "%05d" % obsid)
@@ -349,14 +469,18 @@ class ObsArchive:
                         os.path.relpath(last_ver_dir, chunk_dir_path),
                         obs_ln_last)
         else:
-            # if default and last are the same and we have a last link,
-            # delete it
+            # if default and last are now the same, delete last link
             if os.path.exists(obs_ln_last):
                 logger.info("removing outdated link %s"
                             % obs_ln_last)
                 os.remove(obs_ln_last)
 
     def get_todo_from_links(self, archive_dir):
+        """
+        Return a list of all of the *_last directories in the file archive
+        (and specify revision=default to attempt to get new released products
+        for thems).
+        """
         logger = self.logger
         logger.info("Checking for updates to obsids with provisional data")
         chunk_dirs = glob(os.path.join(archive_dir, "??"))
@@ -372,6 +496,10 @@ class ObsArchive:
         return todo_obs
 
     def update(self):
+        """
+        Run the update process using the config already passed to the object.
+        """
+
         self.set_env()
         config = self._config
         logger = self.logger
@@ -404,9 +532,9 @@ class ObsArchive:
                 logger.debug(ve)
                 continue
             self.update_link(obs['obsid'])
-         # if no obsid specified, try to retrieve all asp_1 runs
+        # if no obsid specified, try to retrieve all data
         # since tool last run
-        # use an aspect_1_id in a file
+        # use saved id from the apstat table as a reference
         last_id = 0
         if os.path.exists(last_id_file):
             last_id_fh = open(last_id_file)
@@ -425,17 +553,22 @@ class ObsArchive:
             logger.info("running get_arch for obsid %d run on %s"
                         % (obs['obsid'], obs['ap_date']))
             get_rev = obs['revision']
+            # firstrun was the mode to initially populate the
+            # file archive
             if config['firstrun']:
-                # if I've already got a later version, skip
+                # if I've already got a later version, skip this
+                # obsid
                 have = self.get_obs_dirs(obs['obsid'])
                 if have:
                     max_rev = max(have['revisions'])
-                    print "%d vs %d" % (max_rev, obs['revision'])
+                    logger.info("%d vs %d" % (max_rev, obs['revision']))
                     if max_rev >= obs['revision']:
                         logger.info(
                             "skipping %d, firstrun and already have newer rev"
                             % obs['obsid'])
                         continue
+                # otherwise override the revision from the apstat
+                # table and just get the current 'default'
                 else:
                     get_rev = 'default'
 
@@ -447,6 +580,7 @@ class ObsArchive:
                             % obs['obsid'])
                 logger.debug(ve)
                 continue
+            # update the file that stores the last id from the apstat table
             last_id_fh = open(last_id_file, 'w')
             last_id_fh.write("%d" % obs[config['apstat_id']])
             last_id_fh.close()
