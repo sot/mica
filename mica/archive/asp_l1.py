@@ -1,10 +1,20 @@
 #!/usr/bin/env python
+"""
+Script to update Ska file archive aspect L1 products.  Module
+also provides methods to retrieve the directory (or directories)
+for an obsid.
+
+This uses the obsid_archive module with a configuration specific
+to the aspect L1 products.
+
+"""
 
 import logging
 import obsid_archive
 
 
-# borrowed from eng_archive
+# these columns are available in the headers of the fetched telemetry
+# for this product (ASP L1) and will be included in the file lookup table
 archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content',
                       'ascdsver', 'revision', 'date')
 
@@ -23,8 +33,19 @@ config = dict(data_root='/data/aca/archive/asp1',
 
 def get_options():
     import argparse
-    parser = argparse.ArgumentParser(
-        description="Fetch aspect level 1 products and make a file archive")
+    desc = \
+"""
+Run the update process to get new ASP L1 telemetry, save it in the Ska
+file archive, and include it in the file lookup database.  This is intended
+to be run as a cron task, and in regular processing, the update will fetch
+and ingest all telemetry since the task's last run.  Options also provided
+to fetch and ingest specific obsids and versions.
+
+See the ``config`` in the asp_l1.py file and the config description in
+obsid_archive for more information on the asp l1 default config if parameters
+without command-line options need to be changed.
+"""
+    parser = argparse.ArgumentParser(description=desc)
     defaults = dict(config)
     parser.set_defaults(**defaults)
     parser.add_argument("--obsid",
@@ -47,16 +68,32 @@ def get_options():
 
 
 def get_dir(obsid):
-    archive = obsid_archive.ObsArchive(dict(config))
+    """
+    Get ASP L1 directory for default/released products for an obsid.
+
+    :param obsid: obsid
+    :returns: directory
+    :rtype: string
+    """
     return archive.get_dir(obsid)
 
 
 def get_obs_dirs(obsid):
-    archive = obsid_archive.ObsArchive(dict(config))
+    """
+    Get all ASP L1 directories for an obsid in the Ska file archive.
+
+    :param obsid: obsid
+    :returns: map of obsid version to directories
+    :rtype: dictionary
+    """
     return archive.get_obs_dirs(obsid)
 
 
 def main():
+    """
+    Run the update process to get new ASP L1 telemetry, save it in the Ska
+    file archive, and include it in the file lookup database.
+    """
     opt = get_options()
     config = dict(opt.__dict__, cols=archfiles_hdr_cols)
     archive = obsid_archive.ObsArchive(config)
