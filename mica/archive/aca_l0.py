@@ -140,6 +140,45 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
     return all_rows
 
 
+class MissingDataError(Exception):
+    pass
+
+
+class MSID(object):
+    def __init__(self, msid, slot, start, stop):
+        self.tstart = DateTime(start).secs
+        self.tstop = DateTime(stop).secs
+        self.datestart = DateTime(self.tstart).date
+        self.datestop = DateTime(self.tstop).date
+        self.slot = slot
+        self._check_msid(msid)
+        self._get_data()
+
+    def _check_msid(self, req_msid):
+        if req_msid.upper() in aca_dtype_names:
+            self.msid = req_msid.lower()
+        else:
+            raise MissingDataError("msid %s not found" % req_msid)
+
+    def _get_data(self):
+        slot_data = get_slot_data(
+            self.tstart, self.tstop, self.slot, imgsize=[8],
+            columns=['TIME', self.msid.upper()])
+        self.vals = slot_data[self.msid.upper()]
+        self.times = slot_data['TIME']
+
+import collections
+class MSIDset(collections.OrderedDict):
+    def __init__(self, msids, start, stop):
+        super(MSIDset, self).__init__()
+        self.tstart = DateTime(start).secs
+        self.tstop = DateTime(stop).secs
+        self.datestart = DateTime(self.tstart).date
+        self.datestop = DateTime(self.tstop).date
+        for msid in msids:
+            self[msid] = MSID(msid, self.tstart, self.tstop)
+
+
 def get_interval_files(tstart, tstop,
                        slots=[0, 1, 2, 3, 4, 5, 6, 7],
                        imgsize=[4, 6, 8], db=None):
