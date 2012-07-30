@@ -53,8 +53,8 @@ aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('IMGSIZE', '>i4'),
              ]
 
+aca_dtype_names = [k[0] for k in aca_dtype]
 
-#config = ConfigObj("aca0.conf")
 config = dict(data_root='/data/aca/archive/aca0',
               temp_root='/data/aca/archive/temp',
               days_at_once=30.0,
@@ -82,17 +82,19 @@ def get_options():
 
 
 def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
-                  db=None, data_root=config['data_root']):
+                  db=None, data_root=config['data_root'],
+	              columns=aca_dtype_names):
     if not db:
         dbfile = os.path.join(config['data_root'], 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
     data_files = get_interval_files(tstart, tstop, slots=[slot],
                                     imgsize=imgsize, db=db)
+    dtype = [k for k in aca_dtype if k[0] in columns]
     if not len(data_files):
         # return an empty masked array
-        return ma.zeros(0, dtype=aca_dtype)
+        return ma.zeros(0, dtype=dtype)
     rows = np.sum(data_files['rows'])
-    zero_row = ma.zeros(1, dtype=aca_dtype)
+    zero_row = ma.zeros(1, dtype=dtype)
     zero_row.mask = ma.masked
     all_rows = zero_row.repeat(rows)
     rowcount = 0
@@ -109,11 +111,13 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
             if fname in chunk.dtype.names:
                 all_rows[fname][rowcount:(rowcount + len(chunk))] \
                     = chunk.field(fname)
-        f_imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
-        all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = f_imgsize
-        all_rows['IMGRAW'].reshape(rows, 8, 8)[
-            rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
-            chunk.field('IMGRAW').reshape(len(chunk), f_imgsize, f_imgsize))
+        if 'IMGSIZE' in columns and 'IMGRAW' in columns:
+            f_imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
+            all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = f_imgsize
+            all_rows['IMGRAW'].reshape(rows, 8, 8)[
+                rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
+                chunk.field('IMGRAW').reshape(len(chunk),
+                                              f_imgsize, f_imgsize))
         rowcount += len(chunk)
     return all_rows
 
