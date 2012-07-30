@@ -28,7 +28,8 @@ config = dict(data_root='/data/aca/archive/asp1',
               small='asp1{fidprops}',
               small_glob='*fidpr*',
               small_ver_regex='pcadf\d+N(\d{3})_',
-              full='asp1')
+              full='asp1',
+              cols=archfiles_hdr_cols)
 
 
 def get_options():
@@ -61,10 +62,12 @@ without command-line options need to be changed.
                         help="parent directory for all data")
     parser.add_argument("--temp-root",
                         help="parent temp directory")
-    parser.add_argument("--proctype",
-                        default="asp1")
     opt = parser.parse_args()
     return opt
+
+# set up an archive object with default config for use by the other
+# get_* methods
+archive = obsid_archive.ObsArchive(config)
 
 
 def get_dir(obsid):
@@ -95,7 +98,7 @@ def main():
     file archive, and include it in the file lookup database.
     """
     opt = get_options()
-    config = dict(opt.__dict__, cols=archfiles_hdr_cols)
+    config = vars(opt)
     archive = obsid_archive.ObsArchive(config)
     archive.logger.setLevel(logging.INFO)
     archive.logger.addHandler(logging.StreamHandler())
