@@ -103,10 +103,11 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
     :rtype: numpy masked recarray
     """
     if not db:
-        dbfile = os.path.join(config['data_root'], 'archfiles.db3')
+        dbfile = os.path.join(data_root, 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
     data_files = get_interval_files(tstart, tstop, slots=[slot],
-                                    imgsize=imgsize, db=db)
+                                    imgsize=imgsize, db=db, 
+                                    data_root=data_root)
     dtype = [k for k in aca_dtype if k[0] in columns]
     if not len(data_files):
         # return an empty masked array
@@ -181,7 +182,8 @@ class MSIDset(collections.OrderedDict):
 
 def get_interval_files(tstart, tstop,
                        slots=[0, 1, 2, 3, 4, 5, 6, 7],
-                       imgsize=[4, 6, 8], db=None):
+                       imgsize=[4, 6, 8], db=None, 
+                       data_root=config['data_root']):
     """
     Retrieve list of files from ACA0 archive lookup table that
     match arguments.
@@ -191,13 +193,14 @@ def get_interval_files(tstart, tstop,
     :param slots: list of desired image slots to retrieve in interval
     :param imgsize: list of desired image sizes
     :param db: handle to archive lookup table
+    :param data_root: parent directory of Ska aca l0 archive
 
     :returns: interval files
     :rtype: list
     """
 
     if not db:
-        dbfile = os.path.join(config['data_root'], 'archfiles.db3')
+        dbfile = os.path.join(data_root, 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
     tstart = DateTime(tstart).secs
     tstop = DateTime(tstop).secs
@@ -219,7 +222,9 @@ def get_interval_files(tstart, tstop,
     return db.fetchall(db_query)
 
 
-def _rebuild_database(db=None, db_file=None):
+def _rebuild_database(db=None, db_file=None,
+                      data_root=config['data_root'],
+                      sql_def=config['sql_def']):
     """
     Utility routine to rebuild the file lookup database using the 
     package defaults and the files in the archive.
@@ -228,15 +233,15 @@ def _rebuild_database(db=None, db_file=None):
         raise ValueError
     if db is None and db_file is not None:
         logger.info("creating archfiles db from %s"
-                    % config['sql_def'])
+                    % sql_def)
         db_sql = os.path.join(os.environ['SKA_DATA'],
-                              'mica', config['sql_def'])
+                              'mica', sql_def)
         db_init_cmds = file(db_sql).read()
         db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
                          autocommit=False)
         db.execute(db_init_cmds, commit=True)
     year_dirs = sorted(glob(
-            os.path.join(config['data_root'], '[12][0-9][0-9][0-9]')))
+            os.path.join(data_root, '[12][0-9][0-9][0-9]')))
     for ydir in year_dirs:
         day_dirs = sorted(glob(
                 os.path.join(ydir, '[0-3][0-9][0-9]')))
@@ -382,11 +387,11 @@ def update_archive(datestart, datestop, sql_def,
     # make it
     if not os.path.exists(archdb):
         logger.info("creating archfiles db from %s"
-                    % config['sql_def'])
+                    % sql_def)
         db_sql = os.path.join(os.environ['SKA_DATA'],
-                              'mica', config['sql_def'])
+                              'mica', sql_def)
         db_init_cmds = file(db_sql).read()
-        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+        db = Ska.DBI.DBI(dbi='sqlite', server=archdb,
                          autocommit=False)
         db.execute(db_init_cmds, commit=True)
     # open a handle to file database with autocommit turned off
@@ -440,7 +445,6 @@ def main():
     """
     opt = get_options()
     kwargs = vars(opt)
-    config.update(kwargs)
     update_archive(**kwargs)
 
 
