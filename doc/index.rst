@@ -58,15 +58,15 @@ ACA Diagnostic module
 .. toctree::
    :maxdepth: 1
    
-   mica.archive.aca_diagnostic_telem
+   mica.archive.aca_hdr3
 
 Retrieving Data with the ACA diagnostic module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Module examples::
 
-  import mica.archive.aca_diagnostic_telem
-  ccd_temp = mica.archive.aca_diagnostic.MSID('ccd_temp', '2012:001', '2012:020')
-  perigee_data = mica.archive.aca_diagnostic.MSIDset(['ccd_temp','aca_temp', 'dac'],
+  import mica.archive.aca_hdr3
+  ccd_temp = mica.archive.aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
+  perigee_data = mica.archive.aca_hdr3.MSIDset(['ccd_temp','aca_temp', 'dac'],
                                                      '2012:001', '2012:030')
 
 Aspect L1 products

@@ -1,7 +1,7 @@
-:mod:`mica.archive.aca_diagnostic_telem`
+:mod:`mica.archive.aca_hdr3`
 ==========================
 
-.. automodule:: mica.archive.aca_diagnostic_telem
+.. automodule:: mica.archive.aca_hdr3
 
 Functions
 ---------
