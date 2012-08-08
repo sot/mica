@@ -1,10 +1,11 @@
+
 """
 Experimental code to work with ACA L0 Header 3 data
 """
-
+import re
 import numpy as np
 import collections
-
+from scipy.interpolate import interp1d
 from Chandra.Time import DateTime
 import mica.archive.aca_l0
 
@@ -69,7 +70,6 @@ a_to_d = a_to_d[::-1]
 a_to_d = np.rec.fromrecords(a_to_d, names=['hex', 'tempC'])
 x = np.array([int(a, 16) for a in a_to_d['hex']])
 #adpoly = np.polyfit(x, a_to_d['tempC'], 6)
-from scipy.interpolate import interp1d
 ad_func = interp1d(x, a_to_d['tempC'], kind='cubic', bounds_error=False)
 
 
@@ -327,7 +327,7 @@ msid_aliases = {'dac': {'hdr3': '776'},
 
 
 default_nbytes = 2
-import re
+
 
 
 class MSID(object):
