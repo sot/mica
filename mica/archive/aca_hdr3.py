@@ -1,4 +1,3 @@
-
 """
 Experimental code to work with ACA L0 Header 3 data
 """
@@ -324,10 +323,6 @@ The number most recently written the the [sic] TEC power control DAC.
 msid_aliases = {'dac': {'hdr3': '776'},
                 'aca_temp': {'hdr3': '766'},
                 'ccd_temp': {'hdr3': '676'}}
-
-
-default_nbytes = 2
-
 
 
 class MSID(object):
