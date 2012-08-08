@@ -327,17 +327,23 @@ msid_aliases = {'dac': {'hdr3': '776'},
 
 class MSID(object):
     def __init__(self, msid, start, stop, msid_data=None):
+        if msid_data is None:
+            msid_data = MSIDset([msid], start, stop)[msid]
+        self.msid = msid        
         self.tstart = DateTime(start).secs
         self.tstop = DateTime(stop).secs
         self.datestart = DateTime(self.tstart).date
         self.datestop = DateTime(self.tstop).date
-        if msid_data is None:
-            msid_data = MSIDset([msid], start, stop)[msid]
-        self.hdr3_msid = msid_data['hdr3_msid']
-        self.msid = msid
-        self.vals = msid_data['vals']
-        self.times = msid_data['times']
-
+        # TODO: fix the logic to handle both
+        # types of msid_data (MSID vs dict) in a nice way
+        if hasattr(msid_data, 'hdr3_msid'):
+            self.hdr3_msid = msid_data.hdr3_msid
+            self.vals = msid_data.vals
+            self.times = msid_data.times
+        else:
+            self.hdr3_msid = msid_data['hdr3_msid']
+            self.vals = msid_data['vals']
+            self.times = msid_data['times']
 
 def confirm_msid(req_msid):
     if req_msid in msid_aliases:
