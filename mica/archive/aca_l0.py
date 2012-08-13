@@ -8,7 +8,7 @@ import pyfits
 import numpy as np
 import numpy.ma as ma
 import argparse
-
+import collections
 
 import Ska.DBI
 import Ska.arc5gl
@@ -168,7 +168,7 @@ class MSID(object):
         self.vals = slot_data[self.msid.upper()]
         self.times = slot_data['TIME']
 
-import collections
+
 class MSIDset(collections.OrderedDict):
     def __init__(self, msids, start, stop):
         super(MSIDset, self).__init__()
