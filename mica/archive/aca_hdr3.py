@@ -68,9 +68,7 @@ a_to_d = [
 a_to_d = a_to_d[::-1]
 a_to_d = np.rec.fromrecords(a_to_d, names=['hex', 'tempC'])
 x = np.array([int(a, 16) for a in a_to_d['hex']])
-#adpoly = np.polyfit(x, a_to_d['tempC'], 6)
 ad_func = interp1d(x, a_to_d['tempC'], kind='cubic', bounds_error=False)
-
 
 def ad_temp(msids):
     def func(slot_data):
