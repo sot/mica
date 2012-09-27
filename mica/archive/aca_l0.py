@@ -69,9 +69,9 @@ def get_options():
                         help="parent directory for all data")
     parser.add_argument("--temp-root",
                         help="parent temp directory")
-    parser.add_argument("--datestart",
+    parser.add_argument("--start",
                         help="start date for retrieve (defaults to max date of archived files)")
-    parser.add_argument("--datestop",
+    parser.add_argument("--stop",
                         help="stop date for retrieve (defaults to now)")
     parser.add_argument("--days-at-once",
                         type=float,
@@ -80,7 +80,7 @@ def get_options():
     return opt
 
 
-def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
+def get_slot_data(start, stop, slot, imgsize=[4, 6, 8],
                   db=None,
                   data_root=config['data_root'],
                   columns=aca_dtype_names,
@@ -89,8 +89,8 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
     For a the given parameters, retrieve telemetry and construct a
     masked array of the MSIDs available in that telemetry
 
-    :param tstart: start time of requested interval
-    :param tstop: stop time of requested interval
+    :param start: start time of requested interval
+    :param stop: stop time of requested interval
     :param slot: slot number (in the range 0 -> 7)
     :param imgsize: list of desired image sizes
     :param db: handle to archive lookup table
@@ -105,7 +105,7 @@ def get_slot_data(tstart, tstop, slot, imgsize=[4, 6, 8],
     if not db:
         dbfile = os.path.join(data_root, 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
-    data_files = get_interval_files(tstart, tstop, slots=[slot],
+    data_files = get_interval_files(start, stop, slots=[slot],
                                     imgsize=imgsize, db=db, 
                                     data_root=data_root)
     dtype = [k for k in aca_dtype if k[0] in columns]
@@ -180,7 +180,7 @@ class MSIDset(collections.OrderedDict):
             self[msid] = MSID(msid, self.tstart, self.tstop)
 
 
-def get_interval_files(tstart, tstop,
+def get_interval_files(start, stop,
                        slots=[0, 1, 2, 3, 4, 5, 6, 7],
                        imgsize=[4, 6, 8], db=None, 
                        data_root=config['data_root']):
@@ -202,8 +202,8 @@ def get_interval_files(tstart, tstop,
     if not db:
         dbfile = os.path.join(data_root, 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
-    tstart = DateTime(tstart).secs
-    tstop = DateTime(tstop).secs
+    tstart = DateTime(start).secs
+    tstop = DateTime(stop).secs
     imgsize_str = ','.join([str(x) for x in imgsize])
     slot_str = ','.join([str(x) for x in slots])
     # a composite index isn't as fast as just doing a padded search on one
@@ -256,7 +256,7 @@ def _rebuild_database(db=None, db_file=None,
             db.commit()
 
 
-def get_archive_files(filetype, datestart, datestop):
+def get_archive_files(filetype, start, stop):
     """
     Update FITS file archive with arc5gl and ingest files into file archive
 
@@ -265,8 +265,8 @@ def get_archive_files(filetype, datestart, datestop):
                      and 'fileglob' for arc5gl.  For ACA0:
                      {'level': 'L0', 'instrum': 'PCAD', 'content': 'ACADATA',
                      'arc5gl_query': 'ACA0', 'fileglob': '*fits.gz'}
-    :param datestart: beginning of interval to retrieve 
-    :param datestop: end of interval to retrieve
+    :param start: beginning of interval to retrieve (Chandra.Time compatible)
+    :param stop: end of interval to retrieve (Chandra.Time compatible)
 
     :returns: retrieved file names
     :rtype: list
@@ -277,8 +277,8 @@ def get_archive_files(filetype, datestart, datestop):
     logger.info('********** %s %s **********' 
                 % (filetype['content'], time.ctime()))
 
-    arc5.sendline('tstart=%s' % DateTime(datestart).date)
-    arc5.sendline('tstop=%s' % DateTime(datestop).date)
+    arc5.sendline('tstart=%s' % DateTime(start).date)
+    arc5.sendline('tstop=%s' % DateTime(stop).date)
     arc5.sendline('get %s' % filetype['arc5gl_query'].lower())
 
     return sorted(glob(filetype['fileglob']))
@@ -373,7 +373,7 @@ def move_archive_files(filetype, archfiles, data_root):
 
 
 
-def update_archive(datestart, datestop, sql_def,
+def update_archive(start, stop, sql_def,
                    data_root, temp_root, days_at_once):
     """
     Retrieve ACA0 telemetry files from the CXC archive, store in the 
@@ -397,8 +397,8 @@ def update_archive(datestart, datestop, sql_def,
     # open a handle to file database with autocommit turned off
     # to allow control of commits in batches
     db = Ska.DBI.DBI(dbi='sqlite', server=archdb, autocommit=False)
-    if datestart:
-        datestart = DateTime(datestart)
+    if start:
+        datestart = DateTime(start)
     else:
         # Get datestart as the most-recent file time from archfiles table
         # will need min-of-max-slot-datestart
@@ -406,7 +406,7 @@ def update_archive(datestart, datestop, sql_def,
                     "select max(filetime) from archfiles where slot = %d"
                     % s)['max(filetime)'] for s in range(0, 8)])
         datestart = DateTime(last_time)
-    datestop = DateTime(datestop)
+    datestop = DateTime(stop)
     padding_seconds = 10000
     # loop over the specified time range in chunks of 
     # days_at_once in seconds with some padding
