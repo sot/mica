@@ -10,8 +10,9 @@ to the obspar products.
 """
 import os
 import logging
-import obsid_archive
 from glob import glob
+import re
+import obsid_archive
 
 # these keys are available in the obspar and will be included in the
 # file lookup table (archfiles)
@@ -216,7 +217,7 @@ def get_obs_dirs(obsid):
     """
     return archive.get_obs_dirs(obsid)
 
-def get_obspar(obsid, version='default'):
+def get_obspar_file(obsid, version='default'):
     """
     Get location of requested obsid's obspar.
 
@@ -233,6 +234,48 @@ def get_obspar(obsid, version='default'):
     return None
 
 
+# borrowed from telem_archive
+import csv
+import gzip
+
+def parse_obspar(file):
+    """
+    Parse obspar. 
+    """
+    convert = {'i': int,
+               'r': float,
+               's': str}
+    try:
+        lines = gzip.open(file).readlines()
+    except IOError:
+        lines = open(file).readlines()
+    obs_read = csv.DictReader(lines,
+                              fieldnames=('name', 'type', 'hidden', 'value',
+                                          'def1', 'def2', 'descr'),
+                              dialect='excel')
+
+    for row in obs_read:
+        row['value'] = convert[row['type']](row['value'])
+        row['name'] = row['name'].replace('-', '_')
+        yield row
+
+    return
+
+
+def get_obspar(obsid, version='default'):
+    """Get the obspar for obsid starting at tstart.  Return as a dict."""
+
+    obsparfile = get_obspar_file(obsid, version)
+    obspar = {'num_ccd_on': 0}
+    for row in parse_obspar(obsparfile):
+        obspar.update({row['name']: row['value']})
+        if re.match(r'^ccd[is]\d_on$', row['name']) and row['value'] == 'Y':
+            obspar['num_ccd_on'] += 1
+    return obspar
+
+
+
+
 def main():
     """
     Run the update process to get new obspars, save them in the Ska
@@ -245,5 +288,7 @@ def main():
     archive.logger.addHandler(logging.StreamHandler())
     archive.update()
 
+
 if __name__ == '__main__':
     main()
+
