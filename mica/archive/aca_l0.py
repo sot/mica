@@ -255,6 +255,51 @@ def _rebuild_database(db=None, db_file=None,
                     db.insert(arch_info, 'archfiles')
             db.commit()
 
+#def get_missing_archive_files(start, filetype=filetype,
+#                              data_root=config['data_root'], db=None):
+#    ingested_files = get_arc_ingested_files(start)
+#    if not db:
+#        dbfile = os.path.join(data_root, 'archfiles.db3')
+#        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+#    missing = []
+#    for file in ingested_files['filename']:
+#        db_match = db.fetchall("select * from archfiles where filename = '%s' or filename = '%s.gz'" 
+#                               % (file, file))
+#        if not len(db_match):
+#            missing.append(file)
+#    
+#    # Retrieve CXC archive files in a temp directory with arc5gl
+#    arc5 = Ska.arc5gl.Arc5gl(echo=True)
+#    logger.info('********** %s %s **********' 
+#                % (filetype['content'], time.ctime()))
+#
+#    raise ValueError
+#    for file in missing:
+#        arc5.sendline('filename=%s' % file)
+#        arc5.sendline('operation=retrieve')
+#        arc5.sendline('go')
+#
+#    return sorted(glob(filetype['fileglob']))
+#
+#
+#def get_arc_ingested_files(start):
+#    #cda_fetch_cgi = 'https://icxc.harvard.edu/dbtm/CDA/aspect_fetch.html'
+#    cda_fetch_cgi = 'http://cxcweb8:8443/dbtm/CDA/cgi/aspect_fetch.cgi'
+#    import urllib
+#    import asciitable
+#    startmx = DateTime(start).mxDateTime
+#    query = ("?tstart=%s&pattern=aca%%25&submit=Search"
+#             % startmx.strftime("%m-%d-%Y"))
+#
+#    url = cda_fetch_cgi + query
+#    arc_file_lines = urllib.urlopen(url).readlines()
+#    # just get the lines that have three fields
+#    #good_lines = [f for f in arc_file_lines if len(f.split(',')) == 3]
+#    arc_files = asciitable.read(arc_file_lines,
+#                                names=['filename', 'status', 'ingest_time'])
+#    return arc_files
+    
+
 
 def get_archive_files(filetype, start, stop):
     """
@@ -436,6 +481,18 @@ def update_archive(start, stop, sql_def,
                     move_archive_files(filetype, [f], data_root)
                     db.insert(arch_info, 'archfiles')
         db.commit()
+
+#    missing_datetime = DateTime('1999:200')
+#    with Ska.File.chdir(dirname):
+#        archfiles = get_missing_archive_files(missing_datetime)
+#        for i, f in enumerate(archfiles):
+#            arch_info = read_archfile(i, f, archfiles, db)
+#            if arch_info:
+#                move_archive_files(filetype, [f], data_root)
+#                db.insert(arch_info, 'archfiles')
+#                db.commit()
+
+
 
 
 def main():
