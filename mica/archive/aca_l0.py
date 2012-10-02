@@ -381,7 +381,42 @@ def read_archfile(i, f, archfiles, db):
     archfiles_row['doy'] = doy
     archfiles_row['rows'] = len(hdu.data)
     hdus.close()
+
+    # remove old versions of this file
+    oldmatches = db.fetchall("""SELECT * from archfiles
+                                WHERE filetime = %(filetime)d 
+                                and slot = %(slot)d
+                                and startmjf = %(startmjf)d and startmnf = %(startmnf)d 
+                                and stopmjf = %(stopmjf)d and stopmnf = %(stopmnf)d """
+                             % archfiles_row)
+    if len(oldmatches):
+        _arch_remove(oldmatches, db)
+    # throw an error if there is still overlap
+    interval_matches = get_interval_files(archfiles_row['tstart'],
+                                          archfiles_row['tstop'],
+                                          slots=[archfiles_row['slot']])
+    if len(interval_matches):
+        logger.error(archfiles_row)
+        logger.error(interval_matches)
+        raise ValueError("Overlap in database at %s" %
+                         filename)
     return archfiles_row
+
+
+def _arch_remove(defunct_matches, db, data_root=config['data_root']):
+    for file_record in defunct_matches:
+        db.execute("""delete from archfiles 
+                      WHERE filetime = %(filetime)d 
+                      and slot = %(slot)d
+                      and startmjf = %(startmjf)d and startmnf = %(startmnf)d 
+                      and stopmjf = %(stopmnf)d and stopmnf = %(stopmnf)d """
+                   % file_record)
+        archdir = os.path.abspath(os.path.join(data_root,
+                                               file_record['year'],
+                                               file_record['doy']))
+        logger.info("deleting %s" %
+                    os.path.join(archdir, file_record['filename']))
+        os.unlink(os.path.join(archdir, file_record['filename']))
 
 
 def move_archive_files(filetype, archfiles, data_root):
