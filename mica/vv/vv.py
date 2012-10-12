@@ -338,7 +338,7 @@ class Obi(object):
                 slot['%s_mean' % axdir] = smean
                 med = ma.median(data)
                 slot['%s_med' % axdir] = med
-                srms = ma.sqrt(ma.mean(data - med) ** 2)
+                srms = ma.sqrt(ma.mean((data - med) ** 2))
                 slot['%s_rms' % axdir] = srms
                 bad_frac = frac_bad(data, med, dyz_big_lim)
                 slot['frac_%s_big' % axdir] = bad_frac
