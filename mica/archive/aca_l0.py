@@ -9,6 +9,9 @@ import numpy as np
 import numpy.ma as ma
 import argparse
 import collections
+import tables
+from itertools import izip, count
+import mx.DateTime
 
 import Ska.DBI
 import Ska.arc5gl
@@ -57,7 +60,8 @@ aca_dtype_names = [k[0] for k in aca_dtype]
 config = dict(data_root='/data/aca/archive/aca0',
               temp_root='/data/aca/archive/temp',
               days_at_once=30.0,
-              sql_def='archfiles_aca_l0_def.sql')
+              sql_def='archfiles_aca_l0_def.sql',
+              cda_table='cda_aca0.h5')
 
 
 def get_options():
@@ -219,7 +223,8 @@ def get_interval_files(start, stop,
                 'AND imgsize in (%s) '
                 'order by filetime asc '
                 % (tstart, tstart_pad, tstop, tstart, slot_str, imgsize_str))
-    return db.fetchall(db_query)
+    files = db.fetchall(db_query)
+    return files
 
 
 def _rebuild_database(db=None, db_file=None,
@@ -255,49 +260,64 @@ def _rebuild_database(db=None, db_file=None,
                     db.insert(arch_info, 'archfiles')
             db.commit()
 
-#def get_missing_archive_files(start, filetype=filetype,
-#                              data_root=config['data_root'], db=None):
-#    ingested_files = get_arc_ingested_files(start)
-#    if not db:
-#        dbfile = os.path.join(data_root, 'archfiles.db3')
-#        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
-#    missing = []
-#    for file in ingested_files['filename']:
-#        db_match = db.fetchall("select * from archfiles where filename = '%s' or filename = '%s.gz'" 
-#                               % (file, file))
-#        if not len(db_match):
-#            missing.append(file)
-#    
-#    # Retrieve CXC archive files in a temp directory with arc5gl
-#    arc5 = Ska.arc5gl.Arc5gl(echo=True)
-#    logger.info('********** %s %s **********' 
-#                % (filetype['content'], time.ctime()))
-#
-#    raise ValueError
-#    for file in missing:
-#        arc5.sendline('filename=%s' % file)
-#        arc5.sendline('operation=retrieve')
-#        arc5.sendline('go')
-#
-#    return sorted(glob(filetype['fileglob']))
-#
-#
-#def get_arc_ingested_files(start):
-#    #cda_fetch_cgi = 'https://icxc.harvard.edu/dbtm/CDA/aspect_fetch.html'
-#    cda_fetch_cgi = 'http://cxcweb8:8443/dbtm/CDA/cgi/aspect_fetch.cgi'
-#    import urllib
-#    import asciitable
-#    startmx = DateTime(start).mxDateTime
-#    query = ("?tstart=%s&pattern=aca%%25&submit=Search"
-#             % startmx.strftime("%m-%d-%Y"))
-#
-#    url = cda_fetch_cgi + query
-#    arc_file_lines = urllib.urlopen(url).readlines()
-#    # just get the lines that have three fields
-#    #good_lines = [f for f in arc_file_lines if len(f.split(',')) == 3]
-#    arc_files = asciitable.read(arc_file_lines,
-#                                names=['filename', 'status', 'ingest_time'])
-#    return arc_files
+def get_missing_archive_files(start, filetype=filetype,
+                              data_root=config['data_root'], 
+                              temp_root=config['temp_root'],
+                              db=None):
+
+    ingested_files = get_arc_ingested_files()
+    startdate = DateTime(start).mxDateTime
+    for itime, backcnt in izip(ingested_files[::-1]['ingest_time'], count(1)):
+        idate = mx.DateTime.strptime(itime, "%b%t%d%t%Y%t%I:%M%p")
+        print idate
+        print startdate
+        if idate < startdate:
+            break
+
+    if not db:
+        dbfile = os.path.join(data_root, 'archfiles.db3')
+        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+
+    missing = []
+    for file in ingested_files['filename'][-backcnt:]:
+        print file
+        db_match = db.fetchall("select * from archfiles where filename = '%s' or filename = '%s.gz'" 
+                               % (file, file))
+        if not len(db_match):
+            missing.append(file)
+
+    if len(missing):
+        # make a temporary directory
+        tmpdir = Ska.File.TempDir(dir=temp_root)
+        dirname = tmpdir.name
+        logger.info("Files save to temp dir %s" % dirname)
+        # get the files, store in file archive, and record in database
+        with Ska.File.chdir(dirname):
+            # Retrieve CXC archive files in a temp directory with arc5gl
+            arc5 = Ska.arc5gl.Arc5gl(echo=True)
+            logger.info('********** %s %s **********' 
+                        % (filetype['content'], time.ctime()))
+            for file in missing:
+                arc5.sendline('filename=%s' % file)
+                arc5.sendline('operation=retrieve')
+                arc5.sendline('go')
+
+            archfiles = sorted(glob(filetype['fileglob']))
+            for i, f in enumerate(archfiles):
+                arch_info = read_archfile(i, f, archfiles, db)
+                if arch_info:
+                    move_archive_files(filetype, [f], data_root)
+                    db.insert(arch_info, 'archfiles')
+        db.commit()
+
+
+def get_arc_ingested_files(cda_table=config['cda_table'], data_root=config['data_root']):
+    table_file = os.path.join(data_root, cda_table)
+    h5f = tables.openFile(table_file)
+    tbl = h5f.getNode('/', 'data')
+    arc_files = tbl[:]
+    h5f.close()
+    return arc_files
     
 
 
@@ -398,6 +418,9 @@ def read_archfile(i, f, archfiles, db):
     if len(interval_matches):
         logger.error(archfiles_row)
         logger.error(interval_matches)
+        if np.all(interval_matches['revision'] == archfiles_row['revision']):
+            # ignore and move on
+            return archfiles_row
         raise ValueError("Overlap in database at %s" %
                          filename)
     return archfiles_row
