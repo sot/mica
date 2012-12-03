@@ -4,6 +4,9 @@ import re
 import pyfits
 import pickle
 import json
+import tables
+import csv
+import gzip
 from glob import glob
 import numpy as np
 import numpy.ma as ma
@@ -23,11 +26,12 @@ config = dict(h5_arch='/data/aca/archive/vv/vv.h5',
               h5_table='vv',
               )
 
-import tables
+
 def get_table():
     h5 = tables.openFile(config['h5_arch'], 'a')
     tbl = h5.getNode('/', config['h5_table'])
     return tbl, h5
+
 
 def get_arch_vv(obsid, version='default'):
     """
@@ -40,6 +44,7 @@ def get_arch_vv(obsid, version='default'):
                                     'axaf*par*'))[0]
     return Obi(obspar_file, l1_dir)
 
+
 def process(obsid, version='default'):
     obi = get_arch_vv(obsid, version)
     tbl, h5 = get_table()
@@ -51,14 +56,11 @@ def process(obsid, version='default'):
     return obi
 
 
-# borrowed from telem_archive
-import csv
-import gzip
-
 def parse_obspar(file):
     """
-    Parse obspar. 
+    Parse obspar.
     """
+# borrowed from telem_archive
     convert = {'i': int,
                'r': float,
                's': str}
@@ -158,7 +160,7 @@ class Obi(object):
             if not 'n_pts' in slot:
                 continue
             # ignore the arrays
-            save = dict((k, v) for k,v in slot.iteritems() 
+            save = dict((k, v) for k, v in slot.iteritems()
                         if type(v) not in [np.ndarray, np.ma.core.MaskedArray])
             slist.append(save)
         return slist
@@ -190,14 +192,14 @@ class Obi(object):
                 'revision': revision,
                 'tstart': self.obspar['tstart'],
                 'tstop': self.obspar['tstop'],
-                'sim_z' : self.obspar['sim_z'],
+                'sim_z': self.obspar['sim_z'],
                 'sim_z_offset': self.obspar['sim_z_offset'],
                 'ra_pnt': self.obspar['ra_pnt'],
                 'dec_pnt': self.obspar['dec_pnt'],
                 'roll_pnt': self.obspar['roll_pnt'],
                 'instrument': self.obspar['detnam'],
                 'intervals': ai_list,
-                'slots': self._just_slot_data() }
+                'slots': self._just_slot_data()}
 
     def _save_info_file(self, file='vv_agg.json'):
         save = self._info()
@@ -209,7 +211,7 @@ class Obi(object):
         save = self._info()
         in_db = self.db.fetchall("""select * from %s where
                                     obsid = %d and revision = %d"""
-                                 % (self.slot_table, 
+                                 % (self.slot_table,
                                     save['obsid'], save['revision']))
         if len(in_db):
             self.db.execute("""delete from %s where
@@ -225,7 +227,7 @@ class Obi(object):
         save = self._info()
         # add obsid and revision to the slot dict
         for slot in save['slots']:
-            slot.update(dict((k,save[k]) 
+            slot.update(dict((k, save[k])
                              for k in self.table.dtype.names
                              if k in save))
             slot.update(most_recent=0)
@@ -233,11 +235,11 @@ class Obi(object):
         save_rec = np.rec.fromrecords(
             [[slot[k] for k in self.table.dtype.names]
              for slot in save['slots']],
-            dtype = self.table.dtype)
+            dtype=self.table.dtype)
 
-        have_obsid_coord = self.table.getWhereList('(obsid == %d)' 
-                                                  % (save['obsid']),
-                                                  sort=True)
+        have_obsid_coord = self.table.getWhereList('(obsid == %d)'
+                                                   % (save['obsid']),
+                                                   sort=True)
         # if there are previous records for this obsid
         if len(have_obsid_coord):
             # mark all records for the obsid as old (or not most_recent)
@@ -247,18 +249,23 @@ class Obi(object):
             self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
             # if we already have the revision, update in place
             if np.any(obsid_rec['revision'] == save['revision']):
-                rev_coord = self.table.getWhereList('(obsid == %d) & (revision == %d)' 
-                                                    % (save['obsid'], save['revision']),
-                                                    sort=True)
+                rev_coord = self.table.getWhereList(
+                    '(obsid == %d) & (revision == %d)'
+                    % (save['obsid'], save['revision']),
+                    sort=True)
                 if len(rev_coord) != len(save_rec):
-                    raise ValueError("Could not update; different number of slots")
-                print "updating obsid %d rev %d in place" % (save['obsid'], save['revision'])
+                    raise ValueError(
+                        "Could not update; different number of slots")
+                print ("updating obsid %d rev %d in place"
+                       % (save['obsid'], save['revision']))
                 self.table.modifyCoordinates(rev_coord, save_rec)
             # and retag the max revision with most_recent = 1
             max_rev = max(np.max(obsid_rec['revision']), save['revision'])
-            max_rev_coord = self.table.getWhereList('(obsid == %d) & (revision == %d)'
-                                                    % (save['obsid'], max_rev))
-            print "tagging obsid %d rev %d as most recent" % (save['obsid'], max_rev)
+            max_rev_coord = self.table.getWhereList(
+                        '(obsid == %d) & (revision == %d)'
+                        % (save['obsid'], max_rev))
+            print ("tagging obsid %d rev %d as most recent"
+                   % (save['obsid'], max_rev))
             max_rev_rec = self.table.readCoordinates(max_rev_coord)
             max_rev_rec['most_recent'] = 1
             self.table.modifyCoordinates(max_rev_coord, max_rev_rec)
@@ -266,9 +273,6 @@ class Obi(object):
             save_rec['most_recent'] = 1
             self.table.append(save_rec)
         self.table.flush()
-        
-
-
 
     def _aiid_from_asol(self, asol_file, obsdir):
         hdulist = pyfits.open(asol_file)
@@ -395,7 +399,6 @@ class Obi(object):
                         raise ValueError(
                             "differing %s type across aspect intervals" % t)
 
-
     def plot_slot(self, slot):
         y = None
         z = None
@@ -454,7 +457,7 @@ class Obi(object):
         ayz.grid()
         plt.setp(ayz.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayz.get_xticklabels(), fontsize=labelfontsize)
-        ayz.set_xlabel('Y offset (arcsec)')        
+        ayz.set_xlabel('Y offset (arcsec)')
         ayz.set_ylabel('Z offset (arcsec)')
         # make the all-range plot have equal dimensions
         xlims = ayz.get_xlim()
@@ -463,11 +466,9 @@ class Obi(object):
         yrange = ylims[-1] - ylims[0]
         x0 = np.mean(xlims)
         y0 = np.mean(ylims)
-        extent = max(xrange, yrange)/2.0
+        extent = max(xrange, yrange) / 2.0
         ayz.set_xlim(x0 - extent, x0 + extent)
         ayz.set_ylim(y0 - extent, y0 + extent)
-        
-
 
         ayzf = fig.add_axes([.05, .25, .20, .20])
         axes['yz_fixed'] = ayzf
@@ -548,19 +549,19 @@ class Obi(object):
 
         if not fid_plot:
             cenifig = plt.figure(figsize=(12, 10))
-            ceniy = cenifig.add_subplot(2,1,1, sharex=ay)
+            ceniy = cenifig.add_subplot(2, 1, 1, sharex=ay)
             ceniy.plot(plottime[ok], yag[ok], 'b.')
             ceniy.plot(plottime[ok], ang_y_sm[ok] * 3600, 'g.')
             ceniy.set_ylabel('Centroid Y (arcsec)')
             ceniy.set_xlabel('Time(ksec)')
-            ceniz = cenifig.add_subplot(2,1,2, sharex=ay)
+            ceniz = cenifig.add_subplot(2, 1, 2, sharex=ay)
             ceniz.plot(plottime[ok], zag[ok], 'b.')
             ceniz.plot(plottime[ok], ang_z_sm[ok] * 3600, 'g.')
             ceniz.set_ylabel('Centroid Z (arcsec)')
             ceniz.set_xlabel('Time(ksec)')
             plt.title('Slot %d Centroids (aspect sol in blue)' % slot)
 
-	return fig, axes
+        return fig, axes
 
 
 class AspectInterval(object):
@@ -624,7 +625,7 @@ class AspectInterval(object):
         hdulist = pyfits.open(asol_file)
         header = hdulist[1].header
         self.asol_header = header
-        self.asol = asol            
+        self.asol = asol
 
         print 'Reading aspect quality'
         self.aqual = read_table(glob(
@@ -663,7 +664,6 @@ class AspectInterval(object):
         except IOError:
             lines = open(logfile).readlines()
         self.log = lines
-
 
     def _calc_fid_deltas(self):
         asol = self.asol
@@ -710,8 +710,9 @@ class AspectInterval(object):
             #z = ceni['ang_z_sm'] * 3600
             asol_cen_dy = np.interp(ceni['time'], asol['time'], asol['dy'])
             asol_cen_dz = np.interp(ceni['time'], asol['time'], asol['dz'])
-            asol_cen_dtheta = (np.interp(ceni['time'], asol['time'], asol['dtheta'])
-                      * d2r)
+            asol_cen_dtheta = (np.interp(ceni['time'],
+                                         asol['time'], asol['dtheta'])
+                               * d2r)
             dy = np.zeros_like(ceni['time'])
             dz = np.zeros_like(ceni['time'])
             yag = np.zeros_like(ceni['time'])
@@ -754,7 +755,6 @@ class AspectInterval(object):
                     else:
                         err = "Bad fidpr interval not contained in ceni range"
                         raise ValueError(err)
-                
             mag = ma.zeros(len(ceni['counts']))
             mag[:] = ma.masked
             good_mag = medfilt(M0 - 2.5
@@ -798,10 +798,10 @@ class AspectInterval(object):
             print 'Found %d centroids ' % len(ceni)
             # use ang_y or ang_y_sm?
             #inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)
-            d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0,2,1)),
+            d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
                            star['pos_eci']).transpose()
-            yag = np.arctan2(d_aca[:,1], d_aca[:,0]) * r2a
-            zag = np.arctan2(d_aca[:,2], d_aca[:,0]) * r2a
+            yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * r2a
+            zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * r2a
             dy = ceni['ang_y'] * 3600 - yag
             dz = ceni['ang_z'] * 3600 - zag
             mag = ma.zeros(len(ceni['counts']))
@@ -829,7 +829,6 @@ class AspectInterval(object):
                     err = "Bad gspr interval not contained in ceni range"
                     raise ValueError(err)
 
-            
             self.deltas[star['slot']]= dict(dy=dy,
                                             dz=dz,
                                             yag=yag,
@@ -842,6 +841,7 @@ class AspectInterval(object):
                                             ang_y=ceni['ang_y'],
                                             ang_z=ceni['ang_z'],
                                             )
+
     def _calc_sim_offset(self):
         mm2a = 20.0
         max_d_dyz = 0.2
@@ -886,12 +886,10 @@ rms_cols = ['dy_rms', 'dz_rms', 'dy_rms_low', 'dz_rms_low']
 frac_cols = ['frac_dy_big', 'frac_dz_big']
 
 
-
 class ObiTest(object):
     def __init__(self, obi=None):
         self.obi = obi
         self.tests = []
-
 
     def slot_checks(self):
         obi_slot_check = {}
