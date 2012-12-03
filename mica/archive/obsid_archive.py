@@ -395,7 +395,7 @@ class ObsArchive:
             arch_info['obsid'] = obsid
             if (len(existing)
                and arch_info['filename'] in existing['filename']):
-                print "skipping %s" % f
+                logger.info("skipping %s" % f)
                 os.remove(f)
                 continue
 
@@ -404,6 +404,7 @@ class ObsArchive:
             os.remove(f)
         db.commit()
         return obs_dir
+
     # this needs help
     def update_link(self, obsid):
         """
