@@ -7,5 +7,5 @@ setup(name='mica',
 Copyright (c) 2012 Smithsonian Astrophysical Observatory
 All rights reserved.""",
       zip_safe=False,
-      packages=['mica', 'mica.archive'],
+      packages=['mica', 'mica.archive', 'mica.quaternion', 'mica.vv'],
       )
