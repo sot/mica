@@ -289,7 +289,7 @@ class Obi(object):
         if len(asol_files):
             for file in asol_files:
                 self.aiids.append(self._aiid_from_asol(file, obsdir))
-        ASP_dirs = sorted(glob(os.path.join(obsdir, 'ASP_L1__*')))
+        ASP_dirs = sorted(glob(os.path.join(obsdir, 'ASP_L1_*')))
         if len(ASP_dirs):
             for dir in ASP_dirs:
                 max_out = max(sorted(glob(os.path.join(dir, 'out*'))))
