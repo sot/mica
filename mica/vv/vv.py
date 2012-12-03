@@ -545,7 +545,22 @@ class Obi(object):
         am.set_xlabel('Time(ksec)')
         ay.autoscale(enable=False, axis='x')
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
-        return fig, axes
+
+        if not fid_plot:
+            cenifig = plt.figure(figsize=(12, 10))
+            ceniy = cenifig.add_subplot(2,1,1, sharex=ay)
+            ceniy.plot(plottime[ok], yag[ok], 'b.')
+            ceniy.plot(plottime[ok], ang_y_sm[ok] * 3600, 'g.')
+            ceniy.set_ylabel('Centroid Y (arcsec)')
+            ceniy.set_xlabel('Time(ksec)')
+            ceniz = cenifig.add_subplot(2,1,2, sharex=ay)
+            ceniz.plot(plottime[ok], zag[ok], 'b.')
+            ceniz.plot(plottime[ok], ang_z_sm[ok] * 3600, 'g.')
+            ceniz.set_ylabel('Centroid Z (arcsec)')
+            ceniz.set_xlabel('Time(ksec)')
+            plt.title('Slot %d Centroids (aspect sol in blue)' % slot)
+
+	return fig, axes
 
 
 class AspectInterval(object):
