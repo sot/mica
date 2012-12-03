@@ -357,11 +357,12 @@ class Obi(object):
     def _label_slots(self):
         ai = self.aspect_intervals[0]
         self.guide_list = getattr(ai, 'gsprop').slot
-        self.fid_list = getattr(ai, 'fidprop').slot
         for gs in getattr(ai, 'gsprop'):
             self.slot[gs.slot]['type'] = gs.type
-        for fl in getattr(ai, 'fidprop'):
-            self.slot[fl.slot]['type'] = 'FID'
+        if getattr(ai, 'fidprop') is not None:
+            self.fid_list = getattr(ai, 'fidprop').slot
+            for fl in getattr(ai, 'fidprop'):
+                self.slot[fl.slot]['type'] = 'FID'
 
     def _check_over_intervals(self):
         """
@@ -369,6 +370,8 @@ class Obi(object):
         drop out, change status, or change type.
         """
         for t in ('gsprop', 'fidprop'):
+            if getattr(self.aspect_intervals[0], t) is None:
+                continue
             slot_id = getattr(self.aspect_intervals[0], t).slot
             slot_status = getattr(self.aspect_intervals[0], t).id_status
             slot_type = 'FID'
@@ -552,10 +555,11 @@ class AspectInterval(object):
         self.opt = opt if opt else {'obc': None, 'alg': 8, 'noacal': None}
         self._read_in_data()
         self.deltas = {}
-        self._calc_fid_deltas()
         self._calc_guide_deltas()
-        self.sim = {}
-        self._calc_sim_offset()
+        if self.fidprop is not None:
+            self._calc_fid_deltas()
+            self.sim = {}
+            self._calc_sim_offset()
 
     def _get_prop(self, propname, propstring):
         datadir = self.aspdir
@@ -565,7 +569,8 @@ class AspectInterval(object):
         prop_all = read_table(gsfile)
         good = prop_all['id_status'] == 'GOOD      '
         if len(np.flatnonzero(good)) == 0:
-            raise ValueError("No good %s stars" % propname)
+            return (None, None, None)
+            #raise ValueError("No good %s stars" % propname)
         prop = prop_all[good]
 
         info = []
