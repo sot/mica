@@ -101,7 +101,7 @@ enc_rad_2 = 0.99
 dyz_big_lim = 0.7
 frac_dyz_lim = 0.05
 
-data_cols = ['qual', 'dy', 'dz', 'mag', 'time',
+data_cols = ['qual', 'dy', 'dz', 'mag', 'time', 'yag', 'zag',
              'ang_y_sm', 'ang_y', 'ang_z_sm', 'ang_z']
 
 save_asol_header = ['ASCDSVER', 'CALDBVER', 'DATE', 'OBI_NUM', 'OBS_ID',
@@ -397,8 +397,14 @@ class Obi(object):
         y = None
         z = None
         xy_range = None
-        (qual, dy, dz, mag, time) = [self.slot[slot][x] for x in
-                                     ['qual', 'dy', 'dz', 'mag', 'time']]
+        fid_plot = slot < 3
+        (qual, dy, dz, mag, time) = [
+            self.slot[slot][x] for x in
+            ['qual', 'dy', 'dz', 'mag', 'time']]
+        if not fid_plot:
+            (yag, zag, ang_y_sm, ang_z_sm) = [
+                self.slot[slot][x] for x in
+                ['yag', 'zag', 'ang_y_sm', 'ang_z_sm']]
         ai_starts = [interv.deltas[slot]['time'][0]
                      for interv in self.aspect_intervals]
         time0 = time[0]
@@ -408,7 +414,6 @@ class Obi(object):
 
         fig = plt.figure(num=slot, figsize=(14, 10))
         #fid_plot = np.abs(np.max(y) - np.min(y)) > 1e-6
-        fid_plot = slot < 3
         ok = qual == 0
         bad = qual != 0
 
@@ -683,32 +688,36 @@ class AspectInterval(object):
             #dzag = np.zeros(n_ceni)
             #y = ceni['ang_y_sm'] * 3600
             #z = ceni['ang_z_sm'] * 3600
-            dy = np.interp(ceni['time'], asol['time'], asol['dy'])
-            dz = np.interp(ceni['time'], asol['time'], asol['dz'])
-            dtheta = (np.interp(ceni['time'], asol['time'], asol['dtheta'])
+            asol_cen_dy = np.interp(ceni['time'], asol['time'], asol['dy'])
+            asol_cen_dz = np.interp(ceni['time'], asol['time'], asol['dz'])
+            asol_cen_dtheta = (np.interp(ceni['time'], asol['time'], asol['dtheta'])
                       * d2r)
+            dy = np.zeros_like(ceni['time'])
+            dz = np.zeros_like(ceni['time'])
+            yag = np.zeros_like(ceni['time'])
+            zag = np.zeros_like(ceni['time'])
             #dtheta[0] = 1.8455539e-05
             #dy[0] = 0.46696303
             #dz[0] = 0.68532118
             p_stf = p_lsi + lsi0_stt + stt0_stf
             for j in range(0, len(ceni)):
-                s_th = np.sin(dtheta[j])
-                c_th = np.cos(dtheta[j])
+                s_th = np.sin(asol_cen_dtheta[j])
+                c_th = np.cos(asol_cen_dtheta[j])
                 rot_x[1, 1] = c_th
                 rot_x[2, 1] = s_th
                 rot_x[1, 2] = -s_th
                 rot_x[2, 2] = c_th
 
                 p_fc = np.dot(rot_x.transpose(), p_stf)
-                p_fc = p_fc + [0., dy[j], dz[j]]
+                p_fc = p_fc + [0., asol_cen_dy[j], asol_cen_dz[j]]
                 d_fc = p_fc
                 d_fc[0] = d_fc[0] - rrc0_fc_x
                 d_fc = -d_fc
                 d_aca = np.dot(M, d_fc)
-                yag = np.arctan2(d_aca[1], d_aca[0]) * r2a
-                zag = np.arctan2(d_aca[2], d_aca[0]) * r2a
-                dy[j] = ceni[j]['ang_y_sm'] * 3600 - yag
-                dz[j] = ceni[j]['ang_z_sm'] * 3600 - zag
+                yag[j] = np.arctan2(d_aca[1], d_aca[0]) * r2a
+                zag[j] = np.arctan2(d_aca[2], d_aca[0]) * r2a
+                dy[j] = ceni[j]['ang_y_sm'] * 3600 - yag[j]
+                dz[j] = ceni[j]['ang_z_sm'] * 3600 - zag[j]
 
             qual = ceni['status'].copy()
             slot_fidpr = [pr for pr in fidpr_info if pr['slot'] == fid['slot']]
@@ -736,6 +745,8 @@ class AspectInterval(object):
             self.deltas[fid['slot']] = dict(time=ceni['time'],
                                             dy=dy,
                                             dz=dz,
+                                            yag=yag,
+                                            zag=zag,
                                             mag=mag,
                                             qual=qual,
                                             ang_y_sm=ceni['ang_y_sm'],
@@ -801,6 +812,8 @@ class AspectInterval(object):
             
             self.deltas[star['slot']]= dict(dy=dy,
                                             dz=dz,
+                                            yag=yag,
+                                            zag=zag,
                                             time=ceni['time'],
                                             mag=mag,
                                             qual=qual,
