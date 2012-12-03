@@ -415,7 +415,7 @@ class Obi(object):
         dy0 = np.median(dy)
         dz0 = np.median(dz)
 
-        fig = plt.figure(num=slot, figsize=(14, 10))
+        fig = plt.figure(figsize=(14, 10))
         #fid_plot = np.abs(np.max(y) - np.min(y)) > 1e-6
         ok = qual == 0
         bad = qual != 0
