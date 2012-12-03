@@ -756,7 +756,7 @@ class AspectInterval(object):
                                             )
 
     def _calc_guide_deltas(self):
-        from Quaternion import Quat
+        from mica.quaternion import Quat
 
         asol = self.asol
         cen = self.cen
