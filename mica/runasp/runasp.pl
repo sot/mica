@@ -21,7 +21,7 @@ for my $my_ocat ('ASCDS_OCAT_UNAME', 'ASCDS_OCAT_SERVER', 'ASCDS_OCAT_PWORD'){
     $ascds->setenv( $my_ocat, $ocat->envs()->{$my_ocat});
 }
 
-
+open(my $pipelog, '>>', "pipelog.txt") or carp $!;
 
 sub get_job{
     my $jobfile = shift;
@@ -48,7 +48,9 @@ sub run_pipe{
         $jstr .= $cmd_str;
     }
     print $jstr, "\n";
-    $ascds->qexec("$jstr");
+    my ($flt_out, $flt_err) = $ascds->capture("$jstr");
+    print $pipelog $flt_out;
+    print $pipelog $flt_err;
 }
 
 #use File::Temp qw(tempfile);
