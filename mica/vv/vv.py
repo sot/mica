@@ -7,6 +7,7 @@ import json
 import tables
 import csv
 import gzip
+import logging
 from glob import glob
 import numpy as np
 import numpy.ma as ma
@@ -25,6 +26,10 @@ plt.rcParams['lines.markeredgewidth'] = 0
 config = dict(h5_arch='/data/aca/archive/vv/vv.h5',
               h5_table='vv',
               )
+
+logger = logging.getLogger('V&V')
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
 
 
 def get_table():
@@ -243,7 +248,7 @@ class Obi(object):
         # if there are previous records for this obsid
         if len(have_obsid_coord):
             # mark all records for the obsid as old (or not most_recent)
-            print "obsid %d is in table" % save['obsid']
+            logger.info("obsid %d is in table" % save['obsid'])
             obsid_rec = self.table.readCoordinates(have_obsid_coord)
             obsid_rec['most_recent'] = 0
             self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
@@ -256,7 +261,7 @@ class Obi(object):
                 if len(rev_coord) != len(save_rec):
                     raise ValueError(
                         "Could not update; different number of slots")
-                print ("updating obsid %d rev %d in place"
+                logger.info("updating obsid %d rev %d in place"
                        % (save['obsid'], save['revision']))
                 self.table.modifyCoordinates(rev_coord, save_rec)
             # and retag the max revision with most_recent = 1
@@ -264,7 +269,7 @@ class Obi(object):
             max_rev_coord = self.table.getWhereList(
                         '(obsid == %d) & (revision == %d)'
                         % (save['obsid'], max_rev))
-            print ("tagging obsid %d rev %d as most recent"
+            logger.info("tagging obsid %d rev %d as most recent"
                    % (save['obsid'], max_rev))
             max_rev_rec = self.table.readCoordinates(max_rev_coord)
             max_rev_rec['most_recent'] = 1
@@ -579,7 +584,7 @@ class AspectInterval(object):
 
     def _get_prop(self, propname, propstring):
         datadir = self.aspdir
-        print 'Reading %s stars' % propname
+        logger.info('Reading %s stars' % propname)
         gsfile = glob(os.path.join(
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
         prop_all = read_table(gsfile)
@@ -614,7 +619,7 @@ class AspectInterval(object):
         (self.fidprop, self.fidpr_info, self.h_fidpr) \
             = self._get_prop('fid', 'fidpr')
 
-        print 'Reading aspect solution and header'
+        logger.info('Reading aspect solution and header')
         #if opt['obc']:
         #    asol = read_table(glob(
         #            os.path.join(datadir, "%s_osol1.fits*" % aiid))[0])
@@ -627,21 +632,21 @@ class AspectInterval(object):
         self.asol_header = header
         self.asol = asol
 
-        print 'Reading aspect quality'
+        logger.info('Reading aspect quality')
         self.aqual = read_table(glob(
                 os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0])
 
         #if opt['noacal']:
         #    aca_misalign = np.array([[1.0,0,0], [0,1,0],[0,0,1]])
         #else:
-        print 'Reading ACA and FTS align file'
+        logger.info('Reading ACA and FTS align file')
         acal = read_table(glob(
                 os.path.join(datadir, "%s_acal1.fits*" % aiid))[0])
         self.aca_misalign = acal['aca_misalign'].reshape(3, 3)
         self.fts_misalign = acal['fts_misalign'].reshape(3, 3)
         self.acal = acal
 
-        print 'Reading Centroids'
+        logger.info('Reading Centroids')
         cen = read_table(glob(
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         # do we want the other algs?
@@ -681,7 +686,7 @@ class AspectInterval(object):
         #dt0 = np.median(asol['dtheta']) * 3600
         #dr = 2.0
 
-        print 'Calculating fid solution quality'
+        logger.info('Calculating fid solution quality')
 
         lsi0_stt = [h_fidpr['LSI0STT%d' % x] for x in [1, 2, 3]]
         stt0_stf = [h_fidpr['STT0STF%d' % x] for x in [1, 2, 3]]
@@ -697,8 +702,8 @@ class AspectInterval(object):
         rot_x = np.zeros([3, 3])
         rot_x[0, 0] = 1
         for fid in fidprop:
-            print "Processing fid %s in slot %d " % (
-                fid['id_string'], fid['slot'])
+            logger.info("Processing fid %s in slot %d " % (
+                fid['id_string'], fid['slot']))
             #slot = fid['slot']
             p_lsi = fid['p_lsi']
             ok = cen['slot'] == fid['slot']
@@ -784,18 +789,18 @@ class AspectInterval(object):
         aca_misalign = self.aca_misalign
         integ_time = self.integ_time
 
-        print 'Interpolating quaternions'
+        logger.info('Interpolating quaternions')
         q_att = np.array([np.interp(cen['time'],
                                     asol['time'],
                                     asol['q_att'][:, ax])
                           for ax in range(0, 4)]).transpose()
         for star in gsprop:
-            print 'Processing star in slot %(slot)d' % star
+            logger.info('Processing star in slot %(slot)d' % star)
             ok = cen['slot'] == star['slot']
             ceni = cen[ok]
             q_atts = Quat(q_att[ok])
             Ts = q_atts.transform
-            print 'Found %d centroids ' % len(ceni)
+            logger.info('Found %d centroids ' % len(ceni))
             # use ang_y or ang_y_sm?
             #inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)
             d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
