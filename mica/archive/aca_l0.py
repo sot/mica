@@ -35,7 +35,7 @@ dtype = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
 filetype = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
                                dtype=dtype)[0]
 
-aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
+aca_dtype = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('MNF', '>i4'),
              ('END_INTEG_TIME', '>f8'), ('INTEG', '>f4'), ('GLBSTAT', '|u1'),
              ('COMMCNT', '|u1'), ('COMMPROG', '|u1'), ('IMGFID1', '|u1'),
@@ -52,10 +52,9 @@ aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
              ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
              ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
-             ('IMGSIZE', '>i4'),
-             ]
+             ('IMGSIZE', '>i4'))
 
-aca_dtype_names = [k[0] for k in aca_dtype]
+aca_dtype_names = tuple([k[0] for k in aca_dtype])
 
 config = dict(data_root='/data/aca/archive/aca0',
               temp_root='/data/aca/archive/temp',
@@ -89,19 +88,20 @@ def get_options():
     return opt
 
 
-def get_slot_data(start, stop, slot, imgsize=[4, 6, 8],
-                  db=None,
-                  data_root=config['data_root'],
-                  columns=aca_dtype_names,
+def get_slot_data(start, stop, slot, imgsize=None,
+                  db=None, data_root=None, columns=None,
                   ):
     """
     For a the given parameters, retrieve telemetry and construct a
-    masked array of the MSIDs available in that telemetry
+    masked array of the MSIDs available in that telemetry.  This calls
+    get_interval_files to get a list of files, so see that method for a
+    description of how the start and stop times are used.
 
     :param start: start time of requested interval
     :param stop: stop time of requested interval
-    :param slot: slot number (in the range 0 -> 7)
-    :param imgsize: list of desired image sizes
+    :param slot: slot number integer (in the range 0 -> 7)
+    :param imgsize: list of integers of desired image sizes
+                    (defaults to all -> [4, 6, 8])
     :param db: handle to archive lookup table
     :param data_root: parent directory that contains archfiles.db3
                       (for use when db handle not available)
@@ -111,9 +111,16 @@ def get_slot_data(start, stop, slot, imgsize=[4, 6, 8],
     :returns: data structure for slot
     :rtype: numpy masked recarray
     """
-    if not db:
+    if data_root is None:
+        data_root = config['data_root']
+    if columns is None:
+        columns = aca_dtype_names
+    if imgsize is None:
+        imgsize = [4, 6, 8]
+    if db is None:
         dbfile = os.path.join(data_root, 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+
     data_files = get_interval_files(start, stop, slots=[slot],
                                     imgsize=imgsize, db=db,
                                     data_root=data_root)
@@ -189,28 +196,43 @@ class MSIDset(collections.OrderedDict):
             self[msid] = MSID(msid, self.tstart, self.tstop)
 
 
-def get_interval_files(start, stop,
-                       slots=[0, 1, 2, 3, 4, 5, 6, 7],
-                       imgsize=[4, 6, 8], db=None,
-                       data_root=config['data_root']):
+def get_interval_files(start, stop=None, slots=None,
+                       imgsize=None, db=None, data_root=None):
     """
     Retrieve list of files from ACA0 archive lookup table that
-    match arguments.
+    match arguments.  The database query returns files with
+
+      tstart < stop
+      and
+      tstop > start
+
+    which returns all files that contain any part of the interval
+    between start and stop.
 
     :param start: start time of requested interval
     :param stop: stop time of requested interval
-    :param slots: list of desired image slots to retrieve in interval
-    :param imgsize: list of desired image sizes
+                 (default of None will get DateTime(None) which is
+                 equivalent to 'now')
+    :param slots: list of integers of desired image slots to retrieve
+                   (defaults to all -> [0, 1, 2, 3, 4, 5, 6, 7, 8])
+    :param imgsize: list of integers of desired image sizes
+                    (defaults to all -> [4, 6, 8])
     :param db: handle to archive lookup table
     :param data_root: parent directory of Ska aca l0 archive
 
     :returns: interval files
     :rtype: list
     """
-
-    if not db:
+    if slots is None:
+        slots = [0, 1, 2, 3, 4, 5, 6, 7],
+    if data_root is None:
+        data_root = config['data_root']
+    if imgsize is None:
+        imgsize = [4, 6, 8]
+    if db is None:
         dbfile = os.path.join(data_root, 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+
     tstart = DateTime(start).secs
     tstop = DateTime(stop).secs
     imgsize_str = ','.join([str(x) for x in imgsize])
