@@ -554,7 +554,7 @@ class Updater(object):
                 os.makedirs(archdir)
             if not os.path.exists(archfile):
                 logger.info('mv %s %s' % (os.path.abspath(f), archfile))
-                os.chmod(f, 775)
+                os.chmod(f, 0775)
                 shutil.move(f, archfile)
             if os.path.exists(f):
                 logger.info('Unlinking %s' % os.path.abspath(f))
