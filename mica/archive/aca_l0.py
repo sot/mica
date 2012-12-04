@@ -477,27 +477,30 @@ class Updater(object):
                                               archfiles_row['tstop'],
                                               slots=[archfiles_row['slot']])
         if len(interval_matches):
-            # if there are files there that still overlap and they are all
-            # older, remove them.  if the files are all the same version
-            # ignore the overlap.
-            if (np.all(interval_matches['revision']
-                       < archfiles_row['revision'])
-                or np.all(interval_matches['revision']
-                          == archfiles_row['revision'])):
-                if np.all(interval_matches['revision']
-                          < archfiles_row['revision']):
-                    logger.info(
-                        "removing overlapping files at older revision(s)")
-                    logger.info(interval_matches)
-                    self._arch_remove(interval_matches)
-                else:
-                    logger.info("ignoring overlap for same process revision")
+            # if there are files there that still overlap the new file
+            # and they are all older, remove the old files.
+            if np.all(interval_matches['revision']
+                      < archfiles_row['revision']):
+                logger.info(
+                    "removing overlapping files at older revision(s)")
+                logger.info(interval_matches)
+                self._arch_remove(interval_matches)
+            # if the overlapping files are all from the same revision
+            # just ingest them and hope for the best
+            elif np.all(interval_matches['revision']
+                        == archfiles_row['revision']):
+                logger.info("ignoring overlap for same process revision")
+            # if the files that overlap are all newer, let's not ingest
+            # the "missing" file
+            elif np.all(interval_matches['revision']
+                        > archfiles_row['revision']):
+                return None
             else:
                 logger.error(archfiles_row)
                 logger.error(interval_matches)
                 # throw an error if there is still overlap
-                raise ValueError("Overlap in database at %s" %
-                                 filename)
+                raise ValueError("Cannot ingest %s, overlaps existing files"
+                                 % filename)
 
         return archfiles_row
 
