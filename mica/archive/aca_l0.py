@@ -11,7 +11,6 @@ import argparse
 import collections
 import tables
 from itertools import izip, count
-import mx.DateTime
 
 import Ska.DBI
 import Ska.arc5gl
