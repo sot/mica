@@ -625,9 +625,9 @@ class Updater(object):
             logger.info("creating archfiles db from %s"
                         % self.sql_def)
             db_sql = os.path.join(os.environ['SKA_DATA'],
-                                  'mica', sql_def)
+                                  'mica', self.sql_def)
             db_init_cmds = file(db_sql).read()
-            db.execute(db_init_cmds, commit=True)
+            self.db.execute(db_init_cmds, commit=True)
         if self.start:
             datestart = DateTime(self.start)
         else:
