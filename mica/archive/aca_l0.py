@@ -92,9 +92,7 @@ def get_slot_data(start, stop, slot, imgsize=None,
                   ):
     """
     For a the given parameters, retrieve telemetry and construct a
-    masked array of the MSIDs available in that telemetry.  This calls
-    get_interval_files to get a list of files, so see that method for a
-    description of how the start and stop times are used.
+    masked array of the MSIDs available in that telemetry.
 
     :param start: start time of requested interval
     :param stop: stop time of requested interval
@@ -153,7 +151,11 @@ def get_slot_data(start, stop, slot, imgsize=None,
                 chunk.field('IMGRAW').reshape(len(chunk),
                                               f_imgsize, f_imgsize))
         rowcount += len(chunk)
-    return all_rows
+
+    # just include the rows in the requested time range in the returned data
+    oktime = ((all_rows['TIME'] >= DateTime(start).secs)
+               & (all_rows['TIME'] <= DateTime(stop).secs))
+    return all_rows[oktime]
 
 
 class MissingDataError(Exception):
