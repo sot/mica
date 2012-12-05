@@ -223,7 +223,7 @@ def get_interval_files(start, stop=None, slots=None,
     :rtype: list
     """
     if slots is None:
-        slots = [0, 1, 2, 3, 4, 5, 6, 7],
+        slots = [0, 1, 2, 3, 4, 5, 6, 7]
     if data_root is None:
         data_root = config['data_root']
     if imgsize is None:
