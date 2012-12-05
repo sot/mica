@@ -409,6 +409,9 @@ class Obi(object):
         z = None
         xy_range = None
         fid_plot = slot < 3
+        if 'time' not in self.slot[slot]:
+            logger.info("Nothing to plot for slot %d" % slot)
+            return None, None
         (qual, dy, dz, mag, time) = [
             self.slot[slot][x] for x in
             ['qual', 'dy', 'dz', 'mag', 'time']]
@@ -798,6 +801,9 @@ class AspectInterval(object):
             logger.info('Processing star in slot %(slot)d' % star)
             ok = cen['slot'] == star['slot']
             ceni = cen[ok]
+            logger.info('Found %d centroids ' % len(ceni))
+            if not len(ceni):
+                continue
             q_atts = Quat(q_att[ok])
             Ts = q_atts.transform
             logger.info('Found %d centroids ' % len(ceni))
