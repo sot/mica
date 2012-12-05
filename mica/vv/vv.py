@@ -365,13 +365,15 @@ class Obi(object):
 
     def _label_slots(self):
         ai = self.aspect_intervals[0]
-        self.guide_list = getattr(ai, 'gsprop').slot
+        self.guide_list = list(getattr(ai, 'gsprop').slot)
         for gs in getattr(ai, 'gsprop'):
             self.slot[gs.slot]['type'] = gs.type
         if getattr(ai, 'fidprop') is not None:
-            self.fid_list = getattr(ai, 'fidprop').slot
+            self.fid_list = list(getattr(ai, 'fidprop').slot)
             for fl in getattr(ai, 'fidprop'):
                 self.slot[fl.slot]['type'] = 'FID'
+        else:
+            self.fid_list = []
 
     def _check_over_intervals(self):
         """
@@ -408,7 +410,7 @@ class Obi(object):
         y = None
         z = None
         xy_range = None
-        fid_plot = slot < 3
+        fid_plot = slot in self.fid_list
         if 'time' not in self.slot[slot]:
             logger.info("Nothing to plot for slot %d" % slot)
             return None, None
