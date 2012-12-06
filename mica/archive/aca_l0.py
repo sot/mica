@@ -398,10 +398,7 @@ class Updater(object):
 
         filetype = self.filetype
         # Retrieve CXC archive files in a temp directory with arc5gl
-        arc5 = Ska.arc5gl.Arc5gl(echo=True)
-        logger.info('********** %s %s **********'
-                    % (filetype['content'], time.ctime()))
-
+        arc5 = Ska.arc5gl.Arc5gl()
         arc5.sendline('tstart=%s' % DateTime(start).date)
         arc5.sendline('tstop=%s' % DateTime(stop).date)
         arc5.sendline('get %s' % filetype['arc5gl_query'].lower())
@@ -432,9 +429,9 @@ class Updater(object):
         filename = os.path.basename(f)
         if db.fetchall('SELECT filename FROM archfiles WHERE filename=?',
                        (filename,)):
-            logger.info(
+            logger.debug(
                 'File %s already in archfiles - unlinking and skipping' % f)
-            #os.unlink(f)
+            os.unlink(f)
             return None
 
         logger.info('Reading (%d / %d) %s' % (i, len(archfiles), filename))
@@ -563,8 +560,10 @@ class Updater(object):
                 os.unlink(f)
 
     def _fetch_by_time(self, range_tstart, range_tstop):
-        logger.info("Fetching from %s to %s" % (DateTime(range_tstart).date,
-                                                DateTime(range_tstop).date))
+        logger.info("Fetching %s from %s to %s" 
+                    % ('ACA L0 Data',
+                       DateTime(range_tstart).date,
+                       DateTime(range_tstop).date))
         archfiles = self._get_archive_files(DateTime(range_tstart),
                                             DateTime(range_tstop))
         return archfiles
@@ -655,7 +654,7 @@ class Updater(object):
             # make a temporary directory
             tmpdir = Ska.File.TempDir(dir=self.temp_root)
             dirname = tmpdir.name
-            logger.info("Files save to temp dir %s" % dirname)
+            logger.debug("Files save to temp dir %s" % dirname)
             # get the files, store in file archive, and record in database
             with Ska.File.chdir(dirname):
                 fetched_files = self._fetch_by_time(range_tstart, range_tstop)

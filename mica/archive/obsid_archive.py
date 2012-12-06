@@ -396,7 +396,7 @@ class ObsArchive:
             arch_info['obsid'] = obsid
             if (len(existing)
                and arch_info['filename'] in existing['filename']):
-                logger.info("skipping %s" % f)
+                logger.debug("skipping %s" % f)
                 os.remove(f)
                 continue
 
