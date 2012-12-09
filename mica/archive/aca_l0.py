@@ -137,15 +137,16 @@ def get_slot_data(start, stop, slot, imgsize=None,
                           f['filename'])
         hdu = pyfits.open(fp)
         chunk = hdu[1].data
+        f_imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
         for fname in all_rows.dtype.names:
             if fname == 'IMGRAW' or fname == 'IMGSIZE':
                 continue
             if fname in chunk.dtype.names:
                 all_rows[fname][rowcount:(rowcount + len(chunk))] \
                     = chunk.field(fname)
-        if 'IMGSIZE' in columns and 'IMGRAW' in columns:
-            f_imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
+        if 'IMGSIZE' in columns:
             all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = f_imgsize
+        if 'IMGRAW' in columns:
             all_rows['IMGRAW'].reshape(rows, 8, 8)[
                 rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
                 chunk.field('IMGRAW').reshape(len(chunk),
