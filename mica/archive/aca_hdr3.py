@@ -9,6 +9,7 @@ from scipy.interpolate import interp1d
 from Chandra.Time import DateTime
 import mica.archive.aca_l0
 
+
 class MissingDataError(Exception):
     pass
 
@@ -17,6 +18,7 @@ class MissingDataError(Exception):
 # Image No.   = <S>
 # Image type  = <I>
 # Hdr 3 Word  = <W>
+
 
 def two_byte_sum(byte_msids, scale=1):
     def func(slot_data):
@@ -328,7 +330,7 @@ class MSID(object):
     def __init__(self, msid, start, stop, msid_data=None):
         if msid_data is None:
             msid_data = MSIDset([msid], start, stop)[msid]
-        self.msid = msid        
+        self.msid = msid
         self.tstart = DateTime(start).secs
         self.tstop = DateTime(stop).secs
         self.datestart = DateTime(self.tstart).date
@@ -344,6 +346,7 @@ class MSID(object):
             self.vals = msid_data['vals']
             self.times = msid_data['times']
 
+
 def confirm_msid(req_msid):
     if req_msid in msid_aliases:
         return msid_aliases[req_msid]['hdr3']
@@ -352,6 +355,7 @@ def confirm_msid(req_msid):
             raise MissingDataError("msid %s not found" % req_msid)
         else:
             return req_msid
+
 
 def slot_for_msid(msid):
     mmatch = re.match('(\d)\d\d', msid)
