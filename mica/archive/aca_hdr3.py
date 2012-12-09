@@ -365,10 +365,13 @@ def slot_for_msid(msid):
 
 def mask_bad_data(slot_data, tstop):
     iseight = slot_data['IMGSIZE'] == 8
-    slot_data[iseight == False] = ma.masked
     # transitions from 8 to 6 or 4 should be -1 in this scheme
     last_eight = iseight[1:].astype(int) - iseight[:-1].astype(int) == -1
     slot_data[last_eight] = ma.masked
+    slot_data[iseight == False] = ma.masked
+    # explicitly unmask useful columns that will always be good
+    slot_data['TIME'].mask = ma.nomask
+    slot_data['IMGSIZE'].mask = ma.nomask
     # strip off any over time, don't bother masking
     oktime = slot_data['TIME'] <= tstop
     return slot_data[oktime]
