@@ -525,20 +525,7 @@ class ObsArchive:
                             % config['obsid'])
             return
 
-        # look for all previous "provisional" aspect solutions
-        # and broken links and and update if possible
-        prov_data = self.get_todo_from_links(archive_dir)
-        for obs in prov_data:
-            logger.info("running get_arch for obsid %d ver %s, "
-                        % (obs['obsid'], obs['revision']))
-            try:
-                self.get_arch(obs['obsid'], obs['revision'])
-            except ProductVersionError as ve:
-                logger.info("skipping %d, default ver not available"
-                            % obs['obsid'])
-                logger.debug(ve)
-                continue
-            self.update_link(obs['obsid'])
+
         # if no obsid specified, try to retrieve all data
         # since tool last run
         # use saved id from the apstat table as a reference
@@ -594,3 +581,18 @@ class ObsArchive:
             last_id_fh.close()
         if not len(todo):
             logger.info("No new data")
+
+        # look for all previous "provisional" aspect solutions
+        # and broken links and and update if possible
+        prov_data = self.get_todo_from_links(archive_dir)
+        for obs in prov_data:
+            logger.info("running get_arch for obsid %d ver %s, "
+                        % (obs['obsid'], obs['revision']))
+            try:
+                self.get_arch(obs['obsid'], obs['revision'])
+            except ProductVersionError as ve:
+                logger.info("skipping %d, default ver not available"
+                            % obs['obsid'])
+                logger.debug(ve)
+                continue
+            self.update_link(obs['obsid'])
