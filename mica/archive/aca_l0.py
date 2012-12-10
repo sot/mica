@@ -317,6 +317,8 @@ class Updater(object):
     def _get_missing_archive_files(self, start, only_new=False):
         ingested_files = self._get_arc_ingested_files()
         startdate = DateTime(start).date
+        logger.info("Checking for missing files from %s" %
+                    startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
         for idate, backcnt in izip(ingested_files[::-1]['ingest_date'],
@@ -435,7 +437,7 @@ class Updater(object):
             os.unlink(f)
             return None
 
-        logger.info('Reading (%d / %d) %s' % (i, len(archfiles), filename))
+        logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
         hdus = pyfits.open(f)
         hdu = hdus[1]
 
@@ -553,7 +555,7 @@ class Updater(object):
             if not os.path.exists(archdir):
                 os.makedirs(archdir)
             if not os.path.exists(archfile):
-                logger.info('mv %s %s' % (os.path.abspath(f), archfile))
+                logger.debug('mv %s %s' % (os.path.abspath(f), archfile))
                 os.chmod(f, 0775)
                 shutil.move(f, archfile)
             if os.path.exists(f):
@@ -605,12 +607,15 @@ class Updater(object):
         return fetched_files, ingest_dates
 
     def _insert_files(self, files):
+        count_inserted = 0
         for i, f in enumerate(files):
             arch_info = self._read_archfile(i, f, files)
             if arch_info:
                 self._move_archive_files([f])
                 self.db.insert(arch_info, 'archfiles')
+                count_inserted += 1
         self.db.commit()
+        logger.info("Ingested %d files" % count_inserted)
 
     def update(self):
         """
@@ -688,7 +693,8 @@ class Updater(object):
             # update the file to have up through the last confirmed good file
             # even before we try to fetch missing ones
             open(timestamp_file, 'w').write("%s" % last_ingest_date)
-
+        else:
+            logger.info("No missing files")
 
 def main():
     """
