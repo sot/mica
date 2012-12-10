@@ -53,7 +53,7 @@ def make_data_table(lines):
 
 
 def make_table_from_scratch(table_file, cda_fetch_url, start='1999:001'):
-    logger.info("Fetching new data from %s" % start)
+    logger.info("Fetching new CDA list from %s" % start)
     startmx = DateTime(start).mxDateTime
     query = ("?tstart=%s&pattern=aca%%25&submit=Search"
              % startmx.strftime("%m-%d-%Y"))
@@ -84,7 +84,7 @@ def update_cda_table(data_root=config['data_root'],
     lastdate = cda_files[-1]['ingest_date']
     lastmx = DateTime(lastdate).mxDateTime
 
-    logger.info("Fetching new data from %s" % lastdate)
+    logger.info("Fetching new CDA list from %s" % lastdate)
     query = ("?tstart=%s&pattern=acaimgc%%25&submit=Search"
                  % lastmx.strftime("%m-%d-%Y"))
     url = cda_fetch_url + query
