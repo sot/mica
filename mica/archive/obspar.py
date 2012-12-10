@@ -156,6 +156,7 @@ config = dict(data_root='/data/aca/archive/obspar',
               small_glob='axaff*par*',
               small_ver_regex='axaff\d{5}_\d{3}N(\d{3}).*',
               full='obspar',
+              filecheck=True,
               cols=archfiles_hdr_cols)
 
 

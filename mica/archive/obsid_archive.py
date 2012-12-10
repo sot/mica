@@ -344,6 +344,8 @@ class ObsArchive:
             os.makedirs(obs_dir)
         else:
             logger.info("obsid dir %s already exists" % obs_dir)
+            if not config['filecheck']:
+                return obs_dir
 
         # get data
         if not os.path.exists(temp_root):

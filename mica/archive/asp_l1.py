@@ -29,6 +29,7 @@ config = dict(data_root='/data/aca/archive/asp1',
               small_glob='*fidpr*',
               small_ver_regex='pcadf\d+N(\d{3})_',
               full='asp1',
+              filecheck=False,
               cols=archfiles_hdr_cols)
 
 
@@ -62,6 +63,11 @@ without command-line options need to be changed.
                         help="parent directory for all data")
     parser.add_argument("--temp-root",
                         help="parent temp directory")
+    parser.add_argument("--filecheck",
+                        action="store_true",
+                        help="for provisional data, download files and check"
+                        + " that all are present.  If unset, proceed if dir"
+                        + " exists")
     opt = parser.parse_args()
     return opt
 
