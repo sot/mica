@@ -71,8 +71,8 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='1999:001'):
 
 
 def update_cda_table(data_root=config['data_root'],
-         cda_table=config['cda_table'],
-         cda_fetch_url=config['cda_fetch_url']):
+                     cda_table=config['cda_table'],
+                     cda_fetch_url=config['cda_fetch_url']):
 
     table_file = os.path.join(data_root, cda_table)
     if not os.path.exists(table_file):
@@ -86,7 +86,7 @@ def update_cda_table(data_root=config['data_root'],
 
     logger.info("Fetching new CDA list from %s" % lastdate)
     query = ("?tstart=%s&pattern=acaimgc%%25&submit=Search"
-                 % lastmx.strftime("%m-%d-%Y"))
+             % lastmx.strftime("%m-%d-%Y"))
     url = cda_fetch_url + query
     new_lines = urllib.urlopen(url).readlines()
     files = make_data_table(new_lines)
