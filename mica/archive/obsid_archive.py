@@ -495,10 +495,11 @@ class ObsArchive:
         for cdir in chunk_dirs:
             last_links = glob(os.path.join(cdir, "?????_last"))
             for link in last_links:
-                lmatch = re.search('(\d{5})(_last)?$', link)
+                target = os.readlink(link)
+                lmatch = re.search('(\d{5})_v(\d+)$', target)
                 if lmatch:
                     obs = dict(obsid=int(lmatch.group(1)),
-                               revision='default')
+                               revision=int(lmatch.group(2)))
                     todo_obs.append(obs)
         return todo_obs
 
@@ -586,13 +587,35 @@ class ObsArchive:
         # and broken links and and update if possible
         prov_data = self.get_todo_from_links(archive_dir)
         for obs in prov_data:
-            logger.info("running get_arch for obsid %d ver %s, "
-                        % (obs['obsid'], obs['revision']))
-            try:
-                self.get_arch(obs['obsid'], obs['revision'])
-            except ProductVersionError as ve:
-                logger.info("skipping %d, default ver not available"
-                            % obs['obsid'])
-                logger.debug(ve)
-                continue
-            self.update_link(obs['obsid'])
+            # check again for multi-obis and limit to first one
+            obis = apstat.fetchall(
+                "select distinct obi from obidet_0_5 where obsid = %d" % obs['obsid'])
+            minobi = np.min(obis['obi'])
+            logger.info("checking database status for obsid %d obi %d ver %s, "
+                        % (obs['obsid'], minobi, obs['revision']), )
+            query_vars = {'apstat_table': config['apstat_table'],
+                          'apstat_id': config['apstat_id'],
+                          'obsid': obs['obsid'],
+                          'obi': minobi,
+                          'revision': obs['revision']}
+            apstat_query = ("""select * from %(apstat_table)s
+                               where obsid = %(obsid)d and obi = %(obi)d
+                               and revision = %(revision)d"""
+                            % query_vars)
+            logger.debug(apstat_query)
+            current_status = apstat.fetchall(apstat_query)
+            if len(current_status) == 0:
+                raise ValueError("obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
+                                 % query_vars)
+            if len(current_status) > 1:
+                raise ValueError("obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
+                                 % query_vars)
+            if current_status['quality'] != 'P':
+                try:
+                    self.get_arch(obs['obsid'], 'default')
+                except ProductVersionError as ve:
+                    logger.info("skipping %d, default ver not available"
+                                % obs['obsid'])
+                    logger.debug(ve)
+                    continue
+                self.update_link(obs['obsid'])
