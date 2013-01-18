@@ -18,6 +18,7 @@ from Chandra.Time import DateTime
 import Ska.File
 
 
+
 logger = logging.getLogger('aca0 fetch')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
@@ -118,7 +119,7 @@ def get_slot_data(start, stop, slot, imgsize=None,
         dbfile = os.path.join(data_root, 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
 
-    data_files = get_interval_files(start, stop, slots=[slot],
+    data_files = _get_file_records(start, stop, slots=[slot],
                                     imgsize=imgsize, db=db,
                                     data_root=data_root)
     dtype = [k for k in aca_dtype if k[0] in columns]
@@ -198,7 +199,67 @@ class MSIDset(collections.OrderedDict):
             self[msid] = MSID(msid, self.tstart, self.tstop)
 
 
-def get_interval_files(start, stop=None, slots=None,
+def obsid_times(obsid):
+    aca_db = Ska.DBI.DBI(dbi="sybase", server="sybase", user="aca_read")
+    obspars = aca_db.fetchall("""select * from obspar where obsid = %d
+                                 order by obi""" % obsid)
+    return obspars[0]['tstart'], obspars[0]['tstop']
+
+
+def get_files(obsid=None, start=None, stop=None,
+              slots=None, imgsize=None, db=None, data_root=None):
+    """
+    Retrieve list of files from ACA0 archive lookup table that
+    match arguments.  The database query returns files with
+
+      tstart < stop
+      and
+      tstop > start
+
+    which returns all files that contain any part of the interval
+    between start and stop.  If the obsid argument is provided, the
+    archived obspar tstart/tstop (sybase aca.obspar table) are used.
+
+    :param obsid: obsid
+    :param start: start time of requested interval
+    :param stop: stop time of requested interval
+    :param slots: list of integers of desired image slots to retrieve
+                   (defaults to all -> [0, 1, 2, 3, 4, 5, 6, 7, 8])
+    :param imgsize: list of integers of desired image sizes
+                    (defaults to all -> [4, 6, 8])
+    :param db: handle to archive lookup table
+    :param data_root: parent directory of Ska aca l0 archive
+
+    :returns: interval files
+    :rtype: list
+    """
+    if slots is None:
+        slots = [0, 1, 2, 3, 4, 5, 6, 7]
+    if data_root is None:
+        data_root = config['data_root']
+    if imgsize is None:
+        imgsize = [4, 6, 8]
+    if db is None:
+        dbfile = os.path.join(data_root, 'archfiles.db3')
+        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+    if obsid is None:
+        if start is None or stop is None:
+            raise TypeError("Must supply either obsid or start and stop")
+    else:
+        start, stop = obsid_times(obsid)
+
+    file_records = _get_file_records(start, stop,
+                                     slots=slots, imgsize=imgsize, db=db,
+                                     data_root=data_root)
+    files = [os.path.join(data_root,
+                          "%04d" % f['year'],
+                          "%03d" % f['doy'],
+                          str(f['filename']))
+             for f in file_records]
+    return files
+
+
+def _get_file_records(start, stop=None, slots=None,
                        imgsize=None, db=None, data_root=None):
     """
     Retrieve list of files from ACA0 archive lookup table that
@@ -474,7 +535,7 @@ class Updater(object):
         if len(oldmatches):
             self._arch_remove(oldmatches)
 
-        interval_matches = get_interval_files(archfiles_row['tstart'],
+        interval_matches = _get_file_records(archfiles_row['tstart'],
                                               archfiles_row['tstop'],
                                               slots=[archfiles_row['slot']])
         if len(interval_matches):
