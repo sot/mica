@@ -154,6 +154,51 @@ class ObsArchive:
         obspar['filename'] = filename
         return obspar
 
+    def get_files(self, obsid=None, start=None, stop=None,
+                  revision=None, content=None, data_root=None):
+        if data_root is None:
+            data_root = self.config['data_root']
+        if obsid is None:
+            if start is None or stop is None:
+                raise TypeError("Must supply either obsid or start and stop")
+        file_records = self._get_file_records(obsid=obsid,
+                                              start=start, stop=stop,
+                                              revision=revision,
+                                              content=content)
+        files = [os.path.join(data_root,
+                              ("%05d" % f['obsid'])[0:2],
+                              "%05d_v%02d" % (f['obsid'], f['revision']),
+                              str(f['filename']))
+                 for f in file_records]
+        return files
+
+    def _get_file_records(self, obsid=None, start=None, stop=None,
+                          revision=None, content=None):
+        self.set_env()
+        tstart_pad = 10 * 86400
+        if content is None:
+            content = self.config['content_types']
+        if type(content) == str:
+            content = [content]
+        content_str = ','.join(["'%s'" % x for x in content])
+        db_query = ('SELECT * from archfiles '
+                    'WHERE obsid = %d '
+                    'AND content in (%s) '
+                    % (obsid, content_str))
+        if revision is None:
+            db_query += 'AND isdefault = 1 '
+        else:
+            if revision == 'last':
+                db_query += """AND revision in
+                               (SELECT max(revision) from archfiles
+                                WHERE obsid = %d)""" % obsid
+            elif revision == 'all':
+                pass
+            else:
+                db_query += 'AND revision = %d ' % revision
+        files = self._archfiles_db.fetchall(db_query)
+        return files
+
     def get_dir(self, obsid):
         """
         Return the latest released directory for an obsid
