@@ -129,6 +129,7 @@ revision        int,
 obspar_ver      int,
 obspar_type     text,
 obspar_stat     text,
+content         text default 'OBSPAR',
 isdefault       int,
 
   CONSTRAINT pk_archfiles PRIMARY KEY (filename)

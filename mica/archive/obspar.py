@@ -157,7 +157,8 @@ config = dict(data_root='/data/aca/archive/obspar',
               small_ver_regex='axaff\d{5}_\d{3}N(\d{3}).*',
               full='obspar',
               filecheck=True,
-              cols=archfiles_hdr_cols)
+              cols=archfiles_hdr_cols,
+              content_types=['OBSPAR'])
 
 
 def get_options():
@@ -274,7 +275,8 @@ def get_obspar(obsid, version='default'):
             obspar['num_ccd_on'] += 1
     return obspar
 
-
+def get_files(obsid, revision=None, content=None):
+    return archive.get_files(obsid, revision=revision, content=content)
 
 
 def main():

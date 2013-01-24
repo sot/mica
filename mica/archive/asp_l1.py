@@ -30,7 +30,10 @@ config = dict(data_root='/data/aca/archive/asp1',
               small_ver_regex='pcadf\d+N(\d{3})_',
               full='asp1',
               filecheck=False,
-              cols=archfiles_hdr_cols)
+              cols=archfiles_hdr_cols,
+              content_types=['ASPQUAL', 'ASPSOL', 'ACADATA', 'GSPROPS',
+                             'GYRODATA', 'KALMAN', 'ACACAL', 'ACACENT',
+                             'FIDPROPS', 'GYROCAL', 'ACA_BADPIX'])
 
 
 def get_options():
@@ -97,6 +100,8 @@ def get_obs_dirs(obsid):
     """
     return archive.get_obs_dirs(obsid)
 
+def get_files(obsid, revision=None, content=None):
+    return archive.get_files(obsid, revision=revision, content=content)
 
 def main():
     """
