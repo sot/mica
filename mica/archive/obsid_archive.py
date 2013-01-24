@@ -123,6 +123,23 @@ class ObsArchive:
         self._arc5 = Ska.arc5gl.Arc5gl()
         self._apstat = Ska.DBI.DBI(dbi='sybase', server='sqlsao',
                                    database='axafapstat')
+        self._aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase',
+                                   user='aca_read')
+        config = self.config
+        db_file = os.path.join(os.path.abspath(config['data_root']),
+                               'archfiles.db3')
+        if not os.path.exists(db_file):
+            self.logger.info("creating archfiles db from %s"
+                        % config['sql_def'])
+            db_sql = os.path.join(os.environ['SKA_DATA'],
+                                  'mica', config['sql_def'])
+            db_init_cmds = file(db_sql).read()
+            db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                             autocommit=False)
+            db.execute(db_init_cmds, commit=True)
+        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                         autocommit=False)
+        self._archfiles_db = db
 
     def get_all_obspar_info(self, i, f, archfiles):
         """
@@ -371,19 +388,7 @@ class ObsArchive:
         archfiles = glob(os.path.join(tempdir, "*"))
         if not archfiles:
             raise ValueError("Retrieved no files")
-        db_file = os.path.join(os.path.abspath(config['data_root']),
-                               'archfiles.db3')
-        if not os.path.exists(db_file):
-            logger.info("creating archfiles db from %s"
-                        % config['sql_def'])
-            db_sql = os.path.join(os.environ['SKA_DATA'],
-                                  'mica', config['sql_def'])
-            db_init_cmds = file(db_sql).read()
-            db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
-                             autocommit=False)
-            db.execute(db_init_cmds, commit=True)
-        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
-                         autocommit=False)
+        db = self._archfiles_db
         existing = db.fetchall(
             "select * from archfiles where obsid = %d and revision = '%s'"
             % (obsid, version))
@@ -427,6 +432,7 @@ class ObsArchive:
         """
         logger = self.logger
         config = self.config
+        db = self._archfiles_db
         archive_dir = config['data_root']
 
         # for the obsid get the default and last version numbers
@@ -454,6 +460,15 @@ class ObsArchive:
             os.symlink(
                     os.path.relpath(def_ver_dir, chunk_dir_path),
                     obs_ln)
+            logger.info("updating archfiles default rev to %d for %d"
+                        % (obsid, default_ver))
+            db.execute("""UPDATE archfiles SET isdefault = 1
+                          WHERE obsid = %d and revision = %d"""
+                       % (obsid, default_ver))
+            db.execute("""UPDATE archfiles SET isdefault = NULL
+                          WHERE obsid = %d and revision != %d"""
+                       % (obsid, default_ver))
+            db.commit()
 
         # nothing to do if last_ver undefined
         if last_ver is None:
