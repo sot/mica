@@ -17,8 +17,6 @@ import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
 
-
-
 logger = logging.getLogger('aca0 fetch')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
@@ -94,6 +92,12 @@ def get_slot_data(start, stop, slot, imgsize=None,
     """
     For a the given parameters, retrieve telemetry and construct a
     masked array of the MSIDs available in that telemetry.
+
+      >>> from mica.archive import aca_l0
+      >>> slot_data = aca_l0.get_slot_data('2012:001', '2012:002', slot=7)
+      >>> temp_ccd_8x8 = aca_l0.get_slot_data('2005:001', '2005:010',
+      ...                                     slot=6, imgsize=[8],
+      ...                                     columns=['TIME', 'TEMPCCD'])
 
     :param start: start time of requested interval
     :param stop: stop time of requested interval
@@ -219,6 +223,12 @@ def get_files(obsid=None, start=None, stop=None,
     which returns all files that contain any part of the interval
     between start and stop.  If the obsid argument is provided, the
     archived obspar tstart/tstop (sybase aca.obspar table) are used.
+
+      >>> from mica.archive import aca_l0
+      >>> obsid_files = aca_l0.get_files(obsid=5438)
+      >>> time_files = aca_l0.get_files(start='2012:001', stop='2012:002')
+      >>> time_8x8 = aca_l0.get_files(start='2011:001', stop='2011:010',
+      ...                             imgsize=[8])
 
     :param obsid: obsid
     :param start: start time of requested interval
