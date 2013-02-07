@@ -83,6 +83,10 @@ def get_dir(obsid):
     """
     Get ASP L1 directory for default/released products for an obsid.
 
+      >>> from mica.archive import asp_l1
+      >>> asp_l1.get_dir(2121)
+      '/data/aca/archive/asp1/02/02121'
+
     :param obsid: obsid
     :returns: directory
     :rtype: string
@@ -94,14 +98,48 @@ def get_obs_dirs(obsid):
     """
     Get all ASP L1 directories for an obsid in the Ska file archive.
 
+      >>> from mica.archive import asp_l1
+      >>> obsdirs = asp_l1.get_obs_dirs(6000)
+
+    obsdirs will look something like::
+
+      {'default': '/data/aca/archive/asp1/06/06000',
+      2: '/data/aca/archive/asp1/06/06000_v02',
+      3: '/data/aca/archive/asp1/06/06000_v03',
+      'last': '/data/aca/archive/asp1/06/06000',
+      'revisions': [2, 3]}
+
     :param obsid: obsid
     :returns: map of obsid version to directories
     :rtype: dictionary
     """
     return archive.get_obs_dirs(obsid)
 
-def get_files(obsid, revision=None, content=None):
-    return archive.get_files(obsid, revision=revision, content=content)
+
+def get_files(obsid=None, start=None, stop=None,
+              revision=None, content=None):
+    """
+    List asp_l1 files for an obsid or a time range.
+
+      >>> from mica.archive import asp_l1
+      >>> obs_files = asp_l1.get_files(6000)
+      >>> obs_gspr = asp_l1.get_files(6000, content=['GSPROPS'])
+      >>> range_fidpr = asp_l1.get_files(start='2012:001',
+      ...                                stop='2012:030',
+      ...                                content=['FIDPROPS'])
+
+    :param obsid: obsid
+    :param start: time range start (Chandra.Time compatible)
+    :param stop: time range stop (Chandra.Time compatible)
+    :param revision: revision integer or 'last'
+                     defaults to current released version
+    :param content: archive CONTENT type
+                    defaults to all available ASP1 types
+    :returns: full path of files matching query
+    """
+    return archive.get_files(obsid=obsid, start=start, stop=stop,
+                             revision=revision, content=content)
+
 
 def main():
     """
