@@ -203,15 +203,31 @@ def get_dir(obsid):
     """
     Get obspar directory for default/released products for an obsid.
 
+      >>> from mica.archive import obspar
+      >>> obspar.get_dir(2121)
+      '/data/aca/archive/obspar/02/02121'
+
     :param obsid: obsid
     :returns: directory
     :rtype: string
     """
     return archive.get_dir(obsid)
 
+
 def get_obs_dirs(obsid):
     """
     Get all obspar directories for an obsid in the Ska file archive.
+
+      >>> from mica.archive import obspar
+      >>> obsdirs = obspar.get_obs_dirs(6000)
+
+    obsdirs will look something like::
+
+      {'default': '/data/aca/archive/obspar/06/06000',
+      2: '/data/aca/archive/obspar/06/06000_v02',
+      3: '/data/aca/archive/obspar/06/06000_v03',
+      'last': '/data/aca/archive/obspar/06/06000',
+      'revisions': [2, 3]}
 
     :param obsid: obsid
     :returns: map of obsid version to directories
@@ -219,9 +235,16 @@ def get_obs_dirs(obsid):
     """
     return archive.get_obs_dirs(obsid)
 
+
 def get_obspar_file(obsid, version='default'):
     """
     Get location of requested obsid's obspar.
+
+      >>> from mica.archive import obspar
+      >>> obspar.get_obspar_file(7000)
+      '/data/aca/archive/obspar/07/07000/axaff07000_000N002_obs0a.par.gz'
+      >>> obspar.get_obspar_file(14262, version=1)
+      '/data/aca/archive/obspar/14/14262_v01/axaff14262_001N001_obs0a.par.gz'
 
     :param obsid: obsid
     :param version: processing version/revision
@@ -265,7 +288,18 @@ def parse_obspar(file):
 
 
 def get_obspar(obsid, version='default'):
-    """Get the obspar for obsid starting at tstart.  Return as a dict."""
+    """
+    Get the obspar for obsid.  Return as a dict.
+
+      >>> from mica.archive import obspar
+      >>> obspar.get_obspar(7001)['detector']
+      'ACIS-I'
+
+    :param obsid: obsid
+    :param version: processing version/revision
+
+    :returns: dictionary of obspar
+    """
 
     obsparfile = get_obspar_file(obsid, version)
     obspar = {'num_ccd_on': 0}
@@ -275,8 +309,25 @@ def get_obspar(obsid, version='default'):
             obspar['num_ccd_on'] += 1
     return obspar
 
-def get_files(obsid, revision=None, content=None):
-    return archive.get_files(obsid, revision=revision, content=content)
+def get_files(obsid=None, start=None, stop=None, revision=None):
+    """
+    List obspar files for an obsid or a time range.
+
+      >>> from mica.archive import obspar
+      >>> obs_files = obspar.get_files(6000)
+      >>> range = obspar.get_files(start='2012:001',
+      ...                          stop='2012:030')
+
+
+    :param obsid: obsid
+    :param start: time range start (Chandra.Time compatible)
+    :param stop: time range stop (Chandra.Time compatible)
+    :param revision: revision integer or 'last'
+                     defaults to current released version
+    :returns: full path of files matching query
+    """
+    return archive.get_files(obsid=obsid, start=start, stop=stop,
+                             revision=revision)
 
 
 def main():
