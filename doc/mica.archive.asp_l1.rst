@@ -7,5 +7,6 @@
 Functions
 ---------
 
+.. autofunction:: get_files
 .. autofunction:: get_dir
 .. autofunction:: get_obs_dirs

@@ -7,5 +7,5 @@ Functions
 ---------
 
 .. autofunction:: get_slot_data
-.. autofunction:: get_interval_files
+.. autofunction:: get_files
 
