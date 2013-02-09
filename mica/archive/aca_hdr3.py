@@ -410,7 +410,7 @@ def mask_bad_data(slot_data, tstop):
     # transitions from 8 to 6 or 4 should be -1 in this scheme
     last_eight = iseight[1:].astype(int) - iseight[:-1].astype(int) == -1
     slot_data[last_eight] = ma.masked
-    slot_data[iseight == False] = ma.masked
+    slot_data[~iseight] = ma.masked
     # explicitly unmask useful columns that will always be good
     slot_data['TIME'].mask = ma.nomask
     slot_data['IMGSIZE'].mask = ma.nomask
