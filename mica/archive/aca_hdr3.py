@@ -366,16 +366,14 @@ class MSID(object):
         self.tstop = DateTime(stop).secs
         self.datestart = DateTime(self.tstart).date
         self.datestop = DateTime(self.tstop).date
-        # TODO: fix the logic to handle both
-        # types of msid_data (MSID vs dict) in a nice way
-        if hasattr(msid_data, 'hdr3_msid'):
-            self.hdr3_msid = msid_data.hdr3_msid
-            self.vals = msid_data.vals
-            self.times = msid_data.times
-        else:
-            self.hdr3_msid = msid_data['hdr3_msid']
-            self.vals = msid_data['vals']
-            self.times = msid_data['times']
+        # msid_data may be dictionary or object with these
+        # attributes
+        for attr in ('hdr3_msid', 'vals', 'times',
+                     'desc', 'longdesc'):
+            if hasattr(msid_data, attr):
+                setattr(self, attr, getattr(msid_data, attr))
+            else:
+                setattr(self, attr, msid_data.get(attr))
 
 
 def confirm_msid(req_msid):
