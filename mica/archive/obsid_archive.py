@@ -180,10 +180,22 @@ class ObsArchive:
         if type(content) == str:
             content = [content]
         content_str = ','.join(["'%s'" % x for x in content])
-        db_query = ('SELECT * from archfiles '
-                    'WHERE obsid = %d '
-                    'AND content in (%s) '
-                    % (obsid, content_str))
+        if obsid is None:
+            if start is None or stop is None:
+                raise TypeError("Must supply either obsid or start and stop")
+            tstart = DateTime(start).secs
+            tstop = DateTime(stop).secs
+            db_query = ("SELECT * from archfiles "
+                        "WHERE tstart >= %f - %f "
+                        "AND tstart < %f "
+                        "AND tstop > %f "
+                        "AND content in (%s) "
+                        % (tstart, tstart_pad, tstop, tstart, content_str))
+        else:
+            db_query = ('SELECT * from archfiles '
+                        'WHERE obsid = %d '
+                        'AND content in (%s) '
+                        % (obsid, content_str))
         if revision is None:
             db_query += 'AND isdefault = 1 '
         else:
