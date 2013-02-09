@@ -461,8 +461,11 @@ class MSIDset(collections.OrderedDict):
         for msid in msids:
             hdr3_msid = confirm_msid(msid)
             slot = slot_for_msid(hdr3_msid)
+            # make a data dictionary to feed to the MSID constructor
             slot_data = {'vals': hdr3_def[hdr3_msid]['value'](
                     self.slot_data[slot]),
+                         'desc': hdr3_def[hdr3_msid]['desc'],
+                         'longdesc': hdr3_def[hdr3_msid]['longdesc'],
                          'times': self.slot_data[slot]['TIME'],
                          'hdr3_msid': hdr3_msid}
             self[msid] = MSID(msid, start, stop, slot_data)
