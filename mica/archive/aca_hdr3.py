@@ -1,5 +1,5 @@
 """
-Experimental code to work with ACA L0 Header 3 data
+Experimental/alpha code to work with ACA L0 Header 3 data
 """
 import re
 import numpy as np
@@ -78,7 +78,10 @@ def ad_temp(msids):
         sum = two_byte_sum(msids)(slot_data)
         return ad_func(sum)
     return func
-    
+
+# dictionary that defines the header 3 'MSID's.
+# Also includes a value key that describes how to determine the value
+# of the MSID 
 
 hdr3_def = \
 {'062': {'desc': 'AC status word',
@@ -327,6 +330,34 @@ msid_aliases = {'dac': {'hdr3': '776'},
 
 
 class MSID(object):
+    """
+    ACA header 3 data object to work with header 3 data from
+    available 8x8 ACA L0 telemetry.
+
+    >>> from mica.archive import aca_hdr3
+    >>> ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
+    >>> type(ccd_temp.vals)
+    'numpy.ma.core.MaskedArray'
+
+    When given an msid and start and stop range, the object will
+    fetch the ACA L0 to populate the object, which includes the MSID
+    values (vals) at the given times (times).
+
+    The parameter msid_data is used to create an MSID object from
+    the data of another MSID obejct.
+
+    :param msid: MSID or pseudo-MSID
+       pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
+       unaliased values may also be read directly in the form
+          <Slot><Image type><Hdr3 Word>
+       (see aca_hdr3.hdr3_def for a dictionary including those
+       descriptions)
+
+    :param start: Chandra.Time compatible start time
+    :param stop: Chandra.Time compatible stop time
+    :param msid_data: data dictionary or object from another MSID object
+    """
+
     def __init__(self, msid, start, stop, msid_data=None):
         if msid_data is None:
             msid_data = MSIDset([msid], start, stop)[msid]
@@ -348,6 +379,12 @@ class MSID(object):
 
 
 def confirm_msid(req_msid):
+    """
+    Check to see if the 'MSID' is an alias or is in the hdr3_def
+    dictionary.  If in the aliases, return the unaliased value.
+    :param req_msid: requested msid
+    :return: hdr3_def MSID name
+    """
     if req_msid in msid_aliases:
         return msid_aliases[req_msid]['hdr3']
     else:
@@ -358,12 +395,19 @@ def confirm_msid(req_msid):
 
 
 def slot_for_msid(msid):
+    """
+    For a given 'MSID' return the slot number that contains those data.
+    """
     mmatch = re.match('(\d)\d\d', msid)
     slot = int(mmatch.group(1))
     return slot
 
 
 def mask_bad_data(slot_data, tstop):
+    """
+    Mask values of slot data that aren't 8x8 and return the
+    new masked array.
+    """
     iseight = slot_data['IMGSIZE'] == 8
     # transitions from 8 to 6 or 4 should be -1 in this scheme
     last_eight = iseight[1:].astype(int) - iseight[:-1].astype(int) == -1
@@ -378,6 +422,24 @@ def mask_bad_data(slot_data, tstop):
 
 
 class MSIDset(collections.OrderedDict):
+    """
+    ACA header 3 data object to work with header 3 data from
+    available 8x8 ACA L0 telemetry.  An MSIDset works with multiple
+    MSIDs simultaneously.
+
+    >>> from mica.archive import aca_hdr3
+    >>> perigee_data = aca_hdr3.MSIDset(['ccd_temp', 'aca_temp', 'dac'],
+    ...                                 '2012:001', '2012:030')
+
+    :param msids: list of MSIDs or pseudo-MSIDs
+        pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
+        unaliased values may also be read directly in the form
+        <Slot><Image type><Hdr3 Word>
+        (see aca_hdr3.hdr3_def for a dictionary including those
+        descriptions)
+    :param start: Chandra.Time compatible start time
+    :param stop: Chandra.Time compatible stop time
+    """
     def __init__(self, msids, start, stop):
         super(MSIDset, self).__init__()
         self.tstart = DateTime(start).secs
