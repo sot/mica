@@ -207,6 +207,7 @@ class ObsArchive:
                 pass
             else:
                 db_query += 'AND revision = %d ' % revision
+        db_query += "order by tstart"
         files = self._archfiles_db.fetchall(db_query)
         return files
 
