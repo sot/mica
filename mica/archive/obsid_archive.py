@@ -155,9 +155,8 @@ class ObsArchive:
         return obspar
 
     def get_files(self, obsid=None, start=None, stop=None,
-                  revision=None, content=None, data_root=None):
-        if data_root is None:
-            data_root = self.config['data_root']
+                  revision=None, content=None):
+        data_root = self.config['data_root']
         if obsid is None:
             if start is None or stop is None:
                 raise TypeError("Must supply either obsid or start and stop")
