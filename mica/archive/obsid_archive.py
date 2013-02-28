@@ -558,7 +558,7 @@ class ObsArchive:
         """
         Return a list of all of the *_last directories in the file archive
         (and specify revision=default to attempt to get new released products
-        for thems).
+        for them).
         """
         logger = self.logger
         logger.info("Checking for updates to obsids with provisional data")
