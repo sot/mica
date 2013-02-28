@@ -31,7 +31,7 @@ Mica provides interfaces to these products:
 ACA L0 module
 ----------------
 
-The mica.archive.aca_l0 module provides tools to build and fetch from
+The :mod:`mica.archive.aca_l0` module provides tools to build and fetch from
 a file archive of ACA L0 telemetry.  This telemetry is stored in
 directories by year and day-of-year, and ingested filenames are stored
 in a lookup table.  
@@ -52,7 +52,7 @@ data structures.
    ...                                     slot=6, imgsize=[8],
    ...                                     columns=['TIME', 'TEMPCCD'])
 
-The get_slot_data() method will retrieve all columns by default and
+The :func:`~mica.archive.aca_l0.get_slot_data()` method will retrieve all columns by default and
 the resulting data structure will have masked columns where those
 values are not available (i.e. HD3TLM64 in 6x6 or 4x4 image data).
 
@@ -60,7 +60,7 @@ values are not available (i.e. HD3TLM64 in 6x6 or 4x4 image data).
 ACA Diagnostic module
 ---------------------
 
-The mica.archive.aca_hdr3 module works with Header 3 data from 8x8 ACA
+The :mod:`mica.archive.aca_hdr3` module works with Header 3 data from 8x8 ACA
 L0 image data.  An MSID class and MSIDset class are provided to fetch 
 pseudo-MSIDs and return masked array data structures to work with them.
 
@@ -75,7 +75,7 @@ pseudo-MSIDs and return masked array data structures to work with them.
 Aspect L1 module
 ------------------
 
-The mica.archive.asp_l1 module provides tools to build and fetch from
+The :mod:`mica.archive.asp_l1` module provides tools to build and fetch from
 a file archive of Aspect level 1 products.
 
 Methods are provided to find the archive directory:
@@ -107,7 +107,7 @@ Methods are also provided to retrieve a list files by obsid and time range.
 Obspar module
 ------------------
 
-The mica.archive.obspar module provides tools to build and fetch from
+The :mod:`mica.archive.obspar` module provides tools to build and fetch from
 a file archive of obspars.
 
 Methods are provided to find the archive directory and obspar files:
