@@ -85,7 +85,7 @@ Methods are provided to find the archive directory:
    '/data/aca/archive/asp1/02/02121'
    >>> obsdirs = asp_l1.get_obs_dirs(6000)
 
-The obsdirs dictionary should look something like:
+The obsdirs dictionary should look something like::
 
   {'default': '/data/aca/archive/asp1/06/06000',
   2: '/data/aca/archive/asp1/06/06000_v02',
@@ -119,7 +119,7 @@ Methods are provided to find the archive directory and obspar files:
    '/data/aca/archive/obspar/02/02121'
    >>> obsdirs = obspar.get_obs_dirs(6000)
 
-The obsdirs dictionary should look something like:
+The obsdirs dictionary should look something like::
 
    {'default': '/data/aca/archive/obspar/06/06000',
    2: '/data/aca/archive/obspar/06/06000_v02',
