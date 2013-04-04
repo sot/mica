@@ -71,6 +71,23 @@ pseudo-MSIDs and return masked array data structures to work with them.
    >>> perigee_data = aca_hdr3.MSIDset(['ccd_temp', 'aca_temp', 'dac'],
    ...                                 '2012:001', '2012:030')
 
+Retrieving pseudo-MSIDs with this module will be slower than
+Ska.engarchive fetches of similar telemetry, as the aca_hdr3 module
+reads from each of the collection of original fits.gz files for a specified
+time range.  Ska.engarchive, in contrast, reads from HDF5 files (per
+MSID) optimized for fast reads.::
+
+
+   In [2]: %time ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001',
+   '2012:020')
+   CPU times: user 26.32 s, sys: 0.49 s, total: 26.81 s
+   Wall time: 37.79 s
+
+   In [9]: %time quick_ccd = Ska.engarchive.fetch.MSID('AACCCDPT',
+   '2012:001', '2012:020')
+   CPU times: user 0.02 s, sys: 0.00 s, total: 0.03 s
+   Wall time: 0.81 s
+
 
 Aspect L1 module
 ------------------
