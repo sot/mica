@@ -57,7 +57,7 @@ def make_data_table(lines):
 def make_table_from_scratch(table_file, cda_fetch_url, start='1999:001'):
     logger.info("Fetching new CDA list from %s" % start)
     startmx = DateTime(start).mxDateTime
-    query = ("?tstart=%s&pattern=aca%%25&submit=Search"
+    query = ("?tstart=%s&pattern=acaimgc%%25&submit=Search"
              % startmx.strftime("%m-%d-%Y"))
     url = cda_fetch_url + query
     new_lines = urllib.urlopen(url).readlines()
