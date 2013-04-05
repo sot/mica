@@ -193,6 +193,9 @@ without command-line options need to be changed.
                         help="parent directory for all data")
     parser.add_argument("--temp-root",
                         help="parent temp directory")
+    parser.add_argument("--rebuild",
+                        action="store_true",
+                        help="Allow update to rebuild archive from obsid 1")
     opt = parser.parse_args()
     return opt
 

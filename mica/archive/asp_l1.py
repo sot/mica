@@ -72,6 +72,9 @@ without command-line options need to be changed.
                         help="for provisional data, download files and check"
                         + " that all are present.  If unset, proceed if dir"
                         + " exists")
+    parser.add_argument("--rebuild",
+                        action="store_true",
+                        help="Allow update to rebuild archive from obsid 1")
     opt = parser.parse_args()
     return opt
 

@@ -101,6 +101,8 @@ class ObsArchive:
     * small_ver_regex: regular expression to search for version from
                      retrieved files (example 'pacdf\d+N(\d{3})_')
     * full: arc5gl keyword for products (example 'asp1')
+    * rebuild: If True/set, allow update mode to rebuild the database
+               from obsid 1.
     """
 
     def __init__(self, config):
@@ -128,7 +130,9 @@ class ObsArchive:
         config = self.config
         db_file = os.path.join(os.path.abspath(config['data_root']),
                                'archfiles.db3')
-        if not os.path.exists(db_file):
+        if not os.path.exists(db_file) or os.stat(db_file).st_size == 0:
+            if not os.path.exists(config['data_root']):
+                os.makedirs(config['data_root'])
             self.logger.info("creating archfiles db from %s"
                         % config['sql_def'])
             db_sql = os.path.join(os.environ['SKA_DATA'],
@@ -608,6 +612,11 @@ class ObsArchive:
             last_id = int(last_id_fh.read().rstrip())
             logger.info("using %d for last_id" % last_id)
             last_id_fh.close()
+        else:
+            if not config.get('rebuild'):
+                raise ValueError("last_id.txt not found.\n"
+                                 + "To rebuild archive from obsid 1, "
+                                 + "set rebuild=True in configuration")
         query_vars = {'apstat_table': config['apstat_table'],
                       'apstat_id': config['apstat_id'],
                       'last_id': last_id}

@@ -82,6 +82,8 @@ def update_cda_table(data_root=None,
     if cda_fetch_url is None:
         cda_fetch_url = CONFIG['cda_fetch_url']
 
+    if not os.path.exists(data_root):
+        os.makedirs(data_root)
     table_file = os.path.join(data_root, cda_table)
     if not os.path.exists(table_file):
         make_table_from_scratch(table_file, cda_fetch_url)

@@ -698,10 +698,12 @@ class Updater(object):
         contentdir = self.data_root
         if not os.path.exists(contentdir):
             os.makedirs(contentdir)
+        if not os.path.exists(self.temp_root):
+            os.makedirs(self.temp_root)
         archdb = os.path.join(contentdir, 'archfiles.db3')
         # if the database of the archived files does not exist,
-        # make it
-        if not os.path.exists(archdb):
+        # or is empty, make it
+        if not os.path.exists(archdb) or os.stat(archdb).st_size == 0:
             logger.info("creating archfiles db from %s"
                         % self.sql_def)
             db_sql = os.path.join(os.environ['SKA_DATA'],
@@ -716,6 +718,10 @@ class Updater(object):
             last_time = min([self.db.fetchone(
                         "select max(filetime) from archfiles where slot = %d"
                         % s)['max(filetime)'] for s in range(0, 8)])
+            if last_time is None:
+                raise ValueError(
+                    "No files in archive to do update-since-last-run mode.\n"
+                    + "Please specify a time with --start")
             datestart = DateTime(last_time)
         datestop = DateTime(self.stop)
         padding_seconds = 10000
@@ -740,12 +746,18 @@ class Updater(object):
                 self._insert_files(fetched_files)
 
         timestamp_file = os.path.join(self.data_root, 'last_timestamp.txt')
-        cda_checked_timestamp = open(timestamp_file).read().rstrip()
+        # get list of missing files since the last time the tool ingested
+        # files.  If this is first run of the tool, check from the start of
+        # the requested time range
+        if (os.path.exists(timestamp_file)
+                and os.stat(timestamp_file).st_size > 0):
+            cda_checked_timestamp = open(timestamp_file).read().rstrip()
+        else:
+            cda_checked_timestamp = DateTime(self.start).date
         missing_datetime = DateTime(cda_checked_timestamp)
         missing_files, last_ingest_date = \
             self._get_missing_archive_files(missing_datetime,
                                             only_new=True)
-
         # update the file to have up through the last confirmed good file
         # even before we try to fetch missing ones
         open(timestamp_file, 'w').write("%s" % last_ingest_date)
