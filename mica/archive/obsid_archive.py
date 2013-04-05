@@ -46,7 +46,7 @@ def parse_obspar(file):
     for row in obs_read:
         # this empty-string '' hack is not present in the original
         if ((row['value'] == '')
-            and ((row['type'] == 'r') or (row['type'] == 'i'))):
+                and ((row['type'] == 'r') or (row['type'] == 'i'))):
             row['value'] = None
         else:
             row['value'] = convert[row['type']](row['value'])
@@ -134,7 +134,7 @@ class ObsArchive:
             if not os.path.exists(config['data_root']):
                 os.makedirs(config['data_root'])
             self.logger.info("creating archfiles db from %s"
-                        % config['sql_def'])
+                             % config['sql_def'])
             db_sql = os.path.join(os.environ['SKA_DATA'],
                                   'mica', config['sql_def'])
             db_init_cmds = file(db_sql).read()
@@ -218,7 +218,7 @@ class ObsArchive:
     def get_dir(self, obsid):
         """
         Return the latest released directory for an obsid
-	    Return None if there are no 'default' / released products.
+        Return None if there are no 'default' / released products.
         """
         dirmap = self.get_obs_dirs(obsid)
         if 'default' in dirmap:
@@ -317,11 +317,9 @@ class ObsArchive:
         # just get a small file
         arc5.sendline("get %s" % config['small'])
         version = self.get_file_ver(tempdir,
-                               config['small_glob'],
-                               config['small_ver_regex'],
-                               )
-        if not version:
-            raise ProductVersionError("Version not defined")
+                                    config['small_glob'],
+                                    config['small_ver_regex'],
+                                    )
         for afile in glob(os.path.join(tempdir, "*")):
             os.remove(afile)
         os.removedirs(tempdir)
@@ -409,7 +407,7 @@ class ObsArchive:
         n_version = self.get_ver_num(obsid, version=version)
         if n_version is None:
             raise ProductVersionError("No %s data for ver %s"
-                             % (config['label'], version))
+                                      % (config['label'], version))
         # use the numeric version instead of 'last' or 'default'
         version = n_version
 
@@ -463,7 +461,7 @@ class ObsArchive:
             arch_info = self.get_arch_info(i, f, archfiles)
             arch_info['obsid'] = obsid
             if (len(existing)
-               and arch_info['filename'] in existing['filename']):
+                    and arch_info['filename'] in existing['filename']):
                 logger.debug("skipping %s" % f)
                 os.remove(f)
                 continue
@@ -512,15 +510,15 @@ class ObsArchive:
                                        '%05d_v%02d' % (obsid, default_ver))
             # link the default version
             logger.info("linking %s -> %s" % (
-                    os.path.relpath(def_ver_dir, chunk_dir_path),
-                    obs_ln))
+                os.path.relpath(def_ver_dir, chunk_dir_path),
+                obs_ln))
             # don't use os.path.exists here because if we have a broken
             # link we want to remove it too
             if os.path.islink(obs_ln):
                 os.unlink(obs_ln)
             os.symlink(
-                    os.path.relpath(def_ver_dir, chunk_dir_path),
-                    obs_ln)
+                os.path.relpath(def_ver_dir, chunk_dir_path),
+                obs_ln)
             logger.info("updating archfiles default rev to %d for %d"
                         % (obsid, default_ver))
             db.execute("""UPDATE archfiles SET isdefault = 1
@@ -544,13 +542,13 @@ class ObsArchive:
                 obs_ln_last = os.path.join(archive_dir, chunk_dir,
                                            "%05d_last" % obsid)
                 logger.info("linking %s -> %s" % (
-                        os.path.relpath(last_ver_dir, chunk_dir_path),
-                        obs_ln_last))
+                    os.path.relpath(last_ver_dir, chunk_dir_path),
+                    obs_ln_last))
                 if os.path.islink(obs_ln_last):
                     os.unlink(obs_ln_last)
                 os.symlink(
-                        os.path.relpath(last_ver_dir, chunk_dir_path),
-                        obs_ln_last)
+                    os.path.relpath(last_ver_dir, chunk_dir_path),
+                    obs_ln_last)
         else:
             # if default and last are now the same, delete last link
             if os.path.exists(obs_ln_last):
@@ -601,7 +599,6 @@ class ObsArchive:
                 logger.info("Could not determine link versions for %d"
                             % config['obsid'])
             return
-
 
         # if no obsid specified, try to retrieve all data
         # since tool last run
@@ -670,7 +667,8 @@ class ObsArchive:
         for obs in prov_data:
             # check again for multi-obis and limit to first one
             obis = apstat.fetchall(
-                "select distinct obi from obidet_0_5 where obsid = %d" % obs['obsid'])
+                "select distinct obi from obidet_0_5 where obsid = %d"
+                % obs['obsid'])
             minobi = np.min(obis['obi'])
             logger.info("checking database status for obsid %d obi %d ver %s, "
                         % (obs['obsid'], minobi, obs['revision']), )
@@ -686,11 +684,13 @@ class ObsArchive:
             logger.debug(apstat_query)
             current_status = apstat.fetchall(apstat_query)
             if len(current_status) == 0:
-                raise ValueError("obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
-                                 % query_vars)
+                raise ValueError(
+                    "obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
+                    % query_vars)
             if len(current_status) > 1:
-                raise ValueError("obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
-                                 % query_vars)
+                raise ValueError(
+                    "obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
+                    % query_vars)
             if current_status['quality'] != 'P':
                 try:
                     self.get_arch(obs['obsid'], 'default')
