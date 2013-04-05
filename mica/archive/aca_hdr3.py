@@ -29,7 +29,7 @@ def two_byte_sum(byte_msids, scale=1):
 
 
 # 8x8 header values (largest possible ACA0 header set)
-aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('IMGSIZE', '>i4'),
+ACA_DTYPE = [('TIME', '>f8'), ('QUALITY', '>i4'), ('IMGSIZE', '>i4'),
              ('HD3TLM62', '|u1'),
              ('HD3TLM63', '|u1'), ('HD3TLM64', '|u1'), ('HD3TLM65', '|u1'),
              ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
@@ -37,7 +37,7 @@ aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('IMGSIZE', '>i4'),
              ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
              ]
 
-aca_dtype_names = [k[0] for k in aca_dtype]
+ACA_DTYPE_NAMES = [k[0] for k in ACA_DTYPE]
 
 
 a_to_d = [
@@ -81,9 +81,9 @@ def ad_temp(msids):
 
 # dictionary that defines the header 3 'MSID's.
 # Also includes a value key that describes how to determine the value
-# of the MSID 
+# of the MSID
 
-hdr3_def = \
+HDR3_DEF = \
 {'062': {'desc': 'AC status word',
                'longdesc': """
 AC status word.  A status word read from the AC.  The bits in the word are
@@ -324,7 +324,7 @@ write-and-read test
 The number most recently written the the [sic] TEC power control DAC.
 """}}
 
-msid_aliases = {'dac': {'hdr3': '776'},
+MSID_ALIASES = {'dac': {'hdr3': '776'},
                 'aca_temp': {'hdr3': '766'},
                 'ccd_temp': {'hdr3': '676'}}
 
@@ -378,15 +378,15 @@ class MSID(object):
 
 def confirm_msid(req_msid):
     """
-    Check to see if the 'MSID' is an alias or is in the hdr3_def
+    Check to see if the 'MSID' is an alias or is in the HDR3_DEF
     dictionary.  If in the aliases, return the unaliased value.
     :param req_msid: requested msid
     :return: hdr3_def MSID name
     """
-    if req_msid in msid_aliases:
-        return msid_aliases[req_msid]['hdr3']
+    if req_msid in MSID_ALIASES:
+        return MSID_ALIASES[req_msid]['hdr3']
     else:
-        if req_msid not in hdr3_def:
+        if req_msid not in HDR3_DEF:
             raise MissingDataError("msid %s not found" % req_msid)
         else:
             return req_msid
@@ -433,7 +433,7 @@ class MSIDset(collections.OrderedDict):
         pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
         unaliased values may also be read directly in the form
         <Slot><Image type><Hdr3 Word>
-        (see aca_hdr3.hdr3_def for a dictionary including those
+        (see aca_hdr3.HDR3_DEF for a dictionary including those
         descriptions)
     :param start: Chandra.Time compatible start time
     :param stop: Chandra.Time compatible stop time
@@ -452,7 +452,7 @@ class MSIDset(collections.OrderedDict):
         for slot in slots:
             slot_data = mica.archive.aca_l0.get_slot_data(
                 self.tstart, self.tstop + stop_pad, slot,
-                imgsize=[4, 6, 8], columns=aca_dtype_names)
+                imgsize=[4, 6, 8], columns=ACA_DTYPE_NAMES)
             # prune off last sample in at 8x8 -> 4x4 or 6x6
             # transitions and just return 8x8 data
             self.slot_data[slot] = mask_bad_data(slot_data, self.tstop)
@@ -460,10 +460,10 @@ class MSIDset(collections.OrderedDict):
             hdr3_msid = confirm_msid(msid)
             slot = slot_for_msid(hdr3_msid)
             # make a data dictionary to feed to the MSID constructor
-            slot_data = {'vals': hdr3_def[hdr3_msid]['value'](
+            slot_data = {'vals': HDR3_DEF[hdr3_msid]['value'](
                     self.slot_data[slot]),
-                         'desc': hdr3_def[hdr3_msid]['desc'],
-                         'longdesc': hdr3_def[hdr3_msid]['longdesc'],
+                         'desc': HDR3_DEF[hdr3_msid]['desc'],
+                         'longdesc': HDR3_DEF[hdr3_msid]['longdesc'],
                          'times': self.slot_data[slot]['TIME'],
                          'hdr3_msid': hdr3_msid}
             self[msid] = MSID(msid, start, stop, slot_data)

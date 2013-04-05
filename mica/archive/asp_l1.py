@@ -8,19 +8,20 @@ This uses the obsid_archive module with a configuration specific
 to the aspect L1 products.
 
 """
-
+import os
 import logging
 import obsid_archive
 
 
 # these columns are available in the headers of the fetched telemetry
 # for this product (ASP L1) and will be included in the file lookup table
-archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content',
+ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'caldbver', 'content',
                       'ascdsver', 'revision', 'date')
 
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
 #config = ConfigObj('asp1.conf')
-config = dict(data_root='/data/aca/archive/asp1',
-              temp_root='/data/aca/archive/temp',
+CONFIG = dict(data_root=os.path.join(mica_archive, 'asp1'),
+              temp_root=os.path.join(mica_archive, 'temp'),
               sql_def='archfiles_asp_l1_def.sql',
               apstat_table='aspect_1',
               apstat_id='aspect_1_id',
@@ -30,7 +31,7 @@ config = dict(data_root='/data/aca/archive/asp1',
               small_ver_regex='pcadf\d+N(\d{3})_',
               full='asp1',
               filecheck=False,
-              cols=archfiles_hdr_cols,
+              cols=ARCHFILES_HDR_COLS,
               content_types=['ASPQUAL', 'ASPSOL', 'ACADATA', 'GSPROPS',
                              'GYRODATA', 'KALMAN', 'ACACAL', 'ACACENT',
                              'FIDPROPS', 'GYROCAL', 'ACA_BADPIX'])
@@ -46,12 +47,12 @@ to be run as a cron task, and in regular processing, the update will fetch
 and ingest all telemetry since the task's last run.  Options also provided
 to fetch and ingest specific obsids and versions.
 
-See the ``config`` in the asp_l1.py file and the config description in
+See the ``CONFIG`` in the asp_l1.py file and the config description in
 obsid_archive for more information on the asp l1 default config if parameters
 without command-line options need to be changed.
 """
     parser = argparse.ArgumentParser(description=desc)
-    defaults = dict(config)
+    defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
     parser.add_argument("--obsid",
                         type=int,
@@ -76,7 +77,7 @@ without command-line options need to be changed.
 
 # set up an archive object with default config for use by the other
 # get_* methods
-archive = obsid_archive.ObsArchive(config)
+archive = obsid_archive.ObsArchive(CONFIG)
 
 
 def get_dir(obsid):

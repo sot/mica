@@ -16,7 +16,7 @@ import obsid_archive
 
 # these keys are available in the obspar and will be included in the
 # file lookup table (archfiles)
-archfiles_hdr_cols = [
+ARCHFILES_HDR_COLS = [
 'filename',
 'obsid',
 'title',
@@ -146,8 +146,10 @@ archfiles_hdr_cols = [
 'obspar_type',
 'obspar_stat']
 
-config = dict(data_root='/data/aca/archive/obspar',
-              temp_root='/data/aca/archive/tempobs',
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+
+CONFIG = dict(data_root=os.path.join(mica_archive, 'obspar'),
+              temp_root=os.path.join(mica_archive, 'tempobs'),
               sql_def='obspar_def.sql',
               apstat_table='obidet_0_5',
               apstat_id='obidet_0_5_id',
@@ -157,7 +159,7 @@ config = dict(data_root='/data/aca/archive/obspar',
               small_ver_regex='axaff\d{5}_\d{3}N(\d{3}).*',
               full='obspar',
               filecheck=True,
-              cols=archfiles_hdr_cols,
+              cols=ARCHFILES_HDR_COLS,
               content_types=['OBSPAR'])
 
 
@@ -171,12 +173,12 @@ This is intended to be run as a cron task, and in regular processing,
 the update will fetch and ingest all telemetry since the task's last run.
 Options also provided to fetch and ingest specific obsids and versions.
 
-See the ``config`` in the obspar.py file and the config description in
+See the ``CONFIG`` in the obspar.py file and the config description in
 obsid_archive for more information on the obspar default config if parameters
 without command-line options need to be changed.
 """
     parser = argparse.ArgumentParser(description=desc)
-    defaults = dict(config)
+    defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
     parser.add_argument("--obsid",
                         type=int,
@@ -196,7 +198,7 @@ without command-line options need to be changed.
 
 # set up an archive object with default config for use by the other
 # get_* methods
-archive = obsid_archive.ObsArchive(config)
+archive = obsid_archive.ObsArchive(CONFIG)
 
 
 def get_dir(obsid):

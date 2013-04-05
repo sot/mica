@@ -22,18 +22,18 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 # borrowed from eng_archive
-archfiles_hdr_cols = ('tstart', 'tstop', 'startmjf', 'startmnf',
+ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'startmjf', 'startmnf',
                       'stopmjf', 'stopmnf',
                       'tlmver', 'ascdsver', 'revision', 'date',
                       'imgsize')
 
 
-dtype = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
+FDTYPE = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
          ('arc5gl_query', '|S27'), ('fileglob', '|S9')]
-filetype = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
-                               dtype=dtype)[0]
+FILETYPE = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
+                              dtype=FDTYPE)[0]
 
-aca_dtype = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
+ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('MNF', '>i4'),
              ('END_INTEG_TIME', '>f8'), ('INTEG', '>f4'), ('GLBSTAT', '|u1'),
              ('COMMCNT', '|u1'), ('COMMPROG', '|u1'), ('IMGFID1', '|u1'),
@@ -52,10 +52,12 @@ aca_dtype = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
              ('IMGSIZE', '>i4'))
 
-aca_dtype_names = tuple([k[0] for k in aca_dtype])
+ACA_DTYPE_NAMES = tuple([k[0] for k in ACA_DTYPE])
 
-config = dict(data_root='/data/aca/archive/aca0',
-              temp_root='/data/aca/archive/temp',
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+
+CONFIG = dict(data_root=os.path.join(mica_archive, 'aca0'),
+              temp_root=os.path.join(mica_archive, 'temp'),
               days_at_once=30.0,
               sql_def='archfiles_aca_l0_def.sql',
               cda_table='cda_aca0.h5')
@@ -64,7 +66,7 @@ config = dict(data_root='/data/aca/archive/aca0',
 def get_options():
     parser = argparse.ArgumentParser(
         description="Fetch aca level 0 products and make a file archive")
-    defaults = dict(config)
+    defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
     parser.add_argument("--data-root",
                         help="parent directory for all data")
@@ -114,9 +116,9 @@ def get_slot_data(start, stop, slot, imgsize=None,
     :rtype: numpy masked recarray
     """
     if data_root is None:
-        data_root = config['data_root']
+        data_root = CONFIG['data_root']
     if columns is None:
-        columns = aca_dtype_names
+        columns = ACA_DTYPE_NAMES
     if imgsize is None:
         imgsize = [4, 6, 8]
     if db is None:
@@ -126,7 +128,7 @@ def get_slot_data(start, stop, slot, imgsize=None,
     data_files = _get_file_records(start, stop, slots=[slot],
                                     imgsize=imgsize, db=db,
                                     data_root=data_root)
-    dtype = [k for k in aca_dtype if k[0] in columns]
+    dtype = [k for k in ACA_DTYPE if k[0] in columns]
     if not len(data_files):
         # return an empty masked array
         return ma.zeros(0, dtype=dtype)
@@ -179,7 +181,7 @@ class MSID(object):
         self._get_data()
 
     def _check_msid(self, req_msid):
-        if req_msid.upper() in aca_dtype_names:
+        if req_msid.upper() in ACA_DTYPE_NAMES:
             self.msid = req_msid.lower()
         else:
             raise MissingDataError("msid %s not found" % req_msid)
@@ -246,7 +248,7 @@ def get_files(obsid=None, start=None, stop=None,
     if slots is None:
         slots = [0, 1, 2, 3, 4, 5, 6, 7]
     if data_root is None:
-        data_root = config['data_root']
+        data_root = CONFIG['data_root']
     if imgsize is None:
         imgsize = [4, 6, 8]
     if db is None:
@@ -299,7 +301,7 @@ def _get_file_records(start, stop=None, slots=None,
     if slots is None:
         slots = [0, 1, 2, 3, 4, 5, 6, 7]
     if data_root is None:
-        data_root = config['data_root']
+        data_root = CONFIG['data_root']
     if imgsize is None:
         imgsize = [4, 6, 8]
     if db is None:
@@ -330,22 +332,22 @@ def _get_file_records(start, stop=None, slots=None,
 class Updater(object):
     def __init__(self,
                  db=None,
-                 data_root=config['data_root'],
-                 temp_root=config['temp_root'],
-                 days_at_once=config['days_at_once'],
-                 sql_def=config['sql_def'],
-                 cda_table=config['cda_table'],
-                 filetype=filetype,
+                 data_root=None,
+                 temp_root=None,
+                 days_at_once=None,
+                 sql_def=None,
+                 cda_table=None,
+                 filetype=None,
                  start=None,
                  stop=None,
                  ):
-        self.data_root = data_root
-        self.temp_root = temp_root
-        self.days_at_once = days_at_once
-        self.sql_def = sql_def
-        self.cda_table = cda_table
-        self.filetype = filetype
-        if not db:
+        for init_opt in ['data_root', 'temp_root', 'days_at_once',
+                         'sql_def', 'cda_table']:
+            setattr(self, init_opt, vars()[init_opt] or CONFIG[init_opt])
+        self.data_root = os.path.abspath(self.data_root)
+        self.temp_root = os.path.abspath(self.temp_root)
+        self.filetype = filetype or FILETYPE
+        if db is None:
             dbfile = os.path.join(data_root, 'archfiles.db3')
             db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, autocommit=False)
         self.db = db
@@ -484,7 +486,7 @@ class Updater(object):
         Read FITS filename ``f`` with index ``i`` (position within list of
         filenames) and get dictionary of values to store in file lookup
         database.  These values include all header items in
-        ``archfiles_hdr_cols`` plus the header checksum, the image slot
+        ``ARCHFILES_HDR_COLS`` plus the header checksum, the image slot
         as determined by the filename, the imagesize as determined
         by IMGRAW, the year, day-of-year, and number of data rows in the file.
 
@@ -516,7 +518,7 @@ class Updater(object):
         # (this is borrowed from eng-archive but is set to archive to a
         # database table instead of an h5 table in this version)
         archfiles_row = dict((x, hdu.header.get(x.upper()))
-                             for x in archfiles_hdr_cols)
+                             for x in ARCHFILES_HDR_COLS)
         archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
         imgsize = hdu.data[0].field('IMGRAW').shape[0]
         archfiles_row['imgsize'] = int(imgsize)
@@ -645,7 +647,7 @@ class Updater(object):
     def _fetch_individual_files(self, files):
         arc5 = Ska.arc5gl.Arc5gl(echo=True)
         logger.info('********** %s %s **********'
-                    % (filetype['content'], time.ctime()))
+                    % (self.filetype['content'], time.ctime()))
         fetched_files = []
         ingest_dates = []
         # get the files, store in file archive, and record in database
@@ -660,7 +662,7 @@ class Updater(object):
             arc5.sendline('version=last')
             arc5.sendline('operation=retrieve')
             arc5.sendline('go')
-            have_files = sorted(glob(filetype['fileglob']))
+            have_files = sorted(glob(self.filetype['fileglob']))
             if not len(have_files):
                 raise ValueError
             filename = have_files[0]
