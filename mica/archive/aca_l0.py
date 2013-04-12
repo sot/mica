@@ -16,6 +16,7 @@ import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
+import mica.version as mica_version
 
 logger = logging.getLogger('aca0 fetch')
 logger.setLevel(logging.INFO)
@@ -682,6 +683,10 @@ class Updater(object):
         return fetched_files, ingest_dates
 
     def _insert_files(self, files):
+        if (self.data_root.startswith('/data/archive')
+                and not mica_version.release):
+            raise ValueError(
+                "non-release code attempted to write to official archive")
         count_inserted = 0
         for i, f in enumerate(files):
             arch_info = self._read_archfile(i, f, files)

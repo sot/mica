@@ -10,6 +10,7 @@ from Chandra.Time import DateTime
 import Ska.Numpy
 import logging
 import argparse
+import mica.version as mica_version
 
 mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
 
@@ -81,6 +82,11 @@ def update_cda_table(data_root=None,
         cda_table = CONFIG['cda_table']
     if cda_fetch_url is None:
         cda_fetch_url = CONFIG['cda_fetch_url']
+
+    if (data_root.startswith('/data/aca/archive')
+            and not mica_version.release):
+        raise ValueError(
+            "non-release code attempting to write to official archive")
 
     if not os.path.exists(data_root):
         os.makedirs(data_root)

@@ -15,7 +15,7 @@ import Ska.arc5gl
 import Ska.DBI
 from Chandra.Time import DateTime
 import Ska.File
-
+import mica.version as mica_version
 
 # borrowed from telem_archive
 import csv
@@ -401,6 +401,7 @@ class ObsArchive:
         config = self.config
         temp_root = config['temp_root']
 
+
         # get a numeric version
         # do this even if passed a numeric version, as this will
         # check to see if the version is available
@@ -587,6 +588,11 @@ class ObsArchive:
         logger = self.logger
         archive_dir = config['data_root']
         apstat = self._apstat
+
+        if (config['data_root'].startswith('/data/aca/archive')
+                and not mica_version.release):
+            raise ValueError(
+                "non-release code attempting to write to official archive")
 
         last_id_file = os.path.join(archive_dir, 'last_id.txt')
         # if an obsid is requested, just do that
