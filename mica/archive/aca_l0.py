@@ -50,7 +50,7 @@ ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
              ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
              ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
-             ('IMGSIZE', '>i4'))
+             ('IMGSIZE', '>i4'), ('FILENAME', '<U128'))
 
 ACA_DTYPE_NAMES = tuple([k[0] for k in ACA_DTYPE])
 
@@ -153,6 +153,8 @@ def get_slot_data(start, stop, slot, imgsize=None,
                     = chunk.field(fname)
         if 'IMGSIZE' in columns:
             all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = f_imgsize
+        if 'FILENAME' in columns:
+            all_rows['FILENAME'][rowcount:(rowcount + len(chunk))] = f['filename']
         if 'IMGRAW' in columns:
             all_rows['IMGRAW'].reshape(rows, 8, 8)[
                 rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
