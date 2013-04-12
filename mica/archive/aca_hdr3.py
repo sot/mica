@@ -7,7 +7,8 @@ import numpy.ma as ma
 import collections
 from scipy.interpolate import interp1d
 from Chandra.Time import DateTime
-import mica.archive.aca_l0
+from Ska.Numpy import search_both_sorted
+import mica.archive.aca_l0 as aca_l0
 
 
 class MissingDataError(Exception):
@@ -34,7 +35,7 @@ ACA_DTYPE = [('TIME', '>f8'), ('QUALITY', '>i4'), ('IMGSIZE', '>i4'),
              ('HD3TLM63', '|u1'), ('HD3TLM64', '|u1'), ('HD3TLM65', '|u1'),
              ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
              ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
-             ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
+             ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'), ('FILENAME', '<U128')
              ]
 
 ACA_DTYPE_NAMES = [k[0] for k in ACA_DTYPE]
@@ -401,24 +402,6 @@ def slot_for_msid(msid):
     return slot
 
 
-def mask_bad_data(slot_data, tstop):
-    """
-    Mask values of slot data that aren't 8x8 and return the
-    new masked array.
-    """
-    iseight = slot_data['IMGSIZE'] == 8
-    # transitions from 8 to 6 or 4 should be -1 in this scheme
-    last_eight = iseight[1:].astype(int) - iseight[:-1].astype(int) == -1
-    slot_data[last_eight] = ma.masked
-    slot_data[~iseight] = ma.masked
-    # explicitly unmask useful columns that will always be good
-    slot_data['TIME'].mask = ma.nomask
-    slot_data['IMGSIZE'].mask = ma.nomask
-    # strip off any over time, don't bother masking
-    oktime = slot_data['TIME'] <= tstop
-    return slot_data[oktime]
-
-
 class MSIDset(collections.OrderedDict):
     """
     ACA header 3 data object to work with header 3 data from
@@ -446,24 +429,52 @@ class MSIDset(collections.OrderedDict):
         self.datestop = DateTime(self.tstop).date
         self.slot_data = {}
         slots = [slot_for_msid(confirm_msid(msid)) for msid in msids]
-        # get some extra samples to check if the last requested
-        # sample includes a transition from 8x8 to 6x6 or 4x4
-        stop_pad = 32
         for slot in slots:
-            slot_data = mica.archive.aca_l0.get_slot_data(
-                self.tstart, self.tstop + stop_pad, slot,
-                imgsize=[4, 6, 8], columns=ACA_DTYPE_NAMES)
-            # prune off last sample in at 8x8 -> 4x4 or 6x6
-            # transitions and just return 8x8 data
-            self.slot_data[slot] = mask_bad_data(slot_data, self.tstop)
+            # get the 8x8 data
+            slot_data = aca_l0.get_slot_data(
+                self.tstart, self.tstop, slot,
+                imgsize=[8], columns=ACA_DTYPE_NAMES)
+            # get the list of all the files in the interval (pad the end a bit)
+            slot_files = aca_l0._get_file_records(
+                self.tstart, self.tstop + 32, slots=[slot], imgsize=[4, 6, 8])
+            # mask the each 8x8 sample before a 6x6 or 4x4 file
+            # first which files are 8x8
+            iseight = slot_files['imgsize'] == 8
+            # which files are the last 8x8 before a 4x4 or 6x6 file
+            last_eight = np.flatnonzero(
+                iseight[1:].astype(int) - iseight[:-1].astype(int) == -1)
+            # for each of those files, mask the last 8x8 sample before the
+            # transition
+            for file in slot_files[last_eight]['filename']:
+                # last index from that file in the data
+                max_idx = np.max(np.flatnonzero(slot_data['FILENAME'] == file))
+                if max_idx:
+                    slot_data[max_idx] = ma.masked
+            # explicitly unmask useful columns
+            slot_data['TIME'].mask = ma.nomask
+            slot_data['IMGSIZE'].mask = ma.nomask
+            slot_data['FILENAME'].mask = ma.nomask
+            self.slot_data[slot] = slot_data
+        # make a shared time ndarray that is the union of the time sets in the
+        # slots.  The ACA L0 telemetry has the same timestamps across slots,
+        # so the only differences here are caused by different times in
+        # non-TRAK across the slots (usually SRCH differences at the beginning
+        # of the observation)
+        shared_time = np.unique(np.concatenate([
+            self.slot_data[slot]['TIME'].data for slot in slots]))
         for msid in msids:
             hdr3_msid = confirm_msid(msid)
             slot = slot_for_msid(hdr3_msid)
+            full_data = ma.zeros(len(shared_time),
+                                 dtype=self.slot_data[slot].dtype)
+            full_data.mask = ma.masked
+            fd_idx = search_both_sorted(shared_time,
+                                        self.slot_data[slot]['TIME'])
+            full_data[fd_idx] = self.slot_data[slot]
             # make a data dictionary to feed to the MSID constructor
-            slot_data = {'vals': HDR3_DEF[hdr3_msid]['value'](
-                    self.slot_data[slot]),
+            slot_data = {'vals': HDR3_DEF[hdr3_msid]['value'](full_data),
                          'desc': HDR3_DEF[hdr3_msid]['desc'],
                          'longdesc': HDR3_DEF[hdr3_msid]['longdesc'],
-                         'times': self.slot_data[slot]['TIME'],
+                         'times': shared_time,
                          'hdr3_msid': hdr3_msid}
             self[msid] = MSID(msid, start, stop, slot_data)
