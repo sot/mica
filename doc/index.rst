@@ -78,10 +78,10 @@ time range.  Ska.engarchive, in contrast, reads from HDF5 files (per
 MSID) optimized for fast reads.::
 
 
-   In [2]: %time ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001',
+   In [3]: %time ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001',
    '2012:020')
-   CPU times: user 26.32 s, sys: 0.49 s, total: 26.81 s
-   Wall time: 37.79 s
+   CPU times: user 5.18 s, sys: 0.12 s, total: 5.29 s
+   Wall time: 7.46 s
 
    In [9]: %time quick_ccd = Ska.engarchive.fetch.MSID('AACCCDPT',
    '2012:001', '2012:020')
