@@ -750,41 +750,39 @@ class AspectInterval(object):
             logger.info("Processing fid %s in slot %d " % (
                 fid['id_string'], fid['slot']))
             p_lsi = fid['p_lsi']
+            p_stf = p_lsi + lsi0_stt + stt0_stf
+
             ok = cen['slot'] == fid['slot']
             ceni = cen[ok]
             asol_cen_dy = np.interp(ceni['time'], asol['time'], asol['dy'])
             asol_cen_dz = np.interp(ceni['time'], asol['time'], asol['dz'])
             asol_cen_dtheta = (np.interp(ceni['time'],
                                          asol['time'], asol['dtheta'])
-                               * d2r)
-            dy = np.zeros_like(ceni['time'])
-            dz = np.zeros_like(ceni['time'])
-            yag = np.zeros_like(ceni['time'])
-            zag = np.zeros_like(ceni['time'])
-            #dtheta[0] = 1.8455539e-05
-            #dy[0] = 0.46696303
-            #dz[0] = 0.68532118
-            p_stf = p_lsi + lsi0_stt + stt0_stf
-            for j in range(0, len(ceni)):
-                s_th = np.sin(asol_cen_dtheta[j])
-                c_th = np.cos(asol_cen_dtheta[j])
-                rot_x[1, 1] = c_th
-                rot_x[2, 1] = s_th
-                rot_x[1, 2] = -s_th
-                rot_x[2, 2] = c_th
-
-                p_fc = np.dot(rot_x.transpose(), p_stf)
-                p_fc = p_fc + [0., asol_cen_dy[j], asol_cen_dz[j]]
-                d_fc = p_fc
-                d_fc[0] = d_fc[0] - rrc0_fc_x
-                d_fc = -d_fc
-                d_aca = np.dot(M, d_fc)
-                yag[j] = np.arctan2(d_aca[1], d_aca[0]) * r2a
-                zag[j] = np.arctan2(d_aca[2], d_aca[0]) * r2a
-                dy[j] = ceni[j]['ang_y_sm'] * 3600 - yag[j]
-                dz[j] = ceni[j]['ang_z_sm'] * 3600 - zag[j]
-
-            qual = ceni['status'].copy()
+                               * D2R)
+ 
+            rot_x = np.zeros([len(ceni['time']), 3, 3])
+            s_th = np.sin(asol_cen_dtheta)
+            c_th = np.cos(asol_cen_dtheta)
+            rot_x[:, 0, 0] = 1.0
+            rot_x[:, 1, 1] = c_th
+            rot_x[:, 2, 1] = s_th
+            rot_x[:, 1, 2] = -s_th
+            rot_x[:, 2, 2] = c_th
+            p_fc = np.dot(rot_x.transpose(0, 2, 1), p_stf)
+            p_fc[:, 1] = p_fc[:, 1] + asol_cen_dy
+            p_fc[:, 2] = p_fc[:, 2] + asol_cen_dz
+            d_fc = p_fc
+            d_fc[:, 0] = d_fc[:, 0] - rrc0_fc_x
+            d_fc = -d_fc
+            d_aca = np.dot(d_fc, M.transpose())
+            yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
+            zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
+            dy = ceni['ang_y_sm'] * 3600 - yag
+            dz = ceni['ang_z_sm'] * 3600 - zag
+            dr = sph_dist(yag / 3600,
+                          zag / 3600,
+                          ceni['ang_y_sm'],
+                          ceni['ang_z_sm']) * 3600
             slot_fidpr = [pr for pr in fidpr_info if pr['slot'] == fid['slot']]
             if not slot_fidpr:
                 raise ValueError("No FIDPR info found for slot %d"
