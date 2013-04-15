@@ -26,13 +26,15 @@ import matplotlib.pyplot as plt
 # get rid of the black edges on the plot markers
 plt.rcParams['lines.markeredgewidth'] = 0
 
-DEFAULT_CONFIG = dict(data_root='/data/aca/archive/vv',
-                      temp_root='/data/aca/archive/tempvv',
-                      shelf_file='vv_shelf.db',
-                      h5_file='vv.h5',
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+DEFAULT_CONFIG = dict(data_root=os.path.join(mica_archive, 'vv'),
+                      temp_root=os.path.join(mica_archive, 'tempvv'),
+                      shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
+                      h5_file=os.path.join(mica_archive, 'vv', 'vv.h5'),
                       h5_table='data',
                       save=True,
                       plot='png')
+
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -45,8 +47,11 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 
-def get_table():
-    h5 = tables.openFile(config['h5_arch'], 'a')
+
+def get_table(config=None):
+    if config is None:
+       config = DEFAULT_CONFIG
+    h5 = tables.openFile(config['h5_file'], 'a')
     tbl = h5.getNode('/', config['h5_table'])
     return tbl, h5
 
@@ -63,9 +68,13 @@ def get_arch_vv(obsid, version='default'):
     return Obi(obspar_file, l1_dir)
 
 
-def process(obsid, version='default'):
+def process(obsid, version='default', config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
     obi = get_arch_vv(obsid, version)
-    tbl, h5 = get_table()
+    if obi is None:
+        return None
+    tbl, h5 = get_table(config=config)
     obi.set_tbl(tbl)
     obi.slots_to_table()
     tbl.flush()
