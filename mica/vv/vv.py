@@ -15,6 +15,8 @@ from Ska.Table import read_table
 from scipy.signal import medfilt as medfilt
 import mica.archive.asp_l1 as asp_l1_arch
 import mica.archive.obspar as obspar_arch
+from scipy.stats import scoreatpercentile
+from Ska.astro import sph_dist
 
 import matplotlib
 if __name__ == '__main__':
@@ -23,9 +25,19 @@ import matplotlib.pyplot as plt
 # get rid of the black edges on the plot markers
 plt.rcParams['lines.markeredgewidth'] = 0
 
-config = dict(h5_arch='/data/aca/archive/vv/vv.h5',
-              h5_table='vv',
-              )
+DEFAULT_CONFIG = dict(data_root='/data/aca/archive/vv',
+                      temp_root='/data/aca/archive/tempvv',
+                      shelf_file='vv_shelf.db',
+                      h5_file='vv.h5',
+                      h5_table='data',
+                      save=True,
+                      plot='png')
+
+class NumpyAwareJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, 'tolist'):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 logger = logging.getLogger('V&V')
 logger.setLevel(logging.INFO)
@@ -98,17 +110,22 @@ def get_obspar(obsparfile):
     return obspar
 
 
-r2a = 206264.81
-d2r = 0.017453293
+R2A = 206264.81
+D2R = 0.017453293
 M0 = 10.32
 C0 = 5263.0
+
+fidDrEncFrac1 = 0.68
+fidDrEncFrac2 = 0.95 
+starDrEncFrac1 = 0.68
+starDrEncFrac2 = 0.95
 
 enc_rad_1 = 0.68
 enc_rad_2 = 0.99
 dyz_big_lim = 0.7
 frac_dyz_lim = 0.05
 
-data_cols = ['qual', 'dy', 'dz', 'mag', 'time', 'yag', 'zag',
+DATA_COLS = ['qual', 'dy', 'dz', 'dr', 'mag', 'time', 'yag', 'zag',
              'ang_y_sm', 'ang_y', 'ang_z_sm', 'ang_z']
 
 save_asol_header = ['ASCDSVER', 'CALDBVER', 'DATE', 'OBI_NUM', 'OBS_ID',
@@ -130,14 +147,17 @@ def frac_bad(data, median, limit):
 
 
 class Obi(object):
-    def __init__(self, obsparfile, obsdir):
+    def __init__(self, obsparfile, obsdir, config=None):
+        if config is None:
+            config = DEFAULT_CONFIG
+        self._config = config
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
         self._find_aspect_intervals()
         self._process_aspect_intervals()
-        self.slot = dict()
         self._concat_slot_data()
         self._check_over_intervals()
+        self.slot_report = dict()
         self._label_slots()
         self._agg_slot_data()
 
@@ -204,13 +224,19 @@ class Obi(object):
                 'roll_pnt': self.obspar['roll_pnt'],
                 'instrument': self.obspar['detnam'],
                 'intervals': ai_list,
-                'slots': self._just_slot_data()}
+                'slots': self.slot_report}
 
-    def _save_info_file(self, file='vv_agg.json'):
+    def _save_info_json(self, file="vv_report.json"):
         save = self._info()
         jfile = open(file, 'w')
-        jfile.write(json.dumps(save, sort_keys=True, indent=4))
+        jfile.write(json.dumps(save, sort_keys=True, indent=4,
+                               cls=NumpyAwareJSONEncoder))
         jfile.close()
+
+    def _save_info_pkl(self, file="vv_report.pkl"):
+        pfile = open(file, 'w')
+        pickle.dump(self._info(), pfile)
+        pfile.close()
 
     def slots_to_db(self):
         save = self._info()
@@ -314,10 +340,10 @@ class Obi(object):
                 AspectInterval(aiid['id'], aiid['dir']))
 
     def _concat_slot_data(self):
-        all_slot = self.slot
+        slot_data = dict()
         for slot in range(0, 8):
             cslot = dict()
-            for d in data_cols:
+            for d in DATA_COLS:
                 slotval = [i.deltas[slot][d] for i in self.aspect_intervals
                            if slot in i.deltas]
                 if len(slotval):
@@ -325,53 +351,71 @@ class Obi(object):
                         cslot[d] = ma.concatenate(slotval)
                     else:
                         cslot[d] = np.concatenate(slotval)
-            all_slot[slot] = cslot
+            slot_data[slot] = cslot
+        self.all_slot_data = slot_data
 
     def _agg_slot_data(self):
-        all_slot = self.slot
+        all_slot = self.all_slot_data
         for slot_id in all_slot:
-            slot = all_slot[slot_id]
-            slot['slot'] = slot_id
-            if not ('dy' in slot and 'dz' in slot and 'mag' in slot):
+            slot_data = all_slot[slot_id]
+            slot_report = self.slot_report[str(slot_id)]
+            if not ('dy' in slot_data and 'dz' in slot_data and 'mag' in slot_data):
                 continue
             # these should only be calculated over good data, right?
-            qual = dict(dy=slot['qual'],
-                        dz=slot['qual'])
-            for axdir in ['dy', 'dz', 'mag']:
+            qual = dict(dy=slot_data['qual'],
+                        dz=slot_data['qual'],
+                        dr=slot_data['qual'])
+            for axdir in ['dr', 'dy', 'dz', 'mag']:
                 if axdir == 'mag':
-                    data = slot['mag']
+                    data = slot_data['mag']
                 else:
-                    data = ma.array(slot[axdir])
+                    data = ma.array(slot_data[axdir])
                     data[qual[axdir] != 0] = ma.masked
+                slot_report['%s_n_samples' % axdir] = len(data)
+                slot_report['%s_bad_samples' % axdir] = len(np.flatnonzero(data.mask))
                 smean = ma.mean(data)
-                slot['%s_mean' % axdir] = smean
+                slot_report['%s_mean' % axdir] = smean
                 med = ma.median(data)
-                slot['%s_med' % axdir] = med
+                slot_report['%s_med' % axdir] = med
                 srms = ma.sqrt(ma.mean((data - med) ** 2))
-                slot['%s_rms' % axdir] = srms
+                slot_report['%s_rms' % axdir] = srms
                 bad_frac = frac_bad(data, med, dyz_big_lim)
-                slot['frac_%s_big' % axdir] = bad_frac
+                slot_report['frac_%s_big' % axdir] = bad_frac
 
-            slot['frac_%s_big' % axdir] = bad_frac
-            slot['rad_off'] = np.sqrt(slot['dy_med'] ** 2
-                                      + slot['dz_med'] ** 2)
-            slot['n_pts'] = len(slot['dy'])
-            if slot['type'] == 'fid':
-                slot['mean_y'] = np.mean(slot['ang_y_sm'])
-                slot['mean_z'] = np.mean(slot['ang_z_sm'])
+            slot_report['frac_%s_big' % axdir] = bad_frac
+            slot_report['rad_off'] = np.sqrt(slot_report['dy_med'] ** 2
+                                      + slot_report['dz_med'] ** 2)
+            slot_report['n_pts'] = len(slot_data['dy'])
+            if slot_report['type'] == 'fid':
+                slot_report['mean_y'] = np.mean(slot_data['ang_y_sm'])
+                slot_report['mean_z'] = np.mean(slot_data['ang_z_sm'])
+                slot_report['enc_rad1'] = scoreatpercentile(slot_data['dr'],
+                                                            fidDrEncFrac1 * 100)
+                slot_report['enc_rad2'] = scoreatpercentile(slot_data['dr'],
+                                                            fidDrEncFrac2 * 100)
             else:
-                slot['mean_y'] = np.mean(slot['ang_y'])
-                slot['mean_z'] = np.mean(slot['ang_z'])
+                slot_report['mean_y'] = np.mean(slot_data['ang_y'])
+                slot_report['mean_z'] = np.mean(slot_data['ang_z'])
+                slot_report['enc_rad1'] = scoreatpercentile(slot_data['dr'],
+                                                            starDrEncFrac1 * 100)
+                slot_report['enc_rad2'] = scoreatpercentile(slot_data['dr'],
+                                                            starDrEncFrac2 * 100)
+                
+
 
     def _label_slots(self):
         ai = self.aspect_intervals[0]
         self.guide_list = list(getattr(ai, 'gsprop').slot)
         for gs in getattr(ai, 'gsprop'):
-            self.slot[gs.slot]['type'] = gs.type
+            self.slot_report[str(gs.slot)] = dict(
+                slot=gs.slot,
+                type='GUIDE')
         if getattr(ai, 'fidprop') is not None:
             self.fid_list = list(getattr(ai, 'fidprop').slot)
             for fl in getattr(ai, 'fidprop'):
-                self.slot[fl.slot]['type'] = 'FID'
+                self.slot_report[str(fl.slot)] = dict(
+                    slot=fl.slot,
+                    type='FID')
         else:
             self.fid_list = []
 
@@ -406,22 +450,22 @@ class Obi(object):
                         raise ValueError(
                             "differing %s type across aspect intervals" % t)
 
-    def plot_slot(self, slot):
+    def plot_slot(self, slot_num):
         y = None
         z = None
         xy_range = None
-        fid_plot = slot in self.fid_list
-        if 'time' not in self.slot[slot]:
-            logger.info("Nothing to plot for slot %d" % slot)
+        fid_plot = (slot_num in self.fid_list)
+        if 'time' not in self.all_slot_data[slot_num]:
+            logger.info("Nothing to plot for slot %d" % slot_num)
             return None, None
         (qual, dy, dz, mag, time) = [
-            self.slot[slot][x] for x in
+            self.all_slot_data[slot_num][x] for x in
             ['qual', 'dy', 'dz', 'mag', 'time']]
         if not fid_plot:
             (yag, zag, ang_y_sm, ang_z_sm) = [
-                self.slot[slot][x] for x in
+                self.all_slot_data[slot_num][x] for x in
                 ['yag', 'zag', 'ang_y_sm', 'ang_z_sm']]
-        ai_starts = [interv.deltas[slot]['time'][0]
+        ai_starts = [interv.deltas[slot_num]['time'][0]
                      for interv in self.aspect_intervals]
         time0 = time[0]
         timepad = 0.05
@@ -434,8 +478,8 @@ class Obi(object):
         bad = qual != 0
 
         if fid_plot:
-            y = self.slot[slot]['ang_y_sm']
-            z = self.slot[slot]['ang_z_sm']
+            y = self.all_slot_data[slot_num]['ang_y_sm']
+            z = self.all_slot_data[slot_num]['ang_z_sm']
 
         if fid_plot and not xy_range:
             xy_range = 0.1
@@ -498,7 +542,7 @@ class Obi(object):
 
         ay = fig.add_axes([.30, .7, .62, .25])
         axes['dy'] = ay
-        ay.plot(plottime[ok], dy[ok], color='green', marker='.', linestyle='')
+        ay.plot(plottime[ok], dy[ok], color='green', marker='.')
         ay.plot(plottime[bad], dy[bad], 'r.')
         plt.setp(ay.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ay.get_xticklabels(), visible=False)
@@ -569,36 +613,35 @@ class Obi(object):
             ceniz.plot(plottime[ok], ang_z_sm[ok] * 3600, 'g.')
             ceniz.set_ylabel('Centroid Z (arcsec)')
             ceniz.set_xlabel('Time(ksec)')
-            plt.title('Slot %d Centroids (aspect sol in blue)' % slot)
+            plt.suptitle('Slot %d Centroids (aspect sol in blue)' % slot_num)
 
         return fig, axes
 
+
+AI_DEFAULT_CONF = {'obc': None,
+                   'alg': 8,
+                   'noacal': None}
 
 class AspectInterval(object):
     def __init__(self, aiid, aspdir, opt=None):
         self.aiid = aiid
         self.aspdir = aspdir
-        self.opt = opt if opt else {'obc': None, 'alg': 8, 'noacal': None}
+        self.opt = opt if opt else AI_DEFAULT_CONF
         self._read_in_data()
-        self.deltas = {}
+        self._read_in_log()
         self._calc_guide_deltas()
         if self.fidprop is not None:
             self._calc_fid_deltas()
-            self.sim = {}
             self._calc_sim_offset()
 
     def _get_prop(self, propname, propstring):
+        "Read gsprops or fidprops file"
         datadir = self.aspdir
         logger.info('Reading %s stars' % propname)
         gsfile = glob(os.path.join(
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
-        prop_all = read_table(gsfile)
-        good = prop_all['id_status'] == 'GOOD      '
-        if len(np.flatnonzero(good)) == 0:
-            return (None, None, None)
-            #raise ValueError("No good %s stars" % propname)
-        prop = prop_all[good]
-
+        # don't filter for only good stars at this point
+        prop = read_table(gsfile)
         info = []
         hdulist = pyfits.open(os.path.join(datadir, gsfile))
         header = hdulist[1].header
@@ -611,7 +654,6 @@ class AspectInterval(object):
             if 'type' in gs.dtype.names:
                 saveprop['type'] = gs['type']
             info.append(saveprop)
-
         return (prop, info, header)
 
     def _read_in_data(self):
@@ -663,17 +705,26 @@ class AspectInterval(object):
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         self.integ_time = self.cenhdulist[1].header['INTGTIME']
 
+        logger.info('Reading gyro data')
+        self.gdat = read_table(glob(
+                os.path.join(datadir, "%s_gdat1.fits*" % aiid))[0])
+        
+
     def _read_in_log(self):
         aiid = self.aiid
         datadir = self.aspdir
-        opt = self.opt
-        id_end = re.match('\w+(\D\d+N\d{3})', aiid).group(1)
-        logfile = glob(os.path.join(datadir, "*%s.log*" % id_end))[0]
         try:
-            lines = gzip.open(logfile).readlines()
-        except IOError:
-            lines = open(logfile).readlines()
-        self.log = lines
+            id_end = re.match('\w+(\D\d+N\d{3})', aiid)
+            logfiles = glob(os.path.join(datadir, "*%s.log*" % id_end.group(1)))
+            logfile = logfiles[0]
+            try:
+                lines = gzip.open(logfile).readlines()
+            except IOError:
+                lines = open(logfile).readlines()
+            self.log = lines
+        except:
+            logger.info("Did not find/read log file")
+
 
     def _calc_fid_deltas(self):
         asol = self.asol
@@ -685,12 +736,6 @@ class AspectInterval(object):
         fidpr_info = self.fidpr_info
         integ_time = self.integ_time
 
-        #mm2a = 20.0
-        #dy0 = np.median(asol['dy']) * mm2a
-        #dz0 = np.median(asol['dz']) * mm2a
-        #dt0 = np.median(asol['dtheta']) * 3600
-        #dr = 2.0
-
         logger.info('Calculating fid solution quality')
 
         lsi0_stt = [h_fidpr['LSI0STT%d' % x] for x in [1, 2, 3]]
@@ -699,25 +744,14 @@ class AspectInterval(object):
 
         M = np.dot(aca_misalign, fts_misalign)
 
-        #fid_dy_rms = np.zeros(len(fidprop))
-        #fid_dz_rms = np.zeros(len(fidprop))
-        #fid_dy_med = np.zeros(len(fidprop))
-        #fid_dz_med = np.zeros(len(fidprop))
-
         rot_x = np.zeros([3, 3])
         rot_x[0, 0] = 1
         for fid in fidprop:
             logger.info("Processing fid %s in slot %d " % (
                 fid['id_string'], fid['slot']))
-            #slot = fid['slot']
             p_lsi = fid['p_lsi']
             ok = cen['slot'] == fid['slot']
             ceni = cen[ok]
-            #n_ceni = len(ceni)
-            #dyag = np.zeros(n_ceni)
-            #dzag = np.zeros(n_ceni)
-            #y = ceni['ang_y_sm'] * 3600
-            #z = ceni['ang_z_sm'] * 3600
             asol_cen_dy = np.interp(ceni['time'], asol['time'], asol['dy'])
             asol_cen_dz = np.interp(ceni['time'], asol['time'], asol['dz'])
             asol_cen_dtheta = (np.interp(ceni['time'],
@@ -755,16 +789,6 @@ class AspectInterval(object):
             if not slot_fidpr:
                 raise ValueError("No FIDPR info found for slot %d"
                                  % fid['slot'])
-            for pr in slot_fidpr:
-                if pr['id_status'] != 'GOOD      ':
-                    bad = ((ceni['time'] >= pr['tstart'])
-                           & (ceni['time'] <= pr['tstop']))
-                    n_bad = len(np.flatnonzero(bad))
-                    if n_bad:
-                        qual[bad] = 1
-                    else:
-                        err = "Bad fidpr interval not contained in ceni range"
-                        raise ValueError(err)
             mag = ma.zeros(len(ceni['counts']))
             mag[:] = ma.masked
             good_mag = medfilt(M0 - 2.5
@@ -775,10 +799,11 @@ class AspectInterval(object):
             self.deltas[fid['slot']] = dict(time=ceni['time'],
                                             dy=dy,
                                             dz=dz,
+                                            dr=dr,
                                             yag=yag,
                                             zag=zag,
                                             mag=mag,
-                                            qual=qual,
+                                            qual=ceni['status'],
                                             ang_y_sm=ceni['ang_y_sm'],
                                             ang_z_sm=ceni['ang_z_sm'],
                                             ang_y=ceni['ang_y'],
@@ -787,7 +812,7 @@ class AspectInterval(object):
 
     def _calc_guide_deltas(self):
         from mica.quaternion import Quat
-
+        self.deltas = {}
         asol = self.asol
         cen = self.cen
         gsprop = self.gsprop
@@ -813,10 +838,14 @@ class AspectInterval(object):
             #inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)
             d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
                            star['pos_eci']).transpose()
-            yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * r2a
-            zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * r2a
+            yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
+            zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
             dy = ceni['ang_y'] * 3600 - yag
             dz = ceni['ang_z'] * 3600 - zag
+            dr = sph_dist(yag / 3600,
+                          zag / 3600,
+                          ceni['ang_y'],
+                          ceni['ang_z']) * 3600
             mag = ma.zeros(len(ceni['counts']))
             mag[:] = ma.masked
             good_mag = medfilt(M0 - 2.5
@@ -824,31 +853,19 @@ class AspectInterval(object):
                                           / integ_time
                                           / C0), 3)
             mag[ceni['counts'] > 10] = good_mag
-            qual = ceni['status'].copy()
             slot_gspr = [pr for pr in self.gspr_info
                           if pr['slot'] == star['slot']]
             if not slot_gspr:
                 err = "No GSPR info found for slot %d" % star['slot']
                 raise ValueError(err)
-            for pr in slot_gspr:
-                if pr['id_status'] == 'GOOD      ':
-                    continue
-                bad = ((ceni['time'] >= pr['tstart'])
-                       & (ceni['time'] <= pr['tstop']))
-                n_bad = len(np.flatnonzero(bad))
-                if n_bad:
-                    qual[bad] = 1
-                else:
-                    err = "Bad gspr interval not contained in ceni range"
-                    raise ValueError(err)
-
             self.deltas[star['slot']]= dict(dy=dy,
                                             dz=dz,
+                                            dr=dr,
                                             yag=yag,
                                             zag=zag,
                                             time=ceni['time'],
                                             mag=mag,
-                                            qual=qual,
+                                            qual=ceni['status'],
                                             ang_y_sm=ceni['ang_y_sm'],
                                             ang_z_sm=ceni['ang_z_sm'],
                                             ang_y=ceni['ang_y'],
@@ -857,19 +874,18 @@ class AspectInterval(object):
 
     def _calc_sim_offset(self):
         mm2a = 20.0
-        max_d_dyz = 0.2
-        max_drift = 3.0
-        max_abs_sim = 10
-        abs_sim_dy0 = 8.0
-        abs_sim_dz0 = 8.0
+        abs_sim_dy0 = 10.0
+        abs_sim_dz0 = 10.0
         n_med = 21
         medf_dy = medfilt(self.asol.dy * mm2a, kernel_size=n_med)
         medf_dz = medfilt(self.asol.dz * mm2a, kernel_size=n_med)
         d_dy = abs(medf_dy[1:] - medf_dy[:-1])
         d_dz = abs(medf_dz[1:] - medf_dz[:-1])
-        self.sim['time'] = self.asol['time'][:-1]
-        self.sim['d_dy'] = d_dy
-        self.sim['d_dz'] = d_dz
+        self.sim = dict(time=self.asol['time'][:-1],
+                        medf_dy=medf_dy,
+                        medf_dz=medf_dz,
+                        d_dy=d_dy,
+                        d_dz=d_dz)
 
 
 
