@@ -4,6 +4,7 @@ import re
 import pyfits
 import pickle
 import json
+import shelve
 import tables
 import csv
 import gzip
@@ -237,6 +238,15 @@ class Obi(object):
         pfile = open(file, 'w')
         pickle.dump(self._info(), pfile)
         pfile.close()
+
+    def _shelve_info(self, file=None):
+        if file is None:
+            file = os.path.join(self._config['data_root'],
+                                self._config['shelf_file'])
+        s = shelve.open(file)
+        s["%s_%s" % (self._info()['obsid'], self._info()['revision'])] \
+            = self._info()
+        s.close()
 
     def slots_to_db(self):
         save = self._info()
