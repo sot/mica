@@ -286,15 +286,17 @@ class Obi(object):
         save = self._info()
         mean_aacccdpt = self._get_ccd_temp(save['tstart'], save['tstop'])
         # add obsid and revision to the slot dict
-        for slot in save['slots']:
+        for slot_str in save['slots']:
+            slot = save['slots'][slot_str]
             slot.update(dict((k, save[k])
                              for k in self.table.dtype.names
                              if k in save))
+            slot.update(dict(mean_aacccdpt=mean_aacccdpt))
             slot.update(most_recent=0)
         # make a recarray
         save_rec = np.rec.fromrecords(
-            [[slot[k] for k in self.table.dtype.names]
-             for slot in save['slots']],
+            [[save['slots'][slot_str][k] for k in self.table.dtype.names]
+             for slot_str in save['slots']],
             dtype=self.table.dtype)
 
         have_obsid_coord = self.table.getWhereList('(obsid == %d)'
