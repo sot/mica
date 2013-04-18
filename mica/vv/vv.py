@@ -18,6 +18,7 @@ import mica.archive.asp_l1 as asp_l1_arch
 import mica.archive.obspar as obspar_arch
 from scipy.stats import scoreatpercentile
 from Ska.astro import sph_dist
+from Ska.engarchive import fetch
 
 import matplotlib
 if __name__ == '__main__':
@@ -273,8 +274,17 @@ class Obi(object):
             slot.update(revision=save['revision'])
             self.db.insert(slot, self.slot_table)
 
+    @staticmethod
+    def _get_ccd_temp(tstart, tstop):
+        temps = fetch.MSID('AACCCDPT', tstart, tstop)
+        if not len(temps.vals):
+            return -9e7
+        else:
+            return np.mean(temps.vals) - 273.15
+
     def slots_to_table(self):
         save = self._info()
+        mean_aacccdpt = self._get_ccd_temp(save['tstart'], save['tstop'])
         # add obsid and revision to the slot dict
         for slot in save['slots']:
             slot.update(dict((k, save[k])
