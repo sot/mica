@@ -68,8 +68,22 @@ pseudo-MSIDs and return masked array data structures to work with them.
    >>> ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
    >>> type(ccd_temp.vals)
    'numpy.ma.core.MaskedArray'
+   >>> from Ska.Matplotlib import plot_cxctime
+   >>> figure(figsize=(5, 3.5))
+   >>> plot_cxctime(ccd_temp.times, ccd_temp.vals, '.')
+
+   .. image:: plots/plot_cxctime_ccd_temp.png
+
    >>> perigee_data = aca_hdr3.MSIDset(['ccd_temp', 'aca_temp', 'dac'],
-   ...                                 '2012:001', '2012:030')
+   ...                                 '2012:125', '2012:155')
+   >>> figure(figsize=(5, 3.5))
+   >>> plot(perigee_data['aca_temp'].vals - perigee_data['ccd_temp'].vals,
+   ...      perigee_data['dac'].vals, '.')
+   >>> subplots_adjust(bottom=0.15)
+   >>> ylabel('TEC DAC Control Level')
+   >>> xlabel('ACA temp - CCD temp (C)')
+
+   .. image:: plots/dac_vs_tempdiff.png
 
 Retrieving pseudo-MSIDs with this module will be slower than
 Ska.engarchive fetches of similar telemetry, as the aca_hdr3 module
