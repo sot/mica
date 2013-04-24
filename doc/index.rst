@@ -4,6 +4,8 @@
    contain the root `toctree` directive.
 
 
+
+
 Mica Documentation
 ================================
 
@@ -60,9 +62,12 @@ values are not available (i.e. HD3TLM64 in 6x6 or 4x4 image data).
 ACA Diagnostic module
 ---------------------
 
-The :mod:`mica.archive.aca_hdr3` module works with Header 3 data from 8x8 ACA
-L0 image data.  An MSID class and MSIDset class are provided to fetch 
-pseudo-MSIDs and return masked array data structures to work with them.
+The :mod:`mica.archive.aca_hdr3` module works with Header 3 data
+(extended ACA diagnostic telemetry) available in 8x8 ACA
+L0 image data.  The module provies an MSID class and MSIDset class to fetch
+these data as "pseudo-MSIDs" and return masked array data structures.
+See :doc:`Header 3 Pseudo-MSIDs <hdr3_only_msids>` for the list
+of available pseudo-MSIDs.
 
    >>> from mica.archive import aca_hdr3
    >>> ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
@@ -169,6 +174,7 @@ Methods are also provided to retrieve a list of files by obsid and time range.
    >>> obs_files = obspar.get_files(6000)
    >>> range = obspar.get_files(start='2012:001',
    ...                          stop='2012:030')
+
 
 
 
