@@ -42,23 +42,52 @@ Methods are provided to retrieve files and read those data files into
 data structures.
 
    >>> from mica.archive import aca_l0
-
    >>> obsid_files = aca_l0.get_files(obsid=5438)
-   >>> time_files = aca_l0.get_files(start='2012:001', stop='2012:002')
    >>> time_8x8 = aca_l0.get_files(start='2011:001', stop='2011:010',
    ...                             imgsize=[8])
+   >>> time_files = aca_l0.get_files(start='2012:001:00:00:00.000',
+   ...                               stop='2012:002:00:00:00.000',
+   ...                               slots=[0], imgsize=[6, 8])
 
 
-   >>> slot_data = aca_l0.get_slot_data('2012:001', '2012:002', slot=7)
-   >>> temp_ccd_8x8 = aca_l0.get_slot_data('2005:001', '2005:010',
-   ...                                     slot=6, imgsize=[8],
-   ...                                     columns=['TIME', 'TEMPCCD'])
+The values from those files may be read and plotted directly:
 
-The :func:`~mica.archive.aca_l0.get_slot_data()` method will retrieve all columns by default and
-the resulting data structure will have masked columns where those
-values are not available (i.e. HD3TLM64 in 6x6 or 4x4 image data).
-See :doc:`ACA L0 MSIDs/columns <aca_l0_msids>` for the list of
-available columns.
+   >>> from astropy.io import fits
+   >>> from Ska.Matplotlib import plot_cxctime
+   >>> figure(figsize=(5, 3.5))
+   >>> for aca_file in time_files:
+   ...     f = fits.open(aca_file)
+   ...     plot_cxctime(f[1].data['TIME'], f[1].data['TEMPCCD'], '.')
+   ...
+
+   .. image:: plots/tempccd_from_files.png
+
+
+This particular loop/plot will break if the images aren't filtered on
+"imgsize=[6, 8]", as the 'TEMPCCD' columns is only available in 6x6
+and 8x8 data.  That's one reason to use the convenience function
+:func:`~mica.archive.aca_l0.get_slot_data()`, as it places the values in a
+masked array (masking, for example, TEMPCCD when in 4x4 mode or when
+the data is just not available).
+
+   >>> temp_ccd = aca_l0.get_slot_data('2012:001:00:00:00.000',
+   ...                                 '2012:002:00:00:00.000',
+   ...                                  slot=0, imgsize=[6, 8],
+   ...                                  columns=['TIME', 'TEMPCCD'])
+   >>> figure(figsize=(5, 3.5))
+   >>> plot_cxctime(temp_ccd['TIME'], temp_ccd['TEMPCCD'], '.')
+
+   .. image:: plots/tempccd_from_get_slot_data.png
+
+(it is still wise to filter on imgsize in this example, as there is no
+advantage to reading each of the 4x4 files.)
+
+The :func:`~mica.archive.aca_l0.get_slot_data()` method will retrieve
+all columns by default and the resulting data structure, as mentioned,
+will have masked columns where those values are not available
+(i.e. HD3TLM64 in 6x6 or 4x4 image data).  See :doc:`ACA L0
+MSIDs/columns <aca_l0_msids>` for the list of available columns.
+
 
 
 ACA Diagnostic module
