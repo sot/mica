@@ -57,6 +57,8 @@ data structures.
 The :func:`~mica.archive.aca_l0.get_slot_data()` method will retrieve all columns by default and
 the resulting data structure will have masked columns where those
 values are not available (i.e. HD3TLM64 in 6x6 or 4x4 image data).
+See :doc:`ACA L0 MSIDs/columns <aca_l0_msids>` for the list of
+available columns.
 
 
 ACA Diagnostic module
@@ -194,4 +196,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
