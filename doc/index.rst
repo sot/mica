@@ -88,6 +88,33 @@ will have masked columns where those values are not available
 (i.e. HD3TLM64 in 6x6 or 4x4 image data).  See :doc:`ACA L0
 MSIDs/columns <aca_l0_msids>` for the list of available columns.
 
+The aca_l0 archive includes all of the raw image data.  The following
+code grabs the image data from slot 2 during a fid shift and creates a
+plot of each readout.
+
+   >>> from scipy.stats import scoreatpercentile
+   >>> from itertools import izip, count
+   >>> slot_data = aca_l0.get_slot_data(98585849, 98585884, slot=2)
+   >>> vmax = scoreatpercentile(np.ravel(slot_data['IMGRAW']), 98)
+   >>> vmin = scoreatpercentile(np.ravel(slot_data['IMGRAW']), 2)
+   >>> norm = mpl.colors.LogNorm(vmin=vmin, vmax=vmax, clip=1)
+   >>> for raw, idx in izip(slot_data['IMGRAW'], count()):
+   ...     fig = figure(figsize=(4,4))
+   ...     imshow(raw.reshape(8,8, order='F'),
+   ...            interpolation='none',
+   ...            cmap=cm.gray,
+   ...            origin='lower',
+   ...            norm=norm,
+   ...            aspect='equal')
+   ...     savefig("slot_2_{0:02d}.png".format(idx))
+
+ImageMagick has been used to knit those plots together::
+
+   convert -delay 20 -loop 0 slot*.png slot_2.gif
+
+to create this:
+
+   .. image:: plots/slot_2.gif
 
 
 ACA Diagnostic module
