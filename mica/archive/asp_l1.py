@@ -8,19 +8,20 @@ This uses the obsid_archive module with a configuration specific
 to the aspect L1 products.
 
 """
-
+import os
 import logging
 import obsid_archive
 
 
 # these columns are available in the headers of the fetched telemetry
 # for this product (ASP L1) and will be included in the file lookup table
-archfiles_hdr_cols = ('tstart', 'tstop', 'caldbver', 'content',
+ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'caldbver', 'content',
                       'ascdsver', 'revision', 'date')
 
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
 #config = ConfigObj('asp1.conf')
-config = dict(data_root='/data/aca/archive/asp1',
-              temp_root='/data/aca/archive/temp',
+CONFIG = dict(data_root=os.path.join(mica_archive, 'asp1'),
+              temp_root=os.path.join(mica_archive, 'temp'),
               sql_def='archfiles_asp_l1_def.sql',
               apstat_table='aspect_1',
               apstat_id='aspect_1_id',
@@ -30,7 +31,10 @@ config = dict(data_root='/data/aca/archive/asp1',
               small_ver_regex='pcadf\d+N(\d{3})_',
               full='asp1',
               filecheck=False,
-              cols=archfiles_hdr_cols)
+              cols=ARCHFILES_HDR_COLS,
+              content_types=['ASPQUAL', 'ASPSOL', 'ACADATA', 'GSPROPS',
+                             'GYRODATA', 'KALMAN', 'ACACAL', 'ACACENT',
+                             'FIDPROPS', 'GYROCAL', 'ACA_BADPIX'])
 
 
 def get_options():
@@ -43,12 +47,12 @@ to be run as a cron task, and in regular processing, the update will fetch
 and ingest all telemetry since the task's last run.  Options also provided
 to fetch and ingest specific obsids and versions.
 
-See the ``config`` in the asp_l1.py file and the config description in
+See the ``CONFIG`` in the asp_l1.py file and the config description in
 obsid_archive for more information on the asp l1 default config if parameters
 without command-line options need to be changed.
 """
     parser = argparse.ArgumentParser(description=desc)
-    defaults = dict(config)
+    defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
     parser.add_argument("--obsid",
                         type=int,
@@ -68,17 +72,24 @@ without command-line options need to be changed.
                         help="for provisional data, download files and check"
                         + " that all are present.  If unset, proceed if dir"
                         + " exists")
+    parser.add_argument("--rebuild",
+                        action="store_true",
+                        help="Allow update to rebuild archive from obsid 1")
     opt = parser.parse_args()
     return opt
 
 # set up an archive object with default config for use by the other
 # get_* methods
-archive = obsid_archive.ObsArchive(config)
+archive = obsid_archive.ObsArchive(CONFIG)
 
 
 def get_dir(obsid):
     """
     Get ASP L1 directory for default/released products for an obsid.
+
+      >>> from mica.archive import asp_l1
+      >>> asp_l1.get_dir(2121)
+      '/data/aca/archive/asp1/02/02121'
 
     :param obsid: obsid
     :returns: directory
@@ -91,11 +102,47 @@ def get_obs_dirs(obsid):
     """
     Get all ASP L1 directories for an obsid in the Ska file archive.
 
+      >>> from mica.archive import asp_l1
+      >>> obsdirs = asp_l1.get_obs_dirs(6000)
+
+    obsdirs will look something like::
+
+      {'default': '/data/aca/archive/asp1/06/06000',
+      2: '/data/aca/archive/asp1/06/06000_v02',
+      3: '/data/aca/archive/asp1/06/06000_v03',
+      'last': '/data/aca/archive/asp1/06/06000',
+      'revisions': [2, 3]}
+
     :param obsid: obsid
     :returns: map of obsid version to directories
     :rtype: dictionary
     """
     return archive.get_obs_dirs(obsid)
+
+
+def get_files(obsid=None, start=None, stop=None,
+              revision=None, content=None):
+    """
+    List asp_l1 files for an obsid or a time range.
+
+      >>> from mica.archive import asp_l1
+      >>> obs_files = asp_l1.get_files(6000)
+      >>> obs_gspr = asp_l1.get_files(6000, content=['GSPROPS'])
+      >>> range_fidpr = asp_l1.get_files(start='2012:001',
+      ...                                stop='2012:030',
+      ...                                content=['FIDPROPS'])
+
+    :param obsid: obsid
+    :param start: time range start (Chandra.Time compatible)
+    :param stop: time range stop (Chandra.Time compatible)
+    :param revision: revision integer or 'last'
+                     defaults to current released version
+    :param content: archive CONTENT type
+                    defaults to all available ASP1 types
+    :returns: full path of files matching query
+    """
+    return archive.get_files(obsid=obsid, start=start, stop=stop,
+                             revision=revision, content=content)
 
 
 def main():

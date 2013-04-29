@@ -1,0 +1,67 @@
+<table border="1" class="mine"><tr><th>slot_hdr3_word</th><th>description</th><th>full description</th></tr>
+<tr><td>aca_temp</td><td>alias. see <A HREF="#776">slot_hdr3_word 766<A></td><td></td></tr>
+<tr><td>ccd_temp</td><td>alias. see <A HREF="#676">slot_hdr3_word 676</A></td><td></td></tr>
+<tr><td>dac</td><td>alias. see <A HREF="#776">slot_hdr3_word 776<A></td><td></td></tr>
+<tr><td>062</td><td><pre>AC status word</pre></td><td><pre>AC status word.  A status word read from the AC.  The bits in the word are defined as follows:
+
+xxxx xxrr rrtt eccp
+
+X = spare bits
+R = CCD readout mode
+   1 => S/H input is grounded during pixel readout
+   2 => CCD reset is pulsed during column flush
+   4 => CCD reset/sw is pulsed during row shifts
+   8 => MUX is switched to ground when A/D not in use
+T = Test signal select (test signals not available in flight)
+E = Cmd error.  AC cmd input buffer was overwritten
+C = Clock period for parallel shifts
+   0 => 6 microsec
+   1 => 12 microsec
+   2 => 24 microsec
+   3 => 48 microsec
+P = PromWrite? flag: true when AC EEPROM is in the write mode.</pre></td></tr><tr><td>064</td><td><pre>Misc status bits</pre></td><td><pre>Miscellaneous status bits showing the status of the following 16 flag variables
+starting with the LSB and ending with the MSB:
+
+bit 0 (LSB): AcSendTimeOut?
+bit 1: AcIdleTimeOut?
+bit 2: TecActive?
+bit 3: TecHeat?
+bit 4: DecAcTable?
+bit 5: AcTableCkSumOK?
+bit 6: StackError?
+bit 7: WarmBoot?
+bit 8: IdleCode LSB
+bit 9: CalMode?
+bit 10: CalModePending?
+bit 11: IuData?
+bit 12: IuDataPending?
+bit 13: DsnFixed?
+bit 14: InitialCalFillOK?
+bit 15 (MSB): IoUpdTimeout?</pre></td></tr><tr><td>066</td><td><pre>A/D CCD molyb therm 1</pre></td><td><pre>A/D converter reading for the CCD moly base thermistor number 1</pre></td></tr><tr><td>072</td><td><pre>A/D CCD molyb therm 2</pre></td><td><pre>A/D converter reading for the CCD moly base thermistor number 2</pre></td></tr><tr><td>074</td><td><pre>A/D CCD detector therm</pre></td><td><pre>A/D converter reading for the CCD detector thermistor</pre></td></tr><tr><td>076</td><td><pre>A/D +5 volt PS</pre></td><td><pre>A/D converter reading for the +5 volt power supply; 1 LSB=0.30518 mv</pre></td></tr><tr><td>162</td><td><pre>A/D +15 volt PS</pre></td><td><pre>A/D converter reading for the +15 volt power supply; 1 LSB=0.61035 mv</pre></td></tr><tr><td>164</td><td><pre>A/D -15 volt PS</pre></td><td><pre>A/D converter reading for the -15 volt power supply; 1 LSB=0.61035 mv</pre></td></tr><tr><td>166</td><td><pre>A/D +27 volt PS</pre></td><td><pre>A/D converter reading for the +27 volt power supply; 1 LSB=1.04597 mv</pre></td></tr><tr><td>172</td><td><pre>A/D analog ground</pre></td><td><pre>A/D converter reading for analog ground; 1 LSB=0.30518 mv</pre></td></tr><tr><td>174</td><td><pre>A/D for A/D convertor therm</pre></td><td><pre>A/D converter reading for the A/D converter thermistor.</pre></td></tr><tr><td>176</td><td><pre>A/D secondary mirror therm. HRMA side</pre></td><td><pre>A/D converter reading for the secondary mirror thermistor, HRMA side</pre></td></tr><tr><td>262</td><td><pre>A/D secondary mirror therm. Opp HRMA side</pre></td><td><pre>A/D converter reading for the secondary mirror thermistor, Opposite from the
+HRMA side</pre></td></tr><tr><td>264</td><td><pre>A/D primary mirror therm. HRMA side</pre></td><td><pre>A/D converter reading for the primary mirror thermistor, HRMA side</pre></td></tr><tr><td>266</td><td><pre>A/D primary mirror therm. Opp HRMA side</pre></td><td><pre>A/D converter reading for the primary mirror thermistor, opposite from the
+HRMA side</pre></td></tr><tr><td>272</td><td><pre>A/D AC housing therm.  HRMA side</pre></td><td><pre>A/D converter reading for the AC housing thermistor, HRMA side</pre></td></tr><tr><td>274</td><td><pre>A/D AC housing therm.  Opp HRMA side</pre></td><td><pre>A/D converter reading for the AC housing thermistor, opposite HRMA side</pre></td></tr><tr><td>276</td><td><pre>A/D lens cell therm.</pre></td><td><pre>A/D converter reading for the lens cell thermistor</pre></td></tr><tr><td>362</td><td><pre>Processor stack pointer and telem update counter</pre></td><td><pre>A word containing the processor data stack pointer in the high byte, and
+an update counter in the low byte that increments once for every 1.025
+second telemetry update.</pre></td></tr><tr><td>364</td><td><pre>Science header pulse period</pre></td><td><pre>The science header pulse period, as measured by the PEA; 1 LSB = 2 microseconds</pre></td></tr><tr><td>372</td><td><pre>16-bit zero offset for pixels from CCD quad A</pre></td><td><pre>A 16-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 1 A/D
+converter count (nominally 5 electrons)</pre></td></tr><tr><td>374</td><td><pre>16-bit zero offset for pixels from CCD quad B</pre></td><td><pre>A 16-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 1 A/D
+converter count (nominally 5 electrons)</pre></td></tr><tr><td>376</td><td><pre>16-bit zero offset for pixels from CCD quad C</pre></td><td><pre>A 16-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 1 A/D
+converter count (nominally 5 electrons)</pre></td></tr><tr><td>462</td><td><pre>16-bit zero offset for pixels from CCD quad D</pre></td><td><pre>A 16-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 1 A/D
+converter count (nominally 5 electrons)</pre></td></tr><tr><td>464</td><td><pre>32-bit zero offset for pixels from CCD quad A</pre></td><td><pre>A 32-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 2^-16
+A/D converter counts</pre></td></tr><tr><td>472</td><td><pre>32-bit zero offset for pixels from CCD quad B</pre></td><td><pre>A 32-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 2^-16
+A/D converter counts</pre></td></tr><tr><td>476</td><td><pre>32-bit zero offset for pixels from CCD quad C</pre></td><td><pre>A 32-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 2^-16
+A/D converter counts</pre></td></tr><tr><td>564</td><td><pre>32-bit zero offset for pixels from CCD quad D</pre></td><td><pre>A 32-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 2^-16
+A/D converter counts</pre></td></tr><tr><td>572</td><td><pre>last CCD flush duration</pre></td><td><pre>The time required for the most recent flush of the CCD; 1 LSB=2 microseconds</pre></td></tr><tr><td>574</td><td><pre>CCD row shift clock period</pre></td><td><pre>The CCD row shift clock period currently in effect; 1 LSB = 1 microsecond</pre></td></tr><tr><td>576</td><td><pre>average backround reading</pre></td><td><pre>An overall average background reading derived from the most recent CCD readout.
+This is an average from all tracked images and from all search readout
+segments. One LSB = 1 A/D converter count (nominally 5 electrons).</pre></td></tr><tr><td>662</td><td><pre>Header 1 for DSN records</pre></td><td><pre>Header 1 for Deep Space Network record.</pre></td></tr><tr><td>672</td><td><pre>record counter and Header 2 for DSN</pre></td><td><pre>The record counter and Header 2 for Deep Space Network records.
+The record counter occupies the three high order bytes, and Header 2
+occupies the low order byte.</pre></td></tr>
+<tr><td><A NAME="676"></A>676</td><td><pre>CCD temperature</pre></td><td><pre>CCD temperature.  1 LSB=0.01/(2^16) degrees C.  The high order 16 bits give the
+CCD temperature in units of 1 LSB = 0.01 degrees C.</pre></td></tr><tr><td>764</td><td><pre>CCD setpoint</pre></td><td><pre>The CCD temperature control setpoint; 1 LSB=0.01 degrees C</pre></td></tr>
+<tr><td><A NAME="766"></A>766</td><td><pre>temperature for position/angle cal</pre></td><td><pre>The temperature used in the angle calibration equations that convert star
+positions from CCD row and column coordinates to Y and Z angles for OBC
+telemetry; 1 LSB = 1/256 degrees C.</pre></td></tr><tr><td>774</td><td><pre>RAM address of last write-read test failure</pre></td><td><pre>The address in RAM of the failure most recently detected by the RAM
+write-and-read test</pre></td></tr>
+<tr><td><A NAME="776"></A>776</td><td><pre>TEC DAC number</pre></td><td><pre>The number most recently written the the [sic] TEC power control DAC.</pre></td></tr>
+</table>
+
+</body>
+</html>
