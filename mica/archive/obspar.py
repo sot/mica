@@ -16,7 +16,7 @@ import obsid_archive
 
 # these keys are available in the obspar and will be included in the
 # file lookup table (archfiles)
-archfiles_hdr_cols = [
+ARCHFILES_HDR_COLS = [
 'filename',
 'obsid',
 'title',
@@ -146,8 +146,10 @@ archfiles_hdr_cols = [
 'obspar_type',
 'obspar_stat']
 
-config = dict(data_root='/data/aca/archive/obspar',
-              temp_root='/data/aca/archive/tempobs',
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+
+CONFIG = dict(data_root=os.path.join(mica_archive, 'obspar'),
+              temp_root=os.path.join(mica_archive, 'tempobs'),
               sql_def='obspar_def.sql',
               apstat_table='obidet_0_5',
               apstat_id='obidet_0_5_id',
@@ -157,7 +159,8 @@ config = dict(data_root='/data/aca/archive/obspar',
               small_ver_regex='axaff\d{5}_\d{3}N(\d{3}).*',
               full='obspar',
               filecheck=True,
-              cols=archfiles_hdr_cols)
+              cols=ARCHFILES_HDR_COLS,
+              content_types=['OBSPAR'])
 
 
 def get_options():
@@ -170,12 +173,12 @@ This is intended to be run as a cron task, and in regular processing,
 the update will fetch and ingest all telemetry since the task's last run.
 Options also provided to fetch and ingest specific obsids and versions.
 
-See the ``config`` in the obspar.py file and the config description in
+See the ``CONFIG`` in the obspar.py file and the config description in
 obsid_archive for more information on the obspar default config if parameters
 without command-line options need to be changed.
 """
     parser = argparse.ArgumentParser(description=desc)
-    defaults = dict(config)
+    defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
     parser.add_argument("--obsid",
                         type=int,
@@ -190,17 +193,24 @@ without command-line options need to be changed.
                         help="parent directory for all data")
     parser.add_argument("--temp-root",
                         help="parent temp directory")
+    parser.add_argument("--rebuild",
+                        action="store_true",
+                        help="Allow update to rebuild archive from obsid 1")
     opt = parser.parse_args()
     return opt
 
 # set up an archive object with default config for use by the other
 # get_* methods
-archive = obsid_archive.ObsArchive(config)
+archive = obsid_archive.ObsArchive(CONFIG)
 
 
 def get_dir(obsid):
     """
     Get obspar directory for default/released products for an obsid.
+
+      >>> from mica.archive import obspar
+      >>> obspar.get_dir(2121)
+      '/data/aca/archive/obspar/02/02121'
 
     :param obsid: obsid
     :returns: directory
@@ -208,9 +218,21 @@ def get_dir(obsid):
     """
     return archive.get_dir(obsid)
 
+
 def get_obs_dirs(obsid):
     """
     Get all obspar directories for an obsid in the Ska file archive.
+
+      >>> from mica.archive import obspar
+      >>> obsdirs = obspar.get_obs_dirs(6000)
+
+    obsdirs will look something like::
+
+      {'default': '/data/aca/archive/obspar/06/06000',
+      2: '/data/aca/archive/obspar/06/06000_v02',
+      3: '/data/aca/archive/obspar/06/06000_v03',
+      'last': '/data/aca/archive/obspar/06/06000',
+      'revisions': [2, 3]}
 
     :param obsid: obsid
     :returns: map of obsid version to directories
@@ -218,9 +240,16 @@ def get_obs_dirs(obsid):
     """
     return archive.get_obs_dirs(obsid)
 
+
 def get_obspar_file(obsid, version='default'):
     """
     Get location of requested obsid's obspar.
+
+      >>> from mica.archive import obspar
+      >>> obspar.get_obspar_file(7000)
+      '/data/aca/archive/obspar/07/07000/axaff07000_000N002_obs0a.par.gz'
+      >>> obspar.get_obspar_file(14262, version=1)
+      '/data/aca/archive/obspar/14/14262_v01/axaff14262_001N001_obs0a.par.gz'
 
     :param obsid: obsid
     :param version: processing version/revision
@@ -264,7 +293,18 @@ def parse_obspar(file):
 
 
 def get_obspar(obsid, version='default'):
-    """Get the obspar for obsid starting at tstart.  Return as a dict."""
+    """
+    Get the obspar for obsid.  Return as a dict.
+
+      >>> from mica.archive import obspar
+      >>> obspar.get_obspar(7001)['detector']
+      'ACIS-I'
+
+    :param obsid: obsid
+    :param version: processing version/revision
+
+    :returns: dictionary of obspar
+    """
 
     obsparfile = get_obspar_file(obsid, version)
     obspar = {'num_ccd_on': 0}
@@ -274,7 +314,25 @@ def get_obspar(obsid, version='default'):
             obspar['num_ccd_on'] += 1
     return obspar
 
+def get_files(obsid=None, start=None, stop=None, revision=None):
+    """
+    List obspar files for an obsid or a time range.
 
+      >>> from mica.archive import obspar
+      >>> obs_files = obspar.get_files(6000)
+      >>> range = obspar.get_files(start='2012:001',
+      ...                          stop='2012:030')
+
+
+    :param obsid: obsid
+    :param start: time range start (Chandra.Time compatible)
+    :param stop: time range stop (Chandra.Time compatible)
+    :param revision: revision integer or 'last'
+                     defaults to current released version
+    :returns: full path of files matching query
+    """
+    return archive.get_files(obsid=obsid, start=start, stop=stop,
+                             revision=revision)
 
 
 def main():

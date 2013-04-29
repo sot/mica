@@ -15,7 +15,7 @@ import Ska.arc5gl
 import Ska.DBI
 from Chandra.Time import DateTime
 import Ska.File
-
+import mica.version as mica_version
 
 # borrowed from telem_archive
 import csv
@@ -46,7 +46,7 @@ def parse_obspar(file):
     for row in obs_read:
         # this empty-string '' hack is not present in the original
         if ((row['value'] == '')
-            and ((row['type'] == 'r') or (row['type'] == 'i'))):
+                and ((row['type'] == 'r') or (row['type'] == 'i'))):
             row['value'] = None
         else:
             row['value'] = convert[row['type']](row['value'])
@@ -101,6 +101,8 @@ class ObsArchive:
     * small_ver_regex: regular expression to search for version from
                      retrieved files (example 'pacdf\d+N(\d{3})_')
     * full: arc5gl keyword for products (example 'asp1')
+    * rebuild: If True/set, allow update mode to rebuild the database
+               from obsid 1.
     """
 
     def __init__(self, config):
@@ -123,6 +125,25 @@ class ObsArchive:
         self._arc5 = Ska.arc5gl.Arc5gl()
         self._apstat = Ska.DBI.DBI(dbi='sybase', server='sqlsao',
                                    database='axafapstat')
+        self._aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase',
+                                   user='aca_read')
+        config = self.config
+        db_file = os.path.join(os.path.abspath(config['data_root']),
+                               'archfiles.db3')
+        if not os.path.exists(db_file) or os.stat(db_file).st_size == 0:
+            if not os.path.exists(config['data_root']):
+                os.makedirs(config['data_root'])
+            self.logger.info("creating archfiles db from %s"
+                             % config['sql_def'])
+            db_sql = os.path.join(os.environ['SKA_DATA'],
+                                  'mica', config['sql_def'])
+            db_init_cmds = file(db_sql).read()
+            db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                             autocommit=False)
+            db.execute(db_init_cmds, commit=True)
+        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                         autocommit=False)
+        self._archfiles_db = db
 
     def get_all_obspar_info(self, i, f, archfiles):
         """
@@ -137,10 +158,67 @@ class ObsArchive:
         obspar['filename'] = filename
         return obspar
 
+    def get_files(self, obsid=None, start=None, stop=None,
+                  revision=None, content=None):
+        data_root = self.config['data_root']
+        if obsid is None:
+            if start is None or stop is None:
+                raise TypeError("Must supply either obsid or start and stop")
+        file_records = self._get_file_records(obsid=obsid,
+                                              start=start, stop=stop,
+                                              revision=revision,
+                                              content=content)
+        files = [os.path.join(data_root,
+                              ("%05d" % f['obsid'])[0:2],
+                              "%05d_v%02d" % (f['obsid'], f['revision']),
+                              str(f['filename']))
+                 for f in file_records]
+        return files
+
+    def _get_file_records(self, obsid=None, start=None, stop=None,
+                          revision=None, content=None):
+        self.set_env()
+        tstart_pad = 10 * 86400
+        if content is None:
+            content = self.config['content_types']
+        if type(content) == str:
+            content = [content]
+        content_str = ','.join(["'%s'" % x for x in content])
+        if obsid is None:
+            if start is None or stop is None:
+                raise TypeError("Must supply either obsid or start and stop")
+            tstart = DateTime(start).secs
+            tstop = DateTime(stop).secs
+            db_query = ("SELECT * from archfiles "
+                        "WHERE tstart >= %f - %f "
+                        "AND tstart < %f "
+                        "AND tstop > %f "
+                        "AND content in (%s) "
+                        % (tstart, tstart_pad, tstop, tstart, content_str))
+        else:
+            db_query = ('SELECT * from archfiles '
+                        'WHERE obsid = %d '
+                        'AND content in (%s) '
+                        % (obsid, content_str))
+        if revision is None:
+            db_query += 'AND isdefault = 1 '
+        else:
+            if revision == 'last':
+                db_query += """AND revision in
+                               (SELECT max(revision) from archfiles
+                                WHERE obsid = %d)""" % obsid
+            elif revision == 'all':
+                pass
+            else:
+                db_query += 'AND revision = %d ' % revision
+        db_query += "order by tstart"
+        files = self._archfiles_db.fetchall(db_query)
+        return files
+
     def get_dir(self, obsid):
         """
         Return the latest released directory for an obsid
-	    Return None if there are no 'default' / released products.
+        Return None if there are no 'default' / released products.
         """
         dirmap = self.get_obs_dirs(obsid)
         if 'default' in dirmap:
@@ -239,11 +317,9 @@ class ObsArchive:
         # just get a small file
         arc5.sendline("get %s" % config['small'])
         version = self.get_file_ver(tempdir,
-                               config['small_glob'],
-                               config['small_ver_regex'],
-                               )
-        if not version:
-            raise ProductVersionError("Version not defined")
+                                    config['small_glob'],
+                                    config['small_ver_regex'],
+                                    )
         for afile in glob(os.path.join(tempdir, "*")):
             os.remove(afile)
         os.removedirs(tempdir)
@@ -325,13 +401,14 @@ class ObsArchive:
         config = self.config
         temp_root = config['temp_root']
 
+
         # get a numeric version
         # do this even if passed a numeric version, as this will
         # check to see if the version is available
         n_version = self.get_ver_num(obsid, version=version)
         if n_version is None:
             raise ProductVersionError("No %s data for ver %s"
-                             % (config['label'], version))
+                                      % (config['label'], version))
         # use the numeric version instead of 'last' or 'default'
         version = n_version
 
@@ -371,19 +448,7 @@ class ObsArchive:
         archfiles = glob(os.path.join(tempdir, "*"))
         if not archfiles:
             raise ValueError("Retrieved no files")
-        db_file = os.path.join(os.path.abspath(config['data_root']),
-                               'archfiles.db3')
-        if not os.path.exists(db_file):
-            logger.info("creating archfiles db from %s"
-                        % config['sql_def'])
-            db_sql = os.path.join(os.environ['SKA_DATA'],
-                                  'mica', config['sql_def'])
-            db_init_cmds = file(db_sql).read()
-            db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
-                             autocommit=False)
-            db.execute(db_init_cmds, commit=True)
-        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
-                         autocommit=False)
+        db = self._archfiles_db
         existing = db.fetchall(
             "select * from archfiles where obsid = %d and revision = '%s'"
             % (obsid, version))
@@ -397,7 +462,7 @@ class ObsArchive:
             arch_info = self.get_arch_info(i, f, archfiles)
             arch_info['obsid'] = obsid
             if (len(existing)
-               and arch_info['filename'] in existing['filename']):
+                    and arch_info['filename'] in existing['filename']):
                 logger.debug("skipping %s" % f)
                 os.remove(f)
                 continue
@@ -427,6 +492,7 @@ class ObsArchive:
         """
         logger = self.logger
         config = self.config
+        db = self._archfiles_db
         archive_dir = config['data_root']
 
         # for the obsid get the default and last version numbers
@@ -445,15 +511,24 @@ class ObsArchive:
                                        '%05d_v%02d' % (obsid, default_ver))
             # link the default version
             logger.info("linking %s -> %s" % (
-                    os.path.relpath(def_ver_dir, chunk_dir_path),
-                    obs_ln))
+                os.path.relpath(def_ver_dir, chunk_dir_path),
+                obs_ln))
             # don't use os.path.exists here because if we have a broken
             # link we want to remove it too
             if os.path.islink(obs_ln):
                 os.unlink(obs_ln)
             os.symlink(
-                    os.path.relpath(def_ver_dir, chunk_dir_path),
-                    obs_ln)
+                os.path.relpath(def_ver_dir, chunk_dir_path),
+                obs_ln)
+            logger.info("updating archfiles default rev to %d for %d"
+                        % (obsid, default_ver))
+            db.execute("""UPDATE archfiles SET isdefault = 1
+                          WHERE obsid = %d and revision = %d"""
+                       % (obsid, default_ver))
+            db.execute("""UPDATE archfiles SET isdefault = NULL
+                          WHERE obsid = %d and revision != %d"""
+                       % (obsid, default_ver))
+            db.commit()
 
         # nothing to do if last_ver undefined
         if last_ver is None:
@@ -468,13 +543,13 @@ class ObsArchive:
                 obs_ln_last = os.path.join(archive_dir, chunk_dir,
                                            "%05d_last" % obsid)
                 logger.info("linking %s -> %s" % (
-                        os.path.relpath(last_ver_dir, chunk_dir_path),
-                        obs_ln_last))
+                    os.path.relpath(last_ver_dir, chunk_dir_path),
+                    obs_ln_last))
                 if os.path.islink(obs_ln_last):
                     os.unlink(obs_ln_last)
                 os.symlink(
-                        os.path.relpath(last_ver_dir, chunk_dir_path),
-                        obs_ln_last)
+                    os.path.relpath(last_ver_dir, chunk_dir_path),
+                    obs_ln_last)
         else:
             # if default and last are now the same, delete last link
             if os.path.exists(obs_ln_last):
@@ -486,7 +561,7 @@ class ObsArchive:
         """
         Return a list of all of the *_last directories in the file archive
         (and specify revision=default to attempt to get new released products
-        for thems).
+        for them).
         """
         logger = self.logger
         logger.info("Checking for updates to obsids with provisional data")
@@ -514,6 +589,11 @@ class ObsArchive:
         archive_dir = config['data_root']
         apstat = self._apstat
 
+        if (config['data_root'].startswith('/data/aca/archive')
+                and not mica_version.release):
+            raise ValueError(
+                "non-release code attempting to write to official archive")
+
         last_id_file = os.path.join(archive_dir, 'last_id.txt')
         # if an obsid is requested, just do that
         if 'obsid' in config and config['obsid']:
@@ -526,7 +606,6 @@ class ObsArchive:
                             % config['obsid'])
             return
 
-
         # if no obsid specified, try to retrieve all data
         # since tool last run
         # use saved id from the apstat table as a reference
@@ -536,6 +615,11 @@ class ObsArchive:
             last_id = int(last_id_fh.read().rstrip())
             logger.info("using %d for last_id" % last_id)
             last_id_fh.close()
+        else:
+            if not config.get('rebuild'):
+                raise ValueError("last_id.txt not found.\n"
+                                 + "To rebuild archive from obsid 1, "
+                                 + "set rebuild=True in configuration")
         query_vars = {'apstat_table': config['apstat_table'],
                       'apstat_id': config['apstat_id'],
                       'last_id': last_id}
@@ -589,7 +673,8 @@ class ObsArchive:
         for obs in prov_data:
             # check again for multi-obis and limit to first one
             obis = apstat.fetchall(
-                "select distinct obi from obidet_0_5 where obsid = %d" % obs['obsid'])
+                "select distinct obi from obidet_0_5 where obsid = %d"
+                % obs['obsid'])
             minobi = np.min(obis['obi'])
             logger.info("checking database status for obsid %d obi %d ver %s, "
                         % (obs['obsid'], minobi, obs['revision']), )
@@ -605,11 +690,13 @@ class ObsArchive:
             logger.debug(apstat_query)
             current_status = apstat.fetchall(apstat_query)
             if len(current_status) == 0:
-                raise ValueError("obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
-                                 % query_vars)
+                raise ValueError(
+                    "obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
+                    % query_vars)
             if len(current_status) > 1:
-                raise ValueError("obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
-                                 % query_vars)
+                raise ValueError(
+                    "obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
+                    % query_vars)
             if current_status['quality'] != 'P':
                 try:
                     self.get_arch(obs['obsid'], 'default')

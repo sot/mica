@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
+from mica.version import version
 setup(name='mica',
-      version="0.1",
+      version=version,
       author='Jean Connelly',
       author_email='jconnelly@cfa.harvard.edu',
       license="""New BSD/3-clause BSD License

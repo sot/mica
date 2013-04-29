@@ -10,8 +10,11 @@ from Chandra.Time import DateTime
 import Ska.Numpy
 import logging
 import argparse
+import mica.version as mica_version
 
-config = dict(data_root='/data/aca/archive/aca0',
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+
+CONFIG = dict(data_root=os.path.join(mica_archive, 'aca0'),
               cda_fetch_url=
               'https://icxc.harvard.edu/dbtm/CDA/cgi/aspect_fetch.cgi',
               cda_table='cda_aca0.h5')
@@ -24,7 +27,7 @@ logger.addHandler(logging.StreamHandler())
 def get_options():
     parser = argparse.ArgumentParser(
         description="Update table of list of CDA ingested ACA0 files")
-    defaults = dict(config)
+    defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
     parser.add_argument("--data-root",
                         help="parent directory for all data")
@@ -55,7 +58,7 @@ def make_data_table(lines):
 def make_table_from_scratch(table_file, cda_fetch_url, start='1999:001'):
     logger.info("Fetching new CDA list from %s" % start)
     startmx = DateTime(start).mxDateTime
-    query = ("?tstart=%s&pattern=aca%%25&submit=Search"
+    query = ("?tstart=%s&pattern=acaimgc%%25&submit=Search"
              % startmx.strftime("%m-%d-%Y"))
     url = cda_fetch_url + query
     new_lines = urllib.urlopen(url).readlines()
@@ -70,10 +73,23 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='1999:001'):
     h5f.close()
 
 
-def update_cda_table(data_root=config['data_root'],
-                     cda_table=config['cda_table'],
-                     cda_fetch_url=config['cda_fetch_url']):
+def update_cda_table(data_root=None,
+                     cda_table=None,
+                     cda_fetch_url=None):
+    if data_root is None:
+        data_root = CONFIG['data_root']
+    if cda_table is None:
+        cda_table = CONFIG['cda_table']
+    if cda_fetch_url is None:
+        cda_fetch_url = CONFIG['cda_fetch_url']
 
+    if (data_root.startswith('/data/aca/archive')
+            and not mica_version.release):
+        raise ValueError(
+            "non-release code attempting to write to official archive")
+
+    if not os.path.exists(data_root):
+        os.makedirs(data_root)
     table_file = os.path.join(data_root, cda_table)
     if not os.path.exists(table_file):
         make_table_from_scratch(table_file, cda_fetch_url)

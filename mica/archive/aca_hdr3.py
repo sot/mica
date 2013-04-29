@@ -1,5 +1,5 @@
 """
-Experimental code to work with ACA L0 Header 3 data
+Experimental/alpha code to work with ACA L0 Header 3 data
 """
 import re
 import numpy as np
@@ -7,7 +7,8 @@ import numpy.ma as ma
 import collections
 from scipy.interpolate import interp1d
 from Chandra.Time import DateTime
-import mica.archive.aca_l0
+from Ska.Numpy import search_both_sorted
+import mica.archive.aca_l0 as aca_l0
 
 
 class MissingDataError(Exception):
@@ -29,15 +30,15 @@ def two_byte_sum(byte_msids, scale=1):
 
 
 # 8x8 header values (largest possible ACA0 header set)
-aca_dtype = [('TIME', '>f8'), ('QUALITY', '>i4'), ('IMGSIZE', '>i4'),
+ACA_DTYPE = [('TIME', '>f8'), ('QUALITY', '>i4'), ('IMGSIZE', '>i4'),
              ('HD3TLM62', '|u1'),
              ('HD3TLM63', '|u1'), ('HD3TLM64', '|u1'), ('HD3TLM65', '|u1'),
              ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
              ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
-             ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
+             ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'), ('FILENAME', '<U128')
              ]
 
-aca_dtype_names = [k[0] for k in aca_dtype]
+ACA_DTYPE_NAMES = [k[0] for k in ACA_DTYPE]
 
 
 a_to_d = [
@@ -78,9 +79,12 @@ def ad_temp(msids):
         sum = two_byte_sum(msids)(slot_data)
         return ad_func(sum)
     return func
-    
 
-hdr3_def = \
+# dictionary that defines the header 3 'MSID's.
+# Also includes a value key that describes how to determine the value
+# of the MSID
+
+HDR3_DEF = \
 {'062': {'desc': 'AC status word',
                'longdesc': """
 AC status word.  A status word read from the AC.  The bits in the word are
@@ -321,12 +325,40 @@ write-and-read test
 The number most recently written the the [sic] TEC power control DAC.
 """}}
 
-msid_aliases = {'dac': {'hdr3': '776'},
+MSID_ALIASES = {'dac': {'hdr3': '776'},
                 'aca_temp': {'hdr3': '766'},
                 'ccd_temp': {'hdr3': '676'}}
 
 
 class MSID(object):
+    """
+    ACA header 3 data object to work with header 3 data from
+    available 8x8 ACA L0 telemetry.
+
+    >>> from mica.archive import aca_hdr3
+    >>> ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
+    >>> type(ccd_temp.vals)
+    'numpy.ma.core.MaskedArray'
+
+    When given an msid and start and stop range, the object will
+    fetch the ACA L0 to populate the object, which includes the MSID
+    values (vals) at the given times (times).
+
+    The parameter msid_data is used to create an MSID object from
+    the data of another MSID obejct.
+
+    :param msid: MSID or pseudo-MSID
+       pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
+       unaliased values may also be read directly in the form
+          <Slot><Image type><Hdr3 Word>
+       (see aca_hdr3.hdr3_def for a dictionary including those
+       descriptions)
+
+    :param start: Chandra.Time compatible start time
+    :param stop: Chandra.Time compatible stop time
+    :param msid_data: data dictionary or object from another MSID object
+    """
+
     def __init__(self, msid, start, stop, msid_data=None):
         if msid_data is None:
             msid_data = MSIDset([msid], start, stop)[msid]
@@ -335,49 +367,60 @@ class MSID(object):
         self.tstop = DateTime(stop).secs
         self.datestart = DateTime(self.tstart).date
         self.datestop = DateTime(self.tstop).date
-        # TODO: fix the logic to handle both
-        # types of msid_data (MSID vs dict) in a nice way
-        if hasattr(msid_data, 'hdr3_msid'):
-            self.hdr3_msid = msid_data.hdr3_msid
-            self.vals = msid_data.vals
-            self.times = msid_data.times
-        else:
-            self.hdr3_msid = msid_data['hdr3_msid']
-            self.vals = msid_data['vals']
-            self.times = msid_data['times']
+        # msid_data may be dictionary or object with these
+        # attributes
+        for attr in ('hdr3_msid', 'vals', 'times',
+                     'desc', 'longdesc'):
+            if hasattr(msid_data, attr):
+                setattr(self, attr, getattr(msid_data, attr))
+            else:
+                setattr(self, attr, msid_data.get(attr))
 
 
 def confirm_msid(req_msid):
-    if req_msid in msid_aliases:
-        return msid_aliases[req_msid]['hdr3']
+    """
+    Check to see if the 'MSID' is an alias or is in the HDR3_DEF
+    dictionary.  If in the aliases, return the unaliased value.
+    :param req_msid: requested msid
+    :return: hdr3_def MSID name
+    """
+    if req_msid in MSID_ALIASES:
+        return MSID_ALIASES[req_msid]['hdr3']
     else:
-        if req_msid not in hdr3_def:
+        if req_msid not in HDR3_DEF:
             raise MissingDataError("msid %s not found" % req_msid)
         else:
             return req_msid
 
 
 def slot_for_msid(msid):
+    """
+    For a given 'MSID' return the slot number that contains those data.
+    """
     mmatch = re.match('(\d)\d\d', msid)
     slot = int(mmatch.group(1))
     return slot
 
 
-def mask_bad_data(slot_data, tstop):
-    iseight = slot_data['IMGSIZE'] == 8
-    # transitions from 8 to 6 or 4 should be -1 in this scheme
-    last_eight = iseight[1:].astype(int) - iseight[:-1].astype(int) == -1
-    slot_data[last_eight] = ma.masked
-    slot_data[iseight == False] = ma.masked
-    # explicitly unmask useful columns that will always be good
-    slot_data['TIME'].mask = ma.nomask
-    slot_data['IMGSIZE'].mask = ma.nomask
-    # strip off any over time, don't bother masking
-    oktime = slot_data['TIME'] <= tstop
-    return slot_data[oktime]
-
-
 class MSIDset(collections.OrderedDict):
+    """
+    ACA header 3 data object to work with header 3 data from
+    available 8x8 ACA L0 telemetry.  An MSIDset works with multiple
+    MSIDs simultaneously.
+
+    >>> from mica.archive import aca_hdr3
+    >>> perigee_data = aca_hdr3.MSIDset(['ccd_temp', 'aca_temp', 'dac'],
+    ...                                 '2012:001', '2012:030')
+
+    :param msids: list of MSIDs or pseudo-MSIDs
+        pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
+        unaliased values may also be read directly in the form
+        <Slot><Image type><Hdr3 Word>
+        (see aca_hdr3.HDR3_DEF for a dictionary including those
+        descriptions)
+    :param start: Chandra.Time compatible start time
+    :param stop: Chandra.Time compatible stop time
+    """
     def __init__(self, msids, start, stop):
         super(MSIDset, self).__init__()
         self.tstart = DateTime(start).secs
@@ -386,21 +429,52 @@ class MSIDset(collections.OrderedDict):
         self.datestop = DateTime(self.tstop).date
         self.slot_data = {}
         slots = [slot_for_msid(confirm_msid(msid)) for msid in msids]
-        # get some extra samples to check if the last requested
-        # sample includes a transition from 8x8 to 6x6 or 4x4
-        stop_pad = 32
         for slot in slots:
-            slot_data = mica.archive.aca_l0.get_slot_data(
-                self.tstart, self.tstop + stop_pad, slot,
-                imgsize=[4, 6, 8], columns=aca_dtype_names)
-            # prune off last sample in at 8x8 -> 4x4 or 6x6
-            # transitions and just return 8x8 data
-            self.slot_data[slot] = mask_bad_data(slot_data, self.tstop)
+            # get the 8x8 data
+            slot_data = aca_l0.get_slot_data(
+                self.tstart, self.tstop, slot,
+                imgsize=[8], columns=ACA_DTYPE_NAMES)
+            # get the list of all the files in the interval (pad the end a bit)
+            slot_files = aca_l0._get_file_records(
+                self.tstart, self.tstop + 32, slots=[slot], imgsize=[4, 6, 8])
+            # mask the each 8x8 sample before a 6x6 or 4x4 file
+            # first which files are 8x8
+            iseight = slot_files['imgsize'] == 8
+            # which files are the last 8x8 before a 4x4 or 6x6 file
+            last_eight = np.flatnonzero(
+                iseight[1:].astype(int) - iseight[:-1].astype(int) == -1)
+            # for each of those files, mask the last 8x8 sample before the
+            # transition
+            for file in slot_files[last_eight]['filename']:
+                # last index from that file in the data
+                max_idx = np.max(np.flatnonzero(slot_data['FILENAME'] == file))
+                if max_idx:
+                    slot_data[max_idx] = ma.masked
+            # explicitly unmask useful columns
+            slot_data['TIME'].mask = ma.nomask
+            slot_data['IMGSIZE'].mask = ma.nomask
+            slot_data['FILENAME'].mask = ma.nomask
+            self.slot_data[slot] = slot_data
+        # make a shared time ndarray that is the union of the time sets in the
+        # slots.  The ACA L0 telemetry has the same timestamps across slots,
+        # so the only differences here are caused by different times in
+        # non-TRAK across the slots (usually SRCH differences at the beginning
+        # of the observation)
+        shared_time = np.unique(np.concatenate([
+            self.slot_data[slot]['TIME'].data for slot in slots]))
         for msid in msids:
             hdr3_msid = confirm_msid(msid)
             slot = slot_for_msid(hdr3_msid)
-            slot_data = {'vals': hdr3_def[hdr3_msid]['value'](
-                    self.slot_data[slot]),
-                         'times': self.slot_data[slot]['TIME'],
+            full_data = ma.zeros(len(shared_time),
+                                 dtype=self.slot_data[slot].dtype)
+            full_data.mask = ma.masked
+            fd_idx = search_both_sorted(shared_time,
+                                        self.slot_data[slot]['TIME'])
+            full_data[fd_idx] = self.slot_data[slot]
+            # make a data dictionary to feed to the MSID constructor
+            slot_data = {'vals': HDR3_DEF[hdr3_msid]['value'](full_data),
+                         'desc': HDR3_DEF[hdr3_msid]['desc'],
+                         'longdesc': HDR3_DEF[hdr3_msid]['longdesc'],
+                         'times': shared_time,
                          'hdr3_msid': hdr3_msid}
             self[msid] = MSID(msid, start, stop, slot_data)

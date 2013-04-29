@@ -16,25 +16,25 @@ import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
-
+import mica.version as mica_version
 
 logger = logging.getLogger('aca0 fetch')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 # borrowed from eng_archive
-archfiles_hdr_cols = ('tstart', 'tstop', 'startmjf', 'startmnf',
+ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'startmjf', 'startmnf',
                       'stopmjf', 'stopmnf',
                       'tlmver', 'ascdsver', 'revision', 'date',
                       'imgsize')
 
 
-dtype = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
+FDTYPE = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
          ('arc5gl_query', '|S27'), ('fileglob', '|S9')]
-filetype = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
-                               dtype=dtype)[0]
+FILETYPE = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
+                              dtype=FDTYPE)[0]
 
-aca_dtype = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
+ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('MNF', '>i4'),
              ('END_INTEG_TIME', '>f8'), ('INTEG', '>f4'), ('GLBSTAT', '|u1'),
              ('COMMCNT', '|u1'), ('COMMPROG', '|u1'), ('IMGFID1', '|u1'),
@@ -51,12 +51,14 @@ aca_dtype = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
              ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
              ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
-             ('IMGSIZE', '>i4'))
+             ('IMGSIZE', '>i4'), ('FILENAME', '<U128'))
 
-aca_dtype_names = tuple([k[0] for k in aca_dtype])
+ACA_DTYPE_NAMES = tuple([k[0] for k in ACA_DTYPE])
 
-config = dict(data_root='/data/aca/archive/aca0',
-              temp_root='/data/aca/archive/temp',
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+
+CONFIG = dict(data_root=os.path.join(mica_archive, 'aca0'),
+              temp_root=os.path.join(mica_archive, 'temp'),
               days_at_once=30.0,
               sql_def='archfiles_aca_l0_def.sql',
               cda_table='cda_aca0.h5')
@@ -65,7 +67,7 @@ config = dict(data_root='/data/aca/archive/aca0',
 def get_options():
     parser = argparse.ArgumentParser(
         description="Fetch aca level 0 products and make a file archive")
-    defaults = dict(config)
+    defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
     parser.add_argument("--data-root",
                         help="parent directory for all data")
@@ -94,6 +96,12 @@ def get_slot_data(start, stop, slot, imgsize=None,
     For a the given parameters, retrieve telemetry and construct a
     masked array of the MSIDs available in that telemetry.
 
+      >>> from mica.archive import aca_l0
+      >>> slot_data = aca_l0.get_slot_data('2012:001', '2012:002', slot=7)
+      >>> temp_ccd_8x8 = aca_l0.get_slot_data('2005:001', '2005:010',
+      ...                                     slot=6, imgsize=[8],
+      ...                                     columns=['TIME', 'TEMPCCD'])
+
     :param start: start time of requested interval
     :param stop: stop time of requested interval
     :param slot: slot number integer (in the range 0 -> 7)
@@ -109,19 +117,19 @@ def get_slot_data(start, stop, slot, imgsize=None,
     :rtype: numpy masked recarray
     """
     if data_root is None:
-        data_root = config['data_root']
+        data_root = CONFIG['data_root']
     if columns is None:
-        columns = aca_dtype_names
+        columns = ACA_DTYPE_NAMES
     if imgsize is None:
         imgsize = [4, 6, 8]
     if db is None:
         dbfile = os.path.join(data_root, 'archfiles.db3')
         db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
 
-    data_files = get_interval_files(start, stop, slots=[slot],
+    data_files = _get_file_records(start, stop, slots=[slot],
                                     imgsize=imgsize, db=db,
                                     data_root=data_root)
-    dtype = [k for k in aca_dtype if k[0] in columns]
+    dtype = [k for k in ACA_DTYPE if k[0] in columns]
     if not len(data_files):
         # return an empty masked array
         return ma.zeros(0, dtype=dtype)
@@ -146,6 +154,8 @@ def get_slot_data(start, stop, slot, imgsize=None,
                     = chunk.field(fname)
         if 'IMGSIZE' in columns:
             all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = f_imgsize
+        if 'FILENAME' in columns:
+            all_rows['FILENAME'][rowcount:(rowcount + len(chunk))] = f['filename']
         if 'IMGRAW' in columns:
             all_rows['IMGRAW'].reshape(rows, 8, 8)[
                 rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
@@ -174,7 +184,7 @@ class MSID(object):
         self._get_data()
 
     def _check_msid(self, req_msid):
-        if req_msid.upper() in aca_dtype_names:
+        if req_msid.upper() in ACA_DTYPE_NAMES:
             self.msid = req_msid.lower()
         else:
             raise MissingDataError("msid %s not found" % req_msid)
@@ -198,7 +208,73 @@ class MSIDset(collections.OrderedDict):
             self[msid] = MSID(msid, self.tstart, self.tstop)
 
 
-def get_interval_files(start, stop=None, slots=None,
+def obsid_times(obsid):
+    aca_db = Ska.DBI.DBI(dbi="sybase", server="sybase", user="aca_read")
+    obspars = aca_db.fetchall("""select * from obspar where obsid = %d
+                                 order by obi""" % obsid)
+    return obspars[0]['tstart'], obspars[0]['tstop']
+
+
+def get_files(obsid=None, start=None, stop=None,
+              slots=None, imgsize=None, db=None, data_root=None):
+    """
+    Retrieve list of files from ACA0 archive lookup table that
+    match arguments.  The database query returns files with
+
+      tstart < stop
+      and
+      tstop > start
+
+    which returns all files that contain any part of the interval
+    between start and stop.  If the obsid argument is provided, the
+    archived obspar tstart/tstop (sybase aca.obspar table) are used.
+
+      >>> from mica.archive import aca_l0
+      >>> obsid_files = aca_l0.get_files(obsid=5438)
+      >>> time_files = aca_l0.get_files(start='2012:001', stop='2012:002')
+      >>> time_8x8 = aca_l0.get_files(start='2011:001', stop='2011:010',
+      ...                             imgsize=[8])
+
+    :param obsid: obsid
+    :param start: start time of requested interval
+    :param stop: stop time of requested interval
+    :param slots: list of integers of desired image slots to retrieve
+                   (defaults to all -> [0, 1, 2, 3, 4, 5, 6, 7, 8])
+    :param imgsize: list of integers of desired image sizes
+                    (defaults to all -> [4, 6, 8])
+    :param db: handle to archive lookup table
+    :param data_root: parent directory of Ska aca l0 archive
+
+    :returns: interval files
+    :rtype: list
+    """
+    if slots is None:
+        slots = [0, 1, 2, 3, 4, 5, 6, 7]
+    if data_root is None:
+        data_root = CONFIG['data_root']
+    if imgsize is None:
+        imgsize = [4, 6, 8]
+    if db is None:
+        dbfile = os.path.join(data_root, 'archfiles.db3')
+        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+    if obsid is None:
+        if start is None or stop is None:
+            raise TypeError("Must supply either obsid or start and stop")
+    else:
+        start, stop = obsid_times(obsid)
+
+    file_records = _get_file_records(start, stop,
+                                     slots=slots, imgsize=imgsize, db=db,
+                                     data_root=data_root)
+    files = [os.path.join(data_root,
+                          "%04d" % f['year'],
+                          "%03d" % f['doy'],
+                          str(f['filename']))
+             for f in file_records]
+    return files
+
+
+def _get_file_records(start, stop=None, slots=None,
                        imgsize=None, db=None, data_root=None):
     """
     Retrieve list of files from ACA0 archive lookup table that
@@ -228,7 +304,7 @@ def get_interval_files(start, stop=None, slots=None,
     if slots is None:
         slots = [0, 1, 2, 3, 4, 5, 6, 7]
     if data_root is None:
-        data_root = config['data_root']
+        data_root = CONFIG['data_root']
     if imgsize is None:
         imgsize = [4, 6, 8]
     if db is None:
@@ -259,22 +335,22 @@ def get_interval_files(start, stop=None, slots=None,
 class Updater(object):
     def __init__(self,
                  db=None,
-                 data_root=config['data_root'],
-                 temp_root=config['temp_root'],
-                 days_at_once=config['days_at_once'],
-                 sql_def=config['sql_def'],
-                 cda_table=config['cda_table'],
-                 filetype=filetype,
+                 data_root=None,
+                 temp_root=None,
+                 days_at_once=None,
+                 sql_def=None,
+                 cda_table=None,
+                 filetype=None,
                  start=None,
                  stop=None,
                  ):
-        self.data_root = data_root
-        self.temp_root = temp_root
-        self.days_at_once = days_at_once
-        self.sql_def = sql_def
-        self.cda_table = cda_table
-        self.filetype = filetype
-        if not db:
+        for init_opt in ['data_root', 'temp_root', 'days_at_once',
+                         'sql_def', 'cda_table']:
+            setattr(self, init_opt, vars()[init_opt] or CONFIG[init_opt])
+        self.data_root = os.path.abspath(self.data_root)
+        self.temp_root = os.path.abspath(self.temp_root)
+        self.filetype = filetype or FILETYPE
+        if db is None:
             dbfile = os.path.join(data_root, 'archfiles.db3')
             db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, autocommit=False)
         self.db = db
@@ -413,7 +489,7 @@ class Updater(object):
         Read FITS filename ``f`` with index ``i`` (position within list of
         filenames) and get dictionary of values to store in file lookup
         database.  These values include all header items in
-        ``archfiles_hdr_cols`` plus the header checksum, the image slot
+        ``ARCHFILES_HDR_COLS`` plus the header checksum, the image slot
         as determined by the filename, the imagesize as determined
         by IMGRAW, the year, day-of-year, and number of data rows in the file.
 
@@ -445,7 +521,7 @@ class Updater(object):
         # (this is borrowed from eng-archive but is set to archive to a
         # database table instead of an h5 table in this version)
         archfiles_row = dict((x, hdu.header.get(x.upper()))
-                             for x in archfiles_hdr_cols)
+                             for x in ARCHFILES_HDR_COLS)
         archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
         imgsize = hdu.data[0].field('IMGRAW').shape[0]
         archfiles_row['imgsize'] = int(imgsize)
@@ -474,7 +550,7 @@ class Updater(object):
         if len(oldmatches):
             self._arch_remove(oldmatches)
 
-        interval_matches = get_interval_files(archfiles_row['tstart'],
+        interval_matches = _get_file_records(archfiles_row['tstart'],
                                               archfiles_row['tstop'],
                                               slots=[archfiles_row['slot']])
         if len(interval_matches):
@@ -574,7 +650,7 @@ class Updater(object):
     def _fetch_individual_files(self, files):
         arc5 = Ska.arc5gl.Arc5gl(echo=True)
         logger.info('********** %s %s **********'
-                    % (filetype['content'], time.ctime()))
+                    % (self.filetype['content'], time.ctime()))
         fetched_files = []
         ingest_dates = []
         # get the files, store in file archive, and record in database
@@ -589,7 +665,7 @@ class Updater(object):
             arc5.sendline('version=last')
             arc5.sendline('operation=retrieve')
             arc5.sendline('go')
-            have_files = sorted(glob(filetype['fileglob']))
+            have_files = sorted(glob(self.filetype['fileglob']))
             if not len(have_files):
                 raise ValueError
             filename = have_files[0]
@@ -607,6 +683,10 @@ class Updater(object):
         return fetched_files, ingest_dates
 
     def _insert_files(self, files):
+        if (self.data_root.startswith('/data/archive')
+                and not mica_version.release):
+            raise ValueError(
+                "non-release code attempted to write to official archive")
         count_inserted = 0
         for i, f in enumerate(files):
             arch_info = self._read_archfile(i, f, files)
@@ -625,10 +705,12 @@ class Updater(object):
         contentdir = self.data_root
         if not os.path.exists(contentdir):
             os.makedirs(contentdir)
+        if not os.path.exists(self.temp_root):
+            os.makedirs(self.temp_root)
         archdb = os.path.join(contentdir, 'archfiles.db3')
         # if the database of the archived files does not exist,
-        # make it
-        if not os.path.exists(archdb):
+        # or is empty, make it
+        if not os.path.exists(archdb) or os.stat(archdb).st_size == 0:
             logger.info("creating archfiles db from %s"
                         % self.sql_def)
             db_sql = os.path.join(os.environ['SKA_DATA'],
@@ -643,6 +725,10 @@ class Updater(object):
             last_time = min([self.db.fetchone(
                         "select max(filetime) from archfiles where slot = %d"
                         % s)['max(filetime)'] for s in range(0, 8)])
+            if last_time is None:
+                raise ValueError(
+                    "No files in archive to do update-since-last-run mode.\n"
+                    + "Please specify a time with --start")
             datestart = DateTime(last_time)
         datestop = DateTime(self.stop)
         padding_seconds = 10000
@@ -667,12 +753,18 @@ class Updater(object):
                 self._insert_files(fetched_files)
 
         timestamp_file = os.path.join(self.data_root, 'last_timestamp.txt')
-        cda_checked_timestamp = open(timestamp_file).read().rstrip()
+        # get list of missing files since the last time the tool ingested
+        # files.  If this is first run of the tool, check from the start of
+        # the requested time range
+        if (os.path.exists(timestamp_file)
+                and os.stat(timestamp_file).st_size > 0):
+            cda_checked_timestamp = open(timestamp_file).read().rstrip()
+        else:
+            cda_checked_timestamp = DateTime(self.start).date
         missing_datetime = DateTime(cda_checked_timestamp)
         missing_files, last_ingest_date = \
             self._get_missing_archive_files(missing_datetime,
                                             only_new=True)
-
         # update the file to have up through the last confirmed good file
         # even before we try to fetch missing ones
         open(timestamp_file, 'w').write("%s" % last_ingest_date)
