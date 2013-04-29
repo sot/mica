@@ -245,6 +245,15 @@ API docs
 
    api
 
+MSID descriptions
+=================
+
+.. toctree::
+   :maxdepth: 1
+
+   aca_l0_msids
+   hdr3_only_msids
+
 
 Indices and tables
 ==================

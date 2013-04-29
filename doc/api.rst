@@ -51,7 +51,7 @@ Functions
 
 
 :mod:`mica.archive.obsid_archive`
-================================
+=================================
 
 Base Class used in mica.archive.asp_l1 and mica.archive.obspar
 
