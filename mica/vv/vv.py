@@ -220,30 +220,55 @@ class Obi(object):
             slist.append(save)
         return slist
 
-    def _info(self):
+# this should probably be handled in mica.archive.asp_l1
+    @staticmethod
+    def _asp1_lookup(obsid, obi, revision):
+        import Ska.DBI
+        apstat = Ska.DBI.DBI(dbi='sybase',
+                             server='sqlsao',
+                             database='axafapstat')
+        # take these from the first aspect solution file header
+        aspect_1 = apstat.fetchall("""SELECT * FROM aspect_1
+                                      WHERE obsid = {obsid}
+                                      AND obi = {obi}
+                                      AND revision = {revision}
+                                   """.format(obsid=obsid,
+                                              obi=obi,
+                                              revision=revision))
+        if len(aspect_1) > 1:
+            raise ValueError(
+                "More than one entry found for obsid/obi/rev in aspect_1")
+        return aspect_1[0]['aspect_1_id'], aspect_1[0]['ap_date']
+
+    def _get_info(self):
         """
         get labels for top level
         """
         ai_list = self._aiid_info()
         obsid = ai_list[0]['OBS_ID']
         revision = ai_list[0]['REVISION']
+        obi = ai_list[0]['OBI_NUM']
+        aspect_1_id, ap_date = self._asp1_lookup(obsid, obi, revision)
         for ai in ai_list:
             if ai['OBS_ID'] != obsid:
                 raise ValueError
             if ai['REVISION'] != revision:
                 raise ValueError
-        return {'obsid': int(obsid),
-                'revision': revision,
-                'tstart': self.obspar['tstart'],
-                'tstop': self.obspar['tstop'],
-                'sim_z': self.obspar['sim_z'],
-                'sim_z_offset': self.obspar['sim_z_offset'],
-                'ra_pnt': self.obspar['ra_pnt'],
-                'dec_pnt': self.obspar['dec_pnt'],
-                'roll_pnt': self.obspar['roll_pnt'],
-                'instrument': self.obspar['detnam'],
-                'intervals': ai_list,
-                'slots': self.slot_report}
+        self._info = {'obsid': int(obsid),
+                     'revision': revision,
+                     'tstart': self.obspar['tstart'],
+                     'tstop': self.obspar['tstop'],
+                     'sim_z': self.obspar['sim_z'],
+                     'sim_z_offset': self.obspar['sim_z_offset'],
+                     'ra_pnt': self.obspar['ra_pnt'],
+                     'dec_pnt': self.obspar['dec_pnt'],
+                     'roll_pnt': self.obspar['roll_pnt'],
+                     'instrument': self.obspar['detnam'],
+                     'intervals': ai_list,
+                     'slots': self.slot_report,
+                     'aspect_1_id': aspect_1_id,
+                     'ap_date': ap_date}
+
 
     def _save_info_json(self, file="vv_report.json"):
         save = self.info()
