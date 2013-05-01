@@ -162,6 +162,7 @@ class Obi(object):
     def __init__(self, obsparfile, obsdir, config=None):
         if config is None:
             config = DEFAULT_CONFIG
+        self._info = None
         self._config = config
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
@@ -172,6 +173,7 @@ class Obi(object):
         self.slot_report = dict()
         self._label_slots()
         self._agg_slot_data()
+        self._get_info()
 
         #self.plots = [self.plot_slot(slot) for slot in range(0, 8)]
     def set_dbh(self, dbhandle, slot_table='vv_slots'):
@@ -201,6 +203,11 @@ class Obi(object):
                         if type(v) not in [np.ndarray, np.ma.core.MaskedArray])
             slist.append(save)
         return slist
+
+    def info(self):
+        if self._info is None:
+            self._get_info()
+        return self._info
 
     def _aiid_info(self, save_cols=save_asol_header):
         """
@@ -239,7 +246,7 @@ class Obi(object):
                 'slots': self.slot_report}
 
     def _save_info_json(self, file="vv_report.json"):
-        save = self._info()
+        save = self.info()
         jfile = open(file, 'w')
         jfile.write(json.dumps(save, sort_keys=True, indent=4,
                                cls=NumpyAwareJSONEncoder))
@@ -247,7 +254,7 @@ class Obi(object):
 
     def _save_info_pkl(self, file="vv_report.pkl"):
         pfile = open(file, 'w')
-        pickle.dump(self._info(), pfile)
+        pickle.dump(self.info(), pfile)
         pfile.close()
 
     def _shelve_info(self, file=None):
@@ -255,12 +262,12 @@ class Obi(object):
             file = os.path.join(self._config['data_root'],
                                 self._config['shelf_file'])
         s = shelve.open(file)
-        s["%s_%s" % (self._info()['obsid'], self._info()['revision'])] \
-            = self._info()
+        s["%s_%s" % (self.info()['obsid'], self.info()['revision'])] \
+            = self.info()
         s.close()
 
     def slots_to_db(self):
-        save = self._info()
+        save = self.info()
         in_db = self.db.fetchall("""select * from %s where
                                     obsid = %d and revision = %d"""
                                  % (self.slot_table,
@@ -284,7 +291,7 @@ class Obi(object):
             return np.mean(temps.vals) - 273.15
 
     def slots_to_table(self):
-        save = self._info()
+        save = self.info()
         mean_aacccdpt = self._get_ccd_temp(save['tstart'], save['tstop'])
         # add obsid and revision to the slot dict
         for slot_str in save['slots']:
@@ -642,7 +649,7 @@ class Obi(object):
         ay.autoscale(enable=False, axis='x')
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         plt.suptitle('Obsid %d Slot %d Residuals' % (
-                self._info['obsid'], slot_num))
+                self.info()['obsid'], slot_num))
 
         if not fid_plot:
             cenifig = plt.figure(figsize=(12, 10))
