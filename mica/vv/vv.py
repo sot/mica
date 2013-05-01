@@ -534,51 +534,59 @@ class Obi(object):
         labelfontsize = 10
         axes = dict()
 
-        ayz = fig.add_axes([.05, .7, .20, .20])
+        max_y = np.max(dy[ok])
+        min_y = np.min(dy[ok])
+        max_z = np.max(dz[ok])
+        min_z = np.min(dz[ok])
+        ymid = (max_y + min_y) / 2
+        zmid = (max_z + min_z) / 2
+        max_extent = np.max([max_y - min_y, max_z - min_z]) / 2
+        extent = max_extent * 1.10
+        if extent < (xy_range / 2):
+            extent = xy_range / 2
 
+        ayz = fig.add_axes([.05, .7, .20, .20], aspect='equal')
         axes['yz'] = ayz
         ayz.plot(dy[ok], dz[ok], 'g.')
         ayz.plot(dy[bad], dz[bad], 'r.')
-        ayz.set_aspect('equal')
         ayz.grid()
         plt.setp(ayz.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayz.get_xticklabels(), fontsize=labelfontsize)
+        plt.setp(ayz.get_xticklabels(), rotation=30)
+        plt.setp(ayz.get_xticklabels(), horizontalalignment='right')
         ayz.set_xlabel('Y offset (arcsec)')
         ayz.set_ylabel('Z offset (arcsec)')
-        # make the all-range plot have equal dimensions
-        xlims = ayz.get_xlim()
-        ylims = ayz.get_ylim()
-        xrange = xlims[-1] - xlims[0]
-        yrange = ylims[-1] - ylims[0]
-        x0 = np.mean(xlims)
-        y0 = np.mean(ylims)
-        extent = max(xrange, yrange) / 2.0
-        ayz.set_xlim(x0 - extent, x0 + extent)
-        ayz.set_ylim(y0 - extent, y0 + extent)
+        # set limits to include all of the "ok" data
+        # use the middle of the range of the data, not the median
+        ayz.set_xlim(ymid - extent, ymid + extent)
+        ayz.set_ylim(zmid - extent, zmid + extent)
 
-        ayzf = fig.add_axes([.05, .25, .20, .20])
+        ayzf = fig.add_axes([.05, .25, .20, .20], aspect='equal')
         axes['yz_fixed'] = ayzf
         ayzf.plot(dy[ok], dz[ok], 'g.')
         ayzf.plot(dy[bad], dz[bad], 'r.')
-        ayzf.set_aspect('equal')
         ayzf.grid()
         plt.setp(ayzf.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayzf.get_xticklabels(), fontsize=labelfontsize)
+        plt.setp(ayzf.get_xticklabels(), rotation=30)
+        plt.setp(ayzf.get_xticklabels(), horizontalalignment='right')
         circle = plt.Circle((dy0, dz0), radius=circ_rad, fill=False)
         ayzf.add_patch(circle)
         ayzf.set_xlabel('Y offset (arcsec)')
         ayzf.set_ylabel('Z offset (arcsec)')
+        # set limits to fixed range
         if xy_range is not None:
             ayzf.set_xlim([dy0 - xy_range, dy0 + xy_range])
             ayzf.set_ylim([dz0 - xy_range, dz0 + xy_range])
 
         ay = fig.add_axes([.30, .7, .62, .25])
         axes['dy'] = ay
-        ay.plot(plottime[ok], dy[ok], color='green', marker='.')
+        ay.plot(plottime[ok], dy[ok], 'g.')
         ay.plot(plottime[bad], dy[bad], 'r.')
         plt.setp(ay.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ay.get_xticklabels(), visible=False)
         ay.set_ylabel('Y offsets(dy) (arcsec)')
+        ay.set_ylim(ymid - extent, ymid + extent)
         for t in ai_starts:
             s_t = (t - time0) / 1000.
             ay.plot([s_t, s_t], ay.get_ylim(), color='blue',
@@ -596,11 +604,12 @@ class Obi(object):
 
         az = fig.add_axes([.30, .4, .62, .25], sharex=ay)
         axes['dz'] = az
-        az.plot(plottime[ok], dz[ok], color='green', marker='.')
+        az.plot(plottime[ok], dz[ok], 'g.')
         az.plot(plottime[bad], dz[bad], 'r.')
         plt.setp(az.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(az.get_xticklabels(), visible=False)
         az.set_ylabel('Z offsets(dz) (arcsec)')
+        az.set_ylim(zmid - extent, zmid + extent)
         for t in ai_starts:
             s_t = (t - time0) / 1000.
             az.plot([s_t, s_t], az.get_ylim(), color='blue',
@@ -632,6 +641,8 @@ class Obi(object):
         am.set_xlabel('Time(ksec)')
         ay.autoscale(enable=False, axis='x')
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
+        plt.suptitle('Obsid %d Slot %d Residuals' % (
+                self._info['obsid'], slot_num))
 
         if not fid_plot:
             cenifig = plt.figure(figsize=(12, 10))
