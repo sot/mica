@@ -289,7 +289,10 @@ class Obi(object):
         pickle.dump(self.info(), pfile)
         pfile.close()
 
-    def _shelve_info(self, file=None):
+    def shelve_info(self, file=None):
+        if self.info()['aspect_1_id'] is None:
+            logger.warn("Shelving not implemented for obsids without aspect_1_ids")
+            return
         if file is None:
             file = os.path.join(self._config['data_root'],
                                 self._config['shelf_file'])
@@ -299,6 +302,9 @@ class Obi(object):
         s.close()
 
     def slots_to_db(self):
+        if self.info()['aspect_1_id'] is None:
+            logger.warn("Database save not implemented for obsids without aspect_1_ids")
+            return
         save = self.info()
         in_db = self.db.fetchall("""select * from %s where
                                     obsid = %d and revision = %d"""
@@ -323,6 +329,9 @@ class Obi(object):
             return np.mean(temps.vals) - 273.15
 
     def slots_to_table(self):
+        if self.info()['aspect_1_id'] is None:
+            logger.warn("Table save not implemented for obsids without aspect_1_ids")
+            return
         save = self.info()
         mean_aacccdpt = self._get_ccd_temp(save['tstart'], save['tstop'])
         # add obsid and revision to the slot dict
