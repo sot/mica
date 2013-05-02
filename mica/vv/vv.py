@@ -19,6 +19,7 @@ import mica.archive.obspar as obspar_arch
 from scipy.stats import scoreatpercentile
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
+import tempfile
 
 import matplotlib
 if __name__ == '__main__':
@@ -166,6 +167,9 @@ class Obi(object):
         self._config = config
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
+        if not os.path.exists(config['temp_root']):
+            os.makedirs(config['temp_root'])
+        self.tempdir = tempfile.mkdtemp(dir=config['temp_root'])
         self._find_aspect_intervals()
         self._process_aspect_intervals()
         self._concat_slot_data()
@@ -269,15 +273,18 @@ class Obi(object):
                      'aspect_1_id': aspect_1_id,
                      'ap_date': ap_date}
 
-
-    def _save_info_json(self, file="vv_report.json"):
+    def _save_info_json(self, file=None):
+        if file is None:
+            file = os.path.join(self.tempdir, 'vv_report.json')
         save = self.info()
         jfile = open(file, 'w')
         jfile.write(json.dumps(save, sort_keys=True, indent=4,
                                cls=NumpyAwareJSONEncoder))
         jfile.close()
 
-    def _save_info_pkl(self, file="vv_report.pkl"):
+    def _save_info_pkl(self, file=None):
+        if file is None:
+            file = os.path.join(self.tempdir, 'vv_report.pkl')
         pfile = open(file, 'w')
         pickle.dump(self.info(), pfile)
         pfile.close()
@@ -516,7 +523,9 @@ class Obi(object):
                         raise ValueError(
                             "differing %s type across aspect intervals" % t)
 
-    def plot_slot(self, slot_num):
+    def plot_slot(self, slot_num, plotdir=None, save=True, close=True):
+        if plotdir is None:
+            plotdir = self.tempdir
         y = None
         z = None
         xy_range = None
@@ -678,7 +687,15 @@ class Obi(object):
         plt.suptitle('Obsid %d Slot %d Residuals' % (
                 self.info()['obsid'], slot_num))
 
-        if not fid_plot:
+        if save:
+            plotfile = os.path.join(self.tempdir,
+                                    "slot_{}.png".format(slot_num))
+            plt.savefig(plotfile)
+            logger.info("Saved plot {}".format(plotfile))
+        if close:
+            plt.close(fig)
+
+        if not fid_plot and not save:
             cenifig = plt.figure(figsize=(12, 10))
             ceniy = cenifig.add_subplot(2, 1, 1, sharex=ay)
             ceniy.plot(plottime[ok], yag[ok], 'b.')
@@ -691,9 +708,6 @@ class Obi(object):
             ceniz.set_ylabel('Centroid Z (arcsec)')
             ceniz.set_xlabel('Time(ksec)')
             plt.suptitle('Slot %d Centroids (aspect sol in blue)' % slot_num)
-
-        return fig, axes
-
 
 AI_DEFAULT_CONF = {'obc': None,
                    'alg': 8,
