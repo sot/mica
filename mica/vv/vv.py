@@ -415,7 +415,9 @@ class Obi(object):
                         cslot[d] = ma.concatenate(slotval)
                     else:
                         cslot[d] = np.concatenate(slotval)
-            slot_data[slot] = cslot
+            # only make a top-level slot key if there is some kind of data
+            if len(cslot.keys()):
+                slot_data[slot] = cslot
         self.all_slot_data = slot_data
 
     def _agg_slot_data(self):
@@ -519,7 +521,7 @@ class Obi(object):
         z = None
         xy_range = None
         fid_plot = (slot_num in self.fid_list)
-        if 'time' not in self.all_slot_data[slot_num]:
+        if slot_num not in self.all_slot_data:
             logger.info("Nothing to plot for slot %d" % slot_num)
             return None, None
         (qual, dy, dz, mag, time) = [
