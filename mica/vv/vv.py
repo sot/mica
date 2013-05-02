@@ -170,6 +170,9 @@ class Obi(object):
         if not os.path.exists(config['temp_root']):
             os.makedirs(config['temp_root'])
         self.tempdir = tempfile.mkdtemp(dir=config['temp_root'])
+        self._process()
+
+    def _process(self):
         self._find_aspect_intervals()
         self._process_aspect_intervals()
         self._concat_slot_data()
@@ -178,8 +181,10 @@ class Obi(object):
         self._label_slots()
         self._agg_slot_data()
         self._get_info()
+        self._save_info_json()
+        for slot in self.all_slot_data:
+            self.plot_slot(slot)
 
-        #self.plots = [self.plot_slot(slot) for slot in range(0, 8)]
     def set_dbh(self, dbhandle, slot_table='vv_slots'):
         self.db = dbhandle
         self.slot_table = slot_table
@@ -271,7 +276,10 @@ class Obi(object):
                      'intervals': ai_list,
                      'slots': self.slot_report,
                      'aspect_1_id': aspect_1_id,
-                     'ap_date': ap_date}
+                     'ap_date': str(ap_date)}
+        # we don't care about the DateTimeType for ap_date,
+        # so just cast to a string
+
 
     def _save_info_json(self, file=None):
         if file is None:
