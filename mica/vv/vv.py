@@ -102,7 +102,7 @@ def get_table(config=None):
     return tbl, h5
 
 
-def get_arch_vv(obsid, version='default'):
+def get_arch_vv(obsid, version='last'):
     """
     Get obsid paths from mica.archive and create mica.vv.Obi object
     """
@@ -118,7 +118,7 @@ def get_arch_vv(obsid, version='default'):
     return Obi(obspar_file, l1_dir)
 
 
-def process(obsid, version='default', config=None):
+def process(obsid, version='last', config=None):
     if config is None:
         config = DEFAULT_CONFIG
     obi = get_arch_vv(obsid, version)
