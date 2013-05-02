@@ -8,6 +8,7 @@ import shelve
 import tables
 import csv
 import gzip
+import shutil
 import logging
 from glob import glob
 import numpy as np
@@ -49,6 +50,48 @@ logger = logging.getLogger('V&V')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
+def file_vv(obi):
+    obsid = int(obi.info()['obsid'])
+    version = int(obi.info()['revision'])
+    # set up directory for data
+    strobs = "%05d_v%02d" % (obsid, version)
+    chunk_dir = strobs[0:2]
+    chunk_dir_path = os.path.join(obi._config['data_root'], chunk_dir)
+    obs_dir = os.path.join(chunk_dir_path, strobs)
+    if not os.path.exists(obs_dir):
+        logger.info("making directory %s" % obs_dir)
+        os.makedirs(obs_dir)
+    else:
+        logger.info("obsid dir %s already exists" % obs_dir)
+    for f in glob(os.path.join(obi.tempdir, "*")):
+        os.chmod(f, 0775)
+        shutil.copy(f, obs_dir)
+        os.remove(f)
+    logger.info("moved VV files to {}".format(obs_dir))
+    os.removedirs(obi.tempdir)
+    logger.info("removed directory {}".format(obi.tempdir))
+    # make any desired link
+    obs_ln = os.path.join(obi._config['data_root'], chunk_dir, "%05d" % obsid)
+    obs_ln_last = os.path.join(obi._config['data_root'], chunk_dir, "%05d_last" % obsid)
+    obsdirs = asp_l1_arch.get_obs_dirs(obsid)
+    if 'default' in obsdirs:
+        if obsdirs[version] == obsdirs['default']:
+            if os.path.islink(obs_ln):
+                os.unlink(obs_ln)
+            os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln)
+    if 'last' in obsdirs:
+        if ('default' in obsdirs and (os.path.realpath(obsdirs['last'])
+                                     != os.path.realpath(obsdirs['default']))
+            or 'default' not in obsdirs):
+            if os.path.realpath(obsdirs[version]) == os.path.realpath(obsdirs['last']):
+                if os.path.islink(obs_ln_last):
+                    os.unlink(obs_ln_last)
+                os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln_last)
+        if ('default' in obsdirs and (os.path.realpath(obsdirs['last'))
+                                      == os.path.realpath(obsdirs['default'])))
+            if os.path.exists(obs_ln_last):
+                os.unlink(obs_ln_last)
+
 
 
 def get_table(config=None):
@@ -83,6 +126,8 @@ def process(obsid, version='default', config=None):
     tbl.flush()
     h5.flush()
     h5.close()
+    obi.shelve_info()
+    file_vv(obi)
     return obi
 
 
