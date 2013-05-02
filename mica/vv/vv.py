@@ -107,6 +107,10 @@ def get_arch_vv(obsid, version='default'):
     Get obsid paths from mica.archive and create mica.vv.Obi object
     """
     asp_l1_dirs = asp_l1_arch.get_obs_dirs(obsid)
+    if version not in asp_l1_dirs:
+        logger.error(
+            "Requested version {} not in asp_l1 archive".format(version))
+        return None
     l1_dir = asp_l1_dirs[version]
     obspar_dirs = obspar_arch.get_obs_dirs(obsid)
     obspar_file = glob(os.path.join(obspar_dirs[version],
@@ -292,6 +296,9 @@ class Obi(object):
         if len(aspect_1) > 1:
             raise ValueError(
                 "More than one entry found for obsid/obi/rev in aspect_1")
+        if len(aspect_1) == 0:
+            logger.warn("obsid / revision not in axafapstat.aspect_1")
+            return (None, None)
         return aspect_1[0]['aspect_1_id'], aspect_1[0]['ap_date']
 
     def _get_info(self):
@@ -334,6 +341,7 @@ class Obi(object):
         jfile.write(json.dumps(save, sort_keys=True, indent=4,
                                cls=NumpyAwareJSONEncoder))
         jfile.close()
+        logger.info("Saved JSON to {}".format(file))
 
     def _save_info_pkl(self, file=None):
         if file is None:
@@ -353,6 +361,7 @@ class Obi(object):
         s["%s_%s" % (self.info()['obsid'], self.info()['revision'])] \
             = self.info()
         s.close()
+        logger.info("Saved to shelve file {}".format(file))
 
     def slots_to_db(self):
         if self.info()['aspect_1_id'] is None:
