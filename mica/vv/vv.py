@@ -74,11 +74,13 @@ def file_vv(obi):
     obs_ln = os.path.join(obi._config['data_root'], chunk_dir, "%05d" % obsid)
     obs_ln_last = os.path.join(obi._config['data_root'], chunk_dir, "%05d_last" % obsid)
     obsdirs = asp_l1_arch.get_obs_dirs(obsid)
+    isdefault = False
     if 'default' in obsdirs:
         if obsdirs[version] == obsdirs['default']:
             if os.path.islink(obs_ln):
                 os.unlink(obs_ln)
             os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln)
+            isdefault = True
     if 'last' in obsdirs:
         if ('default' in obsdirs and (os.path.realpath(obsdirs['last'])
                                      != os.path.realpath(obsdirs['default']))
@@ -91,6 +93,7 @@ def file_vv(obi):
                                       == os.path.realpath(obsdirs['default'])))
             if os.path.exists(obs_ln_last):
                 os.unlink(obs_ln_last)
+    obi.set_default(isdefault)
 
 
 
@@ -124,14 +127,14 @@ def process(obsid, version='last', config=None):
     obi = get_arch_vv(obsid, version)
     if obi is None:
         return None
+    obi.shelve_info()
+    file_vv(obi)
     tbl, h5 = get_table(config=config)
     obi.set_tbl(tbl)
     obi.slots_to_table()
     tbl.flush()
     h5.flush()
     h5.close()
-    obi.shelve_info()
-    file_vv(obi)
     return obi
 
 
@@ -213,6 +216,7 @@ class Obi(object):
         if config is None:
             config = DEFAULT_CONFIG
         self._info = None
+        self._isdefault = None
         self._config = config
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
@@ -247,6 +251,13 @@ class Obi(object):
 #        """
 #        pickle.dump(self.slot, open(file, 'w'))
 #
+
+    def set_default(self, isdefault):
+        self._isdefault = isdefault
+
+    def get_default(self):
+        return self._isdefault
+
     def _just_slot_data(self):
         """
         get just the aggregate values for a slot
@@ -403,7 +414,7 @@ class Obi(object):
                              for k in self.table.dtype.names
                              if k in save))
             slot.update(dict(mean_aacccdpt=mean_aacccdpt))
-            slot.update(most_recent=0)
+            slot.update(isdefault=self.get_default())
         # make a recarray
         save_rec = np.rec.fromrecords(
             [[save['slots'][slot_str][k] for k in self.table.dtype.names]
@@ -415,11 +426,13 @@ class Obi(object):
                                                    sort=True)
         # if there are previous records for this obsid
         if len(have_obsid_coord):
-            # mark all records for the obsid as old (or not most_recent)
             logger.info("obsid %d is in table" % save['obsid'])
-            obsid_rec = self.table.readCoordinates(have_obsid_coord)
-            obsid_rec['most_recent'] = 0
-            self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
+            # if the current entry is default, mark other entries as
+            # not-default
+            if self.get_default():
+                obsid_rec = self.table.readCoordinates(have_obsid_coord)
+                obsid_rec['isdefault'] = 0
+                self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
             # if we already have the revision, update in place
             if np.any(obsid_rec['revision'] == save['revision']):
                 rev_coord = self.table.getWhereList(
@@ -432,18 +445,7 @@ class Obi(object):
                 logger.info("updating obsid %d rev %d in place"
                        % (save['obsid'], save['revision']))
                 self.table.modifyCoordinates(rev_coord, save_rec)
-            # and retag the max revision with most_recent = 1
-            max_rev = max(np.max(obsid_rec['revision']), save['revision'])
-            max_rev_coord = self.table.getWhereList(
-                        '(obsid == %d) & (revision == %d)'
-                        % (save['obsid'], max_rev))
-            logger.info("tagging obsid %d rev %d as most recent"
-                   % (save['obsid'], max_rev))
-            max_rev_rec = self.table.readCoordinates(max_rev_coord)
-            max_rev_rec['most_recent'] = 1
-            self.table.modifyCoordinates(max_rev_coord, max_rev_rec)
         else:
-            save_rec['most_recent'] = 1
             self.table.append(save_rec)
         self.table.flush()
 

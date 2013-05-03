@@ -4,8 +4,8 @@ import numpy as np
 VV_DTYPE = np.dtype(
     [('obsid', '<i4'),
      ('revision', '<i4'),
-     ('most_recent', '<i4'),
-     ('aspect_l1_id', '<i4'),
+     ('isdefault', '<i4'),
+     ('aspect_1_id', '<i4'),
      ('ap_date', '|S21'),
      ('tstart', '<f8'), ('tstop', '<f8'),
      ('sim_z', '<f8'), ('sim_z_offset', '<f8'), ('instrument', '|S10'),
