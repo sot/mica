@@ -699,6 +699,21 @@ class ObsArchive:
                 raise ValueError(
                     "obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
                     % query_vars)
+            # a query to get the quality from the max science_2 data that
+            # used this aspect_solution.  Ugh.
+            if config['apstat_table'] == 'aspect_1':
+                science_qual = apstat.fetchall(
+                    """select quality from science_2 where science_2_id in (
+                         select science_2_id from science_2_obi where science_1_id in (
+                         select science_1_id from science_1 where aspect_1_id in (
+                         select aspect_1_id from aspect_1
+                         where obsid = {obsid} and obi = {obi}
+                         and revision = {revision})))""".format(query_vars))
+                # if any of the science_2 data associated with this obsid is
+                # now not pending, set the quality to an arbitrary value 'X'
+                # and try to update the obsid
+                if np.any(science_qual['quality'] != 'P'):
+                    current_status['quality'] = 'X'
             if current_status['quality'] != 'P':
                 try:
                     self.get_arch(obs['obsid'], 'default')
