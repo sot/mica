@@ -24,7 +24,7 @@ def update(obsids):
                             server='sqlsao',
                             database='axafapstat')
     proc_db = Ska.DBI.DBI(dbi='sqlite',
-                          server=os.path.join(mica_archive, 'processing_asp_l1.db3'))
+                          server=os.path.join(mica_archive, 'asp1', 'processing_asp_l1.db3'))
     archdb = Ska.DBI.DBI(dbi='sqlite',
                          server=os.path.join(mica_archive, 'asp1', 'archfiles.db3'))
     for obs in obsids:
