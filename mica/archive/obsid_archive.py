@@ -145,6 +145,19 @@ class ObsArchive:
                          autocommit=False)
         self._archfiles_db = db
 
+    def set_read_env(self):
+        """
+        Set environment included an arc5gl handle and
+        and a handle to the axafapstat database
+        """
+        config = self.config
+        db_file = os.path.join(os.path.abspath(config['data_root']),
+                               'archfiles.db3')
+        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                         autocommit=False)
+        self._archfiles_db = db
+
+
     def get_all_obspar_info(self, i, f, archfiles):
         """
         Read obspar and add 'obsid' and 'filename' keys to the dictionary
@@ -177,7 +190,7 @@ class ObsArchive:
 
     def _get_file_records(self, obsid=None, start=None, stop=None,
                           revision=None, content=None):
-        self.set_env()
+        self.set_read_env()
         tstart_pad = 10 * 86400
         if content is None:
             content = self.config['content_types']
