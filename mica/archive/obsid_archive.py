@@ -521,7 +521,7 @@ class ObsArchive:
                 os.path.relpath(def_ver_dir, chunk_dir_path),
                 obs_ln)
             logger.info("updating archfiles default rev to %d for %d"
-                        % (obsid, default_ver))
+                        % (default_ver, obsid))
             db.execute("""UPDATE archfiles SET isdefault = 1
                           WHERE obsid = %d and revision = %d"""
                        % (obsid, default_ver))
@@ -588,6 +588,7 @@ class ObsArchive:
         logger = self.logger
         archive_dir = config['data_root']
         apstat = self._apstat
+        updated_obsids = []
 
         if (config['data_root'].startswith('/data/aca/archive')
                 and not mica_version.release):
@@ -604,7 +605,7 @@ class ObsArchive:
                 logger.debug(ve)
                 logger.info("Could not determine link versions for %d"
                             % config['obsid'])
-            return
+            return [config['obsid']]
 
         # if no obsid specified, try to retrieve all data
         # since tool last run
@@ -664,6 +665,7 @@ class ObsArchive:
             last_id_fh = open(last_id_file, 'w')
             last_id_fh.write("%d" % obs[config['apstat_id']])
             last_id_fh.close()
+            updated_obsids.append(obs['obsid'])
         if not len(todo):
             logger.info("No new data")
 
@@ -706,3 +708,5 @@ class ObsArchive:
                     logger.debug(ve)
                     continue
                 self.update_link(obs['obsid'])
+            updated_obsids.append(obs['obsid'])
+        return updated_obsids
