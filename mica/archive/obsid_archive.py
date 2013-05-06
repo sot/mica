@@ -145,6 +145,19 @@ class ObsArchive:
                          autocommit=False)
         self._archfiles_db = db
 
+    def set_read_env(self):
+        """
+        Set environment included an arc5gl handle and
+        and a handle to the axafapstat database
+        """
+        config = self.config
+        db_file = os.path.join(os.path.abspath(config['data_root']),
+                               'archfiles.db3')
+        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                         autocommit=False)
+        self._archfiles_db = db
+
+
     def get_all_obspar_info(self, i, f, archfiles):
         """
         Read obspar and add 'obsid' and 'filename' keys to the dictionary
@@ -177,7 +190,7 @@ class ObsArchive:
 
     def _get_file_records(self, obsid=None, start=None, stop=None,
                           revision=None, content=None):
-        self.set_env()
+        self.set_read_env()
         tstart_pad = 10 * 86400
         if content is None:
             content = self.config['content_types']
@@ -521,7 +534,7 @@ class ObsArchive:
                 os.path.relpath(def_ver_dir, chunk_dir_path),
                 obs_ln)
             logger.info("updating archfiles default rev to %d for %d"
-                        % (obsid, default_ver))
+                        % (default_ver, obsid))
             db.execute("""UPDATE archfiles SET isdefault = 1
                           WHERE obsid = %d and revision = %d"""
                        % (obsid, default_ver))
@@ -588,6 +601,7 @@ class ObsArchive:
         logger = self.logger
         archive_dir = config['data_root']
         apstat = self._apstat
+        updated_obsids = []
 
         if (config['data_root'].startswith('/data/aca/archive')
                 and not mica_version.release):
@@ -604,7 +618,7 @@ class ObsArchive:
                 logger.debug(ve)
                 logger.info("Could not determine link versions for %d"
                             % config['obsid'])
-            return
+            return [config['obsid']]
 
         # if no obsid specified, try to retrieve all data
         # since tool last run
@@ -664,6 +678,7 @@ class ObsArchive:
             last_id_fh = open(last_id_file, 'w')
             last_id_fh.write("%d" % obs[config['apstat_id']])
             last_id_fh.close()
+            updated_obsids.append(obs['obsid'])
         if not len(todo):
             logger.info("No new data")
 
@@ -697,6 +712,21 @@ class ObsArchive:
                 raise ValueError(
                     "obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
                     % query_vars)
+            # a query to get the quality from the max science_2 data that
+            # used this aspect_solution.  Ugh.
+            if config['apstat_table'] == 'aspect_1':
+                science_qual = apstat.fetchall(
+                    """select quality from science_2 where science_2_id in (
+                         select science_2_id from science_2_obi where science_1_id in (
+                         select science_1_id from science_1 where aspect_1_id in (
+                         select aspect_1_id from aspect_1
+                         where obsid = {obsid} and obi = {obi}
+                         and revision = {revision})))""".format(query_vars))
+                # if any of the science_2 data associated with this obsid is
+                # now not pending, set the quality to an arbitrary value 'X'
+                # and try to update the obsid
+                if np.any(science_qual['quality'] != 'P'):
+                    current_status['quality'] = 'X'
             if current_status['quality'] != 'P':
                 try:
                     self.get_arch(obs['obsid'], 'default')
@@ -706,3 +736,5 @@ class ObsArchive:
                     logger.debug(ve)
                     continue
                 self.update_link(obs['obsid'])
+            updated_obsids.append(obs['obsid'])
+        return updated_obsids
