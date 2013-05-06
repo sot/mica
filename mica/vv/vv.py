@@ -31,6 +31,16 @@ import matplotlib.pyplot as plt
 plt.rcParams['lines.markeredgewidth'] = 0
 
 mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+DEFAULT_CONFIG = dict(
+    data_root=os.path.join(mica_archive, 'vv'),
+    temp_root=os.path.join(mica_archive, 'tempvv'),
+    shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
+    h5_file=os.path.join(mica_archive, 'vv', 'vv.h5'),
+    h5_table='vv',
+    last_file=os.path.join(mica_archive, 'vv', 'last_id.txt'),
+    save=True,
+    plot='png')
+
 DEFAULT_CONFIG = dict(data_root=os.path.join(mica_archive, 'vv'),
                       temp_root=os.path.join(mica_archive, 'tempvv'),
                       shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
@@ -73,7 +83,8 @@ def file_vv(obi):
     logger.info("removed directory {}".format(obi.tempdir))
     # make any desired link
     obs_ln = os.path.join(obi._config['data_root'], chunk_dir, "%05d" % obsid)
-    obs_ln_last = os.path.join(obi._config['data_root'], chunk_dir, "%05d_last" % obsid)
+    obs_ln_last = os.path.join(
+        obi._config['data_root'], chunk_dir, "%05d_last" % obsid)
     obsdirs = asp_l1_arch.get_obs_dirs(obsid)
     isdefault = 0
     if 'default' in obsdirs:
@@ -83,15 +94,19 @@ def file_vv(obi):
             os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln)
             isdefault = 1
     if 'last' in obsdirs:
-        if ('default' in obsdirs and (os.path.realpath(obsdirs['last'])
-                                     != os.path.realpath(obsdirs['default']))
-            or 'default' not in obsdirs):
-            if os.path.realpath(obsdirs[version]) == os.path.realpath(obsdirs['last']):
+        if ('default' in obsdirs
+                and (os.path.realpath(obsdirs['last'])
+                     != os.path.realpath(obsdirs['default']))
+                or 'default' not in obsdirs):
+            if (os.path.realpath(obsdirs[version])
+                    == os.path.realpath(obsdirs['last'])):
                 if os.path.islink(obs_ln_last):
                     os.unlink(obs_ln_last)
-                os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln_last)
-        if ('default' in obsdirs and (os.path.realpath(obsdirs['last']))
-                                      == os.path.realpath(obsdirs['default'])))
+                os.symlink(os.path.relpath(obs_dir, chunk_dir_path),
+                           obs_ln_last)
+        if ('default' in obsdirs
+            and (os.path.realpath(obsdirs['last'])
+                 == os.path.realpath(obsdirs['default']))):
             if os.path.exists(obs_ln_last):
                 os.unlink(obs_ln_last)
     obi.isdefault = isdefault
@@ -100,7 +115,7 @@ def file_vv(obi):
 
 def get_table(config=None):
     if config is None:
-       config = DEFAULT_CONFIG
+        config = DEFAULT_CONFIG
     h5 = tables.openFile(config['h5_file'], 'a')
     tbl = h5.getNode('/', config['h5_table'])
     return tbl, h5
@@ -284,6 +299,7 @@ class Obi(object):
 
     def _get_default(self):
         return self._isdefault
+
     isdefault = property(_get_default, _set_default)
 
     def _just_slot_data(self):
