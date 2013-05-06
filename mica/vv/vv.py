@@ -596,8 +596,8 @@ class Obi(object):
                         raise ValueError(
                             "differing %s type across aspect intervals" % t)
 
-    def plot_slot(self, slot_num, plotdir=None, save=True, close=True):
-        if plotdir is None:
+    def plot_slot(self, slot_num, plotdir=None, save=False, close=False, singles=False):
+        if plotdir is None and save:
             plotdir = self.tempdir
         y = None
         z = None
@@ -620,7 +620,6 @@ class Obi(object):
         dy0 = np.median(dy)
         dz0 = np.median(dz)
 
-        fig = plt.figure(figsize=(14, 10))
         #fid_plot = np.abs(np.max(y) - np.min(y)) > 1e-6
         ok = qual == 0
         bad = qual != 0
@@ -660,8 +659,13 @@ class Obi(object):
         extent = max_extent * 1.10
         if extent < (xy_range / 2):
             extent = xy_range / 2
-
-        ayz = fig.add_axes([.05, .7, .20, .20], aspect='equal')
+        
+        if singles:
+            fig1 = plt.figure(figsize=(2,2))
+            ayz = plt.subplot(1, 1, 1)
+        else:
+            fig = plt.figure(figsize=(14, 10))
+            ayz = fig.add_axes([.05, .7, .20, .20], aspect='equal')
         axes['yz'] = ayz
         ayz.plot(dy[ok], dz[ok], 'g.')
         ayz.plot(dy[bad], dz[bad], 'r.')
@@ -676,8 +680,21 @@ class Obi(object):
         # use the middle of the range of the data, not the median
         ayz.set_xlim(ymid - extent, ymid + extent)
         ayz.set_ylim(zmid - extent, zmid + extent)
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_yz.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig1)
+                
 
-        ayzf = fig.add_axes([.05, .25, .20, .20], aspect='equal')
+        if singles:
+            fig2 = plt.figure(figsize=(2,2))
+            ayzf = plt.subplot(1, 1, 1)
+        else:
+            ayzf = fig.add_axes([.05, .25, .20, .20], aspect='equal')
         axes['yz_fixed'] = ayzf
         ayzf.plot(dy[ok], dz[ok], 'g.')
         ayzf.plot(dy[bad], dz[bad], 'r.')
@@ -694,8 +711,20 @@ class Obi(object):
         if xy_range is not None:
             ayzf.set_xlim([dy0 - xy_range, dy0 + xy_range])
             ayzf.set_ylim([dz0 - xy_range, dz0 + xy_range])
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_yzf.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig2)
 
-        ay = fig.add_axes([.30, .7, .62, .25])
+        if singles:
+            fig3 = plt.figure(figsize=(7,2.5))
+            ay = plt.subplot(1, 1, 1)
+        else:
+            ay = fig.add_axes([.30, .7, .62, .25])
         axes['dy'] = ay
         ay.plot(plottime[ok], dy[ok], 'g.')
         ay.plot(plottime[bad], dy[bad], 'r.')
@@ -717,8 +746,20 @@ class Obi(object):
             plt.setp(ay2.get_yticklabels(), fontsize=labelfontsize,
                      color='blue')
             ay2.set_ylabel('centroid y angle', color='blue')
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_y.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig3)
 
-        az = fig.add_axes([.30, .4, .62, .25], sharex=ay)
+        if singles:
+            fig4 = plt.figure(figsize=(7,2.5))
+            az = plt.subplot(1, 1, 1)
+        else:
+            az = fig.add_axes([.30, .4, .62, .25], sharex=ay)
         axes['dz'] = az
         az.plot(plottime[ok], dz[ok], 'g.')
         az.plot(plottime[bad], dz[bad], 'r.')
@@ -740,8 +781,20 @@ class Obi(object):
             plt.setp(az2.get_yticklabels(), fontsize=labelfontsize,
                      color='blue')
             az2.set_ylabel('centroid z angle', color='blue')
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_z.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig4)
 
-        am = fig.add_axes([.30, .1, .62, .25], sharex=ay)
+        if singles:
+            fig5 = plt.figure(figsize=(7,2.5))
+            am = plt.subplot(1, 1, 1)
+        else:
+            am = fig.add_axes([.30, .1, .62, .25], sharex=ay)
         axes['mag'] = am
         plt.setp(am.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(am.get_xticklabels(), fontsize=labelfontsize)
@@ -757,16 +810,25 @@ class Obi(object):
         am.set_xlabel('Time(ksec)')
         ay.autoscale(enable=False, axis='x')
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
-        plt.suptitle('Obsid %d Slot %d Residuals' % (
-                self.info()['obsid'], slot_num))
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_m.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig5)
 
-        if save:
-            plotfile = os.path.join(self.tempdir,
-                                    "slot_{}.png".format(slot_num))
-            plt.savefig(plotfile)
-            logger.info("Saved plot {}".format(plotfile))
-        if close:
-            plt.close(fig)
+        if not singles:
+            plt.suptitle('Obsid %d Slot %d Residuals' % (
+                    self.info()['obsid'], slot_num))
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig)
 
         if not fid_plot and not save:
             cenifig = plt.figure(figsize=(12, 10))
