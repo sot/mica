@@ -75,13 +75,13 @@ def file_vv(obi):
     obs_ln = os.path.join(obi._config['data_root'], chunk_dir, "%05d" % obsid)
     obs_ln_last = os.path.join(obi._config['data_root'], chunk_dir, "%05d_last" % obsid)
     obsdirs = asp_l1_arch.get_obs_dirs(obsid)
-    isdefault = False
+    isdefault = 0
     if 'default' in obsdirs:
         if obsdirs[version] == obsdirs['default']:
             if os.path.islink(obs_ln):
                 os.unlink(obs_ln)
             os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln)
-            isdefault = True
+            isdefault = 1
     if 'last' in obsdirs:
         if ('default' in obsdirs and (os.path.realpath(obsdirs['last'])
                                      != os.path.realpath(obsdirs['default']))
@@ -90,7 +90,7 @@ def file_vv(obi):
                 if os.path.islink(obs_ln_last):
                     os.unlink(obs_ln_last)
                 os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln_last)
-        if ('default' in obsdirs and (os.path.realpath(obsdirs['last'))
+        if ('default' in obsdirs and (os.path.realpath(obsdirs['last']))
                                       == os.path.realpath(obsdirs['default'])))
             if os.path.exists(obs_ln_last):
                 os.unlink(obs_ln_last)
