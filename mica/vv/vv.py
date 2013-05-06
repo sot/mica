@@ -50,6 +50,41 @@ DEFAULT_CONFIG = dict(data_root=os.path.join(mica_archive, 'vv'),
                       save=True,
                       plot='png')
 
+def get_vv(obsid, version="default", config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
+    num_version = None
+    if version == 'last' or version == 'default':
+        asp_l1_proc_table = os.path.join(
+            mica_archive, 'asp1', 'processing_asp_l1.db3')
+        asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+        if version == 'default':
+            obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
+                                          where obsid = {} and isdefault = 1
+                                       """.format(obsid))
+            if not len(obs):
+                raise ValueError("Version {} not found for obsid {}".format(
+                    obsid, version))
+            num_version = obs['revision'][0]
+        if version == 'last':
+            obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
+                                          where obsid = {}
+                                       """.format(obsid))
+            if not len(obs):
+                raise ValueError("Version {} not found for obsid {}".format(
+                    obsid, version))
+            num_version = np.max(obs['revision'])
+    else:
+        num_version = version
+    strobs = "%05d_v%02d" % (obsid, num_version)
+    chunk_dir = strobs[0:2]
+    chunk_dir_path = os.path.join(config['data_root'], chunk_dir)
+    obs_dir = os.path.join(chunk_dir_path, strobs)
+    # for now, just return the list of files
+    files = glob(os.path.join(obs_dir, "*"))
+    json_file = glob(os.path.join(obs_dir, "*.json"))[0]
+    return json.loads(open(json_file).read()), files
+
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
