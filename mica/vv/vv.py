@@ -199,6 +199,7 @@ def process(obsid, version='last', config=None):
     if config is None:
         config = DEFAULT_CONFIG
     obi = get_arch_vv(obsid, version)
+    obi.save_plots_and_resid()
     if obi is None:
         return None
     obi.shelve_info()
@@ -308,9 +309,15 @@ class Obi(object):
         self._label_slots()
         self._agg_slot_data()
         self._get_info()
+
+    def save_plots_and_resid(self):
         self._save_info_json()
+        self._save_slot_pkl()
+        self._save_info_pkl()
+        #for slot in self.all_slot_data:
+        #    self.plot_slot(slot, save=True, close=True)
         for slot in self.all_slot_data:
-            self.plot_slot(slot)
+            self.plot_slot(slot, save=True, close=True, singles=True)
 
     def set_dbh(self, dbhandle, slot_table='vv_slots'):
         self.db = dbhandle
@@ -319,12 +326,13 @@ class Obi(object):
     def set_tbl(self, table):
         self.table = table
 
-#    def _save_slot_pkl(self, file='vv_slot.pkl'):
-#        """
-#        save the slot residuals as a pkl
-#        """
-#        pickle.dump(self.slot, open(file, 'w'))
-#
+    def _save_slot_pkl(self, file=None):
+        """
+        save the slot residuals as a pkl
+        """
+        if file is None:
+            file = os.path.join(self.tempdir, 'vv_slot.pkl')
+        pickle.dump(self.all_slot_data, open(file, 'w'))
 
     def _set_default(self, isdefault):
         self._isdefault = isdefault
