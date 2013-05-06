@@ -536,8 +536,8 @@ class Obi(object):
             slot.update(isdefault=self.isdefault)
         # make a recarray
         save_rec = np.rec.fromrecords(
-            [[save['slots'][slot_str][k] for k in self.table.dtype.names]
-             for slot_str in save['slots']],
+            [[save['slots'][slot_str].get(k) for k in self.table.dtype.names]
+             for slot_str in save['slots'] if 'n_pts' in save['slots'][slot_str]],
             dtype=self.table.dtype)
 
         have_obsid_coord = self.table.getWhereList('(obsid == %d)'
