@@ -93,7 +93,7 @@ def file_vv(obi):
                                       == os.path.realpath(obsdirs['default'])))
             if os.path.exists(obs_ln_last):
                 os.unlink(obs_ln_last)
-    obi.set_default(isdefault)
+    obi.isdefault = isdefault
 
 
 
@@ -252,11 +252,12 @@ class Obi(object):
 #        pickle.dump(self.slot, open(file, 'w'))
 #
 
-    def set_default(self, isdefault):
+    def _set_default(self, isdefault):
         self._isdefault = isdefault
 
-    def get_default(self):
+    def _get_default(self):
         return self._isdefault
+    isdefault = property(_get_default, _set_default)
 
     def _just_slot_data(self):
         """
@@ -414,7 +415,7 @@ class Obi(object):
                              for k in self.table.dtype.names
                              if k in save))
             slot.update(dict(mean_aacccdpt=mean_aacccdpt))
-            slot.update(isdefault=self.get_default())
+            slot.update(isdefault=self.isdefault)
         # make a recarray
         save_rec = np.rec.fromrecords(
             [[save['slots'][slot_str][k] for k in self.table.dtype.names]
@@ -427,10 +428,10 @@ class Obi(object):
         # if there are previous records for this obsid
         if len(have_obsid_coord):
             logger.info("obsid %d is in table" % save['obsid'])
+            obsid_rec = self.table.readCoordinates(have_obsid_coord)
             # if the current entry is default, mark other entries as
             # not-default
-            if self.get_default():
-                obsid_rec = self.table.readCoordinates(have_obsid_coord)
+            if self.isdefault:
                 obsid_rec['isdefault'] = 0
                 self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
             # if we already have the revision, update in place
