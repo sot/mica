@@ -496,7 +496,7 @@ class Obi(object):
                     else:
                         cslot[d] = np.concatenate(slotval)
             # only make a top-level slot key if there is some kind of data
-            if len(cslot.keys()):
+            if len(cslot.keys()) and len(cslot['time']):
                 slot_data[slot] = cslot
         self.all_slot_data = slot_data
 
