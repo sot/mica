@@ -21,6 +21,7 @@ from scipy.stats import scoreatpercentile
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
 import tempfile
+import Ska.DBI
 
 import matplotlib
 if __name__ == '__main__':
@@ -115,8 +116,34 @@ def get_arch_vv(obsid, version='last'):
             "Requested version {} not in asp_l1 archive".format(version))
         return None
     l1_dir = asp_l1_dirs[version]
+    # find the obspar that matches the requested aspect_1 products
+    # this is in the aspect processing table
+    asp_l1_proc_table = os.path.join(
+        mica_archive, 'asp1', 'processing_asp_l1.db3')
+    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+    asp_obs = asp_l1_proc.fetchall(
+        "SELECT * FROM aspect_1_proc where obsid = {}".format(
+            obsid))
+    asp_proc = None
+    if version == 'last':
+        asp_proc = asp_obs[asp_obs['aspect_1_id']
+                           == np.max(asp_obs['aspect_1_id'])][0]
+    if version == 'default':
+        asp_proc = asp_obs[asp_obs['isdefault'] == 1][0]
+    if asp_proc is None:
+        asp_proc = asp_obs[asp_obs['revision'] == version][0]
     obspar_dirs = obspar_arch.get_obs_dirs(obsid)
-    obspar_file = glob(os.path.join(obspar_dirs[version],
+    if asp_proc['obspar_version'] not in obspar_dirs:
+        # try to update the obspar archive with the missing version
+        from mica.archive import obsid_archive
+        config = obspar_arch.CONFIG.copy()
+        config.update(dict(obsid=obsid, version=asp_proc['obspar_version']))
+        oa = obsid_archive.ObsArchive(config)
+        oa.logger.setLevel(logging.INFO)
+        oa.logger.addHandler(logging.StreamHandler())
+        oa.update()
+        obspar_dirs = obspar_arch.get_obs_dirs(obsid)
+    obspar_file = glob(os.path.join(obspar_dirs[asp_proc['obspar_version']],
                                     'axaf*par*'))[0]
     return Obi(obspar_file, l1_dir)
 
