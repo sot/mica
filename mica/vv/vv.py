@@ -111,6 +111,38 @@ def file_vv(obi):
                 os.unlink(obs_ln_last)
     obi.isdefault = isdefault
 
+def update(obsids=[], config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
+    asp_l1_proc_table = os.path.join(
+        mica_archive, 'asp1', 'processing_asp_l1.db3')
+    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+    # if an obsid is requested, just do that
+    # there's a little bit of duplication in this block
+    if len(obsids):
+        for obsid in obsids:
+            todo = asp_l1_proc.fetchall(
+                "SELECT * FROM aspect_1_proc where obsid = {}".format(
+                    obsid))
+            for obs in todo:
+                logger.info("running VV for obsid {} run on {}".format(
+                    obs['obsid'], obs['ap_date']))
+                process(obs['obsid'], version=obs['revision'])
+                asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = 1
+                                       where obsid = {} and revision = {}
+                                    """.format(obs['obsid'], obs['revision']))
+    else:
+        # if no obsid specified, try to retrieve all data without vv
+        todo = asp_l1_proc.fetchall(
+            """SELECT * FROM aspect_1_proc
+               where vv_complete != 1 order by aspect_1_id""")
+        for obs in todo:
+            logger.info("running VV for obsid {} run on {}".format(
+                obs['obsid'], obs['ap_date']))
+            process(obs['obsid'], version=obs['revision'])
+            asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = 1
+                                   where obsid = {} and revision = {}
+                                """.format(obs['obsid'], obs['revision']))
 
 
 def get_table(config=None):
