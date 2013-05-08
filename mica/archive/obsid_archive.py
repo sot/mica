@@ -716,7 +716,7 @@ class ObsArchive:
                          select science_1_id from science_1 where aspect_1_id in (
                          select aspect_1_id from aspect_1
                          where obsid = {obsid} and obi = {obi}
-                         and revision = {revision})))""".format(query_vars))
+                         and revision = {revision})))""".format(**query_vars))
                 # if any of the science_2 data associated with this obsid is
                 # now not pending, set the quality to an arbitrary value 'X'
                 # and try to update the obsid
