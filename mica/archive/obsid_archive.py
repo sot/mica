@@ -720,7 +720,12 @@ class ObsArchive:
                 # if any of the science_2 data associated with this obsid is
                 # now not pending, set the quality to an arbitrary value 'X'
                 # and try to update the obsid
-                if np.any(science_qual['quality'] != 'P'):
+                if len(science_qual):
+                    if np.any(science_qual['quality'] != 'P'):
+                        current_status['quality'] = 'X'
+                else:
+                    # if there are no science_2 entries at all for the obsid
+                    # try an update anyway
                     current_status['quality'] = 'X'
             if current_status['quality'] != 'P':
                 try:
