@@ -11,7 +11,7 @@ to the aspect L1 products.
 import os
 import logging
 import obsid_archive
-
+import asp_l1_proc
 
 # these columns are available in the headers of the fetched telemetry
 # for this product (ASP L1) and will be included in the file lookup table
@@ -155,7 +155,8 @@ def main():
     archive = obsid_archive.ObsArchive(config)
     archive.logger.setLevel(logging.INFO)
     archive.logger.addHandler(logging.StreamHandler())
-    archive.update()
+    obsids = archive.update()
+    asp_l1_proc.update(obsids)
 
 if __name__ == '__main__':
     main()
