@@ -83,11 +83,6 @@ def update_cda_table(data_root=None,
     if cda_fetch_url is None:
         cda_fetch_url = CONFIG['cda_fetch_url']
 
-    if (data_root.startswith('/data/aca/archive')
-            and not mica_version.release):
-        raise ValueError(
-            "non-release code attempting to write to official archive")
-
     if not os.path.exists(data_root):
         os.makedirs(data_root)
     table_file = os.path.join(data_root, cda_table)

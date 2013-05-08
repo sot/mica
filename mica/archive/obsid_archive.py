@@ -603,11 +603,6 @@ class ObsArchive:
         apstat = self._apstat
         updated_obsids = []
 
-        if (config['data_root'].startswith('/data/aca/archive')
-                and not mica_version.release):
-            raise ValueError(
-                "non-release code attempting to write to official archive")
-
         last_id_file = os.path.join(archive_dir, 'last_id.txt')
         # if an obsid is requested, just do that
         if 'obsid' in config and config['obsid']:
