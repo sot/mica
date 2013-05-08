@@ -4,9 +4,11 @@ import re
 import pyfits
 import pickle
 import json
+import shelve
 import tables
 import csv
 import gzip
+import shutil
 import logging
 from glob import glob
 import numpy as np
@@ -15,6 +17,11 @@ from Ska.Table import read_table
 from scipy.signal import medfilt as medfilt
 import mica.archive.asp_l1 as asp_l1_arch
 import mica.archive.obspar as obspar_arch
+from scipy.stats import scoreatpercentile
+from Ska.astro import sph_dist
+from Ska.engarchive import fetch
+import tempfile
+import Ska.DBI
 
 import matplotlib
 if __name__ == '__main__':
@@ -23,36 +30,216 @@ import matplotlib.pyplot as plt
 # get rid of the black edges on the plot markers
 plt.rcParams['lines.markeredgewidth'] = 0
 
-config = dict(h5_arch='/data/aca/archive/vv/vv.h5',
-              h5_table='vv',
-              )
+mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+DEFAULT_CONFIG = dict(
+    data_root=os.path.join(mica_archive, 'vv'),
+    temp_root=os.path.join(mica_archive, 'tempvv'),
+    shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
+    h5_file=os.path.join(mica_archive, 'vv', 'vv.h5'),
+    h5_table='vv',
+    last_file=os.path.join(mica_archive, 'vv', 'last_id.txt'),
+    save=True,
+    plot='png')
+
+DEFAULT_CONFIG = dict(data_root=os.path.join(mica_archive, 'vv'),
+                      temp_root=os.path.join(mica_archive, 'tempvv'),
+                      shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
+                      h5_file=os.path.join(mica_archive, 'vv', 'vv.h5'),
+                      h5_table='vv',
+                      last_file=os.path.join(mica_archive, 'vv', 'last_id.txt'),
+                      save=True,
+                      plot='png')
+
+def get_vv(obsid, version="default", config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
+    num_version = None
+    if version == 'last' or version == 'default':
+        asp_l1_proc_table = os.path.join(
+            mica_archive, 'asp1', 'processing_asp_l1.db3')
+        asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+        if version == 'default':
+            obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
+                                          where obsid = {} and isdefault = 1
+                                       """.format(obsid))
+            if not len(obs):
+                raise ValueError("Version {} not found for obsid {}".format(
+                    obsid, version))
+            num_version = obs['revision'][0]
+        if version == 'last':
+            obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
+                                          where obsid = {}
+                                       """.format(obsid))
+            if not len(obs):
+                raise ValueError("Version {} not found for obsid {}".format(
+                    obsid, version))
+            num_version = np.max(obs['revision'])
+    else:
+        num_version = version
+    strobs = "%05d_v%02d" % (obsid, num_version)
+    chunk_dir = strobs[0:2]
+    chunk_dir_path = os.path.join(config['data_root'], chunk_dir)
+    obs_dir = os.path.join(chunk_dir_path, strobs)
+    # for now, just return the list of files
+    files = glob(os.path.join(obs_dir, "*"))
+    json_file = glob(os.path.join(obs_dir, "*.json"))[0]
+    return json.loads(open(json_file).read()), files
+
+
+class NumpyAwareJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, 'tolist'):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 logger = logging.getLogger('V&V')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
+def file_vv(obi):
+    obsid = int(obi.info()['obsid'])
+    version = int(obi.info()['revision'])
+    # set up directory for data
+    strobs = "%05d_v%02d" % (obsid, version)
+    chunk_dir = strobs[0:2]
+    chunk_dir_path = os.path.join(obi._config['data_root'], chunk_dir)
+    obs_dir = os.path.join(chunk_dir_path, strobs)
+    if not os.path.exists(obs_dir):
+        logger.info("making directory %s" % obs_dir)
+        os.makedirs(obs_dir)
+    else:
+        logger.info("obsid dir %s already exists" % obs_dir)
+    for f in glob(os.path.join(obi.tempdir, "*")):
+        os.chmod(f, 0775)
+        shutil.copy(f, obs_dir)
+        os.remove(f)
+    logger.info("moved VV files to {}".format(obs_dir))
+    os.removedirs(obi.tempdir)
+    logger.info("removed directory {}".format(obi.tempdir))
+    # make any desired link
+    obs_ln = os.path.join(obi._config['data_root'], chunk_dir, "%05d" % obsid)
+    obs_ln_last = os.path.join(
+        obi._config['data_root'], chunk_dir, "%05d_last" % obsid)
+    obsdirs = asp_l1_arch.get_obs_dirs(obsid)
+    isdefault = 0
+    if 'default' in obsdirs:
+        if obsdirs[version] == obsdirs['default']:
+            if os.path.islink(obs_ln):
+                os.unlink(obs_ln)
+            os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln)
+            isdefault = 1
+    if 'last' in obsdirs:
+        if ('default' in obsdirs
+                and (os.path.realpath(obsdirs['last'])
+                     != os.path.realpath(obsdirs['default']))
+                or 'default' not in obsdirs):
+            if (os.path.realpath(obsdirs[version])
+                    == os.path.realpath(obsdirs['last'])):
+                if os.path.islink(obs_ln_last):
+                    os.unlink(obs_ln_last)
+                os.symlink(os.path.relpath(obs_dir, chunk_dir_path),
+                           obs_ln_last)
+        if ('default' in obsdirs
+            and (os.path.realpath(obsdirs['last'])
+                 == os.path.realpath(obsdirs['default']))):
+            if os.path.exists(obs_ln_last):
+                os.unlink(obs_ln_last)
+    obi.isdefault = isdefault
 
-def get_table():
-    h5 = tables.openFile(config['h5_arch'], 'a')
+def update(obsids=[], config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
+    asp_l1_proc_table = os.path.join(
+        mica_archive, 'asp1', 'processing_asp_l1.db3')
+    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+    # if an obsid is requested, just do that
+    # there's a little bit of duplication in this block
+    if len(obsids):
+        for obsid in obsids:
+            todo = asp_l1_proc.fetchall(
+                "SELECT * FROM aspect_1_proc where obsid = {}".format(
+                    obsid))
+            for obs in todo:
+                logger.info("running VV for obsid {} run on {}".format(
+                    obs['obsid'], obs['ap_date']))
+                process(obs['obsid'], version=obs['revision'])
+                asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = 1
+                                       where obsid = {} and revision = {}
+                                    """.format(obs['obsid'], obs['revision']))
+    else:
+        # if no obsid specified, try to retrieve all data without vv
+        todo = asp_l1_proc.fetchall(
+            """SELECT * FROM aspect_1_proc
+               where vv_complete != 1 order by aspect_1_id""")
+        for obs in todo:
+            logger.info("running VV for obsid {} run on {}".format(
+                obs['obsid'], obs['ap_date']))
+            process(obs['obsid'], version=obs['revision'])
+            asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = 1
+                                   where obsid = {} and revision = {}
+                                """.format(obs['obsid'], obs['revision']))
+
+
+def get_table(config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
+    h5 = tables.openFile(config['h5_file'], 'a')
     tbl = h5.getNode('/', config['h5_table'])
     return tbl, h5
 
 
-def get_arch_vv(obsid, version='default'):
+def get_arch_vv(obsid, version='last'):
     """
     Get obsid paths from mica.archive and create mica.vv.Obi object
     """
     asp_l1_dirs = asp_l1_arch.get_obs_dirs(obsid)
+    if version not in asp_l1_dirs:
+        logger.error(
+            "Requested version {} not in asp_l1 archive".format(version))
+        return None
     l1_dir = asp_l1_dirs[version]
+    # find the obspar that matches the requested aspect_1 products
+    # this is in the aspect processing table
+    asp_l1_proc_table = os.path.join(
+        mica_archive, 'asp1', 'processing_asp_l1.db3')
+    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+    asp_obs = asp_l1_proc.fetchall(
+        "SELECT * FROM aspect_1_proc where obsid = {}".format(
+            obsid))
+    asp_proc = None
+    if version == 'last':
+        asp_proc = asp_obs[asp_obs['aspect_1_id']
+                           == np.max(asp_obs['aspect_1_id'])][0]
+    if version == 'default':
+        asp_proc = asp_obs[asp_obs['isdefault'] == 1][0]
+    if asp_proc is None:
+        asp_proc = asp_obs[asp_obs['revision'] == version][0]
     obspar_dirs = obspar_arch.get_obs_dirs(obsid)
-    obspar_file = glob(os.path.join(obspar_dirs[version],
+    if asp_proc['obspar_version'] not in obspar_dirs:
+        # try to update the obspar archive with the missing version
+        from mica.archive import obsid_archive
+        config = obspar_arch.CONFIG.copy()
+        config.update(dict(obsid=obsid, version=asp_proc['obspar_version']))
+        oa = obsid_archive.ObsArchive(config)
+        oa.logger.setLevel(logging.INFO)
+        oa.logger.addHandler(logging.StreamHandler())
+        oa.update()
+        obspar_dirs = obspar_arch.get_obs_dirs(obsid)
+    obspar_file = glob(os.path.join(obspar_dirs[asp_proc['obspar_version']],
                                     'axaf*par*'))[0]
     return Obi(obspar_file, l1_dir)
 
 
-def process(obsid, version='default'):
+def process(obsid, version='last', config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
     obi = get_arch_vv(obsid, version)
-    tbl, h5 = get_table()
+    obi.save_plots_and_resid()
+    if obi is None:
+        return None
+    obi.shelve_info()
+    file_vv(obi)
+    tbl, h5 = get_table(config=config)
     obi.set_tbl(tbl)
     obi.slots_to_table()
     tbl.flush()
@@ -98,17 +285,22 @@ def get_obspar(obsparfile):
     return obspar
 
 
-r2a = 206264.81
-d2r = 0.017453293
+R2A = 206264.81
+D2R = 0.017453293
 M0 = 10.32
 C0 = 5263.0
+
+fidDrEncFrac1 = 0.68
+fidDrEncFrac2 = 0.95 
+starDrEncFrac1 = 0.68
+starDrEncFrac2 = 0.95
 
 enc_rad_1 = 0.68
 enc_rad_2 = 0.99
 dyz_big_lim = 0.7
 frac_dyz_lim = 0.05
 
-data_cols = ['qual', 'dy', 'dz', 'mag', 'time', 'yag', 'zag',
+DATA_COLS = ['qual', 'dy', 'dz', 'dr', 'mag', 'time', 'yag', 'zag',
              'ang_y_sm', 'ang_y', 'ang_z_sm', 'ang_z']
 
 save_asol_header = ['ASCDSVER', 'CALDBVER', 'DATE', 'OBI_NUM', 'OBS_ID',
@@ -130,18 +322,39 @@ def frac_bad(data, median, limit):
 
 
 class Obi(object):
-    def __init__(self, obsparfile, obsdir):
+    def __init__(self, obsparfile, obsdir, config=None):
+        if config is None:
+            config = DEFAULT_CONFIG
+        self._info = None
+        self._isdefault = None
+        self._config = config
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
+        if not os.path.exists(config['temp_root']):
+            os.makedirs(config['temp_root'])
+        self.tempdir = tempfile.mkdtemp(dir=config['temp_root'])
+        self._process()
+
+    def _process(self):
         self._find_aspect_intervals()
         self._process_aspect_intervals()
-        self.slot = dict()
         self._concat_slot_data()
         self._check_over_intervals()
+        self._sim_data()
+        self.slot_report = dict()
         self._label_slots()
         self._agg_slot_data()
+        self._get_info()
 
-        #self.plots = [self.plot_slot(slot) for slot in range(0, 8)]
+    def save_plots_and_resid(self):
+        self._save_info_json()
+        self._save_slot_pkl()
+        self._save_info_pkl()
+        #for slot in self.all_slot_data:
+        #    self.plot_slot(slot, save=True, close=True)
+        for slot in self.all_slot_data:
+            self.plot_slot(slot, save=True, close=True, singles=True)
+
     def set_dbh(self, dbhandle, slot_table='vv_slots'):
         self.db = dbhandle
         self.slot_table = slot_table
@@ -149,12 +362,22 @@ class Obi(object):
     def set_tbl(self, table):
         self.table = table
 
-#    def _save_slot_pkl(self, file='vv_slot.pkl'):
-#        """
-#        save the slot residuals as a pkl
-#        """
-#        pickle.dump(self.slot, open(file, 'w'))
-#
+    def _save_slot_pkl(self, file=None):
+        """
+        save the slot residuals as a pkl
+        """
+        if file is None:
+            file = os.path.join(self.tempdir, 'vv_slot.pkl')
+        pickle.dump(self.all_slot_data, open(file, 'w'))
+
+    def _set_default(self, isdefault):
+        self._isdefault = isdefault
+
+    def _get_default(self):
+        return self._isdefault
+
+    isdefault = property(_get_default, _set_default)
+
     def _just_slot_data(self):
         """
         get just the aggregate values for a slot
@@ -170,6 +393,11 @@ class Obi(object):
             slist.append(save)
         return slist
 
+    def info(self):
+        if self._info is None:
+            self._get_info()
+        return self._info
+
     def _aiid_info(self, save_cols=save_asol_header):
         """
         grab some values from the asol header for the top level
@@ -181,39 +409,97 @@ class Obi(object):
             slist.append(save)
         return slist
 
-    def _info(self):
+# this should probably be handled in mica.archive.asp_l1
+    @staticmethod
+    def _asp1_lookup(obsid, obi, revision):
+        import Ska.DBI
+        apstat = Ska.DBI.DBI(dbi='sybase',
+                             server='sqlsao',
+                             database='axafapstat')
+        # take these from the first aspect solution file header
+        aspect_1 = apstat.fetchall("""SELECT * FROM aspect_1
+                                      WHERE obsid = {obsid}
+                                      AND obi = {obi}
+                                      AND revision = {revision}
+                                   """.format(obsid=obsid,
+                                              obi=obi,
+                                              revision=revision))
+        if len(aspect_1) > 1:
+            raise ValueError(
+                "More than one entry found for obsid/obi/rev in aspect_1")
+        if len(aspect_1) == 0:
+            logger.warn("obsid / revision not in axafapstat.aspect_1")
+            return (None, None)
+        return aspect_1[0]['aspect_1_id'], aspect_1[0]['ap_date']
+
+    def _get_info(self):
         """
         get labels for top level
         """
         ai_list = self._aiid_info()
         obsid = ai_list[0]['OBS_ID']
         revision = ai_list[0]['REVISION']
+        obi = ai_list[0]['OBI_NUM']
+        aspect_1_id, ap_date = self._asp1_lookup(obsid, obi, revision)
         for ai in ai_list:
             if ai['OBS_ID'] != obsid:
                 raise ValueError
             if ai['REVISION'] != revision:
                 raise ValueError
-        return {'obsid': int(obsid),
-                'revision': revision,
-                'tstart': self.obspar['tstart'],
-                'tstop': self.obspar['tstop'],
-                'sim_z': self.obspar['sim_z'],
-                'sim_z_offset': self.obspar['sim_z_offset'],
-                'ra_pnt': self.obspar['ra_pnt'],
-                'dec_pnt': self.obspar['dec_pnt'],
-                'roll_pnt': self.obspar['roll_pnt'],
-                'instrument': self.obspar['detnam'],
-                'intervals': ai_list,
-                'slots': self._just_slot_data()}
+        self._info = {'obsid': int(obsid),
+                     'revision': revision,
+                     'tstart': self.obspar['tstart'],
+                     'tstop': self.obspar['tstop'],
+                     'sim_z': self.obspar['sim_z'],
+                     'sim_z_offset': self.obspar['sim_z_offset'],
+                     'ra_pnt': self.obspar['ra_pnt'],
+                     'dec_pnt': self.obspar['dec_pnt'],
+                     'roll_pnt': self.obspar['roll_pnt'],
+                     'instrument': self.obspar['detnam'],
+                     'intervals': ai_list,
+                     'slots': self.slot_report,
+                     'sim': self.sim_report,
+                     'aspect_1_id': aspect_1_id,
+                     'ap_date': str(ap_date)}
+        # we don't care about the DateTimeType for ap_date,
+        # so just cast to a string
 
-    def _save_info_file(self, file='vv_agg.json'):
-        save = self._info()
+
+    def _save_info_json(self, file=None):
+        if file is None:
+            file = os.path.join(self.tempdir, 'vv_report.json')
+        save = self.info()
         jfile = open(file, 'w')
-        jfile.write(json.dumps(save, sort_keys=True, indent=4))
+        jfile.write(json.dumps(save, sort_keys=True, indent=4,
+                               cls=NumpyAwareJSONEncoder))
         jfile.close()
+        logger.info("Saved JSON to {}".format(file))
+
+    def _save_info_pkl(self, file=None):
+        if file is None:
+            file = os.path.join(self.tempdir, 'vv_report.pkl')
+        pfile = open(file, 'w')
+        pickle.dump(self.info(), pfile)
+        pfile.close()
+
+    def shelve_info(self, file=None):
+        if self.info()['aspect_1_id'] is None:
+            logger.warn("Shelving not implemented for obsids without aspect_1_ids")
+            return
+        if file is None:
+            file = os.path.join(self._config['data_root'],
+                                self._config['shelf_file'])
+        s = shelve.open(file)
+        s["%s_%s" % (self.info()['obsid'], self.info()['revision'])] \
+            = self.info()
+        s.close()
+        logger.info("Saved to shelve file {}".format(file))
 
     def slots_to_db(self):
-        save = self._info()
+        if self.info()['aspect_1_id'] is None:
+            logger.warn("Database save not implemented for obsids without aspect_1_ids")
+            return
+        save = self.info()
         in_db = self.db.fetchall("""select * from %s where
                                     obsid = %d and revision = %d"""
                                  % (self.slot_table,
@@ -228,18 +514,32 @@ class Obi(object):
             slot.update(revision=save['revision'])
             self.db.insert(slot, self.slot_table)
 
+    @staticmethod
+    def _get_ccd_temp(tstart, tstop):
+        temps = fetch.MSID('AACCCDPT', tstart, tstop)
+        if not len(temps.vals):
+            return -9e7
+        else:
+            return np.mean(temps.vals) - 273.15
+
     def slots_to_table(self):
-        save = self._info()
+        if self.info()['aspect_1_id'] is None:
+            logger.warn("Table save not implemented for obsids without aspect_1_ids")
+            return
+        save = self.info()
+        mean_aacccdpt = self._get_ccd_temp(save['tstart'], save['tstop'])
         # add obsid and revision to the slot dict
-        for slot in save['slots']:
+        for slot_str in save['slots']:
+            slot = save['slots'][slot_str]
             slot.update(dict((k, save[k])
                              for k in self.table.dtype.names
                              if k in save))
-            slot.update(most_recent=0)
+            slot.update(dict(mean_aacccdpt=mean_aacccdpt))
+            slot.update(isdefault=self.isdefault)
         # make a recarray
         save_rec = np.rec.fromrecords(
-            [[slot[k] for k in self.table.dtype.names]
-             for slot in save['slots']],
+            [[save['slots'][slot_str].get(k) for k in self.table.dtype.names]
+             for slot_str in save['slots'] if 'n_pts' in save['slots'][slot_str]],
             dtype=self.table.dtype)
 
         have_obsid_coord = self.table.getWhereList('(obsid == %d)'
@@ -247,11 +547,13 @@ class Obi(object):
                                                    sort=True)
         # if there are previous records for this obsid
         if len(have_obsid_coord):
-            # mark all records for the obsid as old (or not most_recent)
             logger.info("obsid %d is in table" % save['obsid'])
             obsid_rec = self.table.readCoordinates(have_obsid_coord)
-            obsid_rec['most_recent'] = 0
-            self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
+            # if the current entry is default, mark other entries as
+            # not-default
+            if self.isdefault:
+                obsid_rec['isdefault'] = 0
+                self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
             # if we already have the revision, update in place
             if np.any(obsid_rec['revision'] == save['revision']):
                 rev_coord = self.table.getWhereList(
@@ -264,18 +566,7 @@ class Obi(object):
                 logger.info("updating obsid %d rev %d in place"
                        % (save['obsid'], save['revision']))
                 self.table.modifyCoordinates(rev_coord, save_rec)
-            # and retag the max revision with most_recent = 1
-            max_rev = max(np.max(obsid_rec['revision']), save['revision'])
-            max_rev_coord = self.table.getWhereList(
-                        '(obsid == %d) & (revision == %d)'
-                        % (save['obsid'], max_rev))
-            logger.info("tagging obsid %d rev %d as most recent"
-                   % (save['obsid'], max_rev))
-            max_rev_rec = self.table.readCoordinates(max_rev_coord)
-            max_rev_rec['most_recent'] = 1
-            self.table.modifyCoordinates(max_rev_coord, max_rev_rec)
         else:
-            save_rec['most_recent'] = 1
             self.table.append(save_rec)
         self.table.flush()
 
@@ -307,6 +598,30 @@ class Obi(object):
                     for file in asol_files:
                         self.aiids.append(self._aiid_from_asol(file, max_out))
 
+
+    def _sim_data(self):
+        ai_0 = self.aspect_intervals[0]
+        sim_keys = ai_0.sim.keys()
+        all_sim = dict()
+        for d in sim_keys:
+            if len(ai_0.sim[d]):
+                if isinstance(ai_0.sim[d], np.ma.MaskedArray):
+                    all_sim[d] = ma.concatenate([
+                        ai.sim[d] for ai in self.aspect_intervals])
+                else:
+                    all_sim[d] = np.concatenate([
+                        ai.sim[d] for ai in self.aspect_intervals])
+        self.sim_data = all_sim
+        self.sim_report = dict(max_medf_dy=np.max(all_sim['medf_dy']),
+                               min_medf_dy=np.min(all_sim['medf_dy']),
+                               max_medf_dz=np.max(all_sim['medf_dz']),
+                               min_medf_dz=np.min(all_sim['medf_dz']),
+                               max_d_dy=np.max(all_sim['d_dy']),
+                               max_d_dz=np.max(all_sim['d_dz']))
+
+
+
+
     def _process_aspect_intervals(self):
         self.aspect_intervals = []
         for aiid in self.aiids:
@@ -314,10 +629,10 @@ class Obi(object):
                 AspectInterval(aiid['id'], aiid['dir']))
 
     def _concat_slot_data(self):
-        all_slot = self.slot
+        slot_data = dict()
         for slot in range(0, 8):
             cslot = dict()
-            for d in data_cols:
+            for d in DATA_COLS:
                 slotval = [i.deltas[slot][d] for i in self.aspect_intervals
                            if slot in i.deltas]
                 if len(slotval):
@@ -325,53 +640,74 @@ class Obi(object):
                         cslot[d] = ma.concatenate(slotval)
                     else:
                         cslot[d] = np.concatenate(slotval)
-            all_slot[slot] = cslot
+            # only make a top-level slot key if there is some kind of data
+            if len(cslot.keys()) and len(cslot['time']):
+                slot_data[slot] = cslot
+        self.all_slot_data = slot_data
+
 
     def _agg_slot_data(self):
-        all_slot = self.slot
+        all_slot = self.all_slot_data
         for slot_id in all_slot:
-            slot = all_slot[slot_id]
-            slot['slot'] = slot_id
-            if not ('dy' in slot and 'dz' in slot and 'mag' in slot):
+            slot_data = all_slot[slot_id]
+            slot_report = self.slot_report[str(slot_id)]
+            if not ('dy' in slot_data and 'dz' in slot_data and 'mag' in slot_data):
                 continue
             # these should only be calculated over good data, right?
-            qual = dict(dy=slot['qual'],
-                        dz=slot['qual'])
-            for axdir in ['dy', 'dz', 'mag']:
+            qual = dict(dy=slot_data['qual'],
+                        dz=slot_data['qual'],
+                        dr=slot_data['qual'])
+            for axdir in ['dr', 'dy', 'dz', 'mag']:
                 if axdir == 'mag':
-                    data = slot['mag']
+                    data = slot_data['mag']
                 else:
-                    data = ma.array(slot[axdir])
+                    data = ma.array(slot_data[axdir])
                     data[qual[axdir] != 0] = ma.masked
+                slot_report['%s_n_samples' % axdir] = len(data)
+                slot_report['%s_bad_samples' % axdir] = len(np.flatnonzero(data.mask))
                 smean = ma.mean(data)
-                slot['%s_mean' % axdir] = smean
+                slot_report['%s_mean' % axdir] = smean
                 med = ma.median(data)
-                slot['%s_med' % axdir] = med
+                slot_report['%s_med' % axdir] = med
                 srms = ma.sqrt(ma.mean((data - med) ** 2))
-                slot['%s_rms' % axdir] = srms
+                slot_report['%s_rms' % axdir] = srms
                 bad_frac = frac_bad(data, med, dyz_big_lim)
-                slot['frac_%s_big' % axdir] = bad_frac
+                slot_report['frac_%s_big' % axdir] = bad_frac
 
-            slot['frac_%s_big' % axdir] = bad_frac
-            slot['rad_off'] = np.sqrt(slot['dy_med'] ** 2
-                                      + slot['dz_med'] ** 2)
-            slot['n_pts'] = len(slot['dy'])
-            if slot['type'] == 'fid':
-                slot['mean_y'] = np.mean(slot['ang_y_sm'])
-                slot['mean_z'] = np.mean(slot['ang_z_sm'])
+            slot_report['frac_%s_big' % axdir] = bad_frac
+            slot_report['rad_off'] = np.sqrt(slot_report['dy_med'] ** 2
+                                      + slot_report['dz_med'] ** 2)
+            slot_report['n_pts'] = len(slot_data['dy'])
+            if slot_report['type'] == 'fid':
+                slot_report['mean_y'] = np.mean(slot_data['ang_y_sm'])
+                slot_report['mean_z'] = np.mean(slot_data['ang_z_sm'])
+                slot_report['enc_rad1'] = scoreatpercentile(slot_data['dr'],
+                                                            fidDrEncFrac1 * 100)
+                slot_report['enc_rad2'] = scoreatpercentile(slot_data['dr'],
+                                                            fidDrEncFrac2 * 100)
             else:
-                slot['mean_y'] = np.mean(slot['ang_y'])
-                slot['mean_z'] = np.mean(slot['ang_z'])
+                slot_report['mean_y'] = np.mean(slot_data['ang_y'])
+                slot_report['mean_z'] = np.mean(slot_data['ang_z'])
+                slot_report['enc_rad1'] = scoreatpercentile(slot_data['dr'],
+                                                            starDrEncFrac1 * 100)
+                slot_report['enc_rad2'] = scoreatpercentile(slot_data['dr'],
+                                                            starDrEncFrac2 * 100)
+                
+
 
     def _label_slots(self):
         ai = self.aspect_intervals[0]
         self.guide_list = list(getattr(ai, 'gsprop').slot)
         for gs in getattr(ai, 'gsprop'):
-            self.slot[gs.slot]['type'] = gs.type
+            self.slot_report[str(gs.slot)] = dict(
+                slot=gs.slot,
+                type='GUIDE')
         if getattr(ai, 'fidprop') is not None:
             self.fid_list = list(getattr(ai, 'fidprop').slot)
             for fl in getattr(ai, 'fidprop'):
-                self.slot[fl.slot]['type'] = 'FID'
+                self.slot_report[str(fl.slot)] = dict(
+                    slot=fl.slot,
+                    type='FID')
         else:
             self.fid_list = []
 
@@ -406,36 +742,37 @@ class Obi(object):
                         raise ValueError(
                             "differing %s type across aspect intervals" % t)
 
-    def plot_slot(self, slot):
+    def plot_slot(self, slot_num, plotdir=None, save=False, close=False, singles=False):
+        if plotdir is None and save:
+            plotdir = self.tempdir
         y = None
         z = None
         xy_range = None
-        fid_plot = slot in self.fid_list
-        if 'time' not in self.slot[slot]:
-            logger.info("Nothing to plot for slot %d" % slot)
+        fid_plot = (slot_num in self.fid_list)
+        if slot_num not in self.all_slot_data:
+            logger.info("Nothing to plot for slot %d" % slot_num)
             return None, None
         (qual, dy, dz, mag, time) = [
-            self.slot[slot][x] for x in
+            self.all_slot_data[slot_num][x] for x in
             ['qual', 'dy', 'dz', 'mag', 'time']]
         if not fid_plot:
             (yag, zag, ang_y_sm, ang_z_sm) = [
-                self.slot[slot][x] for x in
+                self.all_slot_data[slot_num][x] for x in
                 ['yag', 'zag', 'ang_y_sm', 'ang_z_sm']]
-        ai_starts = [interv.deltas[slot]['time'][0]
+        ai_starts = [interv.deltas[slot_num]['time'][0]
                      for interv in self.aspect_intervals]
         time0 = time[0]
         timepad = 0.05
         dy0 = np.median(dy)
         dz0 = np.median(dz)
 
-        fig = plt.figure(figsize=(14, 10))
         #fid_plot = np.abs(np.max(y) - np.min(y)) > 1e-6
         ok = qual == 0
         bad = qual != 0
 
         if fid_plot:
-            y = self.slot[slot]['ang_y_sm']
-            z = self.slot[slot]['ang_z_sm']
+            y = self.all_slot_data[slot_num]['ang_y_sm']
+            z = self.all_slot_data[slot_num]['ang_z_sm']
 
         if fid_plot and not xy_range:
             xy_range = 0.1
@@ -458,51 +795,89 @@ class Obi(object):
         labelfontsize = 10
         axes = dict()
 
-        ayz = fig.add_axes([.05, .7, .20, .20])
-
+        max_y = np.max(dy[ok])
+        min_y = np.min(dy[ok])
+        max_z = np.max(dz[ok])
+        min_z = np.min(dz[ok])
+        ymid = (max_y + min_y) / 2
+        zmid = (max_z + min_z) / 2
+        max_extent = np.max([max_y - min_y, max_z - min_z]) / 2
+        extent = max_extent * 1.10
+        if extent < (xy_range / 2):
+            extent = xy_range / 2
+        
+        if singles:
+            fig1 = plt.figure(figsize=(2,2))
+            ayz = plt.subplot(1, 1, 1)
+        else:
+            fig = plt.figure(figsize=(14, 10))
+            ayz = fig.add_axes([.05, .7, .20, .20], aspect='equal')
         axes['yz'] = ayz
         ayz.plot(dy[ok], dz[ok], 'g.')
         ayz.plot(dy[bad], dz[bad], 'r.')
-        ayz.set_aspect('equal')
         ayz.grid()
         plt.setp(ayz.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayz.get_xticklabels(), fontsize=labelfontsize)
+        plt.setp(ayz.get_xticklabels(), rotation=30)
+        plt.setp(ayz.get_xticklabels(), horizontalalignment='right')
         ayz.set_xlabel('Y offset (arcsec)')
         ayz.set_ylabel('Z offset (arcsec)')
-        # make the all-range plot have equal dimensions
-        xlims = ayz.get_xlim()
-        ylims = ayz.get_ylim()
-        xrange = xlims[-1] - xlims[0]
-        yrange = ylims[-1] - ylims[0]
-        x0 = np.mean(xlims)
-        y0 = np.mean(ylims)
-        extent = max(xrange, yrange) / 2.0
-        ayz.set_xlim(x0 - extent, x0 + extent)
-        ayz.set_ylim(y0 - extent, y0 + extent)
+        # set limits to include all of the "ok" data
+        # use the middle of the range of the data, not the median
+        ayz.set_xlim(ymid - extent, ymid + extent)
+        ayz.set_ylim(zmid - extent, zmid + extent)
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_yz.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig1)
+                
 
-        ayzf = fig.add_axes([.05, .25, .20, .20])
+        if singles:
+            fig2 = plt.figure(figsize=(2,2))
+            ayzf = plt.subplot(1, 1, 1)
+        else:
+            ayzf = fig.add_axes([.05, .25, .20, .20], aspect='equal')
         axes['yz_fixed'] = ayzf
         ayzf.plot(dy[ok], dz[ok], 'g.')
         ayzf.plot(dy[bad], dz[bad], 'r.')
-        ayzf.set_aspect('equal')
         ayzf.grid()
         plt.setp(ayzf.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayzf.get_xticklabels(), fontsize=labelfontsize)
+        plt.setp(ayzf.get_xticklabels(), rotation=30)
+        plt.setp(ayzf.get_xticklabels(), horizontalalignment='right')
         circle = plt.Circle((dy0, dz0), radius=circ_rad, fill=False)
         ayzf.add_patch(circle)
         ayzf.set_xlabel('Y offset (arcsec)')
         ayzf.set_ylabel('Z offset (arcsec)')
+        # set limits to fixed range
         if xy_range is not None:
             ayzf.set_xlim([dy0 - xy_range, dy0 + xy_range])
             ayzf.set_ylim([dz0 - xy_range, dz0 + xy_range])
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_yzf.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig2)
 
-        ay = fig.add_axes([.30, .7, .62, .25])
+        if singles:
+            fig3 = plt.figure(figsize=(7,2.5))
+            ay = plt.subplot(1, 1, 1)
+        else:
+            ay = fig.add_axes([.30, .7, .62, .25])
         axes['dy'] = ay
-        ay.plot(plottime[ok], dy[ok], color='green', marker='.', linestyle='')
+        ay.plot(plottime[ok], dy[ok], 'g.')
         ay.plot(plottime[bad], dy[bad], 'r.')
         plt.setp(ay.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ay.get_xticklabels(), visible=False)
         ay.set_ylabel('Y offsets(dy) (arcsec)')
+        ay.set_ylim(ymid - extent, ymid + extent)
         for t in ai_starts:
             s_t = (t - time0) / 1000.
             ay.plot([s_t, s_t], ay.get_ylim(), color='blue',
@@ -517,14 +892,27 @@ class Obi(object):
             plt.setp(ay2.get_yticklabels(), fontsize=labelfontsize,
                      color='blue')
             ay2.set_ylabel('centroid y angle', color='blue')
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_y.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig3)
 
-        az = fig.add_axes([.30, .4, .62, .25], sharex=ay)
+        if singles:
+            fig4 = plt.figure(figsize=(7,2.5))
+            az = plt.subplot(1, 1, 1)
+        else:
+            az = fig.add_axes([.30, .4, .62, .25], sharex=ay)
         axes['dz'] = az
-        az.plot(plottime[ok], dz[ok], color='green', marker='.')
+        az.plot(plottime[ok], dz[ok], 'g.')
         az.plot(plottime[bad], dz[bad], 'r.')
         plt.setp(az.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(az.get_xticklabels(), visible=False)
         az.set_ylabel('Z offsets(dz) (arcsec)')
+        az.set_ylim(zmid - extent, zmid + extent)
         for t in ai_starts:
             s_t = (t - time0) / 1000.
             az.plot([s_t, s_t], az.get_ylim(), color='blue',
@@ -539,8 +927,20 @@ class Obi(object):
             plt.setp(az2.get_yticklabels(), fontsize=labelfontsize,
                      color='blue')
             az2.set_ylabel('centroid z angle', color='blue')
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_z.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig4)
 
-        am = fig.add_axes([.30, .1, .62, .25], sharex=ay)
+        if singles:
+            fig5 = plt.figure(figsize=(7,2.5))
+            am = plt.subplot(1, 1, 1)
+        else:
+            am = fig.add_axes([.30, .1, .62, .25], sharex=ay)
         axes['mag'] = am
         plt.setp(am.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(am.get_xticklabels(), fontsize=labelfontsize)
@@ -556,8 +956,27 @@ class Obi(object):
         am.set_xlabel('Time(ksec)')
         ay.autoscale(enable=False, axis='x')
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
+        if singles:
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}_m.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig5)
 
-        if not fid_plot:
+        if not singles:
+            plt.suptitle('Obsid %d Slot %d Residuals' % (
+                    self.info()['obsid'], slot_num))
+            if save:
+                plotfile = os.path.join(self.tempdir,
+                                        "slot_{}.png".format(slot_num))
+                plt.savefig(plotfile)
+                logger.info("Saved plot {}".format(plotfile))
+            if close:
+                plt.close(fig)
+
+        if not fid_plot and not save:
             cenifig = plt.figure(figsize=(12, 10))
             ceniy = cenifig.add_subplot(2, 1, 1, sharex=ay)
             ceniy.plot(plottime[ok], yag[ok], 'b.')
@@ -569,36 +988,32 @@ class Obi(object):
             ceniz.plot(plottime[ok], ang_z_sm[ok] * 3600, 'g.')
             ceniz.set_ylabel('Centroid Z (arcsec)')
             ceniz.set_xlabel('Time(ksec)')
-            plt.title('Slot %d Centroids (aspect sol in blue)' % slot)
+            plt.suptitle('Slot %d Centroids (aspect sol in blue)' % slot_num)
 
-        return fig, axes
-
+AI_DEFAULT_CONF = {'obc': None,
+                   'alg': 8,
+                   'noacal': None}
 
 class AspectInterval(object):
     def __init__(self, aiid, aspdir, opt=None):
         self.aiid = aiid
         self.aspdir = aspdir
-        self.opt = opt if opt else {'obc': None, 'alg': 8, 'noacal': None}
+        self.opt = opt if opt else AI_DEFAULT_CONF
         self._read_in_data()
-        self.deltas = {}
+        self._read_in_log()
         self._calc_guide_deltas()
         if self.fidprop is not None:
             self._calc_fid_deltas()
-            self.sim = {}
             self._calc_sim_offset()
 
     def _get_prop(self, propname, propstring):
+        "Read gsprops or fidprops file"
         datadir = self.aspdir
         logger.info('Reading %s stars' % propname)
         gsfile = glob(os.path.join(
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
-        prop_all = read_table(gsfile)
-        good = prop_all['id_status'] == 'GOOD      '
-        if len(np.flatnonzero(good)) == 0:
-            return (None, None, None)
-            #raise ValueError("No good %s stars" % propname)
-        prop = prop_all[good]
-
+        # don't filter for only good stars at this point
+        prop = read_table(gsfile)
         info = []
         hdulist = pyfits.open(os.path.join(datadir, gsfile))
         header = hdulist[1].header
@@ -611,7 +1026,6 @@ class AspectInterval(object):
             if 'type' in gs.dtype.names:
                 saveprop['type'] = gs['type']
             info.append(saveprop)
-
         return (prop, info, header)
 
     def _read_in_data(self):
@@ -663,17 +1077,26 @@ class AspectInterval(object):
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         self.integ_time = self.cenhdulist[1].header['INTGTIME']
 
+        logger.info('Reading gyro data')
+        self.gdat = read_table(glob(
+                os.path.join(datadir, "%s_gdat1.fits*" % aiid))[0])
+        
+
     def _read_in_log(self):
         aiid = self.aiid
         datadir = self.aspdir
-        opt = self.opt
-        id_end = re.match('\w+(\D\d+N\d{3})', aiid).group(1)
-        logfile = glob(os.path.join(datadir, "*%s.log*" % id_end))[0]
         try:
-            lines = gzip.open(logfile).readlines()
-        except IOError:
-            lines = open(logfile).readlines()
-        self.log = lines
+            id_end = re.match('\w+(\D\d+N\d{3})', aiid)
+            logfiles = glob(os.path.join(datadir, "*%s.log*" % id_end.group(1)))
+            logfile = logfiles[0]
+            try:
+                lines = gzip.open(logfile).readlines()
+            except IOError:
+                lines = open(logfile).readlines()
+            self.log = lines
+        except:
+            logger.info("Did not find/read log file")
+
 
     def _calc_fid_deltas(self):
         asol = self.asol
@@ -685,12 +1108,6 @@ class AspectInterval(object):
         fidpr_info = self.fidpr_info
         integ_time = self.integ_time
 
-        #mm2a = 20.0
-        #dy0 = np.median(asol['dy']) * mm2a
-        #dz0 = np.median(asol['dz']) * mm2a
-        #dt0 = np.median(asol['dtheta']) * 3600
-        #dr = 2.0
-
         logger.info('Calculating fid solution quality')
 
         lsi0_stt = [h_fidpr['LSI0STT%d' % x] for x in [1, 2, 3]]
@@ -699,72 +1116,49 @@ class AspectInterval(object):
 
         M = np.dot(aca_misalign, fts_misalign)
 
-        #fid_dy_rms = np.zeros(len(fidprop))
-        #fid_dz_rms = np.zeros(len(fidprop))
-        #fid_dy_med = np.zeros(len(fidprop))
-        #fid_dz_med = np.zeros(len(fidprop))
-
         rot_x = np.zeros([3, 3])
         rot_x[0, 0] = 1
         for fid in fidprop:
             logger.info("Processing fid %s in slot %d " % (
                 fid['id_string'], fid['slot']))
-            #slot = fid['slot']
             p_lsi = fid['p_lsi']
+            p_stf = p_lsi + lsi0_stt + stt0_stf
+
             ok = cen['slot'] == fid['slot']
             ceni = cen[ok]
-            #n_ceni = len(ceni)
-            #dyag = np.zeros(n_ceni)
-            #dzag = np.zeros(n_ceni)
-            #y = ceni['ang_y_sm'] * 3600
-            #z = ceni['ang_z_sm'] * 3600
             asol_cen_dy = np.interp(ceni['time'], asol['time'], asol['dy'])
             asol_cen_dz = np.interp(ceni['time'], asol['time'], asol['dz'])
             asol_cen_dtheta = (np.interp(ceni['time'],
                                          asol['time'], asol['dtheta'])
-                               * d2r)
-            dy = np.zeros_like(ceni['time'])
-            dz = np.zeros_like(ceni['time'])
-            yag = np.zeros_like(ceni['time'])
-            zag = np.zeros_like(ceni['time'])
-            #dtheta[0] = 1.8455539e-05
-            #dy[0] = 0.46696303
-            #dz[0] = 0.68532118
-            p_stf = p_lsi + lsi0_stt + stt0_stf
-            for j in range(0, len(ceni)):
-                s_th = np.sin(asol_cen_dtheta[j])
-                c_th = np.cos(asol_cen_dtheta[j])
-                rot_x[1, 1] = c_th
-                rot_x[2, 1] = s_th
-                rot_x[1, 2] = -s_th
-                rot_x[2, 2] = c_th
-
-                p_fc = np.dot(rot_x.transpose(), p_stf)
-                p_fc = p_fc + [0., asol_cen_dy[j], asol_cen_dz[j]]
-                d_fc = p_fc
-                d_fc[0] = d_fc[0] - rrc0_fc_x
-                d_fc = -d_fc
-                d_aca = np.dot(M, d_fc)
-                yag[j] = np.arctan2(d_aca[1], d_aca[0]) * r2a
-                zag[j] = np.arctan2(d_aca[2], d_aca[0]) * r2a
-                dy[j] = ceni[j]['ang_y_sm'] * 3600 - yag[j]
-                dz[j] = ceni[j]['ang_z_sm'] * 3600 - zag[j]
-
-            qual = ceni['status'].copy()
+                               * D2R)
+ 
+            rot_x = np.zeros([len(ceni['time']), 3, 3])
+            s_th = np.sin(asol_cen_dtheta)
+            c_th = np.cos(asol_cen_dtheta)
+            rot_x[:, 0, 0] = 1.0
+            rot_x[:, 1, 1] = c_th
+            rot_x[:, 2, 1] = s_th
+            rot_x[:, 1, 2] = -s_th
+            rot_x[:, 2, 2] = c_th
+            p_fc = np.dot(rot_x.transpose(0, 2, 1), p_stf)
+            p_fc[:, 1] = p_fc[:, 1] + asol_cen_dy
+            p_fc[:, 2] = p_fc[:, 2] + asol_cen_dz
+            d_fc = p_fc
+            d_fc[:, 0] = d_fc[:, 0] - rrc0_fc_x
+            d_fc = -d_fc
+            d_aca = np.dot(d_fc, M.transpose())
+            yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
+            zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
+            dy = ceni['ang_y_sm'] * 3600 - yag
+            dz = ceni['ang_z_sm'] * 3600 - zag
+            dr = sph_dist(yag / 3600,
+                          zag / 3600,
+                          ceni['ang_y_sm'],
+                          ceni['ang_z_sm']) * 3600
             slot_fidpr = [pr for pr in fidpr_info if pr['slot'] == fid['slot']]
             if not slot_fidpr:
                 raise ValueError("No FIDPR info found for slot %d"
                                  % fid['slot'])
-            for pr in slot_fidpr:
-                if pr['id_status'] != 'GOOD      ':
-                    bad = ((ceni['time'] >= pr['tstart'])
-                           & (ceni['time'] <= pr['tstop']))
-                    n_bad = len(np.flatnonzero(bad))
-                    if n_bad:
-                        qual[bad] = 1
-                    else:
-                        err = "Bad fidpr interval not contained in ceni range"
-                        raise ValueError(err)
             mag = ma.zeros(len(ceni['counts']))
             mag[:] = ma.masked
             good_mag = medfilt(M0 - 2.5
@@ -775,10 +1169,11 @@ class AspectInterval(object):
             self.deltas[fid['slot']] = dict(time=ceni['time'],
                                             dy=dy,
                                             dz=dz,
+                                            dr=dr,
                                             yag=yag,
                                             zag=zag,
                                             mag=mag,
-                                            qual=qual,
+                                            qual=ceni['status'],
                                             ang_y_sm=ceni['ang_y_sm'],
                                             ang_z_sm=ceni['ang_z_sm'],
                                             ang_y=ceni['ang_y'],
@@ -787,7 +1182,7 @@ class AspectInterval(object):
 
     def _calc_guide_deltas(self):
         from mica.quaternion import Quat
-
+        self.deltas = {}
         asol = self.asol
         cen = self.cen
         gsprop = self.gsprop
@@ -813,10 +1208,14 @@ class AspectInterval(object):
             #inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)
             d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
                            star['pos_eci']).transpose()
-            yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * r2a
-            zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * r2a
+            yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
+            zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
             dy = ceni['ang_y'] * 3600 - yag
             dz = ceni['ang_z'] * 3600 - zag
+            dr = sph_dist(yag / 3600,
+                          zag / 3600,
+                          ceni['ang_y'],
+                          ceni['ang_z']) * 3600
             mag = ma.zeros(len(ceni['counts']))
             mag[:] = ma.masked
             good_mag = medfilt(M0 - 2.5
@@ -824,31 +1223,19 @@ class AspectInterval(object):
                                           / integ_time
                                           / C0), 3)
             mag[ceni['counts'] > 10] = good_mag
-            qual = ceni['status'].copy()
             slot_gspr = [pr for pr in self.gspr_info
                           if pr['slot'] == star['slot']]
             if not slot_gspr:
                 err = "No GSPR info found for slot %d" % star['slot']
                 raise ValueError(err)
-            for pr in slot_gspr:
-                if pr['id_status'] == 'GOOD      ':
-                    continue
-                bad = ((ceni['time'] >= pr['tstart'])
-                       & (ceni['time'] <= pr['tstop']))
-                n_bad = len(np.flatnonzero(bad))
-                if n_bad:
-                    qual[bad] = 1
-                else:
-                    err = "Bad gspr interval not contained in ceni range"
-                    raise ValueError(err)
-
             self.deltas[star['slot']]= dict(dy=dy,
                                             dz=dz,
+                                            dr=dr,
                                             yag=yag,
                                             zag=zag,
                                             time=ceni['time'],
                                             mag=mag,
-                                            qual=qual,
+                                            qual=ceni['status'],
                                             ang_y_sm=ceni['ang_y_sm'],
                                             ang_z_sm=ceni['ang_z_sm'],
                                             ang_y=ceni['ang_y'],
@@ -857,19 +1244,18 @@ class AspectInterval(object):
 
     def _calc_sim_offset(self):
         mm2a = 20.0
-        max_d_dyz = 0.2
-        max_drift = 3.0
-        max_abs_sim = 10
-        abs_sim_dy0 = 8.0
-        abs_sim_dz0 = 8.0
+        abs_sim_dy0 = 10.0
+        abs_sim_dz0 = 10.0
         n_med = 21
         medf_dy = medfilt(self.asol.dy * mm2a, kernel_size=n_med)
         medf_dz = medfilt(self.asol.dz * mm2a, kernel_size=n_med)
         d_dy = abs(medf_dy[1:] - medf_dy[:-1])
         d_dz = abs(medf_dz[1:] - medf_dz[:-1])
-        self.sim['time'] = self.asol['time'][:-1]
-        self.sim['d_dy'] = d_dy
-        self.sim['d_dz'] = d_dz
+        self.sim = dict(time=self.asol['time'][:-1],
+                        medf_dy=medf_dy,
+                        medf_dz=medf_dz,
+                        d_dy=d_dy,
+                        d_dz=d_dz)
 
 
 

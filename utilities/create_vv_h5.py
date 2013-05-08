@@ -1,30 +1,27 @@
 import tables
+import numpy as np
 
-vv_desc = dict(
-obsid=tables.IntCol(pos=0),
-revision=tables.IntCol(pos=1),
-most_recent=tables.IntCol(pos=2),
-slot=tables.IntCol(pos=3),
-type=tables.StringCol(10,pos=4),
-n_pts=tables.IntCol(pos=5),
-rad_off=tables.FloatCol(pos=6),
-frac_dy_big=tables.FloatCol(pos=7),
-frac_dz_big=tables.FloatCol(pos=8),
-frac_mag_big=tables.FloatCol(pos=9),
-mean_y =tables.FloatCol(pos=10),
-mean_z =tables.FloatCol(pos=11),
-dy_mean=tables.FloatCol(pos=12),
-dy_med =tables.FloatCol(pos=13),
-dy_rms =tables.FloatCol(pos=14),
-dz_mean=tables.FloatCol(pos=15),
-dz_med =tables.FloatCol(pos=16),
-dz_rms =tables.FloatCol(pos=17),
-mag_mean=tables.FloatCol(pos=18),
-mag_med =tables.FloatCol(pos=19),
-mag_rms =tables.FloatCol(pos=20),
-)
+VV_DTYPE = np.dtype(
+    [('obsid', '<i4'),
+     ('revision', '<i4'),
+     ('isdefault', '<i4'),
+     ('aspect_1_id', '<i4'),
+     ('ap_date', '|S21'),
+     ('tstart', '<f8'), ('tstop', '<f8'),
+     ('sim_z', '<f8'), ('sim_z_offset', '<f8'), ('instrument', '|S10'),
+     ('ra_pnt', '<f8'), ('dec_pnt', '<f8'), ('roll_pnt', '<f8'),
+     ('slot', '<i4'), ('type', '|S10'),
+     ('n_pts', '<i4'), ('rad_off', '<f8'),
+     ('frac_dy_big', '<f8'), ('frac_dz_big', '<f8'), ('frac_mag_big', '<f8'),
+     ('mean_y', '<f8'), ('mean_z', '<f8'),
+     ('dy_mean', '<f8'), ('dy_med', '<f8'), ('dy_rms', '<f8'),
+     ('dz_mean', '<f8'), ('dz_med', '<f8'), ('dz_rms', '<f8'),
+     ('dr_mean', '<f8'), ('dr_med', '<f8'), ('dr_rms', '<f8'),
+     ('mag_mean', '<f8'), ('mag_med', '<f8'), ('mag_rms', '<f8'),
+     ('mean_aacccdpt', '<f8')])
 
-h5f = tables.openFile('/data/aca/archive/vv/vv.h5', 'a')
-tbl = h5f.createTable('/', 'vv', vv_desc)
-tbl.cols.obsid.createIndex()
+vv_desc, byteorder = tables.descr_from_dtype(VV_DTYPE)
+filters = tables.Filters(complevel=5, complib='zlib')
+h5f = tables.openFile('vv.h5', 'a')
+tbl = h5f.createTable('/', 'vv', vv_desc, filters=filters)
 h5f.close()
