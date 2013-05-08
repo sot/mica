@@ -123,7 +123,8 @@ def file_vv(obi):
     obsdirs = asp_l1_arch.get_obs_dirs(obsid)
     isdefault = 0
     if 'default' in obsdirs:
-        if obsdirs[version] == obsdirs['default']:
+        if (os.path.realpath(obsdirs[version])
+                == os.path.realpath(obsdirs['default'])):
             if os.path.islink(obs_ln):
                 os.unlink(obs_ln)
             os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln)
