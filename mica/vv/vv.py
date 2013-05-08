@@ -340,6 +340,7 @@ class Obi(object):
         self._process_aspect_intervals()
         self._concat_slot_data()
         self._check_over_intervals()
+        self._sim_data()
         self.slot_report = dict()
         self._label_slots()
         self._agg_slot_data()
@@ -457,6 +458,7 @@ class Obi(object):
                      'instrument': self.obspar['detnam'],
                      'intervals': ai_list,
                      'slots': self.slot_report,
+                     'sim': self.sim_report,
                      'aspect_1_id': aspect_1_id,
                      'ap_date': str(ap_date)}
         # we don't care about the DateTimeType for ap_date,
@@ -596,6 +598,30 @@ class Obi(object):
                     for file in asol_files:
                         self.aiids.append(self._aiid_from_asol(file, max_out))
 
+
+    def _sim_data(self):
+        ai_0 = self.aspect_intervals[0]
+        sim_keys = ai_0.sim.keys()
+        all_sim = dict()
+        for d in sim_keys:
+            if len(ai_0.sim[d]):
+                if isinstance(ai_0.sim[d], np.ma.MaskedArray):
+                    all_sim[d] = ma.concatenate([
+                        ai.sim[d] for ai in self.aspect_intervals])
+                else:
+                    all_sim[d] = np.concatenate([
+                        ai.sim[d] for ai in self.aspect_intervals])
+        self.sim_data = all_sim
+        self.sim_report = dict(max_medf_dy=np.max(all_sim['medf_dy']),
+                               min_medf_dy=np.min(all_sim['medf_dy']),
+                               max_medf_dz=np.max(all_sim['medf_dz']),
+                               min_medf_dz=np.min(all_sim['medf_dz']),
+                               max_d_dy=np.max(all_sim['d_dy']),
+                               max_d_dz=np.max(all_sim['d_dz']))
+
+
+
+
     def _process_aspect_intervals(self):
         self.aspect_intervals = []
         for aiid in self.aiids:
@@ -618,6 +644,7 @@ class Obi(object):
             if len(cslot.keys()) and len(cslot['time']):
                 slot_data[slot] = cslot
         self.all_slot_data = slot_data
+
 
     def _agg_slot_data(self):
         all_slot = self.all_slot_data
