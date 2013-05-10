@@ -106,7 +106,8 @@ def update(config=None):
         db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
         db.execute(db_init_cmds)
         # make a touch file with a time before starchecks
-        Ska.Shell.bash("touch -t 199801010000 %s" % (config['touch_file']))
+        Ska.Shell.bash("touch -t 199801010000 %s" % (config['touch_file']),
+                       env={'MAILCHECK': -1})
     else:
         db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
 
@@ -114,7 +115,8 @@ def update(config=None):
         "find %s" % config['mp_top_level']
         + "/[12]???/[A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9]/ofls?/ "
         + " -maxdepth 1 -wholename '*/ofls?/starcheck.txt' "
-        + "-cnewer %s" % config['touch_file'])
+        + "-cnewer %s" % config['touch_file'],
+        env={'MAILCHECK': -1})
 
     starchecks_with_times = [dict(file=st, mtime=os.path.getmtime(st))
                              for st in starchecks]
@@ -142,7 +144,8 @@ def update(config=None):
         for (obs, obs_idx) in izip(starcheck, count(0)):
             ingest_obs(obs, obs_idx, sc_id, st, db, existing=existing)
         logger.info("Done with %s; updating touch file" % st)
-        Ska.Shell.bash("touch -r %s %s" % (st, config['touch_file']))
+        Ska.Shell.bash("touch -r %s %s" % (st, config['touch_file']),
+                       env={'MAILCHECK': -1})
 
 
 def main():
