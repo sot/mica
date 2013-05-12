@@ -249,6 +249,15 @@ def get_warnings(obs_text):
                              warning=form3.group(2)))
     return warn
 
+
+def fix_obs(obs):
+    # Fix broken starcheck.txt manually
+    # obsid 11866 has non-ascii characters in the starcheck.txt file
+    # (and python complains if I copy them here for reference)
+    if obs['obsid'] == 11866:
+        obs['target_id'] = 'cl0422-5009'
+
+
 def get_cat(obs_text):
     obsmatch = re.match("^OBSID:\s(\d+).*", obs_text)
     if not obsmatch:
@@ -261,6 +270,7 @@ def get_cat(obs_text):
     obs.update(get_starcat_header(obs_text))
     # the whole catalog should be broken up into
     # the obs/manvrs/catalog/warnings keys
+    fix_obs(obs)
     return dict(
         obsid=obs['obsid'],
         obs=obs,
