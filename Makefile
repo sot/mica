@@ -10,7 +10,8 @@ SHARE = scripts/update_aca_l0.py scripts/update_asp_l1.py scripts/update_obspar.
 DATA = task_schedule.cfg \
 	mica/archive/obspar_def.sql mica/archive/archfiles_asp_l1_def.sql \
 	mica/archive/archfiles_aca_l0_def.sql \
-	mica/archive/processing_asp_l1_def.sql
+	mica/archive/processing_asp_l1_def.sql \
+	mica/starcheck/starcheck.sql
 
 
 install:
