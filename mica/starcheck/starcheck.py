@@ -1,9 +1,6 @@
 import os
-import sys
 import re
-import subprocess
 import Ska.Shell
-import json
 import Ska.DBI
 from itertools import izip, count
 import logging
@@ -55,11 +52,11 @@ def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
             'starcheck_manvr')
     for star in obs['catalog']:
         star_d = dict(
-                sc_id=sc_id,
-                obsid=obs['obsid'],
-                obs_idx=obs_idx,
-                mp_starcat_time=obs['obs']['mp_starcat_time'],
-                **star)
+            sc_id=sc_id,
+            obsid=obs['obsid'],
+            obs_idx=obs_idx,
+            mp_starcat_time=obs['obs']['mp_starcat_time'],
+            **star)
         logger.debug("inserting %s idx of catalog" % star['idx'])
         db.insert(star_d, 'starcheck_catalog')
     logger.debug("inserting %d warnings" % len(obs['warnings']))
@@ -116,7 +113,6 @@ def get_starcheck_catalog(obsid, mp_dir=None,
     return obs, cat, manvr
 
 
-
 def get_options():
     parser = argparse.ArgumentParser(
         description="Update starcheck database")
@@ -141,7 +137,7 @@ def update(config=None):
     if config['dbi'] != 'sqlite':
         raise ValueError("Only sqlite DBI implemented")
     if (not os.path.exists(config['server'])
-        or os.stat(config['server']).st_size == 0):
+            or os.stat(config['server']).st_size == 0):
         if not os.path.exists(os.path.dirname(config['server'])):
             os.makedirs(os.path.dirname(config['server']))
         db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', config['sql_def'])
