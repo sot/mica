@@ -9,6 +9,7 @@ from itertools import izip, count
 import logging
 import argparse
 from operator import itemgetter
+import numpy as np
 from mica.starcheck.starcheck_parser import read_starcheck
 
 logger = logging.getLogger('starcheck ingest')
@@ -71,6 +72,48 @@ def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
         db.insert(warn_d, 'starcheck_warnings')
     db.commit()
 
+
+def get_starcheck_catalog(obsid, mp_dir=None,
+                          config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
+    sc_dbi = config['dbi']
+    sc_server = config['server']
+    dbh = Ska.DBI.DBI(dbi=sc_dbi, server=sc_server)
+    if mp_dir is None:
+        # in this mode, just get last NPNT interval
+        # not clear about what obi we'll get, but..
+        aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase',
+                             user='aca_read')
+        cmd_state = aca_db.fetchone(
+            "select max(datestart) as datestart from cmd_states "
+            "where obsid = %d and pcad_mode = 'NPNT'"
+            % obsid)
+        if cmd_state['datestart'] is None:
+            # just the most recent starcheck if not in cmd_states
+            obs = dbh.fetchall("""select * from starcheck_obs
+                                  where obsid = %d""" % obsid)
+            sc_id = np.max(obs['sc_id'])
+            mp_dir = dbh.fetchone("select dir from starcheck_id "
+                                  "where id = %d" % sc_id)['dir']
+        else:
+            timeline = aca_db.fetchone(
+                "select * from timeline_loads where datestart in "
+                "(select max(datestart) from timeline_loads "
+                "where datestart <= '%s')" % cmd_state['datestart'])
+            mp_dir = timeline['mp_dir']
+
+    sc_id = dbh.fetchone("select id from starcheck_id "
+                         "where dir = '%s'" % mp_dir)['id']
+    obs = dbh.fetchone("select * from starcheck_obs "
+                       "where sc_id = %d and obsid = %d" % (sc_id, obsid))
+    cat = dbh.fetchall("""select * from starcheck_catalog
+                      where sc_id = %d and obsid = %d
+                      order by idx""" % (sc_id, obsid))
+    manvr = dbh.fetchall("select * from starcheck_manvr "
+                         "where sc_id = %d and obsid = %d"
+                         % (sc_id, obsid))
+    return obs, cat, manvr
 
 
 
