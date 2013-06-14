@@ -302,6 +302,60 @@ def queue_ai(ais, skip_slot=None):
 #            + '-a "INTERVAL_STOP=%(istop)f" ' % cmd \
 #            + '-a obiroot=%(obiroot)s 2>&1 >> %(log)s' % cmd
 
+def mock_cai_file(opt):
+    aiprops_files = glob(os.path.join(opt.dir, "asp05/*aipr*"))
+    from astropy.io import fits
+    obs_records = []
+    colnames = ['obsid', 'pcad_mode', 'aspect_mode',
+                'start_time', 'stop_time']
+    for ai_file in aiprops_files:
+        tbl = fits.open(ai_file)[1].data
+        for row in tbl[tbl['obsid'] == opt.obsid]:
+            obs_records.append([row[s] for s in colnames])
+
+    import numpy as np
+    ai_rec = np.rec.fromrecords(obs_records, names=colnames)
+    acq = np.flatnonzero(ai_rec['aspect_mode'] == 'ACQUISITION')
+    gui = np.flatnonzero(ai_rec['aspect_mode'] == 'GUIDE')
+    if len(acq) and len(gui):
+        kalman_mask = ((np.arange(len(ai_rec)) > acq)
+                       & (np.arange(len(ai_rec)) > gui)
+                       & (ai_rec['pcad_mode'] == 'NPNT')
+                       & (ai_rec['aspect_mode'] == 'KALMAN'))
+        kalman = ai_rec[kalman_mask]
+    if not len(kalman):
+        raise ValueError("no kalman intervals in aiprops")
+    kalman_intervals = [dict((col, kalman[0][col]) for col in colnames)]
+    from itertools import izip, count
+    if len(kalman) > 1:
+        for k, idx in izip(kalman[1:], count(1)):
+            if k['start_time'] == kalman[idx - 1]['stop_time']:
+                kalman_intervals[-1].update(dict(stop_time=k['stop_time']))
+            else:
+                kalman_intervals.append(k)
+
+
+    obspar_files = glob(os.path.join(opt.dir, "obspar/*.par*"))
+    # just quit if there are multiple obspars
+    if len(obspar_files) > 1:
+        raise ValueError("Multiple obspars; unsure how to proceed.")
+    obspar = get_obspar(obspar_files[0])
+#    cai_text = "blah"
+    cai_text = ('''obs_id,r,h,%(obs_id)s,,,""
+obi_num,r,h,%(obi_num)d,,,""
+start_time,r,h,%(tstart)f,,,""
+stop_time,r,h,%(tstop)f,,,""
+ascdsver,r,h,%(ascdsver)s,,,""
+num_cai,r,h,1,,,""
+istart_0,r,h,%(tstart)f,,,""
+istop_0,r,h,%(tstop)f,,,""
+''' % obspar)
+    cai_file = os.path.join(opt.dir, "asp05", "pcadf%05d_000N%03d_cai0a.par"
+                            % (int(obspar['obs_id']), obspar['revision']))
+    fh = open(cai_file, 'w')
+    fh.write(cai_text)
+    fh.close()
+
 
 def main(opt):
     job_dir = opt.jobdir
@@ -322,6 +376,18 @@ def main(opt):
             if opt.version is not None:
                 arc5.sendline("version=%s" % opt.version)
             arc5.sendline("get %s" % query)
+            gotfiles = glob(os.path.join(proddir, "*"))
+            if not len(gotfiles):
+                os.rmdir(proddir)
+
+    caiprops_files = glob(os.path.join(opt.dir, "asp05",
+                                       "pcad*cai0a.par*"))
+    if not len(caiprops_files):
+        if os.path.exists(os.path.join(opt.dir, "asp05")):
+            mock_cai_file(opt)
+        else:
+            raise ValueError
+
 
     # check files
     for filetype in ['infiles', 'outfiles']:
@@ -336,19 +402,21 @@ def main(opt):
 
     # constant aspect interval files
     obi = {}
-    caiprops_files = glob(os.path.join(opt.dir, "asp05",
-                                       "pcad*cai0a*"))
-    for cai_file in caiprops_files:
-        cai = get_par(cai_file, cai_override)
-        if not cai['obi_num'] in obi:
-            obi[cai['obi_num']] = {}
-        interval = 0
-        while ("istart_%d" % interval in cai
-               and "istop_%d" % interval in cai):
-            obi[cai['obi_num']][interval] = \
-                {'istart': cai['istart_%d' % interval],
-                 'istop':  cai['istop_%d' % interval]}
-            interval += 1
+    if len(caiprops_files):
+        for cai_file in caiprops_files:
+            cai = get_par(cai_file, cai_override)
+            if not cai['obi_num'] in obi:
+                obi[cai['obi_num']] = {}
+            interval = 0
+            while ("istart_%d" % interval in cai
+                   and "istop_%d" % interval in cai):
+                obi[cai['obi_num']][interval] = \
+                    {'istart': cai['istart_%d' % interval],
+                     'istop':  cai['istop_%d' % interval]}
+                interval += 1
+
+
+    
 
     ai_cmds = []
     for obi_num in obi:
