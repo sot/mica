@@ -27,8 +27,8 @@ def get_options():
     parser.add_option("--archive",
                       type='int',
                       help="obsid to fetch from archive and process")
-    #parser.add_option("--version",
-    #                  help="version of products )
+    parser.add_option("--version",
+                      help="version of products")
     #parser.add_option("--release")
     #parser.add_option("--clean",
     #                  action='store_true')
@@ -315,6 +315,8 @@ def main(opt):
             #arc5.echo = 1
             arc5.sendline("cd %s" % os.path.abspath(proddir))
             arc5.sendline("obsid=%d" % int(obsid))
+            if opt.version is not None:
+                arc5.sendline("version=%s" % opt.version)
             arc5.sendline("get %s" % query)
 
     # check files
