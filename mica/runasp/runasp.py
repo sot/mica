@@ -36,6 +36,8 @@ def get_options():
                       default="1",
                       type="int",
                       help="integer revision label for output")
+    parser.add_option("--label",
+                      help="output processing dir toplevel name")
     parser.add_option("--skip-slot",
                       type='int',
                       action='append',
@@ -128,7 +130,7 @@ def get_obspar(obsparfile):
     return obspar
 
 
-def dir_setup(dir, istart):
+def dir_setup(dir, istart, label=None):
     """
     Makes
 
@@ -140,9 +142,11 @@ def dir_setup(dir, istart):
     The input and output directories have trailing integer revision numbers
     that are incremented in successive processing attempts.
     """
-
-    workdir = os.path.join(dir,
-                           'ASP_L1_STD_%09d' % istart)
+    if label is None:
+        workdir = os.path.join(dir,
+                               'ASP_L1_STD_%09d' % istart)
+    else:
+        workdir = os.path.join(dir, label)
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     rev = 1
@@ -365,7 +369,8 @@ def main(opt):
             root = "f%09d" % istart
             # directory setup
             workdir, indir, outdir = dir_setup(opt.dir,
-                                               int(istart))
+                                               int(istart),
+                                               label=opt.label)
 
             # if skipping the slot by chucking the telem
             telem_skip_slot = []
