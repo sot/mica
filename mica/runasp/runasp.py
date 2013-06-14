@@ -194,9 +194,9 @@ def link_files(dir, indir, outdir, istart, istop, obiroot, skip_slot=None):
                         if aca_file_slot in skip_slot:
                             #print "skipping slot file on %s" % mfile
                             continue
-                obsparmatch = re.match('.*obs0a\.par', mfile)
+                obsparmatch = re.match('.*obs0a\.par(\.gz)?', mfile)
                 if obsparmatch:
-                    obimatch = re.match('.*axaf%s_obs0a\.par' % obiroot, mfile)
+                    obimatch = re.match('.*axaf%s_obs0a\.par(\.gz)?' % obiroot, mfile)
                     if not obimatch:
                         #print "skipping obspar for different obi"
                         continue
@@ -215,10 +215,10 @@ def make_list_files(dir, indir, outdir, root):
     outlists = glob(os.path.join(outdir, "*.lis"))
     [os.unlink(x) for x in outlists]
 
-    for listend, listglob in (('sim.lis', 'sim*coor0a*fits'),
-                              ('pcad.lis', 'pcad*eng0*fits'),
-                              ('acis.list', 'acis*eng0*fits'),
-                              ('obc.list', 'obc*eng0*fits')):
+    for listend, listglob in (('sim.lis', 'sim*coor0a*fits*'),
+                              ('pcad.lis', 'pcad*eng0*fits*'),
+                              ('acis.lis', 'acis*eng0*fits*'),
+                              ('obc.lis', 'obc*eng0*fits*')):
         lfile = open(os.path.join(indir, "%(root)s_%(listend)s"
                                   % dict(root=root,
                                          listend=listend)), 'w')
@@ -229,7 +229,7 @@ def make_list_files(dir, indir, outdir, root):
     lfile = open(os.path.join(indir, "%(root)s_tel.lis"
                               % dict(root=root)), 'w')
     for slot in [3, 4, 5, 6, 7, 0, 1, 2]:
-        sglob = sorted(glob(os.path.join(indir, 'aca*_%d_*0.fits' % slot)))
+        sglob = sorted(glob(os.path.join(indir, 'aca*_%d_*0.fits*' % slot)))
         telem_lines = '\n'.join([os.path.basename(x) for x in sglob])
         lfile.write(telem_lines)
         lfile.write("\n")
@@ -237,7 +237,7 @@ def make_list_files(dir, indir, outdir, root):
     # pcad adat in outdir if present
     lfile = open(os.path.join(outdir, "%(root)s_dat.lis"
                               % dict(root=root)), 'w')
-    sglob = sorted(glob(os.path.join(indir, 'pcad*adat*fits')))
+    sglob = sorted(glob(os.path.join(indir, 'pcad*adat*fits*')))
     lfile.write('\n'.join([os.path.basename(x) for x in sglob]))
     lfile.close()
 
@@ -357,7 +357,7 @@ def main(opt):
         for ofile in obspar_files:
             obspar = get_obspar(ofile)
             if obspar['obi_num'] == obi_num:
-                obsmatch = re.search('axaf(.+)_obs0a.par', ofile)
+                obsmatch = re.search('axaf(.+)_obs0a\.par', ofile)
                 obiroot = obsmatch.group(1)
         if not obiroot:
             raise ValueError("no obspar for obi %d" % obi_num)
