@@ -9,13 +9,11 @@ import string
 import random
 import csv
 import gzip
+import shutil
 
 import Ska.arc5gl
-from Ska.Shell import bash
+from Ska.Shell import getenv, bash, bash_shell, tcsh_shell, ShellError
 import Ska.Table
-
-job_dir = os.path.abspath("./jobs")
-
 
 def get_options():
     from optparse import OptionParser
@@ -50,9 +48,6 @@ def get_options():
     parser.add_option("--dir",
                       default=".",
                       help="directory for telem fetching")
-    parser.add_option("--jobdir",
-                      default=job_dir,
-                      help="directory for job queue json files")
     opt, args = parser.parse_args()
     return opt, args
 
@@ -280,27 +275,53 @@ def get_range_ai(ai_cmds, proc_range):
         return [cut_ai]
 
 
-def queue_ai(ais, skip_slot=None):
-    """
-    Write JSON dictionaries for each job out to a directory.
-    """
-    if not os.path.exists(job_dir):
-        os.makedirs(job_dir)
-    for ai in ais:
-        # make a random string for a job
-        id = ''.join(random.choice(string.ascii_letters) for x in range(6))
-        job_id = "%s_%d.job" % (id, int(ai['istart']))
-        f = open(os.path.join(job_dir, job_id), 'w')
-        f.write(json.dumps(ai, sort_keys=True, indent=4))
-        f.close()
+def cut_stars(ai):
+    starfiles = glob(os.path.join(ai['outdir'],
+                                  "*stars.txt"))
+    shutil.copy(starfiles[0], starfiles[0] + ".orig")
+    starlines = open(starfiles[0]).read().split("\n")
+    for slot in ai['skip_slot']:
+        starlines = [i for i in starlines
+                     if not re.match("^\s+{}\s+1.*".format(slot), i)]
+    newlist = open(starfiles[0], "w")
+    newlist.write("\n".join(starlines))
+    newlist.close()
 
-#def make_pipe_cmds(ais, skip_slot=None):
-#    for cmd in ais:
-#        print 'flt_run_pipe -i %(indir)s -o %(outdir)s ' % cmd \
-#            + '-r %(root)s -t %(pipe_ped)s ' % cmd \
-#            + '-a "INTERVAL_START=%(istart)f" ' % cmd \
-#            + '-a "INTERVAL_STOP=%(istop)f" ' % cmd \
-#            + '-a obiroot=%(obiroot)s 2>&1 >> %(log)s' % cmd
+def run_ai(ais):
+    ascds_env = getenv('source /home/ascds/.ascrc -r release', shell='tcsh')
+    ocat_env = getenv(
+        'source /proj/sot/ska/data/aspect_authorization/set_ascds_ocat_vars.csh',
+        shell='tcsh')
+    for var in ['ASCDS_OCAT_UNAME', 'ASCDS_OCAT_SERVER', 'ASCDS_OCAT_PWORD']:
+        ascds_env[var] = ocat_env[var]
+    for ai in ais:
+        logfile = os.path.join(ai['outdir'],
+                               "{}_pipelog.txt".format(ai['root']))
+        log = open(logfile, 'w')
+        pipe_cmd = 'flt_run_pipe -r {root} -i {indir} -o {outdir} \
+-t {pipe_ped} \
+-a "INTERVAL_START"={istart} \
+-a "INTERVAL_STOP"={istop} \
+-a obiroot={obiroot} \
+-a revision=1 '.format(**ai)
+        if 'skip_slot' in ai:
+            try:
+                tcsh_shell(pipe_cmd + " -S check_star_data",
+                           env=ascds_env,
+                           logfile=log)
+            except ShellError as sherr:
+                # if shell error, just check to see if get_star_data completed successfully
+                loglines = open(logfile).read()
+                if not re.search("get_star_data completed successfully", loglines):
+                    raise ShellError(sherr)
+            cut_stars(ai)
+            tcsh_shell(pipe_cmd + " -s check_star_data",
+                       env=ascds_env,
+                       logfile=log)
+        else:
+            tcsh_shell(pipe_cmd,
+                       env=ascds_env,
+                       logfile=log)
 
 def mock_cai_file(opt):
     aiprops_files = glob(os.path.join(opt.dir, "asp05/*aipr*"))
@@ -358,7 +379,6 @@ istop_0,r,h,%(tstop)f,,,""
 
 
 def main(opt):
-    job_dir = opt.jobdir
     # get files
     if (opt.obsid or opt.archive):
         arc5 = Ska.arc5gl.Arc5gl()
@@ -379,6 +399,7 @@ def main(opt):
             gotfiles = glob(os.path.join(proddir, "*"))
             if not len(gotfiles):
                 os.rmdir(proddir)
+        del arc5
 
     caiprops_files = glob(os.path.join(opt.dir, "asp05",
                                        "pcad*cai0a.par*"))
@@ -399,6 +420,11 @@ def main(opt):
             for mfile in match:
                 if re.match(".*\.gz", mfile):
                     bash("gunzip -f %s" % os.path.abspath(mfile))
+
+    # reset this to get unzipped names
+    caiprops_files = glob(os.path.join(opt.dir, "asp05",
+                                       "pcad*cai0a.par*"))
+
 
     # constant aspect interval files
     obi = {}
@@ -472,7 +498,7 @@ def main(opt):
             ai_cmds.append(cmd)
 
     range_ais = get_range_ai(ai_cmds, opt.range)
-    queue_ai(range_ais)
+    run_ai(range_ais)
 
 if __name__ == '__main__':
     opt, args = get_options()
