@@ -1,19 +1,16 @@
 #!/usr/bin/env python
-
 import os
 import re
 from glob import glob
 import pyfits
-import json
-import string
-import random
 import csv
 import gzip
 import shutil
 
 import Ska.arc5gl
-from Ska.Shell import getenv, bash, bash_shell, tcsh_shell, ShellError
+from Ska.Shell import getenv, bash, tcsh_shell, ShellError
 import Ska.Table
+
 
 def get_options():
     from optparse import OptionParser
@@ -180,7 +177,7 @@ def link_files(dir, indir, outdir, istart, istop, obiroot, skip_slot=None):
                 if fitsmatch:
                     header = pyfits.getheader(mfile)
                     if ((istart >= header['tstop'])
-                        or (istop <= header['tstart'])):
+                            or (istop <= header['tstart'])):
                         #print "skipping file out of timerange %s" % mfile
                         continue
                     aca0 = re.search('aca.*_(\d)_img0', mfile)
@@ -217,7 +214,7 @@ def make_list_files(dir, indir, outdir, root):
         lfile = open(os.path.join(indir, "%(root)s_%(listend)s"
                                   % dict(root=root,
                                          listend=listend)), 'w')
-        sglob = sorted(glob(os.path.join(indir, listglob)))        
+        sglob = sorted(glob(os.path.join(indir, listglob)))
         lfile.write("\n".join([os.path.basename(x) for x in sglob]))
         lfile.close()
     # aca0
@@ -287,6 +284,7 @@ def cut_stars(ai):
     newlist.write("\n".join(starlines))
     newlist.close()
 
+
 def run_ai(ais):
     ascds_env = getenv('source /home/ascds/.ascrc -r release', shell='tcsh')
     ocat_env = getenv(
@@ -323,6 +321,7 @@ def run_ai(ais):
                        env=ascds_env,
                        logfile=log)
 
+
 def mock_cai_file(opt):
     aiprops_files = glob(os.path.join(opt.dir, "asp05/*aipr*"))
     from astropy.io import fits
@@ -354,8 +353,6 @@ def mock_cai_file(opt):
                 kalman_intervals[-1].update(dict(stop_time=k['stop_time']))
             else:
                 kalman_intervals.append(k)
-
-
     obspar_files = glob(os.path.join(opt.dir, "obspar/*.par*"))
     # just quit if there are multiple obspars
     if len(obspar_files) > 1:
@@ -409,7 +406,6 @@ def main(opt):
         else:
             raise ValueError
 
-
     # check files
     for filetype in ['infiles', 'outfiles']:
         for fileglob in pipe_config[filetype]:
@@ -425,7 +421,6 @@ def main(opt):
     caiprops_files = glob(os.path.join(opt.dir, "asp05",
                                        "pcad*cai0a.par*"))
 
-
     # constant aspect interval files
     obi = {}
     if len(caiprops_files):
@@ -440,9 +435,6 @@ def main(opt):
                     {'istart': cai['istart_%d' % interval],
                      'istop':  cai['istop_%d' % interval]}
                 interval += 1
-
-
-    
 
     ai_cmds = []
     for obi_num in obi:
