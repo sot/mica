@@ -43,15 +43,6 @@ DEFAULT_CONFIG = dict(
     save=True,
     plot='png')
 
-DEFAULT_CONFIG = dict(data_root=os.path.join(mica_archive, 'vv'),
-                      temp_root=os.path.join(mica_archive, 'tempvv'),
-                      shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
-                      h5_file=os.path.join(mica_archive, 'vv', 'vv.h5'),
-                      h5_table='vv',
-                      last_file=os.path.join(mica_archive, 'vv', 'last_id.txt'),
-                      save=True,
-                      plot='png')
-
 def get_vv(obsid, version="default", config=None):
     if config is None:
         config = DEFAULT_CONFIG
