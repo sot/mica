@@ -35,6 +35,7 @@ DEFAULT_CONFIG = dict(
     data_root=os.path.join(mica_archive, 'vv'),
     temp_root=os.path.join(mica_archive, 'tempvv'),
     shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
+    known_bad_obsids=[1283, 5542, 722, 721],
     h5_file=os.path.join(mica_archive, 'vv', 'vv.h5'),
     h5_table='vv',
     last_file=os.path.join(mica_archive, 'vv', 'last_id.txt'),
@@ -173,6 +174,8 @@ def update(obsids=[], config=None):
             """SELECT * FROM aspect_1_proc
                where vv_complete != 1 order by aspect_1_id""")
         for obs in todo:
+            if obs['obsid'] in config['known_bad_obsids']:
+                continue
             logger.info("running VV for obsid {} run on {}".format(
                 obs['obsid'], obs['ap_date']))
             process(obs['obsid'], version=obs['revision'])
