@@ -811,7 +811,7 @@ class Obi(object):
             extent = xy_range / 2
         
         if singles:
-            fig1 = plt.figure(figsize=(2,2))
+            fig1 = plt.figure(figsize=(3,3))
             ayz = plt.subplot(1, 1, 1)
         else:
             fig = plt.figure(figsize=(14, 10))
@@ -830,7 +830,9 @@ class Obi(object):
         # use the middle of the range of the data, not the median
         ayz.set_xlim(ymid - extent, ymid + extent)
         ayz.set_ylim(zmid - extent, zmid + extent)
+        plt.draw()
         if singles:
+            plt.tight_layout()
             if save:
                 plotfile = os.path.join(self.tempdir,
                                         "slot_{}_yz.png".format(slot_num))
@@ -841,7 +843,7 @@ class Obi(object):
                 
 
         if singles:
-            fig2 = plt.figure(figsize=(2,2))
+            fig2 = plt.figure(figsize=(3,3))
             ayzf = plt.subplot(1, 1, 1)
         else:
             ayzf = fig.add_axes([.05, .25, .20, .20], aspect='equal')
@@ -861,7 +863,9 @@ class Obi(object):
         if xy_range is not None:
             ayzf.set_xlim([dy0 - xy_range, dy0 + xy_range])
             ayzf.set_ylim([dz0 - xy_range, dz0 + xy_range])
+            plt.draw()
         if singles:
+            plt.tight_layout()
             if save:
                 plotfile = os.path.join(self.tempdir,
                                         "slot_{}_yzf.png".format(slot_num))
@@ -882,6 +886,7 @@ class Obi(object):
         plt.setp(ay.get_xticklabels(), visible=False)
         ay.set_ylabel('Y offsets(dy) (arcsec)')
         ay.set_ylim(ymid - extent, ymid + extent)
+        plt.draw()
         for t in ai_starts:
             s_t = (t - time0) / 1000.
             ay.plot([s_t, s_t], ay.get_ylim(), color='blue',
@@ -897,6 +902,7 @@ class Obi(object):
                      color='blue')
             ay2.set_ylabel('centroid y angle', color='blue')
         if singles:
+            plt.tight_layout()
             if save:
                 plotfile = os.path.join(self.tempdir,
                                         "slot_{}_y.png".format(slot_num))
@@ -914,9 +920,11 @@ class Obi(object):
         az.plot(plottime[ok], dz[ok], 'g.')
         az.plot(plottime[bad], dz[bad], 'r.')
         plt.setp(az.get_yticklabels(), fontsize=labelfontsize)
-        plt.setp(az.get_xticklabels(), visible=False)
+        if not singles:
+            plt.setp(az.get_xticklabels(), visible=False)
         az.set_ylabel('Z offsets(dz) (arcsec)')
         az.set_ylim(zmid - extent, zmid + extent)
+        plt.draw()
         for t in ai_starts:
             s_t = (t - time0) / 1000.
             az.plot([s_t, s_t], az.get_ylim(), color='blue',
@@ -932,6 +940,7 @@ class Obi(object):
                      color='blue')
             az2.set_ylabel('centroid z angle', color='blue')
         if singles:
+            plt.tight_layout()
             if save:
                 plotfile = os.path.join(self.tempdir,
                                         "slot_{}_z.png".format(slot_num))
@@ -960,6 +969,7 @@ class Obi(object):
         am.set_xlabel('Time(ksec)')
         ay.autoscale(enable=False, axis='x')
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
+        plt.draw()
         if singles:
             if save:
                 plotfile = os.path.join(self.tempdir,
