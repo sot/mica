@@ -15,13 +15,12 @@ logger.addHandler(logging.StreamHandler())
 
 mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
 
-DEFAULT_CONFIG = dict(data_root=os.path.join(mica_archive, 'starcheck'),
-                      touch_file=os.path.join(mica_archive, 'starcheck', "starcheck_parser.touch"),
-                      sql_def='starcheck.sql',
-                      dbi='sqlite',
+DEFAULT_CONFIG = dict(dbi='sqlite',
                       server=os.path.join(mica_archive, 'starcheck', 'starcheck.db3'),
                       mp_top_level='/data/mpcrit1/mplogs')
-
+FILES = dict(data_root=os.path.join(mica_archive, 'starcheck'),
+             touch_file=os.path.join(mica_archive, 'starcheck', "starcheck_parser.touch"),
+             sql_def='starcheck.sql')
 
 def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
     if existing is not None:
@@ -118,15 +117,12 @@ def get_options():
         description="Update starcheck database")
     defaults = dict(DEFAULT_CONFIG)
     parser.set_defaults(**defaults)
-    parser.add_argument("--data-root",
-                        help="parent directory for all data")
     parser.add_argument("--dbi",
                         help="dbi for starcheck database")
     parser.add_argument("--server",
                         help="server or file for database")
     parser.add_argument("--mp-top-level",
                         help="top level SOT MP dir")
-    parser.add_argument("--touch-file")
     opt = parser.parse_args()
     return opt
 
@@ -140,12 +136,12 @@ def update(config=None):
             or os.stat(config['server']).st_size == 0):
         if not os.path.exists(os.path.dirname(config['server'])):
             os.makedirs(os.path.dirname(config['server']))
-        db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', config['sql_def'])
+        db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', FILES['sql_def'])
         db_init_cmds = open(db_sql).read()
         db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
         db.execute(db_init_cmds)
         # make a touch file with a time before starchecks
-        Ska.Shell.bash("touch -t 199801010000 %s" % (config['touch_file']),
+        Ska.Shell.bash("touch -t 199801010000 %s" % (FILES['touch_file']),
                        env={'MAILCHECK': -1})
     else:
         db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
@@ -154,7 +150,7 @@ def update(config=None):
         "find %s" % config['mp_top_level']
         + "/[12]???/[A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9]/ofls?/ "
         + " -maxdepth 1 -wholename '*/ofls?/starcheck.txt' "
-        + "-cnewer %s" % config['touch_file'],
+        + "-cnewer %s" % FILES['touch_file'],
         env={'MAILCHECK': -1})
 
     starchecks_with_times = [dict(file=st, mtime=os.path.getmtime(st))
@@ -183,7 +179,7 @@ def update(config=None):
         for (obs, obs_idx) in izip(starcheck, count(0)):
             ingest_obs(obs, obs_idx, sc_id, st, db, existing=existing)
         logger.info("Done with %s; updating touch file" % st)
-        Ska.Shell.bash("touch -r %s %s" % (st, config['touch_file']),
+        Ska.Shell.bash("touch -r %s %s" % (st, FILES['touch_file']),
                        env={'MAILCHECK': -1})
 
 
