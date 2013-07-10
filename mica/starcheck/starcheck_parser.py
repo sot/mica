@@ -4,12 +4,13 @@ import os
 import sys
 import re
 import subprocess
-import Ska.Shell
 import json
-import Ska.DBI
 from itertools import izip, count
-import asciitable
 import numpy as np
+import asciitable
+import Ska.Shell
+import Ska.DBI
+
 
 SC1 = ' IDX SLOT        ID  TYPE   SZ  MINMAG    MAG   MAXMAG   YANG   ZANG DIM RES HALFW'
 SC2 = ' IDX SLOT        ID  TYPE   SZ  MINMAG    MAG   MAXMAG   YANG   ZANG DIM RES HALFW NOTES'
