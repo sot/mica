@@ -1,12 +1,14 @@
 import os
 import re
-import Ska.Shell
-import Ska.DBI
-from itertools import izip, count
 import logging
 import argparse
+from itertools import izip, count
 from operator import itemgetter
 import numpy as np
+
+import Ska.Shell
+import Ska.DBI
+
 from mica.starcheck.starcheck_parser import read_starcheck
 
 logger = logging.getLogger('starcheck ingest')
