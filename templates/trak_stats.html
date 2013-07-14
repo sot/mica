@@ -1,0 +1,108 @@
+<HTML>
+<HEAD>
+<TITLE></TITLE>
+<link href="/mta/ASPECT/aspect.css" rel="stylesheet" type="text/css" media="all" />
+<style type="text/css">
+  body { min-width:900px;
+  background:url('http://asc.harvard.edu/mta/ASPECT/blue_paper.gif'); }
+</style>
+</HEAD>
+<BODY>
+<PRE>
+{{"OBSID %5d"|format(obs.obsid) -}}
+{% if obs.target_id %}
+{{"%-22s %-6s SIM Z offset: %-5d (%-.2fmm) Grating: %-5s"|format(
+obs.target_id, obs.sci_instr, obs.sim_z_offset_steps, obs.sim_z_offset_mm, obs.grating) -}}
+{% endif %}
+{% if obs.point_ra %}
+{{- "RA, Dec, Roll (deg): %12.6f %12.6f %12.6f"|format(
+obs.point_ra, obs.point_dec, obs.point_roll) -}}
+{% endif %}
+{% if obs.dither_state is defined and obs.obsid < 40000 %}
+{{- "Dither : %-3s Y_amp=%4.1f  Z_amp=%4.1f  Y_period=%6.1f  Z_period=%6.1f"|format(
+obs.dither_state, obs.dither_y_amp, obs.dither_z_amp,
+obs.dither_y_period, obs.dither_z_period) -}}
+{% endif %}
+</PRE>
+
+
+
+<TABLE border=1 style="font-size:12px">
+<TR>
+{% for field in ['idx', 'slot', 'id',
+                'mag_exp', 'cyan_exp', 'czan_exp',
+                'aoacmag_mean', 'aoacyan_mean', 'aoaczan_mean',
+                ] %}
+<TH align='right'>{{ field|upper() }}</TH>
+{% endfor %}
+</TR>
+
+{% for row in fid_stats %}
+{% for field, form in [('idx', '%2d'), ('slot', '%2d'),
+('id', '%11s'),
+('mag_exp', '%7.3f'), ('cyan_exp', '%6d'), ('czan_exp', '%6d'),
+('aoacmag_mean', '%7.3f'), ('aoacyan_mean', '%6d'), ('aoaczan_mean', '%6d'),
+] %}
+<TD align='right'>{{ form|format(row[field]) }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+
+{% for row in star_stats %}
+{% for field, form in [('idx', '%2d'), ('slot', '%2d'),
+('id', '%11s'),
+('mag_exp', '%7.3f'), ('cyan_exp', '%6d'), ('czan_exp', '%6d'),
+('aoacmag_mean', '%7.3f'), ('aoacyan_mean', '%6d'), ('aoaczan_mean', '%6d'),
+] %}
+<TD align='right'>{{ form|format(row[field]) }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+</TABLE>
+
+
+<TABLE border=1 style="font-size:12px">
+<TR>
+{% for field in ['idx', 'slot', 'cel_loc_flag', 'id_status',
+                'n_samples', 'not_trak_frac', 'obc_bad_frac',
+                'DP_frac', 'IR_frac', 'MS_frac',
+                'QB_frac', 'CC_frac', 'SP_frac',
+                ] %}
+<TH align='right'>{{ field|upper() }}</TH>
+{% endfor %}
+</TR>
+
+
+{% for row in fid_stats %}
+{% for field, form in [('idx', '%2d'), ('slot', '%2d'),
+('cel_loc_flag', '%1d'), ('id_status', '%3s'),
+('n_samples', '%d'), ('not_tracking_frac', '%5.2f'), ('obc_bad_status_frac', '%5.2f'),
+('def_pix_frac', '%5.2f'), ('ion_rad_frac', '%5.2f'),
+('mult_star_frac', '%5.2f'), ('quad_bound_frac', '%5.2f'),
+('common_col_frac', '%5.2f'), ('sat_pix_frac', '%5.2f')] %}
+<TD align='right'>{{ form|format(row[field]) }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+
+
+{% for row in star_stats %}
+{% for field, form in [('idx', '%2d'), ('slot', '%2d'), 
+('cel_loc_flag', '%1d'), ('id_status', '%3s'),
+('n_samples', '%d'), ('not_tracking_frac', '%5.2f'), ('obc_bad_status_frac', '%5.2f'),
+('def_pix_frac', '%5.2f'), ('ion_rad_frac', '%5.2f'),
+('mult_star_frac', '%5.2f'), ('quad_bound_frac', '%5.2f'),
+('common_col_frac', '%5.2f'), ('sat_pix_frac', '%5.2f')] %}
+<TD align='right'>{{ form|format(row[field]) }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+
+</TABLE>
+
+
+<IMG SRC="trakinfo_catalog.png">
+
+
+</BODY>
+</HTML>

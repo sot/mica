@@ -1,0 +1,56 @@
+<HTML>
+<HEAD>
+<TITLE></TITLE>
+<link href="/mta/ASPECT/aspect.css" rel="stylesheet" type="text/css" media="all" />
+<style type="text/css">
+  body { min-width:900px;
+  background:url('http://asc.harvard.edu/mta/ASPECT/blue_paper.gif'); }
+</style>
+</HEAD>
+<BODY>
+<PRE>
+{{"OBSID %5d"|format(obs.obsid) -}}
+{% if obs.target_id %}
+{{"%-22s %-6s SIM Z offset: %-5d (%-.2fmm) Grating: %-5s"|format(
+obs.target_id, obs.sci_instr, obs.sim_z_offset_steps, obs.sim_z_offset_mm, obs.grating) -}}
+{% endif %}
+{% if obs.point_ra %}
+{{- "RA, Dec, Roll (deg): %12.6f %12.6f %12.6f"|format(
+obs.point_ra, obs.point_dec, obs.point_roll) -}}
+{% endif %}
+{% if obs.dither_state is defined and obs.obsid < 40000 %}
+{{- "Dither : %-3s Y_amp=%4.1f  Z_amp=%4.1f  Y_period=%6.1f  Z_period=%6.1f"|format(
+obs.dither_state, obs.dither_y_amp, obs.dither_z_amp,
+obs.dither_y_period, obs.dither_z_period) -}}
+{% endif %}
+</PRE>
+
+<TABLE border=1 style="font-size:12px">
+<TR>
+{% for field in ['idx', 'slot', 'agasc_id',
+                'mag', 'yang', 'zang', 'mag_obs', 'yang_obs', 'zang_obs',
+                'obc_id'] %}
+<TH align='right'>{{ field|upper() }}</TH>
+{% endfor %}
+</TR>
+
+
+{% for row in catalog %}
+{% for field, form in [('idx', '%2d'), ('slot', '%2d'),
+('agasc_id', '%11s'),
+('mag', '%7.3f'), ('yang', '%6d'), ('zang', '%6d'),
+('mag_obs', '%7.3f'), ('yang_obs', '%6d'), ('zang_obs', '%6d'),
+('obc_id', '%4s'),
+] %}
+<TD align='right'>{{ form|format(row[field]) }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+
+</TABLE>
+
+<IMG SRC="acqstat_catalog.png">
+
+
+</BODY>
+</HTML>

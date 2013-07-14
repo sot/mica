@@ -6,6 +6,7 @@ from itertools import izip, count
 from operator import itemgetter
 import numpy as np
 
+from Chandra.Time import DateTime
 import Ska.Shell
 import Ska.DBI
 
@@ -23,6 +24,64 @@ DEFAULT_CONFIG = dict(dbi='sqlite',
 FILES = dict(data_root=os.path.join(mica_archive, 'starcheck'),
              touch_file=os.path.join(mica_archive, 'starcheck', "starcheck_parser.touch"),
              sql_def='starcheck.sql')
+
+# this doesn't belong in starcheck
+def get_timeline_at_date(date):
+    aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+    return aca_db.fetchone(
+        "select * from timelines where datestop >= '%s' and datestart <= '%s'"
+        % (date, date))
+
+def get_mp_dir(obsid, config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
+    aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+    possible_runs = aca_db.fetchall(
+        "select * from tl_obsids where obsid = %d" % obsid)
+    if not len(possible_runs):
+        db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
+        sc = db.fetchall(
+            """select * from starcheck_obs, starcheck_id
+               where obsid = %d and starcheck_id.id = starcheck_obs.sc_id
+               order by sc_id """ % obsid)
+        if len(sc):
+            if sc[-1]['mp_starcat_time'] < '2001:001:00:00:00.000':
+                return (sc[-1]['dir'], 'ran_pretimelines')
+            return (sc[-1]['dir'], 'planned')
+    actual_run = None
+    for poss in possible_runs:
+        tl = get_timeline_at_date(poss['date'])
+        if tl is not None and poss['dir'] == tl['dir']:
+            actual_run = poss
+            break
+    if actual_run is None:
+        last_tl = aca_db.fetchone(
+            "select max(datestop) as datestop from timelines")['datestop']
+        if poss['date'] <= last_tl:
+            return (None, None)
+        return (possible_runs[-1]['dir'], 'planned')
+    if poss['date'] < DateTime().date:
+        return (actual_run['dir'], 'ran')
+    else:
+        return (actual_run['dir'], 'approved')
+
+def obsid(obsid, mp_dir=None, config=None):
+    if mp_dir is None:
+        mp_dir, status = get_mp_dir(obsid)
+    if mp_dir is None:
+        return None
+    if config is None:
+        config = DEFAULT_CONFIG
+    db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
+    sc_id = db.fetchone(
+        "select id from starcheck_id where dir = '%s'" % mp_dir)['id']
+    sc = {}
+    for d in ['manvr', 'catalog', 'obs', 'warnings']:
+        sc[d] = db.fetchall(
+            "select * from starcheck_%s where obsid = %d and sc_id = %d"
+            % (d, obsid, sc_id))
+    return sc
+
 
 def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
     if existing is not None:
