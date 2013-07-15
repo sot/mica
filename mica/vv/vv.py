@@ -57,7 +57,7 @@ def get_vv(obsid, version="default", config=None):
                                        """.format(obsid))
             if not len(obs):
                 raise ValueError("Version {} not found for obsid {}".format(
-                    obsid, version))
+                    version, obsid))
             num_version = obs['revision'][0]
         if version == 'last':
             obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
