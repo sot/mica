@@ -6,6 +6,7 @@ from astropy.io import fits
 
 import Ska.DBI
 
+from mica.archive import obspar
 from mica.catalog import catalog
 from mica.starcheck import starcheck
 from mica.archive import asp_l1
@@ -32,13 +33,19 @@ def get_trak_stats(obsid):
 aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
 
 #obsid = 14932
-#obsid = 10980
+obsid = 10980
 #obsid = 2306
 #obsid = 15315
-obsid = 15293
+#obsid = 15293
 outdir = 'test_report_out'
 if not os.path.exists(outdir):
     os.makedirs(outdir)
+
+try:
+    obspar = obspar.get_obspar(obsid)
+except:
+    obspar = dict()
+
 
 jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'))
@@ -50,17 +57,18 @@ obs_sc, mp_dir, status = get_starcheck(obsid)
 fig, cat, obs = catalog.plot(obsid, mp_dir)
 fig.savefig(os.path.join(outdir, 'starcheck.png'))
 
+
 sc_template = jinja_env.get_template('starcheck.html')
-dcat = [dict(zip(cat.dtype.names, row))
-       for row in cat]
-for row in dcat:
+sc_catalog = [dict(zip(cat.dtype.names, row))
+              for row in cat]
+for row in sc_catalog:
     row['strid'] = (row['idnote'] or '') + str(row['id'])
     row['passnotes'] = (row['pass'] or '') + (row['notes'] or '') or ''
-page = sc_template.render(obs=obs,
-                          catalog=dcat)
-f = open(os.path.join(outdir, 'starcheck.html'), 'w')
-f.write(page)
-f.close()
+#page = sc_template.render(obs=obs,
+#                          catalog=dcat)
+#f = open(os.path.join(outdir, 'starcheck.html'), 'w')
+#f.write(page)
+#f.close()
 
 # acq stats
 if status is not None and (status == 'ran' or status == 'ran_pretimelines') :
@@ -81,11 +89,12 @@ if status is not None and (status == 'ran' or status == 'ran_pretimelines') :
     sc_template = jinja_env.get_template('acq_stats.html')
     #dcat = [dict(zip(cat.dtype.names, row))
     #       for row in cat]
-    page = sc_template.render(obs=obs,
-                              catalog=acqs)
-    f = open(os.path.join(outdir, 'acq_stats.html'), 'w')
-    f.write(page)
-    f.close()
+    acq_catalog = acqs
+    #page = sc_template.render(obs=obs,
+    #                          catalog=acqs)
+    #f = open(os.path.join(outdir, 'acq_stats.html'), 'w')
+    #f.write(page)
+    #f.close()
 
 import mica.vv
 try:
@@ -157,14 +166,14 @@ for tracked in dtrak_stats:
 fig.savefig(os.path.join(outdir, 'trakinfo_catalog.png'))
 [p.set_visible(False) for p in trak_patches]
 
-sc_template = jinja_env.get_template('trak_stats.html')
-page = sc_template.render(obs=obs,
-                          fid_stats=fid_stats,
-                          star_stats=star_stats,
-                          )
-f = open(os.path.join(outdir, 'trak_stats.html'), 'w')
-f.write(page)
-f.close()
+#sc_template = jinja_env.get_template('trak_stats.html')
+#page = sc_template.render(obs=obs,
+#                          fid_stats=fid_stats,
+#                          star_stats=star_stats,
+#                          )
+#f = open(os.path.join(outdir, 'trak_stats.html'), 'w')
+#f.write(page)
+#f.close()
 
 
 
@@ -188,12 +197,25 @@ f.close()
 #
 #
 
-template = jinja_env.get_template('vv_slots.html')
-page = template.render(slots=sorted(vv['slots']),
-                       vv_slots=vv['slots'] )
-f = open(os.path.join(outdir, 'vv_slots.html'), 'w')
+big_template = jinja_env.get_template('one_big.html')
+page = big_template.render(obs=obs,
+                           obspar=obspar,
+                       sc_catalog=sc_catalog,
+                       acq_catalog=acq_catalog,
+                       star_stats=star_stats,
+                       fid_stats=fid_stats,
+                       slots=sorted(vv['slots']),
+                       vv_slots=vv['slots'])
+f = open(os.path.join(outdir, 'obsid.html'), 'w')
 f.write(page)
 f.close()
+
+#template = jinja_env.get_template('vv_slots.html')
+#page = template.render(slots=sorted(vv['slots']),
+#                       vv_slots=vv['slots'] )
+#f = open(os.path.join(outdir, 'vv_slots.html'), 'w')
+#f.write(page)
+#f.close()
 
 for slot in vv['slots']:
     template = jinja_env.get_template('vv_slots_single.html')
