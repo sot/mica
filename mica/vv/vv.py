@@ -13,21 +13,23 @@ import logging
 from glob import glob
 import numpy as np
 import numpy.ma as ma
-from Ska.Table import read_table
-from scipy.signal import medfilt as medfilt
-import mica.archive.asp_l1 as asp_l1_arch
-import mica.archive.obspar as obspar_arch
-from scipy.stats import scoreatpercentile
-from Ska.astro import sph_dist
-from Ska.engarchive import fetch
 import tempfile
-import Ska.DBI
-from Chandra.Time import DateTime
-
 import matplotlib
 if __name__ == '__main__':
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from scipy.signal import medfilt as medfilt
+from scipy.stats import scoreatpercentile
+
+from Ska.Table import read_table
+from Ska.astro import sph_dist
+from Ska.engarchive import fetch
+from Chandra.Time import DateTime
+import Ska.DBI
+
+import mica.archive.asp_l1 as asp_l1_arch
+import mica.archive.obspar as obspar_arch
+
 # get rid of the black edges on the plot markers
 plt.rcParams['lines.markeredgewidth'] = 0
 
