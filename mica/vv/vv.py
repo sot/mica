@@ -29,30 +29,35 @@ import Ska.DBI
 
 import mica.archive.asp_l1 as asp_l1_arch
 import mica.archive.obspar as obspar_arch
+from mica.archive import obsid_archive
+
 
 # get rid of the black edges on the plot markers
 plt.rcParams['lines.markeredgewidth'] = 0
 
 mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
-DEFAULT_CONFIG = dict(
+FILES = dict(
     data_root=os.path.join(mica_archive, 'vv'),
     temp_root=os.path.join(mica_archive, 'tempvv'),
     shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
-    known_bad_obsids=[1283, 5542, 722, 721],
     h5_file=os.path.join(mica_archive, 'vv', 'vv.h5'),
-    h5_table='vv',
     last_file=os.path.join(mica_archive, 'vv', 'last_id.txt'),
-    save=True,
-    plot='png')
+    asp1_proc_table=os.path.join(mica_archive, 'asp1', 'processing_asp_l1.db3'),
+    bad_obsid_list=os.path.join(mica_archive, 'vv', 'bad_obsids.json'))
 
-def get_vv(obsid, version="default", config=None):
-    if config is None:
-        config = DEFAULT_CONFIG
+KNOWN_BAD_OBSIDS = json.loads(open(FILES['bad_obsid_list']).read())
+#    save=True,
+#    known_bad_obsids=[1283, 5542, 722, 721],
+
+logger = logging.getLogger('V&V')
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
+
+
+def get_vv_dir(obsid, version="default"):
     num_version = None
     if version == 'last' or version == 'default':
-        asp_l1_proc_table = os.path.join(
-            mica_archive, 'asp1', 'processing_asp_l1.db3')
-        asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+        asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
         if version == 'default':
             obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
                                           where obsid = {} and isdefault = 1
@@ -73,18 +78,22 @@ def get_vv(obsid, version="default", config=None):
         num_version = version
     strobs = "%05d_v%02d" % (obsid, num_version)
     chunk_dir = strobs[0:2]
-    chunk_dir_path = os.path.join(config['data_root'], chunk_dir)
+    chunk_dir_path = os.path.join(FILES['data_root'], chunk_dir)
     obs_dir = os.path.join(chunk_dir_path, strobs)
-    # for now, just return the list of files
-    files = glob(os.path.join(obs_dir, "*"))
-    json_file = glob(os.path.join(obs_dir, "*.json"))[0]
-    return json.loads(open(json_file).read()), files
+    return obs_dir
 
-def get_rms_data(config=None):
-    if config is None:
-        config = DEFAULT_CONFIG
-    h5f = tables.openFile(config['h5_file'], 'r')
-    tbl = h5f.getNode('/', config['h5_table'])
+def get_vv_files(obsid, version="default"):
+    vv_dir = get_vv_dir(obsid, version)
+    return glob(os.path.join(vv_dir, "*"))
+
+def get_vv(obsid, version="default"):
+    vv_dir = get_vv_dir(obsid, version)
+    json_file = glob(os.path.join(vv_dir, "*.json"))[0]
+    return json.loads(open(json_file).read())
+
+def get_rms_data():
+    h5f = tables.openFile(FILES['h5_file'], 'r')
+    tbl = h5f.getNode('/', 'vv')
     data = tbl[:]
     h5f.close()
     return data
@@ -95,9 +104,6 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
-logger = logging.getLogger('V&V')
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
 
 def file_vv(obi):
     obsid = int(obi.info()['obsid'])
@@ -105,7 +111,7 @@ def file_vv(obi):
     # set up directory for data
     strobs = "%05d_v%02d" % (obsid, version)
     chunk_dir = strobs[0:2]
-    chunk_dir_path = os.path.join(obi._config['data_root'], chunk_dir)
+    chunk_dir_path = os.path.join(FILES['data_root'], chunk_dir)
     obs_dir = os.path.join(chunk_dir_path, strobs)
     if not os.path.exists(obs_dir):
         logger.info("making directory %s" % obs_dir)
@@ -120,9 +126,9 @@ def file_vv(obi):
     os.removedirs(obi.tempdir)
     logger.info("removed directory {}".format(obi.tempdir))
     # make any desired link
-    obs_ln = os.path.join(obi._config['data_root'], chunk_dir, "%05d" % obsid)
+    obs_ln = os.path.join(FILES['data_root'], chunk_dir, "%05d" % obsid)
     obs_ln_last = os.path.join(
-        obi._config['data_root'], chunk_dir, "%05d_last" % obsid)
+        FILES['data_root'], chunk_dir, "%05d_last" % obsid)
     obsdirs = asp_l1_arch.get_obs_dirs(obsid)
     isdefault = 0
     if 'default' in obsdirs:
@@ -150,12 +156,8 @@ def file_vv(obi):
                 os.unlink(obs_ln_last)
     obi.isdefault = isdefault
 
-def update(obsids=[], config=None):
-    if config is None:
-        config = DEFAULT_CONFIG
-    asp_l1_proc_table = os.path.join(
-        mica_archive, 'asp1', 'processing_asp_l1.db3')
-    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+def update(obsids=[]):
+    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
     # if an obsid is requested, just do that
     # there's a little bit of duplication in this block
     if len(obsids):
@@ -164,6 +166,9 @@ def update(obsids=[], config=None):
                 "SELECT * FROM aspect_1_proc where obsid = {}".format(
                     obsid))
             for obs in todo:
+                if obs['obsid'] in KNOWN_BAD_OBSIDS:
+                    logger.info("Skipping known bad obsid {}".format(obs['obsid']))
+                    continue
                 logger.info("running VV for obsid {} run on {}".format(
                     obs['obsid'], obs['ap_date']))
                 process(obs['obsid'], version=obs['revision'])
@@ -176,7 +181,8 @@ def update(obsids=[], config=None):
             """SELECT * FROM aspect_1_proc
                where vv_complete != 1 order by aspect_1_id""")
         for obs in todo:
-            if obs['obsid'] in config['known_bad_obsids']:
+            if obs['obsid'] in KNOWN_BAD_OBSIDS:
+                logger.info("Skipping known bad obsid {}".format(obs['obsid']))
                 continue
             logger.info("running VV for obsid {} run on {}".format(
                 obs['obsid'], obs['ap_date']))
@@ -184,14 +190,6 @@ def update(obsids=[], config=None):
             asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = 1
                                    where obsid = {} and revision = {}
                                 """.format(obs['obsid'], obs['revision']))
-
-
-def get_table(config=None):
-    if config is None:
-        config = DEFAULT_CONFIG
-    h5 = tables.openFile(config['h5_file'], 'a')
-    tbl = h5.getNode('/', config['h5_table'])
-    return tbl, h5
 
 
 def get_arch_vv(obsid, version='last'):
@@ -206,9 +204,7 @@ def get_arch_vv(obsid, version='last'):
     l1_dir = asp_l1_dirs[version]
     # find the obspar that matches the requested aspect_1 products
     # this is in the aspect processing table
-    asp_l1_proc_table = os.path.join(
-        mica_archive, 'asp1', 'processing_asp_l1.db3')
-    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=asp_l1_proc_table)
+    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
     asp_obs = asp_l1_proc.fetchall(
         "SELECT * FROM aspect_1_proc where obsid = {}".format(
             obsid))
@@ -223,7 +219,6 @@ def get_arch_vv(obsid, version='last'):
     obspar_dirs = obspar_arch.get_obs_dirs(obsid)
     if asp_proc['obspar_version'] not in obspar_dirs:
         # try to update the obspar archive with the missing version
-        from mica.archive import obsid_archive
         config = obspar_arch.CONFIG.copy()
         config.update(dict(obsid=obsid, version=asp_proc['obspar_version']))
         oa = obsid_archive.ObsArchive(config)
@@ -236,16 +231,15 @@ def get_arch_vv(obsid, version='last'):
     return Obi(obspar_file, l1_dir)
 
 
-def process(obsid, version='last', config=None):
-    if config is None:
-        config = DEFAULT_CONFIG
+def process(obsid, version='last'):
     obi = get_arch_vv(obsid, version)
     obi.save_plots_and_resid()
     if obi is None:
         return None
     obi.shelve_info()
     file_vv(obi)
-    tbl, h5 = get_table(config=config)
+    h5 = tables.openFile(FILES['h5_file'], 'a')
+    tbl = h5.getNode('/', 'vv')
     obi.set_tbl(tbl)
     obi.slots_to_table()
     tbl.flush()
@@ -328,17 +322,14 @@ def frac_bad(data, median, limit):
 
 
 class Obi(object):
-    def __init__(self, obsparfile, obsdir, config=None):
-        if config is None:
-            config = DEFAULT_CONFIG
+    def __init__(self, obsparfile, obsdir):
         self._info = None
         self._isdefault = None
-        self._config = config
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
-        if not os.path.exists(config['temp_root']):
-            os.makedirs(config['temp_root'])
-        self.tempdir = tempfile.mkdtemp(dir=config['temp_root'])
+        if not os.path.exists(FILES['temp_root']):
+            os.makedirs(FILES['temp_root'])
+        self.tempdir = tempfile.mkdtemp(dir=FILES['temp_root'])
         self._process()
 
     def _process(self):
@@ -493,8 +484,8 @@ class Obi(object):
             logger.warn("Shelving not implemented for obsids without aspect_1_ids")
             return
         if file is None:
-            file = os.path.join(self._config['data_root'],
-                                self._config['shelf_file'])
+            file = os.path.join(FILES['data_root'],
+                                FILES['shelf_file'])
         s = shelve.open(file)
         s["%s_%s" % (self.info()['obsid'], self.info()['revision'])] \
             = self.info()
