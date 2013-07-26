@@ -78,65 +78,14 @@ def get_vv(obsid, version="default", config=None):
     json_file = glob(os.path.join(obs_dir, "*.json"))[0]
     return json.loads(open(json_file).read()), files
 
-
-def mission_plots(config=None):
+def get_rms_data(config=None):
     if config is None:
         config = DEFAULT_CONFIG
-    import matplotlib.pyplot as plt
-    import matplotlib.mpl as mpl
-    import matplotlib.cm as cm
-    norm = mpl.colors.LogNorm()
-    my_cm = cm.jet
-    figsize = (5, 4)
     h5f = tables.openFile(config['h5_file'], 'r')
     tbl = h5f.getNode('/', config['h5_table'])
     data = tbl[:]
-    notfid = data['type'] != 'FID'
-    reasonable = ((data['dz_rms'] > 0) & (data['dz_rms'] < 1))
-    last_year = data['tstart'] > DateTime(-365).secs
-
-    hist2d_fig = plt.figure(figsize=figsize)
-    H, xedges, yedges = np.histogram2d(
-        DateTime(data[notfid & reasonable]['tstart']).frac_year,
-        data[notfid & reasonable]['dz_rms'],
-        bins=100, range=[[2007, DateTime().frac_year], [0.02, 0.30]])
-    #ax1 = hist2d_fig.add_axes([0.125, 0.12, 0.70, 0.78])
-    ax1 = hist2d_fig.add_axes([0.14, 0.12, 0.70, 0.78])
-    #ax1 = subplot(111)
-    ax1.pcolorfast(xedges, yedges, H.T, cmap=my_cm, norm=norm)
-    plt.grid()
-    plt.ylabel("Star Resid RMS in Z (arcsec)")
-    plt.xlabel("Time (Cal Year)")
-    plt.suptitle("RMS vs Time")
-    ax1.xaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%d'))
-
-    ax2 = hist2d_fig.add_axes([0.85, 0.12, 0.015, 0.78])
-    tick_locs = [norm.vmin, 2, 5, 10, norm.vmax]
-    cb = mpl.colorbar.ColorbarBase(ax2,
-                                   cmap=my_cm,
-                                   norm=norm,
-                                   orientation='vertical')
-    cb.locator = mpl.ticker.FixedLocator(tick_locs)
-    cb.formatter = mpl.ticker.FormatStrFormatter("%d")
-    plt.ylabel("N stars")
-    cb.update_ticks()
-
-    temp_resid_fig = plt.figure(figsize=figsize)
-    treas = data['mean_aacccdpt'] != -9e7
-    not_last_year = (last_year == False)
-    plt.plot(data[not_last_year & notfid & reasonable & treas]['mean_aacccdpt'],
-         data[not_last_year & notfid & reasonable & treas]['dz_rms'], 'b.', alpha=.25)
-    plt.plot(data[last_year & notfid & reasonable & treas]['mean_aacccdpt'],
-         data[last_year & notfid & reasonable & treas]['dz_rms'], 'r.', alpha=.25)
-    plt.ylim(0.0064889767905345758, 0.40)
-    plt.grid()
-    plt.xlabel('CCD Temp (AACCCDPT degC)')
-    plt.ylabel('Star Resid RMS in Z (arcsec)')
-    plt.title('RMS vs CCD Temp:\nlast year=red, all other=blue')
-    plt.tight_layout()
-    return dict(hist2d_fig=hist2d_fig,
-                temp_vs_resid=temp_resid_fig)
-
+    h5f.close()
+    return data
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
