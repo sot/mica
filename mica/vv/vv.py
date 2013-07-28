@@ -41,6 +41,14 @@ logger.addHandler(logging.StreamHandler())
 
 
 def get_vv_dir(obsid, version="default"):
+    """
+    Get directory containing V&V products for a requested obsid/version,
+    including plots and json.
+
+    :param obsid: obsid
+    :param version: 'last', 'default' or version number
+    :returns: directory name for obsid/version
+    """
     num_version = None
     if version == 'last' or version == 'default':
         asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
@@ -69,22 +77,46 @@ def get_vv_dir(obsid, version="default"):
     return obs_dir
 
 def get_vv_files(obsid, version="default"):
+    """
+    Get list of V&V files available for a requested obsid/version.
+
+    :param obsid: obsid
+    :param version: 'default', 'last' or version number
+    :returns: list of files
+    """
     vv_dir = get_vv_dir(obsid, version)
     return glob(os.path.join(vv_dir, "*"))
 
 def get_vv(obsid, version="default"):
+    """
+    Retrieve V&V data for an obsid/version.
+    This reads the saved JSON and returns the previously-
+    calculated V&V data.
+
+    :param obsid: obsid
+    :param version: 'last', 'default', or version number
+    :returns: dict of V&V data
+    """
     vv_dir = get_vv_dir(obsid, version)
     json_file = glob(os.path.join(vv_dir, "*.json"))[0]
     return json.loads(open(json_file).read())
 
 def get_rms_data():
+    """
+    Retrieve/return all data from RMS trending H5 archive
+
+    :returns: numpy array of RMS data for each star/obsid/version
+    """
     h5f = tables.openFile(FILES['h5_file'], 'r')
     tbl = h5f.getNode('/', 'vv')
     data = tbl[:]
     h5f.close()
     return data
 
-def file_vv(obi):
+def _file_vv(obi):
+    """
+    Save processed V&V data to per-obsid archive
+    """
     obsid = int(obi.info()['obsid'])
     version = int(obi.info()['revision'])
     # set up directory for data
@@ -136,6 +168,12 @@ def file_vv(obi):
     obi.isdefault = isdefault
 
 def update(obsids=[]):
+    """
+    For a list of obsids or for all new obsids, run V&V processing
+    and save V&V info to archive.
+
+    :param obsids: optional list of obsids
+    """
     asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
     # if an obsid is requested, just do that
     # there's a little bit of duplication in this block
@@ -173,7 +211,13 @@ def update(obsids=[]):
 
 def get_arch_vv(obsid, version='last'):
     """
-    Get obsid paths from mica.archive and create mica.vv.Obi object
+    Given obsid and version, find archived ASP1 and obspar products and
+    run V&V.  Effort is made to find the obspar that was actually used during
+    creation of the ASP1 products.
+
+    :param obsid: obsid
+    :param version: 'last', 'default', or revision number of ASP1 products
+    :returns: mica.vv.Obi V&V object
     """
     asp_l1_dirs = asp_l1_arch.get_obs_dirs(obsid)
     if version not in asp_l1_dirs:
@@ -211,6 +255,15 @@ def get_arch_vv(obsid, version='last'):
 
 
 def process(obsid, version='last'):
+    """
+    For requested obsid/version, run V&V, make plots,
+    save plots and JSON, save info to shelve file, and
+    update RMS HDF5.
+
+    :param obsid: obsid
+    :param version: 'last', 'default' or revision number of ASP1 products
+    :returns: mica.vv.Obi V&V object
+    """
     obi = get_arch_vv(obsid, version)
     obi.save_plots_and_resid()
     if obi is None:
@@ -218,7 +271,7 @@ def process(obsid, version='last'):
     shelf_file = os.path.join(FILES['data_root'],
                               FILES['shelf_file'])
     obi.shelve_info(shelf_file)
-    file_vv(obi)
+    _file_vv(obi)
     h5 = tables.openFile(FILES['h5_file'], 'a')
     tbl = h5.getNode('/', 'vv')
     obi.set_tbl(tbl)
