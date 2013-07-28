@@ -102,9 +102,13 @@ def update(obsids=[]):
                                     """.format(obs['obsid'], obs['revision']))
     else:
         # if no obsid specified, try to retrieve all data without vv
+        # set to only use aspect_1_id greater than those currently
+        # in the archive at time of vv install.
+        # this is to avoid processing old no-longer-default data for now
         todo = asp_l1_proc.fetchall(
             """SELECT * FROM aspect_1_proc
-               where vv_complete != 1 order by aspect_1_id""")
+               where vv_complete != 1 and aspect_1_id > 34878
+               order by aspect_1_id""")
         for obs in todo:
             if obs['obsid'] in KNOWN_BAD_OBSIDS:
                 logger.info("Skipping known bad obsid {}".format(obs['obsid']))
