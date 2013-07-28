@@ -76,6 +76,7 @@ def get_vv_dir(obsid, version="default"):
     obs_dir = os.path.join(chunk_dir_path, strobs)
     return obs_dir
 
+
 def get_vv_files(obsid, version="default"):
     """
     Get list of V&V files available for a requested obsid/version.
@@ -86,6 +87,7 @@ def get_vv_files(obsid, version="default"):
     """
     vv_dir = get_vv_dir(obsid, version)
     return glob(os.path.join(vv_dir, "*"))
+
 
 def get_vv(obsid, version="default"):
     """
@@ -101,6 +103,7 @@ def get_vv(obsid, version="default"):
     json_file = glob(os.path.join(vv_dir, "*.json"))[0]
     return json.loads(open(json_file).read())
 
+
 def get_rms_data():
     """
     Retrieve/return all data from RMS trending H5 archive
@@ -112,6 +115,7 @@ def get_rms_data():
     data = tbl[:]
     h5f.close()
     return data
+
 
 def _file_vv(obi):
     """
@@ -166,6 +170,7 @@ def _file_vv(obi):
             if os.path.exists(obs_ln_last):
                 os.unlink(obs_ln_last)
     obi.isdefault = isdefault
+
 
 def update(obsids=[]):
     """
@@ -280,5 +285,3 @@ def process(obsid, version='last'):
     h5.flush()
     h5.close()
     return obi
-
-
