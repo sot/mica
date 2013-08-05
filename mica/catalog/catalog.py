@@ -17,9 +17,9 @@ import os
 config['server'] = os.path.join(config['data_root'],
                                 config['server_name'])
 
-# rc definitions for dark backgrounds
-frontcolor = 'white'
-backcolor = 'black'
+# rc definitions
+frontcolor = 'black'
+backcolor = 'white'
 plt.rcParams['lines.color'] = frontcolor
 plt.rcParams['patch.edgecolor'] = frontcolor
 plt.rcParams['text.color'] = frontcolor
@@ -47,7 +47,7 @@ def plot_starcheck(catalog, quat=None, field=None, title=None):
     cat = catalog
     fig = plt.figure(num=1, figsize=(5, 5))
     ax = fig.add_subplot(1, 1, 1)
-    face = 'black'
+    face = backcolor
 
     # plot the box and set the labels
     plt.xlim(2900, -2900)
@@ -81,11 +81,11 @@ def plot_starcheck(catalog, quat=None, field=None, title=None):
                     xy=(row['yang'] - 120, row['zang'] + 60))
     ax.scatter(gui['yang'], gui['zang'],
                facecolors=face,
-               edgecolors='yellow',
+               edgecolors='green',
                s=100)
     ax.scatter(bot['yang'], bot['zang'],
                facecolors=face,
-               edgecolors='yellow',
+               edgecolors='green',
                s=100)
     for acq_star in acq:
         acq_box = plt.Rectangle(
@@ -138,14 +138,14 @@ def plot_starcheck(catalog, quat=None, field=None, title=None):
         bright_field = Ska.Numpy.add_column(bright_field,
                                             'zang',
                                             zags)
-        color = np.ones(len(bright_field), dtype='str')
-        color[:] = 'r'
+        color = np.ones(len(bright_field), dtype='|S10')
+        color[:] = 'red'
         faint = ((bright_field['CLASS'] == 0)
                  & (bright_field['MAG_ACA'] >= 10.7))
-        color[faint] = 'm'
+        color[faint] = 'orange'
         ok = ((bright_field['CLASS'] == 0)
               & (bright_field['MAG_ACA'] < 10.7))
-        color[ok] = 'white'
+        color[ok] = frontcolor
         size = symsize(bright_field['MAG_ACA'])
         ax.scatter(bright_field['yang'], bright_field['zang'],
                    c=color, s=size, edgecolors=color)
