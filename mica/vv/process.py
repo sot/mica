@@ -132,7 +132,7 @@ def get_arch_vv(obsid, version='last'):
     :returns: mica.vv.Obi V&V object
     """
     asp_l1_dirs = asp_l1_arch.get_obs_dirs(obsid)
-    if version not in asp_l1_dirs:
+    if asp_l1_dirs is None or version not in asp_l1_dirs:
         logger.error(
             "Requested version {} not in asp_l1 archive".format(version))
         return None
