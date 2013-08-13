@@ -4,6 +4,7 @@ import json
 import tables
 import logging
 from glob import glob
+import numpy as np
 
 import Ska.DBI
 
@@ -48,8 +49,8 @@ def get_vv_dir(obsid, version="default"):
                                           where obsid = {}
                                        """.format(obsid))
             if not len(obs):
-                raise ValueError("Version {} not found for obsid {}".format(
-                    obsid, version))
+                raise ValueError("No entries found for obsid {}".format(
+                    obsid))
             num_version = np.max(obs['revision'])
     else:
         num_version = version
