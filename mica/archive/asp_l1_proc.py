@@ -71,27 +71,37 @@ def update(obsids, config=None):
             indb = proc_db.fetchall("""SELECT * from aspect_1_proc
                                        WHERE aspect_1_id = {}
                                     """.format(aspect_1[0]['aspect_1_id']))
-            if len(indb):
-                logger.info("\tSkipping; already in table")
-                continue
             archrec = archdb.fetchall("""select * from archfiles
                                      where obsid = {obsid}
                                      and revision = {revision}
                                      and content = 'ASPSOL'
                                   """.format(obsid=obs,
                                              revision=revision))
-            proc_db.insert(dict(aspect_1_id=aspect_1[0]['aspect_1_id'],
-                                obsid=obs,
-                                obi=obi,
-                                revision=revision,
-                                obspar_version=obspar_version,
-                                ap_date=str(aspect_1[0]['ap_date'])),
-                           'aspect_1_proc')
-            isdefault = archrec[0]['isdefault']
-            if isdefault is not None:
-                proc_db.execute("""UPDATE aspect_1_proc SET isdefault = 1
+            # if already in the database, reset the V&V
+            # it doesn't really need to be redone (could just be relinked)
+            # but this should at least make the bookkeeping consistent
+            if len(indb):
+                logger.info("Resetting vv_complete to 0 for obsid {obsid} rev {revision}".format(
+                        obsid=obs, revision=revision))
+                proc_db.execute("""UPDATE aspect_1_proc SET vv_complete = 0
                                    WHERE obsid = {obsid}
                                    AND revision = {revision}
                                 """.format(obsid=obs,
+                                           revision=revision))
+            else:
+                proc_db.insert(dict(aspect_1_id=aspect_1[0]['aspect_1_id'],
+                                    obsid=obs,
+                                    obi=obi,
+                                    revision=revision,
+                                    obspar_version=obspar_version,
+                                    ap_date=str(aspect_1[0]['ap_date'])),
+                               'aspect_1_proc')
+            isdefault = archrec[0]['isdefault']
+            if isdefault is not None:
+                proc_db.execute("""UPDATE aspect_1_proc SET isdefault = {isdefault}
+                                   WHERE obsid = {obsid}
+                                   AND revision = {revision}
+                                """.format(isdefault=archrec[0]['isdefault'],
+                                           obsid=obs,
                                            revision=revision))
             logger.info("\tUpdated table for {}".format(obs))
