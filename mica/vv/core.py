@@ -462,7 +462,7 @@ class Obi(object):
             slot_report['rad_off'] = np.sqrt(slot_report['dy_med'] ** 2
                                       + slot_report['dz_med'] ** 2)
             slot_report['n_pts'] = len(slot_data['dy'])
-            if slot_report['type'] == 'fid':
+            if slot_report['type'] == 'FID':
                 slot_report['mean_y'] = np.mean(slot_data['ang_y_sm'])
                 slot_report['mean_z'] = np.mean(slot_data['ang_z_sm'])
                 slot_report['enc_rad1'] = scoreatpercentile(slot_data['dr'],
@@ -476,7 +476,20 @@ class Obi(object):
                                                             starDrEncFrac1 * 100)
                 slot_report['enc_rad2'] = scoreatpercentile(slot_data['dr'],
                                                             starDrEncFrac2 * 100)
-                
+
+            # get status info from guide or fid props
+            # just use the first aspect interval and assume the rest are the
+            # same (checked with _check_over_intervals)
+            if slot_report['type'] == 'FID':
+                slot_fidprop = self.aspect_intervals[0].fidprop[
+                    self.aspect_intervals[0].fidprop['slot'] == slot_id][0]
+                slot_report['id_status'] = slot_fidprop['id_status'].strip()
+            else:
+                slot_gsprop = self.aspect_intervals[0].gsprop[
+                    self.aspect_intervals[0].gsprop['slot'] == slot_id][0]
+                slot_report['id_status'] = slot_gsprop['id_status'].strip()
+                slot_report['cel_loc_flag'] = slot_gsprop['cel_loc_flag']
+
 
 
     def _label_slots(self):
@@ -508,6 +521,7 @@ class Obi(object):
             slot_type = 'FID'
             if t == 'gsprop':
                 slot_type = getattr(self.aspect_intervals[0], t).type
+                slot_cel_loc_flag = getattr(self.aspect_intervals[0], t)['cel_loc_flag']
             for ai in self.aspect_intervals[1:]:
                 if len(slot_id) != len(getattr(ai, t).slot):
                     raise ValueError(
@@ -525,6 +539,11 @@ class Obi(object):
                         (not np.all(slot_type == getattr(ai, t).type))):
                         raise ValueError(
                             "differing %s type across aspect intervals" % t)
+                    if (len(slot_id) == len(getattr(ai, t).slot) &
+                        (not np.all(slot_cel_loc_flag == getattr(ai, t)['cel_loc_flag']))):
+                        raise ValueError(
+                            "differing %s cel_loc_flag across aspect intervals" % t)
+
 
     def plot_slot(self, slot_num, plotdir=None, save=False, close=False, singles=False):
         if plotdir is None and save:
