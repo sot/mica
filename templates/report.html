@@ -1,0 +1,127 @@
+<HTML>
+<HEAD>
+<TITLE>Obsid {{ obsid }}</TITLE>
+<TITLE></TITLE>
+<link href="/mta/ASPECT/aspect.css" rel="stylesheet" type="text/css" media="all" />
+<style type="text/css">
+  body { width:1200px; 
+  background:url('http://asc.harvard.edu/mta/ASPECT/blue_paper.gif'); 
+}
+button {
+    background:none!important;
+     border:none; 
+     padding:0!important;
+     color:#069;
+     text-decoration:underline;
+     cursor:pointer;
+}
+</style>
+</HEAD>
+<BODY>
+
+<h1>Obsid {{ obsid }}</h1>
+
+<TABLE border=1>
+<TR>
+<TD WIDTH="70%" VALIGN="TOP">
+{% if target is not none %}
+<h2>Target Summary</h2>
+<table cellspacing=0 cellpadding=5>
+<tr><td></td>
+<th>Sequence
+  Number:</th><td><a href="http://icxc.harvard.edu/cgi-bin/mp/target.cgi?{{
+  target['seq_nbr'] }}">{{ target['seq_nbr']}}</a></td><th>Status:</th><td>
+  {{ target['status'] }}</td><th>ObsID #:</th><td>{{ target['obsid'] }}</td></tr></table>
+
+<table cellspacing=0 cellpadding=4>
+<tr><td></td>
+<th>Proposal Title:</th><td>{{ target['title'] }}</td></tr></table>
+
+<table cellspacing=0 cellpadding=4>
+<tr><td></td><th>Object:</th><td>{{ target['object'] }}</td></tr></table>
+
+<table cellspacing=0 cellpadding=4>
+<tr><td></td><th>Schedule Date:</th><td>{{ target['soe_st_sched_date'] }}</td>
+          <th>LTS Date:<td>{{ target['lts_lt_plan'] }}</tr></Table>
+<table>
+<tr><td></td><th align='right'>RA:</th><td><td>{{ "%3.6f"|format(target['ra']) }}</td></tr>
+<tr><td></td><th align='right'>DEC:</th><td><td>{{ "%3.6f"|format(target['dec']) }}</td></tr>
+<tr><td></td><th>Exp. Time:</th><td><td>{{ target['approved_exposure_time'] }}</td></tr>
+</table>
+{% endif %}
+
+{% if obs is not none %}
+<h2>Starcheck</h2>
+<PRE>
+{{"OBSID %5d"|format(obs.obsid) -}}
+{% if obs.target_id %}
+{{"%-22s %-6s SIM Z offset: %-5d (%-.2fmm) Grating: %-5s"|format(
+obs.target_id, obs.sci_instr, obs.sim_z_offset_steps,
+obs.sim_z_offset_mm, obs.grating) -}}
+{% endif %}
+{% if obs.point_ra %}
+{{- "RA, Dec, Roll (deg): %12.6f %12.6f %12.6f"|format(
+obs.point_ra, obs.point_dec, obs.point_roll) -}}
+{% endif %}
+{% if obs.dither_state is defined and obs.obsid < 40000 %}
+{{- "Dither : %-3s Y_amp=%4.1f  Z_amp=%4.1f  Y_period=%6.1f
+     Z_period=%6.1f"|format(
+obs.dither_state, obs.dither_y_amp, obs.dither_z_amp,
+obs.dither_y_period, obs.dither_z_period) -}}
+{% endif %}
+</PRE>
+<IMG SRC="starcheck.png">
+{% endif %}
+</TD>
+<TD WIDTH="30%" VALIGN="TOP">
+Links: <br>
+<UL>
+{% if target is not none %}
+<LI><A HREF="{{ links['obscat'] }}">CXC obscat page</A>
+<LI><A HREF="{{ links['seq_sum'] }}">Summary of Sequence</A>
+<LI><form method=post action="http://cxc.harvard.edu/cgi-bin/op/op_status_table.cgi" style="margin-bottom:0;">
+<input type="hidden" name="field" value="ObsId">
+<input type="hidden" name="id" value="{{ obsid }}">
+<input type="hidden" name="out" value="long">
+<button>Processing Status</button></form></LI>
+{% endif %}
+{% if obs is not none %}
+<LI><A HREF="{{ links['shortterm'] }}">MP short term sched</A>
+<LI><A HREF="{{ links['fot_dir'] }}">FOT Approved products</A>
+<LI><A HREF="{{ links['starcheck_html'] }}">Starcheck</A>
+{% endif %}
+{% if links['vv'] is not none %}
+<LI><A HREF="{{ links['vv'] }}">Official V&amp;V</A>
+{% endif %}
+</UL>
+
+</TD>
+</TR>
+</TABLE>
+
+
+
+{% if obs is not none %}
+<TABLE border=1 style="font-size:11px">
+<TR>
+{% for field in ['idx', 'slot', 'id', 'type', 'sz', 'mag', 'yang',
+'zang', 'notes', 'obc_id', 'mag_obs','trak %', 'obc_bad %',  'id_stat', 'cel_loc', 'dr_rms',
+'dy_rms', 'dz_rms', 'dy_mean', 'dz_mean' ] %}
+<TH align='right'>{{ field|upper() }}</TH>
+{% endfor %}
+</TR>
+
+{% for row in cat_table %}
+<TR>
+{% for field in ['idx', 'slot', 'idlink', 'type', 'sz', 'mag', 'yang',
+'zang', 'pass_notes', 'obc_id', 'mag_obs', 'trak_frac', 'obc_bad_frac',  'id_status', 'cel_loc_flag', 'dr_rms',
+'dy_rms', 'dz_rms', 'dy_mean', 'dz_mean'] %}
+<TD align='right'>{{ row[field] }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+</TABLE>
+{% endif %}
+
+</BODY>
+</HTML>
