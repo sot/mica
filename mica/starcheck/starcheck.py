@@ -49,6 +49,8 @@ def get_mp_dir(obsid, config=None):
                 return (sc[-1]['dir'], 'ran_pretimelines')
             return (sc[-1]['dir'], 'planned')
     actual_run = None
+    if not len(possible_runs):
+        return (None, None)
     for poss in possible_runs:
         tl = get_timeline_at_date(poss['date'])
         if tl is not None and poss['dir'] == tl['dir']:
@@ -69,12 +71,15 @@ def obsid(obsid, mp_dir=None, config=None):
     if mp_dir is None:
         mp_dir, status = get_mp_dir(obsid)
     if mp_dir is None:
-        return None
+        raise LookupError("No starcheck catalog found for {}".format(obsid))
     if config is None:
         config = DEFAULT_CONFIG
     db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
-    sc_id = db.fetchone(
-        "select id from starcheck_id where dir = '%s'" % mp_dir)['id']
+    sc = db.fetchone(
+        "select id from starcheck_id where dir = '%s'" % mp_dir)
+    if sc is None:
+        raise LookupError("Catalog for {} missing.  Should already be in mica.starcheck db".format(obsid))
+    sc_id = sc['id']
     sc = {}
     for d in ['manvr', 'catalog', 'obs', 'warnings']:
         sc[d] = db.fetchall(
