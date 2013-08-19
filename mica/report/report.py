@@ -3,14 +3,16 @@ import os
 import sys
 import re
 import logging
+import gzip
 import jinja2
 from glob import glob
+import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.table import Table
 from astropy.io import fits
 
-from Ska.Shell import getenv, tcsh
+from Ska.Shell import getenv, tcsh, bash
 import agasc
 import Ska.DBI
 
@@ -28,6 +30,17 @@ if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
 aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+
+def get_options():
+    parser = argparse.ArgumentParser(
+        description="Create a mica report for an obsid")
+    parser.add_argument("obsid",
+                        help="obsid",
+                        type=int)
+    parser.add_argument("--report-root",
+                        default="/proj/web-icxc/htdocs/aspect/mica_reports")
+    opt = parser.parse_args()
+    return opt
 
 
 def get_starcheck(obsid):
@@ -189,6 +202,23 @@ def official_vv(obsid):
     del vv_db
     return vv_url
 
+
+def official_vv_notes(obsid):
+    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='jeanconn', database='axafvv',
+                        numpy=False)
+    all_vv = vv_db.fetchall("""select * from vvreport where obsid = {obsid}
+                        """.format(obsid=obsid))
+    if not len(all_vv):
+        return None
+    for report in all_vv:
+        aspect_rev = vv_db.fetchone("""select * from vvreview where vvid = {vvid}
+                        """.format(vvid=report['vvid']))
+        report['aspect_review'] = aspect_rev
+
+    del vv_db
+    return all_vv
+
+
 def obs_links(obsid, sequence=None):
     mp_dir, status = starcheck.get_mp_dir(obsid)
     links = dict(
@@ -247,13 +277,15 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
         for sc_row in table:
             if sc_row['type'] != 'ACQ':
                 slot = sc_row['slot']
-                sc_row.update(dict(dr_rms=vv[str(slot)]['dr_rms'],
-                                   dz_rms=vv[str(slot)]['dz_rms'],
-                                   dy_rms=vv[str(slot)]['dy_rms'],
-                                   dy_mean=vv[str(slot)]['dy_mean'],
-                                   dz_mean=vv[str(slot)]['dz_mean'],
-                                   id_status=vv[str(slot)].get('id_status'),
-                                   cel_loc_flag=vv[str(slot)].get('cel_loc_flag')))
+                if str(slot) in vv['slots']:
+                    vvslot = vv['slots'][str(slot)]
+                    sc_row.update(dict(dr_rms=vvslot['dr_rms'],
+                                       dz_rms=vvslot['dz_rms'],
+                                       dy_rms=vvslot['dy_rms'],
+                                       dy_mean=vvslot['dy_mean'],
+                                       dz_mean=vvslot['dz_mean'],
+                                       id_status=vvslot.get('id_status'),
+                                       cel_loc_flag=vvslot.get('cel_loc_flag')))
 
 
     # let's explicitly reformat everything
@@ -310,10 +342,20 @@ def star_info(id):
                 traks=traks,
                 agg_trak=agg_trak)
 
+def get_aiprops(obsid):
+    aiprops = aca_db.fetchall(
+        "select * from aiprops where obsid = {} order by tstart".format(
+            obsid))
+    return aiprops
 
-def main():
+def main(opt):
 
-    outdir = 'test_report_new'
+    obsid = opt.obsid
+    strobs = "%05d" % obsid
+    chunk_dir = strobs[0:2]
+    topdir = os.path.join(opt.report_root, chunk_dir)
+    outdir = os.path.join(topdir, strobs)
+
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
@@ -321,20 +363,6 @@ def main():
         loader=jinja2.FileSystemLoader('templates'))
     jinja_env.line_comment_prefix = '##'
     jinja_env.line_statement_prefix = '#'
-
-
-    #obsid = 14932
-    #obsid = 10980
-    #obsid = 2306
-    #obsid = 15315
-    #obsid = 15293
-    #obsid = 433
-    #obsid = 15552
-    #obsid = 14520
-    #obsid = 53521
-    #obsid = 15042
-    #obsid = 14895
-    obsid = 15129
 
     logger.info("Making report for {}".format(obsid))
     logger.info("Getting target info from axafapstat")
@@ -358,7 +386,7 @@ def main():
     logger.info("Fetching starcheck catalog")
     try:
         obs_sc, mp_dir, status = get_starcheck(obsid)
-        logger.info("Plotting starcheck catalog")
+        logger.info("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
         fig, cat, obs = catalog.plot(obsid, mp_dir)
         fig.savefig(os.path.join(outdir, 'starcheck.png'))
         plt.close('all')
@@ -370,15 +398,13 @@ def main():
                                links=links,
                                cat_table=None,
                                obs=None)
-        full_report_file = os.path.join(outdir, 'report.html')
+        full_report_file = os.path.join(outdir, 'index.html')
         logger.info("Writing out full report to {}".format(full_report_file))
         f = open(full_report_file, 'w')
         f.write(page)
         f.close()
         return
 
-
-    
     # engineering data available
     logger.info("Getting acq and trak stats")
     acqs = get_obs_acq_stats(obsid)
@@ -391,19 +417,82 @@ def main():
     else:
         # obspar ingested
         try:
-            run_obspar = obspar.get_obspar(obsid)
+            run_obspar = obspar.get_obspar(obsid, version='last')
         except:
             run_obspar = None
 
         # v&v available
         try:
-            vv_obi = get_arch_vv(obsid, version='last')
-            vv = dict(slots=vv_obi.slot_report)['slots']
-            #vv = get_vv(obsid, version='last')['slots']
-            #vv_files = get_vv_files(obsid, version='last')
+            #vv_obi = get_arch_vv(obsid, version='last')
+            #vv = dict(slots=vv_obi.slot_report)['slots']
+            vv = get_vv(obsid, version='last')
+            vv_files = get_vv_files(obsid, version='last')
         except LookupError:
             logger.info("No V&V available")
             vv = None
+
+    if vv is not None:
+        for file in vv_files:
+            newfile = os.path.join(outdir, os.path.basename(file))
+            if not os.path.exists(newfile):
+                logger.info("linking {} into {}".format(file, outdir))
+                bash("ln -s {} {}".format(file, outdir))
+        asp_dir = asp_l1.get_obs_dirs(obsid)['last']
+        asp_logs = sorted(glob(os.path.join(asp_dir, "asp*log*gz")))
+        for log, interval in zip(asp_logs, vv['intervals']):
+            logmatch = re.search('(.*log)\.gz', os.path.basename(log))
+            if logmatch:
+                newlogname = "{}.txt".format(logmatch.group(1))
+                newlog = os.path.join(outdir, newlogname)
+                if not os.path.exists(newlog):
+                    logger.info("copying/gunzipping asp log {}".format(newlog))
+                    logtext = gzip.open(log).readlines()
+                    f = open(newlog, 'w')
+                    f.writelines(logtext)
+                    f.close()
+                interval['loglink'] = newlogname
+
+        aiprops = get_aiprops(obsid)
+        aiprops_template = jinja_env.get_template('aiprops.html')
+        aiprops_page = aiprops_template.render(obsid=obsid, aiprops=aiprops)
+        aiprops_page_file = os.path.join(outdir, 'aiprops.html')
+        logger.info("AIPROPS report to {}".format(aiprops_page_file))
+        f = open(aiprops_page_file, 'w')
+        f.write(aiprops_page)
+        f.close()
+
+        props_template = jinja_env.get_template('props.html')
+        props_page = props_template.render(obsid=obsid, vv=vv)
+        props_page_file = os.path.join(outdir, 'props.html')
+        logger.info("GS/FIDPROPS report to {}".format(props_page_file))
+        f = open(props_page_file, 'w')
+        f.write(props_page)
+        f.close()
+
+        for slot in vv['slots']:
+            slot_template = jinja_env.get_template('vv_slots_single.html')
+            slot_page = slot_template.render(obsid=obsid,
+                                             vv=vv,
+                                             slot=slot)
+            slot_page_file = os.path.join(outdir, "slot_{}.html".format(slot))
+            logger.info("VV SLOT report to {}".format(slot_page_file))
+            f = open(slot_page_file, 'w')
+            f.write(slot_page)
+            f.close()
+
+        official_notes=official_vv_notes(obsid)
+        vv_template = jinja_env.get_template('vv.html')
+        vv['has_errors'] = ('errors' in vv) or None
+        vv_page = vv_template.render(obsid=obsid,
+                                     vv=vv,
+                                     obspar=run_obspar,
+                                     official_vv_notes=official_notes,
+                                     )
+        vv_page_file = os.path.join(outdir, 'vv.html')
+        logger.info("VV report to {}".format(vv_page_file))
+        f = open(vv_page_file, 'w')
+        f.write(vv_page)
+        f.close()
 
     cat_table = catalog_info(obs_sc['catalog'], acqs, trak, vv)
 
@@ -426,19 +515,21 @@ def main():
         else:
             row['idlink'] = int(row['id'])
 
-
     template = jinja_env.get_template('report.html')
     page = template.render(cat_table=cat_table,
                            obs=obs,
+                           sc=obs_sc,
                            links=links,
                            target=summary,
                            obsid=obsid)
-    full_report_file = os.path.join(outdir, 'report.html')
+    full_report_file = os.path.join(outdir, 'index.html')
     logger.info("Writing out full report to {}".format(full_report_file))
     f = open(full_report_file, 'w')
     f.write(page)
     f.close()
-    raise ValueError
+
+
 
 if __name__ == '__main__':
-    main()
+    opt = get_options()
+    main(opt)
