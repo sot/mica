@@ -1,19 +1,55 @@
 <HTML>
 <HEAD>
 <TITLE></TITLE>
-<link href="/mta/ASPECT/aspect.css" rel="stylesheet" type="text/css" media="all" />
 <style type="text/css">
-  body { min-width:900px;
+  body { width:1200px;
   background:url('http://asc.harvard.edu/mta/ASPECT/blue_paper.gif'); }
+  div#left {
+    float: left;
+    width: 300px;
+    left: 0;
+  }
+  div#right {
+    float: right;
+    width: 800px;
+    left: 400px;
+  }
 </style>
 </HEAD>
 <BODY>
 
-<IMG SRC="{{ obsdir }}/slot_{{ slot }}_yz.png">
-<IMG SRC="{{ obsdir }}/slot_{{ slot }}_yzf.png">
-<IMG SRC="{{ obsdir }}/slot_{{ slot }}_y.png">
-<IMG SRC="{{ obsdir }}/slot_{{ slot }}_z.png">
-<IMG SRC="{{ obsdir }}/slot_{{ slot }}_m.png">
+<div id="left">
+<table>
+{% for field in ['slot', 'type', 'id_status', 'mean_y', 'mean_z'] %}<TR><TH>{{ field }}</TH><TD>{{ vv['slots'][slot][field] }}</TD></TR>
+{% endfor %}
+</TABLE>
+
+
+<IMG SRC="slot_{{ slot }}_yz.png">
+<IMG SRC="slot_{{ slot }}_yzf.png">
+</div>
+<div id="right">
+<TABLE border=1>
+<TR>
+<TD>RMS</TD><TD>{{ "%.3f"|format(vv['slots'][slot]['dy_rms']) }}</TD>
+<TD>Median</TD><TD>{{ "%.3f"|format(vv['slots'][slot]['dy_med']) }}</TD>
+</TR><TR><TD colspan=4>
+<IMG SRC="slot_{{ slot }}_y.png">
+</TD></TR></TABLE>
+<TABLE border=1><TR>
+<TD>RMS</TD><TD>{{ "%.3f"|format(vv['slots'][slot]['dz_rms']) }}</TD>
+<TD>Median</TD><TD>{{ "%.3f"|format(vv['slots'][slot]['dz_med']) }}</TD>
+</TR><TR><TD colspan=4>
+<IMG SRC="slot_{{ slot }}_z.png">
+</TD></TR></TABLE>
+<TABLE border=1><TR>
+<TD>RMS</TD><TD>{{ "%.3f"|format(vv['slots'][slot]['mag_rms']) }}</TD>
+<TD>Median</TD><TD>{{ "%.3f"|format(vv['slots'][slot]['mag_med']) }}</TD>
+</TR><TR><TD colspan=4>
+<IMG SRC="slot_{{ slot }}_m.png">
+</TD></TR>
+</TABLE>
+</div>
 
 </BODY>
 </HTML>

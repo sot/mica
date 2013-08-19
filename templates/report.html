@@ -2,11 +2,37 @@
 <HEAD>
 <TITLE>Obsid {{ obsid }}</TITLE>
 <TITLE></TITLE>
-<link href="/mta/ASPECT/aspect.css" rel="stylesheet" type="text/css" media="all" />
 <style type="text/css">
-  body { width:1200px; 
+  body { min-width:900px;
   background:url('http://asc.harvard.edu/mta/ASPECT/blue_paper.gif'); 
 }
+  div#fullwidth {
+    clear: both;
+    position: static;
+    width:1200px;
+    left:0px;
+  }
+  div#leftmain {
+    float: left;
+    width: 900px;
+    left:0px;
+    top: 0px;
+  }
+  div#leftsmall {
+    float: left;
+    width: 450px;
+  }
+  div#rightlarge {
+    float: right;
+    width: 450px;
+  }
+  div#rightsmall {
+    float: right;
+    width: 300px;
+    left:900px;
+    top: 0px;
+  }
+
 button {
     background:none!important;
      border:none; 
@@ -19,13 +45,11 @@ button {
 </HEAD>
 <BODY>
 
+<div id="fullwidth">
+<div id="leftmain">
 <h1>Obsid {{ obsid }}</h1>
-
-<TABLE border=1>
-<TR>
-<TD WIDTH="70%" VALIGN="TOP">
 {% if target is not none %}
-<h2>Target Summary</h2>
+<h2><A HREF="{{ links['obscat']}}">Target Summary</A></h2>
 <table cellspacing=0 cellpadding=5>
 <tr><td></td>
 <th>Sequence
@@ -49,31 +73,10 @@ button {
 <tr><td></td><th>Exp. Time:</th><td><td>{{ target['approved_exposure_time'] }}</td></tr>
 </table>
 {% endif %}
+&nbsp;
+</div>
 
-{% if obs is not none %}
-<h2>Starcheck</h2>
-<PRE>
-{{"OBSID %5d"|format(obs.obsid) -}}
-{% if obs.target_id %}
-{{"%-22s %-6s SIM Z offset: %-5d (%-.2fmm) Grating: %-5s"|format(
-obs.target_id, obs.sci_instr, obs.sim_z_offset_steps,
-obs.sim_z_offset_mm, obs.grating) -}}
-{% endif %}
-{% if obs.point_ra %}
-{{- "RA, Dec, Roll (deg): %12.6f %12.6f %12.6f"|format(
-obs.point_ra, obs.point_dec, obs.point_roll) -}}
-{% endif %}
-{% if obs.dither_state is defined and obs.obsid < 40000 %}
-{{- "Dither : %-3s Y_amp=%4.1f  Z_amp=%4.1f  Y_period=%6.1f
-     Z_period=%6.1f"|format(
-obs.dither_state, obs.dither_y_amp, obs.dither_z_amp,
-obs.dither_y_period, obs.dither_z_period) -}}
-{% endif %}
-</PRE>
-<IMG SRC="starcheck.png">
-{% endif %}
-</TD>
-<TD WIDTH="30%" VALIGN="TOP">
+<div id="rightsmall">
 Links: <br>
 <UL>
 {% if target is not none %}
@@ -91,37 +94,88 @@ Links: <br>
 <LI><A HREF="{{ links['starcheck_html'] }}">Starcheck</A>
 {% endif %}
 {% if links['vv'] is not none %}
-<LI><A HREF="{{ links['vv'] }}">Official V&amp;V</A>
+<LI><A HREF="{{ links['vv'] }}">Official V&amp;V</A><BR>
+    <UL><LI>(<A HREF="https://icxc2.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A>
+    once first)</A></BR></LI></UL>
+<LI><A HREF="vv.html">MICA VV</A>
 {% endif %}
 </UL>
+</div>
 
-</TD>
-</TR>
-</TABLE>
-
-
-
+<div id="fullwidth">
 {% if obs is not none %}
+<div id="leftsmall">
+<h2><A HREF="{{ links['starcheck_html'] }}">Starcheck</A></h2>
+<PRE>
+{{"OBSID %5d"|format(obs.obsid) -}}
+{% if obs.target_id %}
+{{"%-22s %-6s SIM Z offset: %-5d (%-.2fmm) Grating: %-5s"|format(
+obs.target_id, obs.sci_instr, obs.sim_z_offset_steps,
+obs.sim_z_offset_mm, obs.grating) -}}
+{% endif %}
+{% if obs.point_ra %}
+{{- "RA, Dec, Roll (deg): %12.6f %12.6f %12.6f"|format(
+obs.point_ra, obs.point_dec, obs.point_roll) -}}
+{% endif %}
+{% if obs.dither_state is defined and obs.obsid < 40000 %}
+{{- "Dither : %-3s Y_amp=%4.1f  Z_amp=%4.1f  Y_period=%6.1f Z_period=%6.1f"|format(
+obs.dither_state, obs.dither_y_amp, obs.dither_z_amp,
+obs.dither_y_period, obs.dither_z_period) -}}
+{% endif %}
+</PRE>
+
+{% for manvr in sc['manvr'] %}
+<PRE>
+{{- "MP_TARGQUAT at %s (VCDU count = %d)"|format(
+manvr['mp_targquat_time'], manvr['mp_targquat_vcdu_cnt']) }}
+{{ "  Q1,Q2,Q3,Q4: %f %f %f %f"|format(
+manvr['target_Q1'], 
+manvr['target_Q2'], 
+manvr['target_Q3'],
+manvr['target_Q4']) }}
+{{ "  MANVR: Angle=  %.2f deg  Duration= %d sec  Slew err= %.1f arcsec"|format(
+manvr['angle_deg'], manvr['duration_sec'], manvr['slew_err_arcsec']) -}}
+{% endfor %}
+</PRE>
+<PRE>
+{% for cat in sc['obs'] %}
+{{- "MP_STARCAT at %s (VCDU count = %d)"|format(
+cat['mp_starcat_time'], cat['mp_starcat_vcdu_cnt']) -}}
+{% endfor %}
+</PRE>
+
+<PRE>
+{% for warn in sc['warnings'] %}{% if warn['idx'] is not none %}{{- "WARNING: [%2s] %s. %s"|format(
+warn['idx'], warn['warning_type'], warn['warning']) }}
+{% else %}{{- "WARNING: %s"|format(warn['warning']) }}{% endif %}{% endfor %}
+</PRE>
+</div>
+<div id="rightlarge">
+<IMG SRC="starcheck.png">
+</div>
+{% endif %}
+</div>
+
+<div id="fullwidth">
+{% if obs is not none %}
+<h2>Catalog</h2>
 <TABLE border=1 style="font-size:11px">
-<TR>
-{% for field in ['idx', 'slot', 'id', 'type', 'sz', 'mag', 'yang',
+<TR>{% for field in ['idx', 'slot', 'id', 'type', 'sz', 'mag', 'yang',
 'zang', 'notes', 'obc_id', 'mag_obs','trak %', 'obc_bad %',  'id_stat', 'cel_loc', 'dr_rms',
 'dy_rms', 'dz_rms', 'dy_mean', 'dz_mean' ] %}
-<TH align='right'>{{ field|upper() }}</TH>
-{% endfor %}
+<TH align='right'>{{ field|upper() }}</TH>{% endfor %}
 </TR>
 
 {% for row in cat_table %}
-<TR>
-{% for field in ['idx', 'slot', 'idlink', 'type', 'sz', 'mag', 'yang',
+<TR>{% for field in ['idx', 'slot', 'idlink', 'type', 'sz', 'mag', 'yang',
 'zang', 'pass_notes', 'obc_id', 'mag_obs', 'trak_frac', 'obc_bad_frac',  'id_status', 'cel_loc_flag', 'dr_rms',
 'dy_rms', 'dz_rms', 'dy_mean', 'dz_mean'] %}
-<TD align='right'>{{ row[field] }}</TD>
-{% endfor %}
-</TR>
+<TD align='right'>{{ row[field] }}</TD>{% endfor %}</TR>
 {% endfor %}
 </TABLE>
 {% endif %}
+</div>
+
 
 </BODY>
 </HTML>
