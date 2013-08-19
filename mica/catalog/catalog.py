@@ -45,7 +45,7 @@ def symsize(mag):
 
 def plot_starcheck(catalog, quat=None, field=None, title=None):
     cat = catalog
-    fig = plt.figure(num=1, figsize=(5, 5))
+    fig = plt.figure(num=1, figsize=(4, 4))
     ax = fig.add_subplot(1, 1, 1)
     face = backcolor
 
