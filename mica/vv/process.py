@@ -133,9 +133,7 @@ def get_arch_vv(obsid, version='last'):
     """
     asp_l1_dirs = asp_l1_arch.get_obs_dirs(obsid)
     if asp_l1_dirs is None or version not in asp_l1_dirs:
-        logger.error(
-            "Requested version {} not in asp_l1 archive".format(version))
-        return None
+        raise LookupError("Requested version {} not in asp_l1 archive".format(version))
     l1_dir = asp_l1_dirs[version]
     # find the obspar that matches the requested aspect_1 products
     # this is in the aspect processing table
