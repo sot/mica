@@ -117,7 +117,6 @@ class Obi(object):
         self._isdefault = None
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
-        self.tempdir = tempfile.mkdtemp(dir=temproot)
         self._process()
 
     def _process(self):

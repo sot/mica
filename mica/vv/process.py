@@ -1,5 +1,6 @@
 from __future__ import division
 import os
+import tempfile
 import json
 import tables
 import shutil
@@ -175,6 +176,7 @@ def process(obsid, version='last'):
     :returns: mica.vv.Obi V&V object
     """
     obi = get_arch_vv(obsid, version)
+    obi.tempdir = tempfile.mkdtemp(dir=FILES['temproot'])
     obi.save_plots_and_resid()
     if obi is None:
         return None
