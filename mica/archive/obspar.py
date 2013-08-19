@@ -307,6 +307,8 @@ def get_obspar(obsid, version='default'):
     """
 
     obsparfile = get_obspar_file(obsid, version)
+    if obsparfile is None:
+        return None
     obspar = {'num_ccd_on': 0}
     for row in parse_obspar(obsparfile):
         obspar.update({row['name']: row['value']})
