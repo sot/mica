@@ -30,6 +30,10 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+class InconsistentAspectIntervals(ValueError):
+    pass
+
+
 logger = logging.getLogger('vv')
 
 
@@ -109,6 +113,7 @@ def frac_bad(data, median, limit):
 class Obi(object):
     def __init__(self, obsparfile, obsdir, temproot=None):
         self._info = None
+        self._errors = []
         self._isdefault = None
         self.obspar = get_obspar(obsparfile)
         self.obsdir = obsdir
@@ -119,7 +124,10 @@ class Obi(object):
         self._find_aspect_intervals()
         self._process_aspect_intervals()
         self._concat_slot_data()
-        self._check_over_intervals()
+        try:
+            self._check_over_intervals()
+        except InconsistentAspectIntervals as e:
+            self._errors.append(e)
         self._sim_data()
         self.slot_report = dict()
         self._label_slots()
@@ -226,10 +234,16 @@ class Obi(object):
                 raise ValueError
             if ai['REVISION'] != revision:
                 raise ValueError
+        fidprops = [[dict(zip(r.dtype.names,r)) for r in getattr(ai, 'fidprop')]
+                    for ai in self.aspect_intervals]
+        gsprops = [[dict(zip(r.dtype.names,r)) for r in getattr(ai, 'gsprop')]
+                   for ai in self.aspect_intervals]
         self._info = {'obsid': int(obsid),
                      'revision': revision,
                      'tstart': self.obspar['tstart'],
                      'tstop': self.obspar['tstop'],
+                      'fidprops': fidprops,
+                      'gsprops': gsprops,
                      'sim_z': self.obspar['sim_z'],
                      'sim_z_offset': self.obspar['sim_z_offset'],
                      'ra_pnt': self.obspar['ra_pnt'],
@@ -240,6 +254,7 @@ class Obi(object):
                      'slots': self.slot_report,
                      'sim': self.sim_report,
                      'aspect_1_id': aspect_1_id,
+                      'errors': [str(e) for e in self._errors],
                      'ap_date': str(ap_date)}
         # we don't care about the DateTimeType for ap_date,
         # so just cast to a string
@@ -349,7 +364,7 @@ class Obi(object):
                        % (save['obsid'], save['revision']))
                 self.table.modifyCoordinates(rev_coord, save_rec)
             else:
-                table.append(save_rec)
+                self.table.append(save_rec)
         else:
             self.table.append(save_rec)
         self.table.flush()
@@ -524,24 +539,24 @@ class Obi(object):
                 slot_cel_loc_flag = getattr(self.aspect_intervals[0], t)['cel_loc_flag']
             for ai in self.aspect_intervals[1:]:
                 if len(slot_id) != len(getattr(ai, t).slot):
-                    raise ValueError(
+                    raise InconsistentAspectIntervals(
                         "differing %s slots across aspect intervals" % t)
-                if (len(slot_id) == len(getattr(ai, t).slot)
-                    & (not np.all(slot_id == getattr(ai, t).slot))):
-                    raise ValueError(
+                if ((len(slot_id) == len(getattr(ai, t).slot)) &
+                    (not np.all([slot_id == getattr(ai, t).slot]))):
+                    raise InconsistentAspectIntervals(
                         "differing %s slots across aspect intervals" % t)
-                if (len(slot_id) == len(getattr(ai, t).slot) &
-                    (not np.all(slot_status == getattr(ai, t).id_status))):
-                    raise ValueError(
+                if ((len(slot_id) == len(getattr(ai, t).slot)) &
+                    (not np.all([slot_status == getattr(ai, t).id_status]))):
+                    raise InconsistentAspectIntervals(
                         "differing %s status across aspect intervals" % t)
                 if t == 'gsprop':
                     if ((len(slot_id) == len(getattr(ai, t).slot)) &
-                        (not np.all(slot_type == getattr(ai, t).type))):
-                        raise ValueError(
+                        (not np.all([slot_type == getattr(ai, t).type]))):
+                        raise InconsistentAspectIntervals(
                             "differing %s type across aspect intervals" % t)
-                    if (len(slot_id) == len(getattr(ai, t).slot) &
-                        (not np.all(slot_cel_loc_flag == getattr(ai, t)['cel_loc_flag']))):
-                        raise ValueError(
+                    if ((len(slot_id) == len(getattr(ai, t).slot)) &
+                        (not np.all([slot_cel_loc_flag == getattr(ai, t)['cel_loc_flag']]))):
+                        raise InconsistentAspectIntervals(
                             "differing %s cel_loc_flag across aspect intervals" % t)
 
 
@@ -719,8 +734,7 @@ class Obi(object):
         az.plot(plottime[ok], dz[ok], 'g.')
         az.plot(plottime[bad], dz[bad], 'r.')
         plt.setp(az.get_yticklabels(), fontsize=labelfontsize)
-        if not singles:
-            plt.setp(az.get_xticklabels(), visible=False)
+        plt.setp(az.get_xticklabels(), visible=False)
         az.set_ylabel('Z offsets(dz) (arcsec)')
         az.set_ylim(zmid - extent, zmid + extent)
         plt.draw()
@@ -749,7 +763,7 @@ class Obi(object):
                 plt.close(fig4)
 
         if singles:
-            fig5 = plt.figure(figsize=(7,2.5))
+            fig5 = plt.figure(figsize=(7,3))
             am = plt.subplot(1, 1, 1)
         else:
             am = fig.add_axes([.30, .1, .62, .25], sharex=ay)
@@ -770,6 +784,7 @@ class Obi(object):
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         plt.draw()
         if singles:
+            plt.tight_layout()
             if save:
                 plotfile = os.path.join(self.tempdir,
                                         "slot_{}_m.png".format(slot_num))
@@ -893,7 +908,7 @@ class AspectInterval(object):
         logger.info('Reading gyro data')
         self.gdat = read_table(glob(
                 os.path.join(datadir, "%s_gdat1.fits*" % aiid))[0])
-        
+
 
     def _read_in_log(self):
         aiid = self.aiid
