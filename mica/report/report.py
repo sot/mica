@@ -21,6 +21,7 @@ from mica.catalog import catalog
 from mica.starcheck import starcheck
 from mica.archive import asp_l1
 from mica.vv import get_vv, get_vv_files, get_arch_vv
+from mica.version import version
 
 plt.rcParams['lines.markeredgewidth'] = 0
 
@@ -397,7 +398,8 @@ def main(opt):
                                target=summary,
                                links=links,
                                cat_table=None,
-                               obs=None)
+                               obs=None,
+                               version=version)
         full_report_file = os.path.join(outdir, 'index.html')
         logger.info("Writing out full report to {}".format(full_report_file))
         f = open(full_report_file, 'w')
@@ -521,7 +523,8 @@ def main(opt):
                            sc=obs_sc,
                            links=links,
                            target=summary,
-                           obsid=obsid)
+                           obsid=obsid,
+                           version=version)
     full_report_file = os.path.join(outdir, 'index.html')
     logger.info("Writing out full report to {}".format(full_report_file))
     f = open(full_report_file, 'w')
