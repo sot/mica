@@ -31,6 +31,7 @@ if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
 aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+DEFAULT_REPORT_ROOT = "/proj/web-icxc/htdocs/aspect/mica_reports"
 
 def get_options():
     parser = argparse.ArgumentParser(
@@ -39,7 +40,7 @@ def get_options():
                         help="obsid",
                         type=int)
     parser.add_argument("--report-root",
-                        default="/proj/web-icxc/htdocs/aspect/mica_reports")
+                        default=DEFAULT_REPORT_ROOT)
     opt = parser.parse_args()
     return opt
 
@@ -362,12 +363,11 @@ def get_aiprops(obsid):
             obsid))
     return aiprops
 
-def main(opt):
+def main(obsid, report_root=DEFAULT_REPORT_ROOT):
 
-    obsid = opt.obsid
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
-    topdir = os.path.join(opt.report_root, chunk_dir)
+    topdir = os.path.join(report_root, chunk_dir)
     outdir = os.path.join(topdir, strobs)
 
     if not os.path.exists(outdir):
@@ -548,4 +548,4 @@ def main(opt):
 
 if __name__ == '__main__':
     opt = get_options()
-    main(opt)
+    main(opt.obsid, opt.report_root)
