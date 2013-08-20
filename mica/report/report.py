@@ -334,7 +334,7 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
     sc.extend(opt_elem)
     for sc_row in table:
         for k in sc:
-            if k in sc_row:
+            if k in sc_row and sc_row[k] is not None:
                 sc_row[k] = format_spec[k].format(sc_row[k])
             else:
                 sc_row[k] = '&nbsp;';
@@ -511,24 +511,27 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
 
     cat_table = catalog_info(obs_sc['catalog'], acqs, trak, vv)
 
-    for row in cat_table:
+    for row, cat_row in zip(obs_sc['catalog'], cat_table):
         if row['type'] != 'FID':
-            s = star_info(row['id'])
-            star_template = jinja_env.get_template('star.html')
-            star_page = star_template.render(
-                star=s['agasc_info'],
-                acqs=s['acqs'],
-                traks=s['traks'],
-                agg_acq=s['agg_acq'],
-                agg_trak=s['agg_trak'])
-            star_page_file = os.path.join(outdir, 'star_%d.html' % int(row['id']))
-            logger.info("Writing out star info to {}".format(star_page_file))
-            f = open(star_page_file, 'w')
-            f.write(star_page)
-            f.close()
-            row['idlink'] = '<A HREF="star_{id}.html">{id}</A>'.format(id=int(row['id']))
+            if row['id'] is not None:
+                s = star_info(row['id'])
+                star_template = jinja_env.get_template('star.html')
+                star_page = star_template.render(
+                    star=s['agasc_info'],
+                    acqs=s['acqs'],
+                    traks=s['traks'],
+                    agg_acq=s['agg_acq'],
+                    agg_trak=s['agg_trak'])
+                star_page_file = os.path.join(outdir, 'star_%d.html' % int(row['id']))
+                logger.info("Writing out star info to {}".format(star_page_file))
+                f = open(star_page_file, 'w')
+                f.write(star_page)
+                f.close()
+                cat_row['idlink'] = '<A HREF="star_{id}.html">{id}</A>'.format(id=int(row['id']))
+            else:
+                cat_row['idlink'] = "&nbsp;"
         else:
-            row['idlink'] = int(row['id'])
+            cat_row['idlink'] = int(row['id'])
 
     template = jinja_env.get_template('report.html')
     page = template.render(cat_table=cat_table,
