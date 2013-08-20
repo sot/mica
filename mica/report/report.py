@@ -537,6 +537,7 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
     page = template.render(cat_table=cat_table,
                            obs=obs,
                            sc=obs_sc,
+                           vv=vv,
                            links=links,
                            target=summary,
                            obsid=obsid,
