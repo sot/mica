@@ -201,7 +201,7 @@ def official_vv(obsid):
     if vv is not None:
         vv_url = "https://icxc.cfa.harvard.edu/cgi-bin/vv/vv_report.cgi?vvid={}".format(vv['vvid'])
     del vv_db
-    return vv_url
+    return vv_url, vv['vvid']
 
 
 def official_vv_notes(obsid):
@@ -223,7 +223,9 @@ def official_vv_notes(obsid):
 def obs_links(obsid, sequence=None):
     mp_dir, status = starcheck.get_mp_dir(obsid)
     links = dict(
-        obscat="https://icxc.cfa.harvard.edu/cgi-bin/mp/target_param.cgi?{}".format(obsid),
+        obscat=dict(
+            label="Target Param : {}".format(obsid),
+            link="https://icxc.cfa.harvard.edu/cgi-bin/mp/target_param.cgi?{}".format(obsid)),
         mp_dir=None,
         shortterm=None,
         fot_dir=None,
@@ -231,16 +233,27 @@ def obs_links(obsid, sequence=None):
         vv=None)
     if sequence is not None:
         links.update(dict(
-                seq_sum="https://icxc.harvard.edu/cgi-bin/mp/target.cgi?{}".format(sequence)))
+                seq_sum=dict(
+                    label="Seq. Summary : {}".format(sequence),
+                    link= "https://icxc.harvard.edu/cgi-bin/mp/target.cgi?{}".format(sequence))))
     if mp_dir is not None:
+        dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
+        mp_label = "{}{}".format(dir_match.group(1),
+                                 dir_match.group(2).upper())
+        vv, vvid = official_vv(obsid)
         links.update(dict(
-                shortterm=guess_shortterm(mp_dir),
-                fot_dir=guess_fot_summary(mp_dir),
-                starcheck_html="{top}{mp_dir}starcheck.html#obsid{obsid}".format(
-                    top="https://icxc.harvard.edu/mp/mplogs",
-                    obsid=obsid,
-                    mp_dir=mp_dir),
-                vv=official_vv(obsid)))
+                shortterm=dict(link=guess_shortterm(mp_dir),
+                               label="Short Term Sched. {}".format(mp_label)),
+                fot_dir=dict(link=guess_fot_summary(mp_dir),
+                             label="FOT Approved Sched. {}".format(mp_label)),
+                starcheck_html=dict(
+                    link="{top}{mp_dir}starcheck.html#obsid{obsid}".format(
+                        top="https://icxc.harvard.edu/mp/mplogs",
+                        obsid=obsid,
+                        mp_dir=mp_dir),
+                    label="Starcheck obsid {}".format(obsid)),
+                vv=dict(link=vv,
+                        label="CXCDS V&V (id={})".format(vvid))))
     return links
 
 
