@@ -176,7 +176,9 @@ def process(obsid, version='last'):
     :returns: mica.vv.Obi V&V object
     """
     obi = get_arch_vv(obsid, version)
-    obi.tempdir = tempfile.mkdtemp(dir=FILES['temproot'])
+    if not os.path.exists(FILES['temp_root']):
+        os.makedirs(FILES['temp_root'])
+    obi.tempdir = tempfile.mkdtemp(dir=FILES['temp_root'])
     obi.save_plots_and_resid()
     if obi is None:
         return None
