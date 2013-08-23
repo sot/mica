@@ -37,10 +37,10 @@ plt.rcParams['savefig.edgecolor'] = backcolor
 
 def symsize(mag):
     # map mags to figsizes, defining
-    # mag 6 -> 40, mag 11 -> 1
+    # mag 6 as 20 and mag 11 as 1
     # interp should leave it at the bounding value outside
     # the range
-    return np.interp(mag, [6.0, 11.0], [40.0, 1])
+    return np.interp(mag, [6.0, 11.0], [20.0, 1])
 
 
 def plot_starcheck(catalog, quat=None, field=None, title=None):
