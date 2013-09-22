@@ -582,7 +582,6 @@ class Obi(object):
         ai_starts = [interv.deltas[slot_num]['time'][0]
                      for interv in self.aspect_intervals]
         time0 = time[0]
-        timepad = 0.05
         dy0 = np.median(dy)
         dz0 = np.median(dz)
 
@@ -625,13 +624,16 @@ class Obi(object):
         extent = max_extent * 1.10
         if extent < (xy_range / 2):
             extent = xy_range / 2
-        
+        plot_dict = dict()
+
         if singles:
             fig1 = plt.figure(figsize=(3,3))
             ayz = plt.subplot(1, 1, 1)
+            plot_dict['ayz'] = fig1
         else:
             fig = plt.figure(figsize=(14, 10))
             ayz = fig.add_axes([.05, .7, .20, .20], aspect='equal')
+            plot_dict['all'] = fig
         axes['yz'] = ayz
         ayz.plot(dy[ok], dz[ok], 'g.')
         ayz.plot(dy[bad], dz[bad], 'r.')
@@ -661,6 +663,7 @@ class Obi(object):
         if singles:
             fig2 = plt.figure(figsize=(3,3))
             ayzf = plt.subplot(1, 1, 1)
+            plot_dict['ayzf'] = fig2
         else:
             ayzf = fig.add_axes([.05, .25, .20, .20], aspect='equal')
         axes['yz_fixed'] = ayzf
@@ -691,8 +694,12 @@ class Obi(object):
                 plt.close(fig2)
 
         if singles:
-            fig3 = plt.figure(figsize=(7,2.5))
+            if fid_plot:
+                fig3 = plt.figure(figsize=(7.9,2.5))
+            else:
+                fig3 = plt.figure(figsize=(7,2.5))
             ay = plt.subplot(1, 1, 1)
+            plot_dict['ay'] = fig3
         else:
             ay = fig.add_axes([.30, .7, .62, .25])
         axes['dy'] = ay
@@ -702,16 +709,20 @@ class Obi(object):
         plt.setp(ay.get_xticklabels(), visible=False)
         ay.set_ylabel('Y offsets(dy) (arcsec)')
         ay.set_ylim(ymid - extent, ymid + extent)
+        ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         plt.draw()
-        for t in ai_starts:
-            s_t = (t - time0) / 1000.
-            ay.plot([s_t, s_t], ay.get_ylim(), color='blue',
-                    linestyle='dashed')
+        if len(ai_starts) > 1:
+            for t in ai_starts:
+                s_t = (t - time0) / 1000.
+                ay.plot([s_t, s_t], ay.get_ylim(), color='blue',
+                        linestyle='dashed')
         ay.grid()
 
         if y is not None:
             ay2 = ay.twinx()
             ay2.plot(plottime, y)
+            ay2.autoscale(enable=False, axis='x')
+            ay2.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
             ay2y_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
             ay2.yaxis.set_major_formatter(ay2y_formatter)
             plt.setp(ay2.get_yticklabels(), fontsize=labelfontsize,
@@ -728,8 +739,12 @@ class Obi(object):
                 plt.close(fig3)
 
         if singles:
-            fig4 = plt.figure(figsize=(7,2.5))
+            if fid_plot:
+                fig4 = plt.figure(figsize=(7.9,2.5))
+            else:
+                fig4 = plt.figure(figsize=(7,2.5))
             az = plt.subplot(1, 1, 1)
+            plot_dict['az'] = fig4
         else:
             az = fig.add_axes([.30, .4, .62, .25], sharex=ay)
         axes['dz'] = az
@@ -739,16 +754,20 @@ class Obi(object):
         plt.setp(az.get_xticklabels(), visible=False)
         az.set_ylabel('Z offsets(dz) (arcsec)')
         az.set_ylim(zmid - extent, zmid + extent)
+        az.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         plt.draw()
-        for t in ai_starts:
-            s_t = (t - time0) / 1000.
-            az.plot([s_t, s_t], az.get_ylim(), color='blue',
-                    linestyle='dashed')
+        if len(ai_starts) > 1:
+            for t in ai_starts:
+                s_t = (t - time0) / 1000.
+                az.plot([s_t, s_t], az.get_ylim(), color='blue',
+                        linestyle='dashed')
         az.grid()
 
         if z is not None:
             az2 = az.twinx()
             az2.plot(plottime, z)
+            az2.autoscale(enable=False, axis='x')
+            az2.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
             az2y_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
             az2.yaxis.set_major_formatter(az2y_formatter)
             plt.setp(az2.get_yticklabels(), fontsize=labelfontsize,
@@ -767,6 +786,7 @@ class Obi(object):
         if singles:
             fig5 = plt.figure(figsize=(7,3))
             am = plt.subplot(1, 1, 1)
+            plot_dict['am'] = fig5
         else:
             am = fig.add_axes([.30, .1, .62, .25], sharex=ay)
         axes['mag'] = am
@@ -775,15 +795,16 @@ class Obi(object):
         am.plot(plottime[ok], mag[ok], color='green')
         am.plot(plottime[bad], mag[bad], 'r.')
         am.set_ylim(am.get_ylim()[::-1])
-        for t in ai_starts:
-            s_t = (t - time0) / 1000.
-            am.plot([s_t, s_t], am.get_ylim(), color='blue',
-                    linestyle='dashed')
+        if len(ai_starts) > 1:
+            for t in ai_starts:
+                s_t = (t - time0) / 1000.
+                am.plot([s_t, s_t], am.get_ylim(), color='blue',
+                        linestyle='dashed')
         am.grid()
         am.set_ylabel('Magnitude(mag)')
         am.set_xlabel('Time(ksec)')
-        ay.autoscale(enable=False, axis='x')
-        ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
+        am.autoscale(enable=False, axis='x')
+        am.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         plt.draw()
         if singles:
             plt.tight_layout()
@@ -818,7 +839,14 @@ class Obi(object):
             ceniz.plot(plottime[ok], ang_z_sm[ok] * 3600, 'g.')
             ceniz.set_ylabel('Centroid Z (arcsec)')
             ceniz.set_xlabel('Time(ksec)')
+            ceniy.autoscale(enable=False, axis='x')
+            ceniz.autoscale(enable=False, axis='x')
+            ceniy.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
+            ceniz.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
+
             plt.suptitle('Slot %d Centroids (aspect sol in blue)' % slot_num)
+
+        return plot_dict
 
 AI_DEFAULT_CONF = {'obc': None,
                    'alg': 8,
