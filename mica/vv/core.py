@@ -33,6 +33,8 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
 class InconsistentAspectIntervals(ValueError):
     pass
 
+# integer code version for lightweight database tracking
+VV_VERSION = 2
 
 logger = logging.getLogger('vv')
 
@@ -252,6 +254,7 @@ class Obi(object):
                      'intervals': ai_list,
                      'slots': self.slot_report,
                      'sim': self.sim_report,
+                     'vv_version': VV_VERSION,
                      'aspect_1_id': aspect_1_id,
                       'errors': [str(e) for e in self._errors],
                      'ap_date': str(ap_date)}

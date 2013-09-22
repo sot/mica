@@ -22,8 +22,11 @@ from mica.archive import obspar
 from mica.catalog import catalog
 from mica.starcheck import starcheck
 from mica.archive import asp_l1
+import mica.vv
 from mica.vv import get_vv, get_vv_files, get_arch_vv
 from mica.version import version
+
+WANT_VV_VERSION = 2
 
 plt.rcParams['lines.markeredgewidth'] = 0
 
@@ -509,9 +512,10 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
 
         # v&v available
         try:
-            #vv_obi = get_arch_vv(obsid, version='last')
-            #vv = dict(slots=vv_obi.slot_report)['slots']
             vv = get_vv(obsid, version='last')
+            if vv is None or 'vv_version' not in vv or vv['vv_version'] < WANT_VV_VERSION:
+                mica.vv.process.process(obsid, version="last")
+                vv = get_vv(obsid, version='last')
             vv_files = get_vv_files(obsid, version='last')
             last_sched = "complete through mica v&v"
         except LookupError:

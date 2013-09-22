@@ -13,7 +13,7 @@ import Ska.DBI
 import mica.archive.asp_l1 as asp_l1_arch
 import mica.archive.obspar as obspar_arch
 from mica.archive import obsid_archive
-from .core import Obi
+from .core import Obi, VV_VERSION
 from .vv import FILES
 
 KNOWN_BAD_OBSIDS = json.loads(open(FILES['bad_obsid_list']).read())
@@ -98,9 +98,9 @@ def update(obsids=[]):
                 logger.info("running VV for obsid {} run on {}".format(
                     obs['obsid'], obs['ap_date']))
                 process(obs['obsid'], version=obs['revision'])
-                asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = 1
+                asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = {}
                                        where obsid = {} and revision = {}
-                                    """.format(obs['obsid'], obs['revision']))
+                                    """.format(VV_VERSION, obs['obsid'], obs['revision']))
     else:
         # if no obsid specified, try to retrieve all data without vv
         # set to only use aspect_1_id greater than those currently
@@ -108,7 +108,7 @@ def update(obsids=[]):
         # this is to avoid processing old no-longer-default data for now
         todo = asp_l1_proc.fetchall(
             """SELECT * FROM aspect_1_proc
-               where vv_complete != 1 and aspect_1_id > 34878
+               where vv_complete = 0 and aspect_1_id > 34878
                order by aspect_1_id""")
         for obs in todo:
             if obs['obsid'] in KNOWN_BAD_OBSIDS:
@@ -117,9 +117,9 @@ def update(obsids=[]):
             logger.info("running VV for obsid {} run on {}".format(
                 obs['obsid'], obs['ap_date']))
             process(obs['obsid'], version=obs['revision'])
-            asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = 1
+            asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = {}
                                    where obsid = {} and revision = {}
-                                """.format(obs['obsid'], obs['revision']))
+                                """.format(VV_VERSION, obs['obsid'], obs['revision']))
 
 
 def get_arch_vv(obsid, version='last'):
