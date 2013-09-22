@@ -1,9 +1,9 @@
 <HTML>
 <HEAD>
-<TITLE></TITLE>
+<TITLE>V&amp;V for Slot {{slot}}</TITLE>
 <style type="text/css">
-  body { width:1200px;
-  background:url('http://asc.harvard.edu/mta/ASPECT/blue_paper.gif'); }
+  body { width:1175px;
+  background-color: lightblue;}
   div#left {
     float: left;
     width: 300px;
@@ -11,24 +11,38 @@
   }
   div#right {
     float: right;
-    width: 800px;
-    left: 400px;
+    width: 825px;
+    left: 320px;
   }
+  div.border{
+    background-color: white;
+    padding-left: 10px;
+    padding-bottom: 5px;
+    border-style: solid;
+    border-width: 5px;
+    border-radius: 20px;
+  }
+
 </style>
 </HEAD>
 <BODY>
 
-<div id="left">
+<div id="left" class="border">
 <table>
-{% for field in ['slot', 'type', 'id_status', 'mean_y', 'mean_z'] %}<TR><TH>{{ field }}</TH><TD>{{ vv['slots'][slot][field] }}</TD></TR>
+{% for field in ['slot', 'type', 'id_status'] %}<TR><TH align="left">{{ field }}</TH><TD align="left">{{ vv['slots'][slot][field] }}</TD></TR>
 {% endfor %}
+{% if vv['slots'][slot]['cel_loc_flag'] is not none %}
+<TR><TH align="left">cel_loc_flag</TH><TD>{{ vv['slots'][slot]['cel_loc_flag'] }}</TD></TR>
+{% endif %}
+<TR><TH align="left">mean_y (deg)</TH><TD>{{ "%.5f"|format(vv['slots'][slot]['mean_y']) }}</TD></TR>
+<TR><TH align="left">mean_z (deg)</TH><TD>{{ "%.5f"|format(vv['slots'][slot]['mean_z']) }}</TD></TR>
 </TABLE>
 
 
 <IMG SRC="slot_{{ slot }}_yz.png">
 <IMG SRC="slot_{{ slot }}_yzf.png">
 </div>
-<div id="right">
+<div id="right" class="border">
 <TABLE border=1>
 <TR>
 <TD>RMS</TD><TD>{{ "%.3f"|format(vv['slots'][slot]['dy_rms']) }}</TD>
