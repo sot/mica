@@ -71,11 +71,11 @@ button {
 
 {% if target is not none %}
 <div class="border" style="padding-top: 0px; margin-bottom: .5cm;">
-<h2><A HREF="{{ links['obscat']['link']}}">Target Summary</A></h2>
+<h2><A target="_blank" HREF="{{ links['obscat']['link']}}">Target Summary</A></h2>
 <table cellspacing=0 cellpadding=5>
 <tr><td></td>
 <th>Sequence
-  Number:</th><td><a href="http://icxc.harvard.edu/cgi-bin/mp/target.cgi?{{
+  Number:</th><td><a target="_blank" href="http://icxc.harvard.edu/cgi-bin/mp/target.cgi?{{
   target['seq_nbr'] }}">{{ target['seq_nbr']}}</a></td><th>Status:</th><td>
   {{ target['status'] }}</td><th>ObsID #:</th><td>{{ target['obsid'] }}</td></tr></table>
 
@@ -100,8 +100,8 @@ button {
 Links: <br>
 <UL>
 {% if target is not none %}
-<LI><A HREF="{{ links['obscat']['link'] }}">{{links['obscat']['label']}}</A>
-<LI><A HREF="{{ links['seq_sum']['link'] }}">{{links['seq_sum']['label']}}</A>
+<LI><A target="_blank" HREF="{{ links['obscat']['link'] }}">{{links['obscat']['label']}}</A>
+<LI><A target="_blank" HREF="{{ links['seq_sum']['link'] }}">{{links['seq_sum']['label']}}</A>
 <LI><form method=post action="http://cxc.harvard.edu/cgi-bin/op/op_status_table.cgi" style="margin-bottom:0;">
 <input type="hidden" name="field" value="ObsId">
 <input type="hidden" name="id" value="{{ obsid }}">
@@ -109,17 +109,17 @@ Links: <br>
 <button>CXCDS Processing Status</button></form></LI>
 {% endif %}
 {% if obs is not none %}
-<LI><A HREF="{{ links['shortterm']['link'] }}">{{links['shortterm']['label']}}</A>
-<LI><A HREF="{{ links['fot_dir']['link'] }}">{{links['fot_dir']['label']}}</A>
-<LI><A HREF="{{ links['starcheck_html']['link'] }}">{{links['starcheck_html']['label']}}</A>
+<LI><A target="_blank" HREF="{{ links['shortterm']['link'] }}">{{links['shortterm']['label']}}</A>
+<LI><A target="_blank" HREF="{{ links['fot_dir']['link'] }}">{{links['fot_dir']['label']}}</A>
+<LI><A target="_blank" HREF="{{ links['starcheck_html']['link'] }}">{{links['starcheck_html']['label']}}</A>
 {% endif %}
 {% if links['vv']['link'] is not none %}
-<LI><A HREF="{{ links['vv']['link'] }}">{{links['vv']['label']}}</A><BR>
-    <UL><LI>(<A HREF="https://icxc2.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A>
+<LI><A target="_blank" HREF="{{ links['vv']['link'] }}">{{links['vv']['label']}}</A><BR>
+    <UL><LI>(<A target="_blank" HREF="https://icxc2.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A>
     once first)</BR></LI></UL>
 {% endif %}
 {% if vv is not none %}
-<LI><A HREF="vv.html">MICA VV</A>
+<LI><A target="_blank" HREF="vv.html">MICA VV</A>
 {% endif %}
 {% if links['fot_daily'] is not none %}
 <LI><A target="_blank" HREF="{{ links['fot_daily']['link']}}">{{links['fot_daily']['label']}}</A></LI>
