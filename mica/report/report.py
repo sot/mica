@@ -16,6 +16,7 @@ from astropy.io import fits
 from Ska.Shell import getenv, tcsh, bash
 import agasc
 import Ska.DBI
+from Chandra.Time import DateTime
 
 from mica.archive import obspar
 from mica.catalog import catalog
@@ -401,10 +402,23 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
     # Links
     logger.info("Looking up obsid links")
 
+    all_progress = dict(science=['ocat',
+                             'long_term', 'short_term',
+                             'starcheck', 'observed',
+                             'engineering', 'aspect_1',
+                             'cxcds_vv', 'released'],
+                    er=['starcheck', 'observed',
+                         'engineering', 'cxcds_vv'])
+    report_status = dict()
+
     er = summary is None and obsid > 40000
+    progress = all_progress['er' if er else 'science']
     if er:
         links = obs_links(obsid)
     else:
+        if summary is None:
+            raise ValueError("Obsid not found in target table")
+        report_status['ocat'] = summary['status']
         links = obs_links(obsid, summary['seq_nbr'])
 
     if not er and (summary['status'] in
@@ -412,6 +426,25 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
         logger.info(
             "Obsid {obsid} has status {status}".format(
                 obsid=obsid, status=summary['status']))
+
+    if summary is not None:
+        if summary['lts_lt_plan'] is not None:
+            report_status['long_term'] = summary['lts_lt_plan']
+            plan = summary['lts_lt_plan']
+            plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:2d}.000".format(
+                    plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
+            now = DateTime()
+        if summary['soe_st_sched_date']:
+            report_status['short_term'] =  summary['soe_st_sched_date']
+
+    last_sched = ''
+    if not er:
+        if summary['lts_lt_plan']:
+            last_sched = "in LTS for {}".format(
+                str(summary['lts_lt_plan']))
+        if summary['soe_st_sched_date']:
+            last_sched = "in ST sched for {}".format(
+                str(summary['soe_st_sched_date']))
 
     ## Starcheck
     logger.info("Fetching starcheck catalog")
@@ -428,6 +461,8 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
                                target=summary,
                                links=links,
                                cat_table=None,
+                               er=er if er else None,
+                               last_sched=last_sched,
                                obs=None,
                                version=version)
         full_report_file = os.path.join(outdir, 'index.html')
@@ -437,12 +472,31 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
         f.close()
         return
 
+    if not er and 'shortterm' in links:
+        dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
+        mp_label = "{}{}".format(dir_match.group(1),
+                                 dir_match.group(2).upper())
+        last_sched = 'in <A HREF="{}">{}</A> at {}'.format(
+            links['shortterm']['link'], mp_label, str(obs_sc['obs'][0]['mp_starcat_time']))
+
+
+    report_status['starcheck'] = mp_dir
+
     # engineering data available
     logger.info("Getting acq and trak stats")
     acqs = get_obs_acq_stats(obsid)
     trak = get_obs_trak_stats(obsid)
 
+    if acqs or trak:
+        last_sched = "eng. data available"
+
+    er_status = None
     if er:
+        stat_map = dict(ran='ran on',
+                        approved='approved for',
+                        ran_pretimelines='ran on',
+                        planned='planned for')
+        er_status = "{} {}".format(stat_map[status], obs_sc['obs'][0]['mp_starcat_time'])
         run_obspar = None
         vv = None
         logger.info("Processing ER; no V&V available")
@@ -459,11 +513,13 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
             #vv = dict(slots=vv_obi.slot_report)['slots']
             vv = get_vv(obsid, version='last')
             vv_files = get_vv_files(obsid, version='last')
+            last_sched = "complete through mica v&v"
         except LookupError:
             logger.info("No V&V available")
             vv = None
 
     if vv is not None:
+        report_status['mica_vv'] = True
         for file in vv_files:
             newfile = os.path.join(outdir, os.path.basename(file))
             if not os.path.exists(newfile):
@@ -557,6 +613,9 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
                            vv=vv,
                            links=links,
                            target=summary,
+                           er=er if er else None,
+                           er_status=er_status,
+                           last_sched=last_sched,
                            obsid=obsid,
                            version=version)
     full_report_file = os.path.join(outdir, 'index.html')
