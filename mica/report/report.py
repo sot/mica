@@ -454,6 +454,8 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
     try:
         obs_sc, mp_dir, status = get_starcheck(obsid)
         logger.info("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
+        if obs_sc['obs'][0]['point_ra'] is None:
+            raise LookupError("Observation has no pointing.")
         fig, cat, obs = catalog.plot(obsid, mp_dir)
         fig.savefig(os.path.join(outdir, 'starcheck.png'))
         plt.close('all')
