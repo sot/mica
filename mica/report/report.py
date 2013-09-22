@@ -6,6 +6,7 @@ import logging
 import gzip
 import jinja2
 import datetime
+import json
 from glob import glob
 import argparse
 import matplotlib.pyplot as plt
@@ -27,6 +28,7 @@ from mica.vv import get_vv, get_vv_files, get_arch_vv
 from mica.version import version
 
 WANT_VV_VERSION = 2
+REPORT_VERSION = 1
 
 plt.rcParams['lines.markeredgewidth'] = 0
 
@@ -633,7 +635,24 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
     f.write(page)
     f.close()
 
+    cat_file = os.path.join(outdir, 'star_table.json')
+    f = open(cat_file, 'w')
+    f.write(json.dumps(cat_table, sort_keys=True, indent=4))
+    f.close()
 
+    f = open(os.path.join(outdir, 'notes.json'), 'w')
+    notes = dict(report_version=REPORT_VERSION,
+                 product_version=version,
+                 last_sched=last_sched,
+                 obsid=obsid)
+    if summary is not None:
+        notes['lts_lt_plan'] = str(summary['lts_lt_plan'])
+        notes['soe_st_sched_date'] = str(summary['lts_lt_plan'])
+    f.write(json.dumps(notes, 
+                       sort_keys=True,
+                       indent=4))
+    f.close()
+            
 
 if __name__ == '__main__':
     opt = get_options()
