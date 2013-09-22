@@ -5,6 +5,7 @@ import re
 import logging
 import gzip
 import jinja2
+import datetime
 from glob import glob
 import argparse
 import matplotlib.pyplot as plt
@@ -32,6 +33,7 @@ if not len(logger.handlers):
 
 aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
 DEFAULT_REPORT_ROOT = "/proj/web-icxc/htdocs/aspect/mica_reports"
+DAILY_PLOT_ROOT="http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
 
 def get_options():
     parser = argparse.ArgumentParser(
@@ -46,7 +48,7 @@ def get_options():
 
 
 def get_starcheck(obsid):
-    mp_dir, status = starcheck.get_mp_dir(obsid)
+    mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     sc = starcheck.obsid(obsid, mp_dir)
     return (sc, mp_dir, status)
 
@@ -55,7 +57,7 @@ def starcheck_orig_link(obsid):
     """
     Return a link to the original starcheck products for an obsid
     """
-    mp_dir, status = starcheck.get_mp_dir(obsid)
+    mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     if mp_dir is None:
         return None
     starcheck_html="{top}{mp_dir}starcheck.html#obsid{obsid}".format(
@@ -222,7 +224,7 @@ def official_vv_notes(obsid):
 
 
 def obs_links(obsid, sequence=None):
-    mp_dir, status = starcheck.get_mp_dir(obsid)
+    mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     links = dict(
         obscat=dict(
             label="Target Param : {}".format(obsid),
@@ -230,6 +232,7 @@ def obs_links(obsid, sequence=None):
         mp_dir=None,
         shortterm=None,
         fot_dir=None,
+        fot_daily=None,
         starcheck_html=None,
         vv=None)
     if sequence is not None:
@@ -241,6 +244,20 @@ def obs_links(obsid, sequence=None):
         dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
         mp_label = "{}{}".format(dir_match.group(1),
                                  dir_match.group(2).upper())
+        mp_date_m = re.match('(\d{4}):(\d{3}):\d{2}:\d{2}:\d{2}\.\d{3}', mp_date)
+        if mp_date_m:
+            year = int(mp_date_m.group(1))
+            doy = int(mp_date_m.group(2))
+
+            dtm = datetime.datetime(year, 1, 1) + datetime.timedelta(doy - 1)
+            month = dtm.strftime("%b")
+            dom = dtm.strftime("%d")
+            links.update(
+                dict(fot_daily=dict(
+                    label="Daily Plots {}:{}".format(year, doy),
+                    link="{root}/{year}/{upper_month}/{lower_month}{day_of_month}_{doy}/".format(
+                        root=DAILY_PLOT_ROOT, year=year, upper_month=month.upper(), 
+                        lower_month=month.lower(), day_of_month=dom, doy=doy))))
         vv, vvid = official_vv(obsid)
         links.update(dict(
                 shortterm=dict(link=guess_shortterm(mp_dir),

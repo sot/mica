@@ -47,10 +47,10 @@ def get_mp_dir(obsid, config=None):
         if len(sc):
             if sc[-1]['mp_starcat_time'] < '2001:001:00:00:00.000':
                 return (sc[-1]['dir'], 'ran_pretimelines')
-            return (sc[-1]['dir'], 'planned')
+            return (sc[-1]['dir'], 'planned', sc[-1]['mp_starcat_time'])
     actual_run = None
     if not len(possible_runs):
-        return (None, None)
+        return (None, None, None)
     for poss in possible_runs:
         tl = get_timeline_at_date(poss['date'])
         if tl is not None and poss['dir'] == tl['dir']:
@@ -60,16 +60,16 @@ def get_mp_dir(obsid, config=None):
         last_tl = aca_db.fetchone(
             "select max(datestop) as datestop from timelines")['datestop']
         if poss['date'] <= last_tl:
-            return (None, None)
-        return (possible_runs[-1]['dir'], 'planned')
+            raise ValueError("Obsid {} not found in timelines but should be there".format(obsid))
+        return (possible_runs[-1]['dir'], 'planned', possible_runs[-1]['date'])
     if poss['date'] < DateTime().date:
-        return (actual_run['dir'], 'ran')
+        return (actual_run['dir'], 'ran', poss['date'])
     else:
-        return (actual_run['dir'], 'approved')
+        return (actual_run['dir'], 'approved', poss['date'])
 
 def obsid(obsid, mp_dir=None, config=None):
     if mp_dir is None:
-        mp_dir, status = get_mp_dir(obsid)
+        mp_dir, status, mp_date = get_mp_dir(obsid)
     if mp_dir is None:
         raise LookupError("No starcheck catalog found for {}".format(obsid))
     if config is None:
