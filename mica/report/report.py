@@ -579,7 +579,7 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
 
         official_notes=official_vv_notes(obsid)
         vv_template = jinja_env.get_template('vv.html')
-        vv['has_errors'] = ('errors' in vv) or None
+        vv['has_errors'] = (('errors' in vv) and (len(vv['errors']))) or None
         vv_page = vv_template.render(obsid=obsid,
                                      vv=vv,
                                      obspar=run_obspar,
