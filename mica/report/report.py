@@ -204,11 +204,14 @@ def official_vv(obsid):
                            and creation_date = (
                               select max(creation_date) from vvreport where obsid = {obsid})
                         """.format(obsid=obsid))
-    vv_url = None
     if vv is not None:
         vv_url = "https://icxc.cfa.harvard.edu/cgi-bin/vv/vv_report.cgi?vvid={}".format(vv['vvid'])
-    del vv_db
-    return vv_url, vv['vvid']
+        del vv_db
+        return vv_url, vv['vvid']
+    else:
+        del vv_db
+        return None, None
+
 
 
 def official_vv_notes(obsid):
