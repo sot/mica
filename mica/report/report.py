@@ -93,7 +93,7 @@ def get_star_acq_stats(id):
                               where agasc_id = %d
                               order by tstart""" % int(id))
     if not len(acqs):
-        return None, None
+        return None, dict(n_acqs=0, n_acq_noid=0, avg_mag=None)
     n_acqs = len(acqs)
     n_acq_noid = len(np.flatnonzero(acqs['obc_id'] == 'NOID'))
     avg_mag = np.mean(acqs[acqs['mag_obs'] < 13.94]['mag_obs'])
@@ -111,7 +111,7 @@ def get_star_trak_stats(id):
                                where id = %d
                                order by kalman_tstart""" % int(id))
     if not len(traks):
-        return None, None
+        return None, dict(n_guis=0, n_bad=0, n_fail=0, n_obc_bad=0, avg_mag=None)
 
     n_guis = len(traks)
     n_bad = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) > 0.05))
@@ -604,7 +604,7 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
                 f = open(star_page_file, 'w')
                 f.write(star_page)
                 f.close()
-                cat_row['idlink'] = '<A HREF="star_{id}.html">{id}</A>'.format(id=int(row['id']))
+                cat_row['idlink'] = '<A HREF="star_{id}.html" STYLE="text-decoration: none;" ONMOUSEOVER="return overlib (\'ACQ total:{n_acq} noid:{n_noid} <BR /> GUI total:{n_gui} bad:{n_bad} fail:{n_fail} obc_bad:{n_obc_bad} <BR /> Avg Mag {avg_mag:4.2f}\', WIDTH, 220);", ONMOUSEOUT="return nd();"> {id}</A>'.format(id=int(row['id']), n_acq=s['agg_acq']['n_acqs'], n_noid=s['agg_acq']['n_acq_noid'], n_gui=s['agg_trak']['n_guis'], n_bad=s['agg_trak']['n_bad'], n_fail=s['agg_trak']['n_fail'], n_obc_bad=s['agg_trak']['n_obc_bad'], avg_mag=s['agg_trak']['avg_mag'] or s['agg_acq']['avg_mag'] or 13.94)
             else:
                 cat_row['idlink'] = "&nbsp;"
         else:
