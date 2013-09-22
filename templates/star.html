@@ -3,11 +3,92 @@
 <TITLE></TITLE>
 <style type="text/css">
   body { min-width:900px;
-  background:url('http://asc.harvard.edu/mta/ASPECT/blue_paper.gif'); }
+         background-color: lightblue;
+  }
+  div.border{
+    background-color: white;
+    padding-left: 10px;
+    padding-bottom: 5px;
+    border-style: solid;
+    border-width: 5px;
+    border-radius: 20px;
+  }
 </style>
 </HEAD>
 <BODY>
 
+
+<div class="border">
+<h1>Observed History for {{ star[0] }}</h1>
+
+{% if acqs is not none %}
+<h3>ACQ STATS</h3>
+<TABLE border=1 stype="font-size:12px">
+<TR><TH>N Acqs</TH><TH>N NOID</TH><TH>Avg Mag</TH></TR>
+<TR><TD>{{ agg_acq['n_acqs'] }}</TD><TD>{{ agg_acq['n_acq_noid'] }}</TD><TD>{{ agg_acq['avg_mag'] }}</TD></TR>
+</TABLE>
+{% endif %}
+
+{% if traks is not none %}
+<h3>TRAK STATS</h3>
+<TABLE border=1 stype="font-size:12px">
+<TR><TH>N Track</TH><TH>N Bad Trak (> 5% no trak)<TH>N Fail (100% no track)</TH><TH>N OBC Bad (> 5% bad stat)</TH><TH>Avg Mag</TH></TR>
+<TR><TD>{{ agg_trak['n_guis'] }}</TD><TD>{{ agg_trak['n_bad'] }}</TD><TD>{{ agg_trak['n_fail'] }}</TD>
+<TD>{{ agg_trak['n_obc_bad'] }}</TD><TD>{{ agg_trak['avg_mag'] }}</TD></TR>
+</TABLE>
+{% endif %}
+</div>
+
+
+
+{% if acqs is not none %}
+<div class="border">
+<h3>Acquisition History</h3>
+<TABLE border=1 style="font-size:12px">
+<TR>
+{% for field in ['obsid', 'tstart', 'mag', 'mag_obs', 'obc_id'] %}
+<TH align='right'>{{ field|upper() }}</TH>
+{% endfor %}
+</TR>
+{% for row in acqs %}
+{% for field, form in [('sc_link', '%s'), ('tstart', '%12.1f'),
+('mag', '%7.3f'), ('mag_obs', '%7.3f'), ('obc_id', '%4s'),
+] %}
+<TD align='right'>{{ form|format(row[field]) }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+</TABLE>
+</div>
+{% endif %}
+
+{% if traks is not none %}
+<div class="border">
+<H1>Guide History</H1>
+<TABLE border=1 style="font-size:12px">
+<TR>
+{% for field in ['obsid', 'tstart', 'mag_obs', 'mag_obs_rms',
+'trak_frac %', 'obc_bad %', 'def_pix %',
+'ion_rad %', 'sat_pix %', 'mult_star %',
+'quad_bound %', 'common_col %'] %}
+<TH align='right'>{{ field|upper() }}</TH>
+{% endfor %}
+</TR>
+{% for row in traks %}
+{% for field in ['sc_link', 'tstart', 'mag_obs', 'mag_obs_rms',
+'trak_frac', 'obc_bad_status', 'def_pix',
+'ion_rad', 'sat_pix', 'mult_star',
+'quad_bound', 'common_col'] %}
+<TD align='right'>{{ row[field] }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+</TABLE>
+</div>
+{% endif %}
+
+
+<div class="border">
 <H1>AGASC info</H1>
 <TABLE border=1>
 <TR><TD WIDTH="30%" VALIGN="TOP">
@@ -33,60 +114,7 @@
 </TABLE>
 </TD></TR>
 </TABLE>
-
-
-<h1>ACQ STATS</h1>
-{% if acqs is not none %}
-<TABLE border=1 stype="font-size:12px">
-<TR><TH>N Acqs</TH><TH>N NOID</TH><TH>Avg Mag</TH></TR>
-<TR><TD>{{ agg_acq['n_acqs'] }}</TD><TD>{{ agg_acq['n_acq_noid'] }}</TD><TD>{{ agg_acq['avg_mag'] }}</TD></TR>
-</TABLE>
-
-<TABLE border=1 style="font-size:12px">
-<TR>
-{% for field in ['obsid', 'tstart', 'mag', 'mag_obs', 'obc_id'] %}
-<TH align='right'>{{ field|upper() }}</TH>
-{% endfor %}
-</TR>
-{% for row in acqs %}
-{% for field, form in [('sc_link', '%s'), ('tstart', '%12.1f'),
-('mag', '%7.3f'), ('mag_obs', '%7.3f'), ('obc_id', '%4s'),
-] %}
-<TD align='right'>{{ form|format(row[field]) }}</TD>
-{% endfor %}
-</TR>
-{% endfor %}
-</TABLE>
-{% endif %}
-
-<H1>Trak Stats</H1>
-{% if traks is not none %}
-<TABLE border=1 stype="font-size:12px">
-<TR><TH>N Track</TH><TH>N Bad Trak (> 5% no trak)<TH>N Fail (100% no track)</TH><TH>N OBC Bad (> 5% bad stat)</TH><TH>Avg Mag</TH></TR>
-<TR><TD>{{ agg_trak['n_guis'] }}</TD><TD>{{ agg_trak['n_bad'] }}</TD><TD>{{ agg_trak['n_fail'] }}</TD>
-<TD>{{ agg_trak['n_obc_bad'] }}</TD><TD>{{ agg_trak['avg_mag'] }}</TD></TR>
-</TABLE>
-
-<TABLE border=1 style="font-size:12px">
-<TR>
-{% for field in ['obsid', 'tstart', 'mag_obs', 'mag_obs_rms',
-'trak_frac %', 'obc_bad %', 'def_pix %',
-'ion_rad %', 'sat_pix %', 'mult_star %',
-'quad_bound %', 'common_col %'] %}
-<TH align='right'>{{ field|upper() }}</TH>
-{% endfor %}
-</TR>
-{% for row in traks %}
-{% for field in ['sc_link', 'tstart', 'mag_obs', 'mag_obs_rms',
-'trak_frac', 'obc_bad_status', 'def_pix',
-'ion_rad', 'sat_pix', 'mult_star',
-'quad_bound', 'common_col'] %}
-<TD align='right'>{{ row[field] }}</TD>
-{% endfor %}
-</TR>
-{% endfor %}
-</TABLE>
-{% endif %}
+</div>
 
 
 </BODY>
