@@ -41,7 +41,7 @@ def get_vv_dir(obsid, version="default"):
                                           where obsid = {} and isdefault = 1
                                        """.format(obsid))
             if not len(obs):
-                raise ValueError("Version {} not found for obsid {}".format(
+                raise LookupError("Version {} not found for obsid {}".format(
                     version, obsid))
             num_version = obs['revision'][0]
         if version == 'last':
@@ -49,7 +49,7 @@ def get_vv_dir(obsid, version="default"):
                                           where obsid = {}
                                        """.format(obsid))
             if not len(obs):
-                raise ValueError("No entries found for obsid {}".format(
+                raise LookupError("No entries found for obsid {}".format(
                     obsid))
             num_version = np.max(obs['revision'])
     else:
@@ -58,6 +58,8 @@ def get_vv_dir(obsid, version="default"):
     chunk_dir = strobs[0:2]
     chunk_dir_path = os.path.join(FILES['data_root'], chunk_dir)
     obs_dir = os.path.join(chunk_dir_path, strobs)
+    if not os.path.exists(obs_dir):
+        raise LookupError("Expected vv archive dir {} not found".format(obs_dir))
     return obs_dir
 
 
