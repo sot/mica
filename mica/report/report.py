@@ -400,7 +400,8 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
         os.makedirs(outdir)
 
     jinja_env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader('templates'))
+        loader=jinja2.FileSystemLoader(
+            os.path.join(os.environ['SKA'], 'data', 'mica', 'templates')))
     jinja_env.line_comment_prefix = '##'
     jinja_env.line_statement_prefix = '#'
 
