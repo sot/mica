@@ -662,7 +662,27 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
                        sort_keys=True,
                        indent=4))
     f.close()
-            
+
+
+def update(report_root=DEFAULT_REPORT_ROOT):
+    recent_obs = aca_db.fetchall("select distinct obsid from cmd_states "
+                             "where datestart > '{}'".format(DateTime(-7).date))
+    for obs in recent_obs:
+        main(obs['obsid'], report_root)
+
+
+def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
+    obs = aca_db.fetchall("select distinct obsid from observations_all")
+    for obsid in obs['obsid']:
+        strobs = "%05d" % obsid
+        chunk_dir = strobs[0:2]
+        topdir = os.path.join(report_root, chunk_dir)
+        outdir = os.path.join(topdir, strobs)
+        if os.path.exists(os.path.join(outdir, 'index.html')):
+            logger.info("Skipping {}, outputs exist.".format(obsid))
+        if not os.path.exists(outdir):
+            main(obsid, report_root)
+
 
 if __name__ == '__main__':
     opt = get_options()
