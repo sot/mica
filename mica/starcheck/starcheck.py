@@ -29,7 +29,8 @@ FILES = dict(data_root=os.path.join(mica_archive, 'starcheck'),
 def get_timeline_at_date(date):
     aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
     return aca_db.fetchone(
-        "select * from timelines where datestop >= '%s' and datestart <= '%s'"
+        "select * from timeline_loads where datestop >= '%s' "
+        " and datestart <= '%s' and scs <= 130 "
         % (date, date))
 
 def get_mp_dir(obsid, config=None):
@@ -46,14 +47,14 @@ def get_mp_dir(obsid, config=None):
                order by sc_id """ % obsid)
         if len(sc):
             if sc[-1]['mp_starcat_time'] < '2001:001:00:00:00.000':
-                return (sc[-1]['dir'], 'ran_pretimelines')
+                return (sc[-1]['dir'], 'ran_pretimelines', sc[-1]['mp_starcat_time'])
             return (sc[-1]['dir'], 'planned', sc[-1]['mp_starcat_time'])
     actual_run = None
     if not len(possible_runs):
         return (None, None, None)
     for poss in possible_runs:
         tl = get_timeline_at_date(poss['date'])
-        if tl is not None and poss['dir'] == tl['dir']:
+        if tl is not None and poss['dir'] == tl['mp_dir']:
             actual_run = poss
             break
     if actual_run is None:
@@ -164,7 +165,6 @@ def get_starcheck_catalog(obsid, mp_dir=None,
                 "(select max(datestart) from timeline_loads "
                 "where datestart <= '%s')" % cmd_state['datestart'])
             mp_dir = timeline['mp_dir']
-
     sc_id = dbh.fetchone("select id from starcheck_id "
                          "where dir = '%s'" % mp_dir)['id']
     obs = dbh.fetchone("select * from starcheck_obs "
