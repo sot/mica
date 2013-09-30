@@ -61,7 +61,11 @@ def get_mp_dir(obsid, config=None):
         last_tl = aca_db.fetchone(
             "select max(datestop) as datestop from timelines")['datestop']
         if poss['date'] <= last_tl:
-            raise ValueError("Obsid {} not found in timelines but should be there".format(obsid))
+            if obsid > 61000:
+                logger.debug("ACIS ER {} not in timelines".format(obsid))
+                return (None, None, None)
+            else:
+                raise ValueError("Obsid {} not found in timelines but should be there".format(obsid))
         return (possible_runs[-1]['dir'], 'planned', possible_runs[-1]['date'])
     if poss['date'] < DateTime().date:
         return (actual_run['dir'], 'ran', poss['date'])
