@@ -368,9 +368,12 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
 
 
 def get_star(id):
-    agasc_info = agasc.get_star(id)
-    agasc_list = [(key, agasc_info[key]) for key in agasc_info.dtype.names]
-    return agasc_list
+    try:
+        agasc_info = agasc.get_star(id)
+        agasc_list = [(key, agasc_info[key]) for key in agasc_info.dtype.names]
+        return agasc_list
+    except:
+        return []
 
 
 def star_info(id):
@@ -462,11 +465,13 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
         logger.info("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
         if obs_sc['obs'][0]['point_ra'] is None:
             raise LookupError("Observation has no pointing.")
+        if len(obs_sc['catalog']) == 0:
+            raise LookupError("Observation has no catalog")
         fig, cat, obs = catalog.plot(obsid, mp_dir)
         fig.savefig(os.path.join(outdir, 'starcheck.png'))
         plt.close('all')
     except LookupError:
-        logger.info("No starcheck.  Writing out OCAT info only")
+        logger.info("No starcheck catalog.  Writing out OCAT info only")
         template = jinja_env.get_template('report.html')
         page = template.render(obsid=obsid,
                                target=summary,
@@ -521,6 +526,10 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
         # v&v available
         try:
             vv = get_vv(obsid, version='last')
+        except LookupError:
+            vv = None
+
+        try:
             if vv is None or 'vv_version' not in vv or vv['vv_version'] < WANT_VV_VERSION:
                 mica.vv.process.process(obsid, version="last")
                 vv = get_vv(obsid, version='last')
