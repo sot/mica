@@ -61,7 +61,7 @@ def get_mp_dir(obsid, config=None):
         last_tl = aca_db.fetchone(
             "select max(datestop) as datestop from timelines")['datestop']
         if poss['date'] <= last_tl:
-            if obsid > 61000:
+            if obsid > 60000:
                 logger.debug("ACIS ER {} not in timelines".format(obsid))
                 return (None, None, None)
             else:
