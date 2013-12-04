@@ -143,8 +143,6 @@ def get_star_trak_stats(id):
             link=starcheck_link(trak['obsid']),
             obsid=trak['obsid'])
         mytraks.append(star)
-    #if id == 896534664:
-    #    raise ValueError
     return mytraks, dict(n_guis=n_guis, n_bad=n_bad, n_fail=n_fail, n_obc_bad=n_obc_bad, avg_mag=avg_mag)
 
 
