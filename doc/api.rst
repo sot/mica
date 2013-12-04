@@ -60,3 +60,18 @@ Base Class used in mica.archive.asp_l1 and mica.archive.obspar
 .. autoclass:: ObsArchive
    :members:
 
+
+:mod:`mica.vv`
+==============
+
+.. automodule:: mica.vv
+
+Functions
+---------
+
+.. autofunction:: get_vv
+.. autofunction:: get_vv_dir
+.. autofunction:: get_vv_files
+.. autofunction:: get_rms_data
+.. autofunction:: get_arch_vv
+
