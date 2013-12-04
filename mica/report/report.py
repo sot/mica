@@ -230,8 +230,7 @@ def official_vv_notes(obsid):
     return all_vv
 
 
-def obs_links(obsid, sequence=None):
-    mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
+def obs_links(obsid, sequence=None, plan=None):
     links = dict(
         obscat=dict(
             label="Target Param : {}".format(obsid),
@@ -247,6 +246,17 @@ def obs_links(obsid, sequence=None):
                 seq_sum=dict(
                     label="Seq. Summary : {}".format(sequence),
                     link= "https://icxc.harvard.edu/cgi-bin/mp/target.cgi?{}".format(sequence))))
+    mp_dir = None
+    # if this is a science observation, only try to get a star catalog if it has a home
+    # in the schedule either in the past or the near future
+    if plan is not None:
+        plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:02d}.000".format(
+                plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
+        if plan_date.secs < (DateTime() + 21).secs:
+            mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
+    else:
+        mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
+
     if mp_dir is not None:
         dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
         mp_label = "{}{}".format(dir_match.group(1),
@@ -429,7 +439,7 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
         if summary is None:
             raise ValueError("Obsid not found in target table")
         report_status['ocat'] = summary['status']
-        links = obs_links(obsid, summary['seq_nbr'])
+        links = obs_links(obsid, summary['seq_nbr'], summary['lts_lt_plan'])
 
     if not er and (summary['status'] in
                    ['canceled', 'unobserved', 'untriggered']):
@@ -440,10 +450,6 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
     if summary is not None:
         if summary['lts_lt_plan'] is not None:
             report_status['long_term'] = summary['lts_lt_plan']
-            plan = summary['lts_lt_plan']
-            plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:2d}.000".format(
-                    plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
-            now = DateTime()
         if summary['soe_st_sched_date']:
             report_status['short_term'] =  summary['soe_st_sched_date']
 
@@ -459,6 +465,13 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
     ## Starcheck
     logger.info("Fetching starcheck catalog")
     try:
+        if summary['lts_lt_plan'] is not None:
+            plan = summary['lts_lt_plan']
+            plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:02d}.000".format(
+                    plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
+            if plan_date.secs > (DateTime() + 21).secs:
+                raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
+        mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         obs_sc, mp_dir, status = get_starcheck(obsid)
         logger.info("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
         if obs_sc['obs'][0]['point_ra'] is None:
