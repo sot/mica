@@ -326,7 +326,7 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
         for sc_row in table:
             if sc_row['type'] != 'ACQ':
                 slot = sc_row['slot']
-                if str(slot) in vv['slots']:
+                if (str(slot) in vv['slots']) and ('n_pts' in vv['slots'][str(slot)]):
                     vvslot = vv['slots'][str(slot)]
                     sc_row.update(dict(dr_rms=vvslot['dr_rms'],
                                        dz_rms=vvslot['dz_rms'],
@@ -481,8 +481,9 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
         fig, cat, obs = catalog.plot(obsid, mp_dir)
         fig.savefig(os.path.join(outdir, 'starcheck.png'))
         plt.close('all')
-    except LookupError:
+    except LookupError as detail:
         logger.info("No starcheck catalog.  Writing out OCAT info only")
+        logger.info(detail)
         template = jinja_env.get_template('report.html')
         page = template.render(obsid=obsid,
                                target=summary,
@@ -590,6 +591,8 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
         f.close()
 
         for slot in vv['slots']:
+            if 'n_pnts' not in slot:
+                continue
             slot_template = jinja_env.get_template('vv_slots_single.html')
             slot_page = slot_template.render(obsid=obsid,
                                              vv=vv,
@@ -636,8 +639,10 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
             else:
                 cat_row['idlink'] = "&nbsp;"
         else:
-            cat_row['idlink'] = int(row['id'])
-
+            if 'id' in row:
+                cat_row['idlink'] = int(row['id'])
+            else:
+                cat_row['idlink'] = ''
     template = jinja_env.get_template('report.html')
     page = template.render(cat_table=cat_table,
                            obs=obs,
