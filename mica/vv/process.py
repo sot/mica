@@ -143,6 +143,8 @@ def get_arch_vv(obsid, version='last'):
         "SELECT * FROM aspect_1_proc where obsid = {}".format(
             obsid))
     asp_proc = None
+    if len(asp_obs) == 0:
+        return None
     if version == 'last':
         asp_proc = asp_obs[asp_obs['aspect_1_id']
                            == np.max(asp_obs['aspect_1_id'])][0]
