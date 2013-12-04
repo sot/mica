@@ -699,6 +699,25 @@ def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
         if not os.path.exists(outdir):
             main(obsid, report_root)
 
+def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
+    obs = aca_db.fetchall("select * from observations_all order by kalman_idstart desc")
+    for ob in obs:
+        obsid = ob['obsid']
+        print ob['date']
+        strobs = "%05d" % obsid
+        chunk_dir = strobs[0:2]
+        topdir = os.path.join(report_root, chunk_dir)
+        outdir = os.path.join(topdir, strobs)
+        if os.path.exists(outdir):
+            logger.info("Skipping {}, output dir exist.".format(obsid))
+        if os.path.exists("{}.ERR".format(outdir)):
+            logger.info("Skipping {}, output.ERR dir exist.".format(obsid))
+        if not os.path.exists(outdir):
+            try:
+                os.makedirs("{}".format(outdir))
+                main(obsid, report_root)
+            except:
+                os.makedirs("{}.ERR".format(outdir))
 
 if __name__ == '__main__':
     opt = get_options()
