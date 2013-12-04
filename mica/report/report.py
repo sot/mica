@@ -687,17 +687,23 @@ def update(report_root=DEFAULT_REPORT_ROOT):
         main(obs['obsid'], report_root)
 
 
-def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
-    obs = aca_db.fetchall("select distinct obsid from observations_all")
-    for obsid in obs['obsid']:
+def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
+    for obsid in obsids:
         strobs = "%05d" % obsid
         chunk_dir = strobs[0:2]
         topdir = os.path.join(report_root, chunk_dir)
         outdir = os.path.join(topdir, strobs)
-        if os.path.exists(os.path.join(outdir, 'index.html')):
-            logger.info("Skipping {}, outputs exist.".format(obsid))
+        if os.path.exists(outdir):
+            logger.info("Skipping {}, output dir exists.".format(obsid))
+        if os.path.exists("{}.ERR".format(outdir)):
+            logger.info("Skipping {}, output.ERR dir exists.".format(obsid))
         if not os.path.exists(outdir):
-            main(obsid, report_root)
+            try:
+                os.makedirs("{}".format(outdir))
+                main(obsid, report_root)
+            except:
+                os.makedirs("{}.ERR".format(outdir))
+
 
 def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
     obs = aca_db.fetchall("select * from observations_all order by kalman_idstart desc")
