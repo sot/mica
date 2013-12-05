@@ -37,7 +37,7 @@ logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
-aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+ACA_DB = None
 DEFAULT_REPORT_ROOT = "/proj/web-icxc/htdocs/aspect/mica_reports"
 DAILY_PLOT_ROOT="http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
 
@@ -91,7 +91,7 @@ def rec_to_dict_list(recarray):
 
 
 def get_star_acq_stats(id):
-    acqs = aca_db.fetchall("""select * from acq_stats_data
+    acqs = ACA_DB.fetchall("""select * from acq_stats_data
                               where agasc_id = %d
                               order by tstart""" % int(id))
     if not len(acqs):
@@ -109,7 +109,7 @@ def get_star_acq_stats(id):
 
 
 def get_star_trak_stats(id):
-    traks = aca_db.fetchall("""select * from trak_stats_data
+    traks = ACA_DB.fetchall("""select * from trak_stats_data
                                where id = %d
                                order by kalman_tstart""" % int(id))
     if not len(traks):
@@ -147,13 +147,13 @@ def get_star_trak_stats(id):
 
 
 def get_obs_acq_stats(obsid):
-    acqs = aca_db.fetchall("select * from acq_stats_data where obsid = %d" % obsid)
+    acqs = ACA_DB.fetchall("select * from acq_stats_data where obsid = %d" % obsid)
     if len(acqs):
         return Table(acqs)
 
 
 def get_obs_trak_stats(obsid):
-    guis = aca_db.fetchall("select * from trak_stats_data where obsid = %d" % obsid)
+    guis = ACA_DB.fetchall("select * from trak_stats_data where obsid = %d" % obsid)
 
     if len(guis):
         return Table(guis)
@@ -164,6 +164,7 @@ def target_summary(obsid):
     ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
                                     and target.obsid = {}""".format(obsid))
+    ocat_db.conn.close()
     del ocat_db
     return ocat_info
 
@@ -395,12 +396,16 @@ def star_info(id):
                 agg_trak=agg_trak)
 
 def get_aiprops(obsid):
-    aiprops = aca_db.fetchall(
+    aiprops = ACA_DB.fetchall(
         "select * from aiprops where obsid = {} order by tstart".format(
             obsid))
     return aiprops
 
 def main(obsid, report_root=DEFAULT_REPORT_ROOT):
+
+    global ACA_DB
+    if ACA_DB is None:
+        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
 
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
@@ -681,11 +686,17 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
 
 
 def update(report_root=DEFAULT_REPORT_ROOT):
-    recent_obs = aca_db.fetchall("select distinct obsid from cmd_states "
+
+    global ACA_DB
+    if ACA_DB is None:
+        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+
+    recent_obs = ACA_DB.fetchall("select distinct obsid from cmd_states "
                              "where datestart > '{}'".format(DateTime(-7).date))
     for obs in recent_obs:
         main(obs['obsid'], report_root)
 
+    ACA_DB.conn.close()
 
 def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
     for obsid in obsids:
@@ -706,7 +717,12 @@ def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
 
 
 def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
-    obs = aca_db.fetchall("select * from observations_all order by kalman_idstart desc")
+
+    global ACA_DB
+    if ACA_DB is None:
+        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+
+    obs = ACA_DB.fetchall("select * from observations_all order by kalman_idstart desc")
     for ob in obs:
         obsid = ob['obsid']
         print ob['date']
@@ -724,6 +740,8 @@ def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
                 main(obsid, report_root)
             except:
                 os.makedirs("{}.ERR".format(outdir))
+
+    ACA_DB.conn.close()
 
 if __name__ == '__main__':
     opt = get_options()
