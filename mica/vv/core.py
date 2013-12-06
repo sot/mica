@@ -213,6 +213,7 @@ class Obi(object):
                                    """.format(obsid=obsid,
                                               obi=obi,
                                               revision=revision))
+        apstat.conn.close()
         if len(aspect_1) > 1:
             raise ValueError(
                 "More than one entry found for obsid/obi/rev in aspect_1")
