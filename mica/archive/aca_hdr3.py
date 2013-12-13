@@ -340,12 +340,16 @@ class MSID(object):
     >>> type(ccd_temp.vals)
     'numpy.ma.core.MaskedArray'
 
-    When given an msid and start and stop range, the object will
-    fetch the ACA L0 to populate the object, which includes the MSID
-    values (vals) at the given times (times).
+    When given an ``msid`` and ``start`` and ``stop`` range, the object will
+    query the ACA L0 archive to populate the object, which includes the MSID
+    values (``vals``) at the given times (``times``).
 
-    The parameter msid_data is used to create an MSID object from
+    The parameter ``msid_data`` is used to create an MSID object from
     the data of another MSID obejct.
+
+    When ``filter_bad`` is supplied then only valid data values are stored
+    and the ``vals`` and ``times`` attributes are `np.ndarray` instead of
+    `ma.MaskedArray`.
 
     :param msid: MSID or pseudo-MSID
        pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
@@ -357,9 +361,10 @@ class MSID(object):
     :param start: Chandra.Time compatible start time
     :param stop: Chandra.Time compatible stop time
     :param msid_data: data dictionary or object from another MSID object
+    :param filter_bad: remove missing values
     """
 
-    def __init__(self, msid, start, stop, msid_data=None):
+    def __init__(self, msid, start, stop, msid_data=None, filter_bad=False):
         if msid_data is None:
             msid_data = MSIDset([msid], start, stop)[msid]
         self.msid = msid
@@ -375,6 +380,61 @@ class MSID(object):
                 setattr(self, attr, getattr(msid_data, attr))
             else:
                 setattr(self, attr, msid_data.get(attr))
+
+        # If requested filter out bad values and set self.bad = None
+        if filter_bad:
+            self.filter_bad()
+
+    def copy(self):
+        from copy import deepcopy
+        return deepcopy(self)
+
+    def filter_bad(self, copy=False):
+        """Filter out any missing values.
+
+        After applying this method the ``vals`` attributes will be a
+        plain np.ndarray object instead of a masked array.
+
+        :param copy: return a copy of MSID object with bad values filtered
+        """
+        obj = self.copy() if copy else self
+
+        if isinstance(obj.vals, ma.MaskedArray):
+            obj.times = obj.times[~obj.vals.mask]
+            obj.vals = obj.vals.compressed()
+
+        if copy:
+            return obj
+
+
+class Msid(MSID):
+    """
+    ACA header 3 data object to work with header 3 data from available 8x8 ACA L0
+    telemetry.
+
+    >>> from mica.archive import aca_hdr3
+    >>> ccd_temp = aca_hdr3.Msid('ccd_temp', '2012:001', '2012:020')
+    >>> type(ccd_temp.vals)
+    'numpy.ndarray'
+
+    When given an ``msid`` and ``start`` and ``stop`` range, the object will
+    query the ACA L0 archive to populate the object, which includes the MSID
+    values (``vals``) at the given times (``times``).  Only valid data values
+    are returned.
+
+    :param msid: MSID or pseudo-MSID
+       pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
+       unaliased values may also be read directly in the form
+          <Slot><Image type><Hdr3 Word>
+       (see aca_hdr3.hdr3_def for a dictionary including those
+       descriptions)
+
+    :param start: Chandra.Time compatible start time
+    :param stop: Chandra.Time compatible stop time
+    """
+
+    def __init__(self, msid, start, stop):
+        super(Msid, self).__init__(msid, start, stop, filter_bad=True)
 
 
 def confirm_msid(req_msid):
