@@ -501,11 +501,12 @@ class MSIDset(collections.OrderedDict):
             # break in L0 decom, typically due to a change to 4x4 or 6x6 data.
             #  t[0] = 1.0
             #  t[1] = 5.1   <= This record could be bad, as indicated by the gap afterward
-            #  t[2] = 17.8
-            #  t[3] = 21.9
+            #  t[2, 3] = 17.4, 21.5
+            # To form the time diffs first add `tstop` to the end so that if 8x8 data
+            # does not extend through `tstop` then the last record gets chopped.
             dt = np.diff(np.concatenate([slot_data['TIME'], [tstop]]))
             bad = np.abs(dt - 4.1) > 1e-3
-            slot_data[np.where(bad)] = ma.masked
+            slot_data[bad] = ma.masked
 
             # Chop off the padding
             i_stop = np.searchsorted(slot_data['TIME'], self.tstop, side='right')
