@@ -4,19 +4,25 @@ from __future__ import division
 import os
 import shutil
 import argparse
+import json
+
+import numpy as np
 
 import kadi.events
 from Chandra.Time import DateTime
 import pyyaks.task       # Pipeline definition and execution
 import pyyaks.logger     # Output logging control
 import pyyaks.context    # Template rendering to provide context values
+import mica.archive.aca_hdr3
+from Ska.engarchive import fetch_sci as fetch
 
 
 DARK_CAL = pyyaks.context.ContextDict('dark_cal')
 
 SKA_DARK_CAL = '/proj/sot/ska/data/aca_dark_cal'
 SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir=SKA_DARK_CAL)
-SKA_FILES.update({'image': '{{dark_cal.id}}/imd',
+SKA_FILES.update({'dark_cal_dir': '{{dark_cal.id}}',
+                   'image': '{{dark_cal.id}}/imd',
                   'info': '{{dark_cal.id}}/info'})
 
 # Temporarily set default mica archive location to /tmp for safety.  In main() this gets
@@ -95,6 +101,80 @@ def copy_dark_image():
     shutil.copy(infile, outfile)
 
 
+def get_ccd_temp(tstart, tstop):
+    """
+    Get the best estimate of CCD temperature between tstart and tstop
+
+    :param tstart: start time in CXC seconds
+    :param tstop: stop time in CXC seconds
+    """
+    # Just guess for pre-2000 data
+    if tstart < DateTime('2000:001').secs:
+        return -10, 'GUESS'
+
+    # Try the HDR3 archive
+    ccd_temp = mica.archive.aca_hdr3.Msid('ccd_temp', tstart, tstop)
+    if len(ccd_temp.vals) > 4:
+        return np.mean(ccd_temp.vals), 'HDR3'
+
+    # Insufficient HDR3 data available, fall back to AACCCDPT and interpolate
+    time0 = (tstart + tstop) / 2.0
+    ccd_temp = fetch.Msid('AACCCDPT', time0 - 20000, time0 + 20000)
+    if len(ccd_temp) > 100:
+        x = ccd_temp.times - time0
+        r = np.polyfit(x, ccd_temp.vals, 2)
+        y_fit = np.polyval(r, 0.0)
+        return y_fit, 'AACCCDPT'
+
+    # Nothing worked.
+    raise Exception('Unable to determine CCD temperature')
+
+
+@pyyaks.task.task()
+@pyyaks.task.depends(depends=(MICA_FILES['image.fits'],),
+                     targets=(MICA_FILES['properties.json'],))
+def make_properties():
+    """
+    Compute basic observation properties and store in a local JSON file.
+    """
+    props = {key: DARK_CAL[key].val for key in DARK_CAL.keys()}
+
+    # First get the individual replicas and set properties
+    props['replicas'] = []
+
+    start = DateTime(DARK_CAL['start'].val)
+    stop = DateTime(DARK_CAL['stop'].val)
+    replicas = kadi.events.dark_cal_replicas.filter(start=start - 0.5, stop=start + 1)
+    for i_replica, replica in enumerate(replicas):
+        # Get the CCD temperature within +/- 10 minutes of replica
+        ccd_temp, temp_source = get_ccd_temp(replica.tstart - 600, replica.tstop + 600)
+
+        # Determine if replica was successfully downlinked.  Prior to 2001:080 the file
+        # structure was inconsistent so it is hard to know algorithmically, but for these
+        # cases all replicas were good.  Otherwise look for VC2_Replica<N>_SFDU
+        if start.date < '2001:080':
+            downlink = True
+        else:
+            dark_files = os.listdir(SKA_FILES['dark_cal_dir'].abs)
+            replica_match = 'VC2_Replica{}_SFDU'.format(i_replica + 1)
+            downlink = any(replica_match in filename for filename in dark_files)
+
+        replica_props = {'count': i_replica + 1,
+                         'ccd_temp': ccd_temp,
+                         'ccd_temp_source': temp_source,
+                         'start': start.date,
+                         'stop': stop.date,
+                         'downlink': downlink}
+        props['replicas'].append(replica_props)
+
+    props['ccd_temp'] = np.mean([repl['ccd_temp'] for repl in props['replicas']])
+
+    outfile = MICA_FILES['properties.json'].abs
+    logger.info('Writing dark cal replica properties to {}'.format(outfile))
+    with open(outfile, 'w') as fh:
+        json.dump(props, fh, sort_keys=True, indent=4, separators=(',', ': '))
+
+
 def main():
     """
     Update all the Mica dark cal directories.
@@ -123,6 +203,7 @@ def main():
         # Do the actual pipeline processing events
         get_id()
         copy_dark_image()
+        make_properties()
 
 
 if __name__ == '__main__':
