@@ -84,9 +84,9 @@ def ad_temp(msids):
 # Also includes a value key that describes how to determine the value
 # of the MSID
 
-HDR3_DEF = \
-{'062': {'desc': 'AC status word',
-               'longdesc': """
+HDR3_DEF = {
+    '062': {'desc': 'AC status word',
+            'longdesc': """
 AC status word.  A status word read from the AC.  The bits in the word are
 defined as follows:
 
@@ -107,8 +107,9 @@ C = Clock period for parallel shifts
    3 => 48 microsec
 P = PromWrite? flag: true when AC EEPROM is in the write mode.
 """},
-       '064': {'desc': 'Misc status bits',
-                'longdesc': """
+
+    '064': {'desc': 'Misc status bits',
+            'longdesc': """
 Miscellaneous status bits showing the status of the following 16 flag variables
 starting with the LSB and ending with the MSB:
 
@@ -129,199 +130,234 @@ bit 13: DsnFixed?
 bit 14: InitialCalFillOK?
 bit 15 (MSB): IoUpdTimeout?
 """},
-       '066': {'desc': 'A/D CCD molyb therm 1',
-               'value': ad_temp(['HD3TLM66', 'HD3TLM67']),
-               'longdesc': """
+
+    '066': {'desc': 'A/D CCD molyb therm 1',
+            'value': ad_temp(['HD3TLM66', 'HD3TLM67']),
+            'longdesc': """
 A/D converter reading for the CCD moly base thermistor number 1
 """},
-       '072': {'desc': 'A/D CCD molyb therm 2',
-               'value': ad_temp(['HD3TLM72', 'HD3TLM73']),
-               'longdesc': """
+
+    '072': {'desc': 'A/D CCD molyb therm 2',
+            'value': ad_temp(['HD3TLM72', 'HD3TLM73']),
+            'longdesc': """
 A/D converter reading for the CCD moly base thermistor number 2
 """},
-       '074': {'desc': 'A/D CCD detector therm',
-               'value': ad_temp(['HD3TLM74', 'HD3TLM75']),
-               'longdesc': """
+
+    '074': {'desc': 'A/D CCD detector therm',
+            'value': ad_temp(['HD3TLM74', 'HD3TLM75']),
+            'longdesc': """
 A/D converter reading for the CCD detector thermistor
 """},
-       '076': {'desc': 'A/D +5 volt PS',
-               'value': two_byte_sum(['HD3TLM76', 'HD3TLM77'], scale=0.20518),
-               'longdesc': """
+
+    '076': {'desc': 'A/D +5 volt PS',
+            'value': two_byte_sum(['HD3TLM76', 'HD3TLM77'], scale=0.20518),
+            'longdesc': """
 A/D converter reading for the +5 volt power supply; 1 LSB=0.30518 mv
 """},
-       '162': {'desc': 'A/D +15 volt PS',
-               'value': two_byte_sum(['HD3TLM62', 'HD3TLM63'], scale=0.61035),
-               'longdesc': """
+
+    '162': {'desc': 'A/D +15 volt PS',
+            'value': two_byte_sum(['HD3TLM62', 'HD3TLM63'], scale=0.61035),
+            'longdesc': """
 A/D converter reading for the +15 volt power supply; 1 LSB=0.61035 mv
 """},
-       '164': {'desc': 'A/D -15 volt PS',
-               'value': two_byte_sum(['HD3TLM64', 'HD3TLM65'], scale=0.61035),
-               'longdesc': """
+
+    '164': {'desc': 'A/D -15 volt PS',
+            'value': two_byte_sum(['HD3TLM64', 'HD3TLM65'], scale=0.61035),
+            'longdesc': """
 A/D converter reading for the -15 volt power supply; 1 LSB=0.61035 mv
 """},
-       '166': {'desc': 'A/D +27 volt PS',
-               'value': two_byte_sum(['HD3TLM66', 'HD3TLM67'], scale=1.04597),
-               'longdesc': """
+
+    '166': {'desc': 'A/D +27 volt PS',
+            'value': two_byte_sum(['HD3TLM66', 'HD3TLM67'], scale=1.04597),
+            'longdesc': """
 A/D converter reading for the +27 volt power supply; 1 LSB=1.04597 mv
 """},
-       '172': {'desc': 'A/D analog ground',
-               'value': ad_temp(['HD3TLM72', 'HD3TLM73']),
-               'longdesc': """
+
+    '172': {'desc': 'A/D analog ground',
+            'value': ad_temp(['HD3TLM72', 'HD3TLM73']),
+            'longdesc': """
 A/D converter reading for analog ground; 1 LSB=0.30518 mv
 """},
-       '174': {'desc': 'A/D for A/D convertor therm',
-               'value': ad_temp(['HD3TLM74', 'HD3TLM75']),
-               'longdesc': """
+
+    '174': {'desc': 'A/D for A/D convertor therm',
+            'value': ad_temp(['HD3TLM74', 'HD3TLM75']),
+            'longdesc': """
 A/D converter reading for the A/D converter thermistor.
 """},
-       '176': {'desc': 'A/D secondary mirror therm. HRMA side',
-               'value': ad_temp(['HD3TLM76', 'HD3TLM77']),
-               'longdesc': """
+
+    '176': {'desc': 'A/D secondary mirror therm. HRMA side',
+            'value': ad_temp(['HD3TLM76', 'HD3TLM77']),
+            'longdesc': """
 A/D converter reading for the secondary mirror thermistor, HRMA side
 """},
-       '262': {'desc': 'A/D secondary mirror therm. Opp HRMA side',
-               'value': ad_temp(['HD3TLM62', 'HD3TLM63']),
-               'longdesc': """
+
+    '262': {'desc': 'A/D secondary mirror therm. Opp HRMA side',
+            'value': ad_temp(['HD3TLM62', 'HD3TLM63']),
+            'longdesc': """
 A/D converter reading for the secondary mirror thermistor, Opposite from the
 HRMA side
 """},
-       '264': {'desc': 'A/D primary mirror therm. HRMA side',
-               'value': ad_temp(['HD3TLM64', 'HD3TLM65']),
-               'longdesc': """
+
+    '264': {'desc': 'A/D primary mirror therm. HRMA side',
+            'value': ad_temp(['HD3TLM64', 'HD3TLM65']),
+            'longdesc': """
 A/D converter reading for the primary mirror thermistor, HRMA side
 """},
-       '266': {'desc': 'A/D primary mirror therm. Opp HRMA side',
-               'value': ad_temp(['HD3TLM66', 'HD3TLM67']),
-               'longdesc': """
+
+    '266': {'desc': 'A/D primary mirror therm. Opp HRMA side',
+            'value': ad_temp(['HD3TLM66', 'HD3TLM67']),
+            'longdesc': """
 A/D converter reading for the primary mirror thermistor, opposite from the
 HRMA side
 """},
-       '272': {'desc': 'A/D AC housing therm.  HRMA side',
-               'value': ad_temp(['HD3TLM72', 'HD3TLM73']),
-               'longdesc': """
+
+    '272': {'desc': 'A/D AC housing therm.  HRMA side',
+            'value': ad_temp(['HD3TLM72', 'HD3TLM73']),
+            'longdesc': """
 A/D converter reading for the AC housing thermistor, HRMA side
 """},
-       '274': {'desc': 'A/D AC housing therm.  Opp HRMA side',
-               'value': ad_temp(['HD3TLM74', 'HD3TLM75']),
-               'longdesc': """
+
+    '274': {'desc': 'A/D AC housing therm.  Opp HRMA side',
+            'value': ad_temp(['HD3TLM74', 'HD3TLM75']),
+            'longdesc': """
 A/D converter reading for the AC housing thermistor, opposite HRMA side
 """},
-       '276': {'desc': 'A/D lens cell therm.',
-               'value': ad_temp(['HD3TLM76', 'HD3TLM77']),
-               'longdesc': """
+
+    '276': {'desc': 'A/D lens cell therm.',
+            'value': ad_temp(['HD3TLM76', 'HD3TLM77']),
+            'longdesc': """
 A/D converter reading for the lens cell thermistor
 """},
-       '362': {'desc': 'Processor stack pointer and telem update counter',
-               'longdesc': """
+
+    '362': {'desc': 'Processor stack pointer and telem update counter',
+            'longdesc': """
 A word containing the processor data stack pointer in the high byte, and
 an update counter in the low byte that increments once for every 1.025
 second telemetry update.
 """},
-       '364': {'desc': 'Science header pulse period',
-               'longdesc': """
+
+    '364': {'desc': 'Science header pulse period',
+            'longdesc': """
 The science header pulse period, as measured by the PEA; 1 LSB = 2 microseconds
 """,
-               'nbytes': 4},
-       '372': {'desc': '16-bit zero offset for pixels from CCD quad A',
-               'longdesc': """
+            'nbytes': 4},
+
+    '372': {'desc': '16-bit zero offset for pixels from CCD quad A',
+            'longdesc': """
 A 16-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
 """},
-       '374': {'desc': '16-bit zero offset for pixels from CCD quad B',
-               'longdesc': """
+
+    '374': {'desc': '16-bit zero offset for pixels from CCD quad B',
+            'longdesc': """
 A 16-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
 """},
-       '376': {'desc': '16-bit zero offset for pixels from CCD quad C',
-               'longdesc': """
+
+    '376': {'desc': '16-bit zero offset for pixels from CCD quad C',
+            'longdesc': """
 A 16-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
 """},
-       '462': {'desc': '16-bit zero offset for pixels from CCD quad D',
-               'longdesc': """
+
+    '462': {'desc': '16-bit zero offset for pixels from CCD quad D',
+            'longdesc': """
 A 16-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
 """},
-       '464': {'desc': '32-bit zero offset for pixels from CCD quad A',
-               'longdesc': """
+
+    '464': {'desc': '32-bit zero offset for pixels from CCD quad A',
+            'longdesc': """
 A 32-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 2^-16
 A/D converter counts
 """,
-               'nbytes': 4},
-       '472': {'desc': '32-bit zero offset for pixels from CCD quad B',
-               'longdesc': """
+            'nbytes': 4},
+
+    '472': {'desc': '32-bit zero offset for pixels from CCD quad B',
+            'longdesc': """
 A 32-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 2^-16
 A/D converter counts
 """,
-               'nbytes': 4},
-       '476': {'desc': '32-bit zero offset for pixels from CCD quad C',
-               'longdesc': """
+            'nbytes': 4},
+
+    '476': {'desc': '32-bit zero offset for pixels from CCD quad C',
+            'longdesc': """
 A 32-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 2^-16
 A/D converter counts
 """,
-               'nbytes': 4},
-       '564': {'desc': '32-bit zero offset for pixels from CCD quad D',
-               'longdesc': """
+            'nbytes': 4},
+
+    '564': {'desc': '32-bit zero offset for pixels from CCD quad D',
+            'longdesc': """
 A 32-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 2^-16
 A/D converter counts
 """,
-               'nbytes': 4},
-       '572': {'desc': 'last CCD flush duration',
-               'longdesc': """
+            'nbytes': 4},
+
+    '572': {'desc': 'last CCD flush duration',
+            'longdesc': """
 The time required for the most recent flush of the CCD; 1 LSB=2 microseconds
 """},
-       '574': {'desc': 'CCD row shift clock period',
-               'longdesc': """
+
+    '574': {'desc': 'CCD row shift clock period',
+            'longdesc': """
 The CCD row shift clock period currently in effect; 1 LSB = 1 microsecond
 """},
-       '576': {'desc': 'average backround reading',
-               'longdesc': """
+
+    '576': {'desc': 'average backround reading',
+            'longdesc': """
 An overall average background reading derived from the most recent CCD readout.
 This is an average from all tracked images and from all search readout
 segments. One LSB = 1 A/D converter count (nominally 5 electrons).
 """,
-               'value': two_byte_sum(['HD3TLM76', 'HD3TLM77'], scale=5)},
-       '662': {'desc': 'Header 1 for DSN records',
-               'longdesc': """
+            'value': two_byte_sum(['HD3TLM76', 'HD3TLM77'], scale=5)},
+
+    '662': {'desc': 'Header 1 for DSN records',
+            'longdesc': """
 Header 1 for Deep Space Network record.
 """,
-               'nbytes': 6},
-       '672': {'desc': 'record counter and Header 2 for DSN',
-               'longdesc': """
+            'nbytes': 6},
+
+    '672': {'desc': 'record counter and Header 2 for DSN',
+            'longdesc': """
 The record counter and Header 2 for Deep Space Network records.
 The record counter occupies the three high order bytes, and Header 2
 occupies the low order byte.
 """,
-               'nbytes': 4},
-       '676': {'desc': 'CCD temperature',
-               'longdesc': """
+            'nbytes': 4},
+
+    '676': {'desc': 'CCD temperature',
+            'longdesc': """
 CCD temperature.  1 LSB=0.01/(2^16) degrees C.  The high order 16 bits give the
 CCD temperature in units of 1 LSB = 0.01 degrees C.
 """,
-               'nbytes': 4,
-               'value': two_byte_sum(['HD3TLM76', 'HD3TLM77'], scale=0.01)},
-       '764': {'desc': 'CCD setpoint',
-               'longdesc': """
+            'nbytes': 4,
+            'value': two_byte_sum(['HD3TLM76', 'HD3TLM77'], scale=0.01)},
+
+    '764': {'desc': 'CCD setpoint',
+            'longdesc': """
 The CCD temperature control setpoint; 1 LSB=0.01 degrees C
 """,
-               'value': two_byte_sum(['HD3TLM64', 'HD3TLM65'])},
-       '766': {'desc': 'temperature for position/angle cal',
-               'longdesc': """
+            'value': two_byte_sum(['HD3TLM64', 'HD3TLM65'])},
+
+    '766': {'desc': 'temperature for position/angle cal',
+            'longdesc': """
 The temperature used in the angle calibration equations that convert star
 positions from CCD row and column coordinates to Y and Z angles for OBC
 telemetry; 1 LSB = 1/256 degrees C.
 """,
-               'nbytes': 4,
-               'value': two_byte_sum(['HD3TLM72', 'HD3TLM73'],
-                                     scale=1 / 256.)},
-       '774': {'desc': 'RAM address of last write-read test failure',
-               'longdesc': """
+            'nbytes': 4,
+            'value': two_byte_sum(['HD3TLM72', 'HD3TLM73'],
+                                  scale=1 / 256.)},
+    '774': {'desc': 'RAM address of last write-read test failure',
+            'longdesc': """
 The address in RAM of the failure most recently detected by the RAM
 write-and-read test
 """},
-       '776': {'desc': 'TEC DAC number',
-               'value': two_byte_sum(['HD3TLM76', 'HD3TLM77']),
-               'longdesc': """
+
+    '776': {'desc': 'TEC DAC number',
+            'value': two_byte_sum(['HD3TLM76', 'HD3TLM77']),
+            'longdesc': """
 The number most recently written the the [sic] TEC power control DAC.
 """}}
 
