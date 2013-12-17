@@ -491,25 +491,27 @@ class MSIDset(collections.OrderedDict):
         slots = [slot_for_msid(confirm_msid(msid)) for msid in msids]
         for slot in slots:
             # get the 8x8 data
+            tstop = self.tstop + 33.0  # Major frame of padding
             slot_data = aca_l0.get_slot_data(
-                self.tstart, self.tstop, slot,
+                self.tstart, tstop, slot,
                 imgsize=[8], columns=ACA_DTYPE_NAMES)
-            # get the list of all the files in the interval (pad the end a bit)
-            slot_files = aca_l0._get_file_records(
-                self.tstart, self.tstop + 32, slots=[slot], imgsize=[4, 6, 8])
-            # mask the each 8x8 sample before a 6x6 or 4x4 file
-            # first which files are 8x8
-            iseight = slot_files['imgsize'] == 8
-            # which files are the last 8x8 before a 4x4 or 6x6 file
-            last_eight = np.flatnonzero(
-                iseight[1:].astype(int) - iseight[:-1].astype(int) == -1)
-            # for each of those files, mask the last 8x8 sample before the
-            # transition
-            for file in slot_files[last_eight]['filename']:
-                # last index from that file in the data
-                max_idx = np.max(np.flatnonzero(slot_data['FILENAME'] == file))
-                if max_idx:
-                    slot_data[max_idx] = ma.masked
+
+            # Find samples where the time stamp changes by a value other than 4.1 secs
+            # (which is the value for 8x8 readouts).  In that case there must have been a
+            # break in L0 decom, typically due to a change to 4x4 or 6x6 data.
+            #  t[0] = 1.0
+            #  t[1] = 5.1   <= This record could be bad, as indicated by the gap afterward
+            #  t[2, 3] = 17.4, 21.5
+            # To form the time diffs first add `tstop` to the end so that if 8x8 data
+            # does not extend through `tstop` then the last record gets chopped.
+            dt = np.diff(np.concatenate([slot_data['TIME'], [tstop]]))
+            bad = np.abs(dt - 4.1) > 1e-3
+            slot_data[bad] = ma.masked
+
+            # Chop off the padding
+            i_stop = np.searchsorted(slot_data['TIME'], self.tstop, side='right')
+            slot_data = slot_data[:i_stop]
+
             # explicitly unmask useful columns
             slot_data['TIME'].mask = ma.nomask
             slot_data['IMGSIZE'].mask = ma.nomask
