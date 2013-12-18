@@ -405,31 +405,25 @@ MSID_ALIASES = {HDR3_DEF[key]['msid']: key for key in HDR3_DEF}
 class MSID(object):
     """
     ACA header 3 data object to work with header 3 data from
-    available 8x8 ACA L0 telemetry.
+    available 8x8 ACA L0 telemetry::
 
-    >>> from mica.archive import aca_hdr3
-    >>> ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
-    >>> type(ccd_temp.vals)
-    'numpy.ma.core.MaskedArray'
+      >>> from mica.archive import aca_hdr3
+      >>> ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
+      >>> type(ccd_temp.vals)
+      'numpy.ma.core.MaskedArray'
 
     When given an ``msid`` and ``start`` and ``stop`` range, the object will
     query the ACA L0 archive to populate the object, which includes the MSID
     values (``vals``) at the given times (``times``).
 
     The parameter ``msid_data`` is used to create an MSID object from
-    the data of another MSID obejct.
+    the data of another MSID object.
 
     When ``filter_bad`` is supplied then only valid data values are stored
     and the ``vals`` and ``times`` attributes are `np.ndarray` instead of
     `ma.MaskedArray`.
 
-    :param msid: MSID or pseudo-MSID
-       pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
-       unaliased values may also be read directly in the form
-          <Slot><Image type><Hdr3 Word>
-       (see aca_hdr3.hdr3_def for a dictionary including those
-       descriptions)
-
+    :param msid: MSID name
     :param start: Chandra.Time compatible start time
     :param stop: Chandra.Time compatible stop time
     :param msid_data: data dictionary or object from another MSID object
@@ -446,8 +440,7 @@ class MSID(object):
         self.datestop = DateTime(self.tstop).date
         # msid_data may be dictionary or object with these
         # attributes
-        for attr in ('hdr3_msid', 'vals', 'times',
-                     'desc', 'longdesc'):
+        for attr in ('hdr3_msid', 'vals', 'times', 'desc', 'longdesc'):
             if hasattr(msid_data, attr):
                 setattr(self, attr, getattr(msid_data, attr))
             else:
@@ -494,13 +487,7 @@ class Msid(MSID):
     values (``vals``) at the given times (``times``).  Only valid data values
     are returned.
 
-    :param msid: MSID or pseudo-MSID
-       pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
-       unaliased values may also be read directly in the form
-          <Slot><Image type><Hdr3 Word>
-       (see aca_hdr3.hdr3_def for a dictionary including those
-       descriptions)
-
+    :param msid: MSID
     :param start: Chandra.Time compatible start time
     :param stop: Chandra.Time compatible stop time
     """
@@ -544,12 +531,7 @@ class MSIDset(collections.OrderedDict):
     >>> perigee_data = aca_hdr3.MSIDset(['ccd_temp', 'aca_temp', 'dac'],
     ...                                 '2012:001', '2012:030')
 
-    :param msids: list of MSIDs or pseudo-MSIDs
-        pseudo-MSIDs include ['dac', 'aca_temp', 'ccd_temp']
-        unaliased values may also be read directly in the form
-        <Slot><Image type><Hdr3 Word>
-        (see aca_hdr3.HDR3_DEF for a dictionary including those
-        descriptions)
+    :param msids: list of MSIDs
     :param start: Chandra.Time compatible start time
     :param stop: Chandra.Time compatible stop time
     """
