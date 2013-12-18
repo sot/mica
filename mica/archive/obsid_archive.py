@@ -75,10 +75,7 @@ class ObsArchive:
     file archive, while logging the archive files to a file lookup
     database.
 
-    :param config: configuration dictionary
-    :returns: ObsArchive instance
-
-    The configuration dictionary may have these key/values:
+    The configuration dictionary ``config`` may have these key/values:
 
     * data_root: directory for products
                 (example /data/aca/archive/asp1)
@@ -103,6 +100,9 @@ class ObsArchive:
     * full: arc5gl keyword for products (example 'asp1')
     * rebuild: If True/set, allow update mode to rebuild the database
                from obsid 1.
+
+    :param config: configuration dictionary
+    :returns: ObsArchive instance
     """
 
     def __init__(self, config):
@@ -572,7 +572,7 @@ class ObsArchive:
 
     def get_todo_from_links(self, archive_dir):
         """
-        Return a list of all of the *_last directories in the file archive
+        Return a list of all of the \*_last directories in the file archive
         (and specify revision=default to attempt to get new released products
         for them).
         """
