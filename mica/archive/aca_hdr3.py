@@ -487,7 +487,7 @@ class MSIDset(collections.OrderedDict):
         self.tstop = DateTime(stop).secs
         self.datestart = DateTime(self.tstart).date
         self.datestop = DateTime(self.tstop).date
-        self.slot_data = {}
+        slot_datas = {}
         slots = [slot_for_msid(confirm_msid(msid)) for msid in msids]
         for slot in slots:
             # get the 8x8 data
@@ -516,23 +516,23 @@ class MSIDset(collections.OrderedDict):
             slot_data['TIME'].mask = ma.nomask
             slot_data['IMGSIZE'].mask = ma.nomask
             slot_data['FILENAME'].mask = ma.nomask
-            self.slot_data[slot] = slot_data
+            slot_datas[slot] = slot_data
         # make a shared time ndarray that is the union of the time sets in the
         # slots.  The ACA L0 telemetry has the same timestamps across slots,
         # so the only differences here are caused by different times in
         # non-TRAK across the slots (usually SRCH differences at the beginning
         # of the observation)
         shared_time = np.unique(np.concatenate([
-            self.slot_data[slot]['TIME'].data for slot in slots]))
+            slot_datas[slot]['TIME'].data for slot in slots]))
         for msid in msids:
             hdr3_msid = confirm_msid(msid)
             slot = slot_for_msid(hdr3_msid)
             full_data = ma.zeros(len(shared_time),
-                                 dtype=self.slot_data[slot].dtype)
+                                 dtype=slot_datas[slot].dtype)
             full_data.mask = ma.masked
             fd_idx = search_both_sorted(shared_time,
-                                        self.slot_data[slot]['TIME'])
-            full_data[fd_idx] = self.slot_data[slot]
+                                        slot_datas[slot]['TIME'])
+            full_data[fd_idx] = slot_datas[slot]
             # make a data dictionary to feed to the MSID constructor
             slot_data = {'vals': HDR3_DEF[hdr3_msid]['value'](full_data),
                          'desc': HDR3_DEF[hdr3_msid]['desc'],
