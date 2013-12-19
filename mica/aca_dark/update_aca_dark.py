@@ -5,24 +5,27 @@ import os
 import shutil
 import argparse
 import json
+import re
 
 import numpy as np
+from astropy.io import ascii
 
 import kadi.events
 from Chandra.Time import DateTime
 import pyyaks.task       # Pipeline definition and execution
 import pyyaks.logger     # Output logging control
 import pyyaks.context    # Template rendering to provide context values
-import mica.archive.aca_hdr3
 from Ska.engarchive import fetch_sci as fetch
 
+import mica.archive.aca_hdr3
+from mica.common import MissingDataError
 
 DARK_CAL = pyyaks.context.ContextDict('dark_cal')
 
 SKA_DARK_CAL = '/proj/sot/ska/data/aca_dark_cal'
 SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir=SKA_DARK_CAL)
 SKA_FILES.update({'dark_cal_dir': '{{dark_cal.id}}',
-                   'image': '{{dark_cal.id}}/imd',
+                  'image': '{{dark_cal.id}}/imd',
                   'info': '{{dark_cal.id}}/info'})
 
 # Temporarily set default mica archive location to /tmp for safety.  In main() this gets
@@ -34,6 +37,7 @@ MICA_FILES.update({'dark_cal_dir': '{{dark_cal.id}}',
                    'properties': '{{dark_cal.id}}/properties'})
 
 logger = None
+ZODI_PROPS = None
 
 
 def get_opt(args=None):
@@ -52,7 +56,7 @@ def get_opt(args=None):
     return args
 
 
-def set_dark_cal_id(date, rootdir=SKA_DARK_CAL):
+def get_dark_cal_id(date, rootdir=SKA_DARK_CAL):
     """
     Get the dark cal ID in ``rootdir`` corresponding to ``date``.  It is assumed
     the dark cal dirs are labeled by YYYYDOY within ``root``.
@@ -70,7 +74,7 @@ def set_dark_cal_id(date, rootdir=SKA_DARK_CAL):
         if os.path.exists(dark_cal_dir):
             return yeardoy
 
-    raise ValueError('No dark calibration directory for {}'.format(date))
+    raise MissingDataError('No dark calibration directory for {}'.format(date))
 
 
 @pyyaks.task.task()
@@ -78,7 +82,7 @@ def get_id():
     """
     Get the YYYYDOY identifier for the dark cal.
     """
-    DARK_CAL['id'] = set_dark_cal_id(DARK_CAL['start'].val)
+    DARK_CAL['id'] = get_dark_cal_id(DARK_CAL['start'].val)
     logger.verbose('Dark cal starting at {} has id={}'
                    .format(DARK_CAL['start'], DARK_CAL['id']))
 
@@ -130,6 +134,31 @@ def get_ccd_temp(tstart, tstop):
     raise Exception('Unable to determine CCD temperature')
 
 
+def get_zodi_props(dark_id):
+    """
+    Get zodiacal light information for given ``dark_id``.
+
+    Parameters are: ('date', 'ra', 'dec', 'el', 'eb', 'sun_el', 'l_l0', 'zodib').
+
+    :param dark_id: dark cal ID as YYYYDOY
+    :returns: table Row object
+    """
+    global ZODI_PROPS
+    if ZODI_PROPS is None:
+        dark_dir_files = [f for f in os.listdir(SKA_FILES.basedir)
+                          if re.match(r'2\d{6}$', f)]
+        last_dark_id = sorted(dark_dir_files)[-1]
+        filename = os.path.join(SKA_FILES.basedir, last_dark_id, 'Result', 'zodi.csv')
+        ZODI_PROPS = ascii.read(filename, delimiter=',', guess=False)
+
+    date = '{}:{}'.format(dark_id[:4], dark_id[4:])
+    for zodi_prop in ZODI_PROPS:
+        if zodi_prop['date'] == date:
+            return zodi_prop
+    else:
+        raise MissingDataError('No Zodiacal properties found for {}'.format(date))
+
+
 @pyyaks.task.task()
 @pyyaks.task.depends(depends=(MICA_FILES['image.fits'],),
                      targets=(MICA_FILES['properties.json'],))
@@ -167,7 +196,10 @@ def make_properties():
                          'downlink': downlink}
         props['replicas'].append(replica_props)
 
+    # Add ccd temperature, zodiacal light brightness, attitude, sun position
     props['ccd_temp'] = np.mean([repl['ccd_temp'] for repl in props['replicas']])
+    zodi_props = get_zodi_props(DARK_CAL['id'].val)
+    props.update({key: zodi_props[key].tolist() for key in zodi_props.colnames})
 
     outfile = MICA_FILES['properties.json'].abs
     logger.info('Writing dark cal replica properties to {}'.format(outfile))
@@ -205,6 +237,7 @@ def main():
         copy_dark_image()
         make_properties()
 
+        pyyaks.task.end(message=process_msg)
 
 if __name__ == '__main__':
     main()
