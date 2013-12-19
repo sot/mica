@@ -14,27 +14,11 @@ import kadi.events
 from Chandra.Time import DateTime
 import pyyaks.task       # Pipeline definition and execution
 import pyyaks.logger     # Output logging control
-import pyyaks.context    # Template rendering to provide context values
 from Ska.engarchive import fetch_sci as fetch
 
-import mica.archive.aca_hdr3
+from mica.archive import aca_hdr3
 from mica.common import MissingDataError
-
-DARK_CAL = pyyaks.context.ContextDict('dark_cal')
-
-SKA_DARK_CAL = '/proj/sot/ska/data/aca_dark_cal'
-SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir=SKA_DARK_CAL)
-SKA_FILES.update({'dark_cal_dir': '{{dark_cal.id}}',
-                  'image': '{{dark_cal.id}}/imd',
-                  'info': '{{dark_cal.id}}/info'})
-
-# Temporarily set default mica archive location to /tmp for safety.  In main() this gets
-# set to os.path.join(opt.data_root, 'archive', 'aca_dark').
-# One must set --data-root=/data/aca/archive/aca_dark for production.
-MICA_FILES = pyyaks.context.ContextDict('mica_files', basedir='/tmp')
-MICA_FILES.update({'dark_cal_dir': '{{dark_cal.id}}',
-                   'image': '{{dark_cal.id}}/image',
-                   'properties': '{{dark_cal.id}}/properties'})
+from .files import SKA_FILES, MICA_FILES, DARK_CAL
 
 logger = None
 ZODI_PROPS = None
@@ -56,10 +40,10 @@ def get_opt(args=None):
     return args
 
 
-def get_dark_cal_id(date, rootdir=SKA_DARK_CAL):
+def get_dark_cal_id(date):
     """
-    Get the dark cal ID in ``rootdir`` corresponding to ``date``.  It is assumed
-    the dark cal dirs are labeled by YYYYDOY within ``root``.
+    Get the dark cal ID in the Ska dark current files corresponding to ``date``.  It is
+    assumed the dark cal dirs are labeled by YYYYDOY within ``root``.
 
     This routine allows for plus/minus one day of slop.
 
@@ -70,7 +54,7 @@ def get_dark_cal_id(date, rootdir=SKA_DARK_CAL):
     for delta_day in (-1, 0, 1):
         date_try = (date0 + delta_day).date
         yeardoy = date_try[:4] + date_try[5:8]
-        dark_cal_dir = os.path.join(rootdir, yeardoy)
+        dark_cal_dir = os.path.join(SKA_FILES.basedir, yeardoy)
         if os.path.exists(dark_cal_dir):
             return yeardoy
 
@@ -117,7 +101,7 @@ def get_ccd_temp(tstart, tstop):
         return -10, 'GUESS'
 
     # Try the HDR3 archive
-    ccd_temp = mica.archive.aca_hdr3.Msid('ccd_temp', tstart, tstop)
+    ccd_temp = aca_hdr3.Msid('ccd_temp', tstart, tstop)
     if len(ccd_temp.vals) > 4:
         return np.mean(ccd_temp.vals), 'HDR3'
 
