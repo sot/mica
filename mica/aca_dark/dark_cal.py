@@ -1,10 +1,16 @@
+import re
 import os
 
 import numpy as np
-
 from astropy.io import fits
 
-__all__ = ['get_dark_cal_image', 'get_dark_cal_properties', 'dark_temp_scale']
+from mica.common import MICA_ARCHIVE
+from .files import SKA_FILES, MICA_FILES, DARK_CAL
+
+MICA_FILES.basedir = os.path.join(MICA_ARCHIVE, 'aca_dark')
+
+__all__ = ['get_dark_cal_image', 'get_dark_cal_properties', 'dark_temp_scale',
+           'get_dark_cal_dirs']
 
 
 def dark_temp_scale(t_ccd, t_ccd_ref=-19.0):
@@ -28,6 +34,19 @@ def dark_temp_scale(t_ccd, t_ccd_ref=-19.0):
     return np.exp(np.log(0.70) / 4.0 * (t_ccd - t_ccd_ref))
 
 
+def get_dark_cal_dirs(source='mica'):
+    """
+    Get a list of directory paths containing dark current calibration files.
+
+    :param source: source of dark cal directories ('mica'|'ska')
+    :returns: lists of absolute directory paths
+    """
+    files = {'ska': SKA_FILES, 'mica': MICA_FILES}[source]
+    dark_cal_dirs = [fn for fn in os.listdir(files['dark_cals_dir'].abs)
+                     if re.match(r'[12]\d{6}$', fn)]
+    return dark_cal_dirs
+
+
 def get_dark_cal_image(date, before_date=False, t_ccd_ref=None):
     """
     Return the dark calibration image (e-/s) nearest to ``date``.
@@ -41,6 +60,7 @@ def get_dark_cal_image(date, before_date=False, t_ccd_ref=None):
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s
     """
+
     hdus = fits.open(os.path.join('proj', 'sot', 'ska', 'data', 'aca_dark_cal', date, 'imd.fits'))
     dark = hdus[0].data
     hdus.close()

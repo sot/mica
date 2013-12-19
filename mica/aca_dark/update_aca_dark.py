@@ -54,7 +54,7 @@ def get_dark_cal_id(date):
     for delta_day in (-1, 0, 1):
         date_try = (date0 + delta_day).date
         yeardoy = date_try[:4] + date_try[5:8]
-        dark_cal_dir = os.path.join(SKA_FILES.basedir, yeardoy)
+        dark_cal_dir = os.path.join(SKA_FILES['dark_cals_dir'].abs, yeardoy)
         if os.path.exists(dark_cal_dir):
             return yeardoy
 
@@ -72,8 +72,8 @@ def get_id():
 
 
 @pyyaks.task.task()
-@pyyaks.task.depends(depends=(SKA_FILES['image.fits'],),
-                     targets=(MICA_FILES['image.fits'],))
+@pyyaks.task.depends(depends=(SKA_FILES['dark_image.fits'],),
+                     targets=(MICA_FILES['dark_image.fits'],))
 def copy_dark_image():
     """
     Copy dark cal image from Ska to Mica
@@ -83,8 +83,8 @@ def copy_dark_image():
         logger.info('Making output dark cal directory {}'.format(outdir))
         os.makedirs(outdir)
 
-    infile = SKA_FILES['image.fits'].abs
-    outfile = MICA_FILES['image.fits'].abs
+    infile = SKA_FILES['dark_image.fits'].abs
+    outfile = MICA_FILES['dark_image.fits'].abs
     logger.info('Copying {} to {}'.format(infile, outfile))
     shutil.copy(infile, outfile)
 
@@ -128,11 +128,12 @@ def get_zodi_props(dark_id):
     :returns: table Row object
     """
     global ZODI_PROPS
+    dark_cals_dir = SKA_FILES['dark_cals_dir'].abs
     if ZODI_PROPS is None:
-        dark_dir_files = [f for f in os.listdir(SKA_FILES.basedir)
-                          if re.match(r'2\d{6}$', f)]
+        dark_dir_files = [f for f in os.listdir(dark_cals_dir)
+                          if re.search(r'[12]\d{6}$', f)]
         last_dark_id = sorted(dark_dir_files)[-1]
-        filename = os.path.join(SKA_FILES.basedir, last_dark_id, 'Result', 'zodi.csv')
+        filename = os.path.join(dark_cals_dir, last_dark_id, 'Result', 'zodi.csv')
         ZODI_PROPS = ascii.read(filename, delimiter=',', guess=False)
 
     date = '{}:{}'.format(dark_id[:4], dark_id[4:])
@@ -144,8 +145,8 @@ def get_zodi_props(dark_id):
 
 
 @pyyaks.task.task()
-@pyyaks.task.depends(depends=(MICA_FILES['image.fits'],),
-                     targets=(MICA_FILES['properties.json'],))
+@pyyaks.task.depends(depends=(MICA_FILES['dark_image.fits'],),
+                     targets=(MICA_FILES['dark_props.json'],))
 def make_properties():
     """
     Compute basic observation properties and store in a local JSON file.
@@ -185,7 +186,7 @@ def make_properties():
     zodi_props = get_zodi_props(DARK_CAL['id'].val)
     props.update({key: zodi_props[key].tolist() for key in zodi_props.colnames})
 
-    outfile = MICA_FILES['properties.json'].abs
+    outfile = MICA_FILES['dark_props.json'].abs
     logger.info('Writing dark cal replica properties to {}'.format(outfile))
     with open(outfile, 'w') as fh:
         json.dump(props, fh, sort_keys=True, indent=4, separators=(',', ': '))
