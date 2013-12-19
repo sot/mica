@@ -1,3 +1,5 @@
+import os
+
 import Ska.DBI
 import Quaternion
 import numpy as np
@@ -7,15 +9,16 @@ import Ska.Table
 import matplotlib.pyplot as plt
 from Ska.quatutil import radec2yagzag
 import Ska.Numpy
-from mica.starcheck import get_starcheck_catalog
 
-config = dict(data_root='/data/aca/archive/starcheck',
+from mica.starcheck import get_starcheck_catalog
+from mica.common import MICA_ARCHIVE
+
+CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
               dbi='sqlite',
               server_name='starcheck.db3',
               )
-import os
-config['server'] = os.path.join(config['data_root'],
-                                config['server_name'])
+CONFIG['server'] = os.path.join(CONFIG['data_root'],
+                                CONFIG['server_name'])
 
 # rc definitions
 frontcolor = 'black'

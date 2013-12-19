@@ -9,9 +9,9 @@ import Ska.DBI
 from glob import glob
 import gzip
 
-mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+from mica.common import MICA_ARCHIVE
 
-DEFAULT_CONFIG = dict(data_root=os.path.join(mica_archive, 'asp1'),
+DEFAULT_CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'asp1'),
                       sql_def='processing_asp_l1_def.sql')
 
 
@@ -29,7 +29,7 @@ def update(obsids, config=None):
     apstat_db = Ska.DBI.DBI(dbi='sybase',
                             server='sqlsao',
                             database='axafapstat')
-    proc_db_file = os.path.join(mica_archive, 'asp1', 'processing_asp_l1.db3')
+    proc_db_file = os.path.join(MICA_ARCHIVE, 'asp1', 'processing_asp_l1.db3')
     if not os.path.exists(proc_db_file) or os.stat(proc_db_file).st_size == 0:
         if not os.path.exists(config['data_root']):
             os.makedirs(config['data_root'])
