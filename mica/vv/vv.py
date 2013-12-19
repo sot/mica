@@ -8,15 +8,16 @@ import numpy as np
 
 import Ska.DBI
 
-mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+from mica.common import MICA_ARCHIVE
+
 FILES = dict(
-    data_root=os.path.join(mica_archive, 'vv'),
-    temp_root=os.path.join(mica_archive, 'tempvv'),
-    shelf_file=os.path.join(mica_archive, 'vv', 'vv_shelf.db'),
+    data_root=os.path.join(MICA_ARCHIVE, 'vv'),
+    temp_root=os.path.join(MICA_ARCHIVE, 'tempvv'),
+    shelf_file=os.path.join(MICA_ARCHIVE, 'vv', 'vv_shelf.db'),
     h5_file=os.path.join('/proj/sot/ska/data/mica/vv.h5'),
-    last_file=os.path.join(mica_archive, 'vv', 'last_id.txt'),
-    asp1_proc_table=os.path.join(mica_archive, 'asp1', 'processing_asp_l1.db3'),
-    bad_obsid_list=os.path.join(mica_archive, 'vv', 'bad_obsids.json'))
+    last_file=os.path.join(MICA_ARCHIVE, 'vv', 'last_id.txt'),
+    asp1_proc_table=os.path.join(MICA_ARCHIVE, 'asp1', 'processing_asp_l1.db3'),
+    bad_obsid_list=os.path.join(MICA_ARCHIVE, 'vv', 'bad_obsids.json'))
 
 
 logger = logging.getLogger('vv')

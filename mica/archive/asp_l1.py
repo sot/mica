@@ -10,18 +10,19 @@ to the aspect L1 products.
 """
 import os
 import logging
-import obsid_archive
-import asp_l1_proc
+
+from mica.archive import obsid_archive
+from mica.archive import asp_l1_proc
+from mica.common import MICA_ARCHIVE
 
 # these columns are available in the headers of the fetched telemetry
 # for this product (ASP L1) and will be included in the file lookup table
 ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'caldbver', 'content',
                       'ascdsver', 'revision', 'date')
 
-mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
 #config = ConfigObj('asp1.conf')
-CONFIG = dict(data_root=os.path.join(mica_archive, 'asp1'),
-              temp_root=os.path.join(mica_archive, 'temp'),
+CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'asp1'),
+              temp_root=os.path.join(MICA_ARCHIVE, 'temp'),
               sql_def='archfiles_asp_l1_def.sql',
               apstat_table='aspect_1',
               apstat_id='aspect_1_id',

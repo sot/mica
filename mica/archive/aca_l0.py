@@ -16,7 +16,9 @@ import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
+
 import mica.version as mica_version
+from mica.common import MICA_ARCHIVE, MissingDataError
 
 logger = logging.getLogger('aca0 fetch')
 logger.setLevel(logging.INFO)
@@ -55,10 +57,8 @@ ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
 
 ACA_DTYPE_NAMES = tuple([k[0] for k in ACA_DTYPE])
 
-mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
-
-CONFIG = dict(data_root=os.path.join(mica_archive, 'aca0'),
-              temp_root=os.path.join(mica_archive, 'temp'),
+CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'aca0'),
+              temp_root=os.path.join(MICA_ARCHIVE, 'temp'),
               days_at_once=30.0,
               sql_def='archfiles_aca_l0_def.sql',
               cda_table='cda_aca0.h5')
@@ -167,10 +167,6 @@ def get_slot_data(start, stop, slot, imgsize=None,
     oktime = ((all_rows['TIME'] >= DateTime(start).secs)
                & (all_rows['TIME'] <= DateTime(stop).secs))
     return all_rows[oktime]
-
-
-class MissingDataError(Exception):
-    pass
 
 
 class MSID(object):
@@ -603,7 +599,6 @@ class Updater(object):
                         os.path.join(archdir, file_record['filename']))
             real_file = os.path.join(archdir, file_record['filename'])
             if os.path.exists(real_file):
-                #shutil.move(real_file, '/data/aca/archive/aca0/deleted')
                 os.unlink(real_file)
 
     def _move_archive_files(self, archfiles):

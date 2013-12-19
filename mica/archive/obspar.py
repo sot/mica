@@ -12,7 +12,9 @@ import os
 import logging
 from glob import glob
 import re
-import obsid_archive
+
+from mica.archive import obsid_archive
+from mica.common import MICA_ARCHIVE
 
 # these keys are available in the obspar and will be included in the
 # file lookup table (archfiles)
@@ -146,10 +148,8 @@ ARCHFILES_HDR_COLS = [
 'obspar_type',
 'obspar_stat']
 
-mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
-
-CONFIG = dict(data_root=os.path.join(mica_archive, 'obspar'),
-              temp_root=os.path.join(mica_archive, 'tempobs'),
+CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'obspar'),
+              temp_root=os.path.join(MICA_ARCHIVE, 'tempobs'),
               sql_def='obspar_def.sql',
               apstat_table='obidet_0_5',
               apstat_id='obidet_0_5_id',

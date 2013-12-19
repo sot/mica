@@ -10,13 +10,11 @@ from Chandra.Time import DateTime
 import Ska.Numpy
 import logging
 import argparse
-import mica.version as mica_version
 
-mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
+from mica.common import MICA_ARCHIVE
 
-CONFIG = dict(data_root=os.path.join(mica_archive, 'aca0'),
-              cda_fetch_url=
-              'https://icxc.harvard.edu/dbtm/CDA/cgi/aspect_fetch.cgi',
+CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'aca0'),
+              cda_fetch_url='https://icxc.harvard.edu/dbtm/CDA/cgi/aspect_fetch.cgi',
               cda_table='cda_aca0.h5')
 
 logger = logging.getLogger('CDA ACA0 file list update')

@@ -11,18 +11,17 @@ import Ska.Shell
 import Ska.DBI
 
 from mica.starcheck.starcheck_parser import read_starcheck
+from mica.common import MICA_ARCHIVE
 
 logger = logging.getLogger('starcheck ingest')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
-mica_archive = os.environ.get('MICA_ARCHIVE') or '/data/aca/archive'
-
 DEFAULT_CONFIG = dict(dbi='sqlite',
-                      server=os.path.join(mica_archive, 'starcheck', 'starcheck.db3'),
+                      server=os.path.join(MICA_ARCHIVE, 'starcheck', 'starcheck.db3'),
                       mp_top_level='/data/mpcrit1/mplogs')
-FILES = dict(data_root=os.path.join(mica_archive, 'starcheck'),
-             touch_file=os.path.join(mica_archive, 'starcheck', "starcheck_parser.touch"),
+FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
+             touch_file=os.path.join(MICA_ARCHIVE, 'starcheck', "starcheck_parser.touch"),
              sql_def='starcheck.sql')
 
 # this doesn't belong in starcheck
