@@ -5,7 +5,6 @@ import os
 import shutil
 import argparse
 import json
-import re
 
 import numpy as np
 from astropy.io import ascii
@@ -14,14 +13,30 @@ import kadi.events
 from Chandra.Time import DateTime
 import pyyaks.task       # Pipeline definition and execution
 import pyyaks.logger     # Output logging control
+import pyyaks.context
 from Ska.engarchive import fetch_sci as fetch
 
 from mica.archive import aca_hdr3
 from mica.common import MissingDataError
-from .files import SKA_FILES, MICA_FILES, DARK_CAL
+
+from . import file_defs
+from . import dark_cal
 
 logger = None
 ZODI_PROPS = None
+
+DARK_CAL = pyyaks.context.ContextDict('dark_cal')
+
+# Pointer to Ska processing files.  This is hardwired to flight Ska since dark
+# cal files are an OTS input here.
+SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir='/proj/sot/ska')
+SKA_FILES.update(file_defs.SKA_FILES)
+
+# Set up file definitions for Mica ACA dark archive.  This needs to be created
+# now for the script import process, so use a temporary directory as basedir.
+# It will be updated in main().
+MICA_FILES = pyyaks.context.ContextDict('update_mica_files', basedir='/tmp')
+MICA_FILES.update(file_defs.MICA_FILES)
 
 
 def get_opt(args=None):
@@ -33,8 +48,8 @@ def get_opt(args=None):
                         default=pyyaks.logger.INFO,
                         help=("Logging level"))
     parser.add_argument("--data-root",
-                        default=".",
-                        help="Root data directory (default='.')")
+                        default="archive",
+                        help="Root data directory (default='archive')")
 
     args = parser.parse_args(args)
     return args
@@ -128,13 +143,11 @@ def get_zodi_props(dark_id):
     :returns: table Row object
     """
     global ZODI_PROPS
-    dark_cals_dir = SKA_FILES['dark_cals_dir'].abs
     if ZODI_PROPS is None:
-        dark_dir_files = [f for f in os.listdir(dark_cals_dir)
-                          if re.search(r'[12]\d{6}$', f)]
-        last_dark_id = sorted(dark_dir_files)[-1]
-        filename = os.path.join(dark_cals_dir, last_dark_id, 'Result', 'zodi.csv')
-        ZODI_PROPS = ascii.read(filename, delimiter=',', guess=False)
+        dark_cal_dirs = dark_cal.get_dark_cal_dirs(source='ska')
+        last_dark_dir = dark_cal_dirs.values()[-1]
+        last_zodi = os.path.join(last_dark_dir, 'Result', 'zodi.csv')
+        ZODI_PROPS = ascii.read(last_zodi, delimiter=',', guess=False)
 
     date = '{}:{}'.format(dark_id[:4], dark_id[4:])
     for zodi_prop in ZODI_PROPS:
@@ -201,7 +214,7 @@ def main():
     opt = get_opt()
     logger = pyyaks.logger.get_logger(level=opt.log_level)
 
-    MICA_FILES.basedir = os.path.join(opt.data_root, 'archive', 'aca_dark')
+    MICA_FILES.basedir = os.path.join(opt.data_root)
 
     # Get dark cals after the processing start time (or now - 30 days) from kadi
     start = DateTime() - 30 if opt.start is None else DateTime(opt.start)

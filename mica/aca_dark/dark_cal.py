@@ -1,13 +1,20 @@
 import re
 import os
+from collections import OrderedDict
 
 import numpy as np
 from astropy.io import fits
+import pyyaks.context
 
-from mica.common import MICA_ARCHIVE
-from .files import SKA_FILES, MICA_FILES, DARK_CAL
+from mica.common import MICA_ARCHIVE_PATH
+from . import file_defs
 
-MICA_FILES.basedir = os.path.join(MICA_ARCHIVE, 'aca_dark')
+SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir='/proj/sot/ska')
+SKA_FILES.update(file_defs.SKA_FILES)
+
+MICA_FILES = pyyaks.context.ContextDict('update_mica_files',
+                                        basedir=os.path.join(MICA_ARCHIVE_PATH))
+MICA_FILES.update(file_defs.MICA_FILES)
 
 __all__ = ['get_dark_cal_image', 'get_dark_cal_properties', 'dark_temp_scale',
            'get_dark_cal_dirs']
@@ -36,15 +43,18 @@ def dark_temp_scale(t_ccd, t_ccd_ref=-19.0):
 
 def get_dark_cal_dirs(source='mica'):
     """
-    Get a list of directory paths containing dark current calibration files.
+    Get an ordered dict of directory paths containing dark current calibration files,
+    where the key is the dark cal identifier (YYYYDOY) and the value is the path.
 
     :param source: source of dark cal directories ('mica'|'ska')
-    :returns: lists of absolute directory paths
+    :returns: ordered dict of absolute directory paths
     """
     files = {'ska': SKA_FILES, 'mica': MICA_FILES}[source]
-    dark_cal_dirs = [fn for fn in os.listdir(files['dark_cals_dir'].abs)
-                     if re.match(r'[12]\d{6}$', fn)]
-    return dark_cal_dirs
+    dark_cal_ids = sorted([fn for fn in os.listdir(files['dark_cals_dir'].abs)
+                           if re.match(r'[12]\d{6}$', fn)])
+    dark_cal_dirs = [os.path.join(files['dark_cals_dir'].abs, id_)
+                     for id_ in dark_cal_ids]
+    return OrderedDict(zip(dark_cal_ids, dark_cal_dirs))
 
 
 def get_dark_cal_image(date, before_date=False, t_ccd_ref=None):
