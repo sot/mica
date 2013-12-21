@@ -67,11 +67,10 @@ def get_dark_cal_id(date):
     """
     date0 = DateTime(date)
     for delta_day in (-1, 0, 1):
-        date_try = (date0 + delta_day).date
-        yeardoy = date_try[:4] + date_try[5:8]
-        dark_cal_dir = os.path.join(SKA_FILES['dark_cals_dir'].abs, yeardoy)
+        dark_id = dark_cal.date_to_dark_id(date0 + delta_day)
+        dark_cal_dir = os.path.join(SKA_FILES['dark_cals_dir'].abs, dark_id)
         if os.path.exists(dark_cal_dir):
-            return yeardoy
+            return dark_id
 
     raise MissingDataError('No dark calibration directory for {}'.format(date))
 
@@ -149,7 +148,7 @@ def get_zodi_props(dark_id):
         last_zodi = os.path.join(last_dark_dir, 'Result', 'zodi.csv')
         ZODI_PROPS = ascii.read(last_zodi, delimiter=',', guess=False)
 
-    date = '{}:{}'.format(dark_id[:4], dark_id[4:])
+    date = dark_cal.dark_id_to_date(dark_id)
     for zodi_prop in ZODI_PROPS:
         if zodi_prop['date'] == date:
             return zodi_prop

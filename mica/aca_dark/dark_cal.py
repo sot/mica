@@ -1,13 +1,18 @@
 import re
 import os
 from collections import OrderedDict
+import json
 
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table, Column
 import pyyaks.context
+from Chandra.Time import DateTime
 
 from mica.common import MICA_ARCHIVE_PATH
 from . import file_defs
+
+DARK_CAL = pyyaks.context.ContextDict('dark_cal')
 
 SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir='/proj/sot/ska')
 SKA_FILES.update(file_defs.SKA_FILES)
@@ -18,6 +23,15 @@ MICA_FILES.update(file_defs.MICA_FILES)
 
 __all__ = ['get_dark_cal_image', 'get_dark_cal_properties', 'dark_temp_scale',
            'get_dark_cal_dirs']
+
+
+def date_to_dark_id(date):
+    date = DateTime(date).date
+    return date[:4] + date[5:8]
+
+
+def dark_id_to_date(dark_id):
+    return '{}:{}'.format(dark_id[:4], dark_id[4:])
 
 
 def dark_temp_scale(t_ccd, t_ccd_ref=-19.0):
@@ -88,16 +102,56 @@ def get_dark_cal_image(date, before_date=False, t_ccd_ref=None):
     return dark
 
 
-def get_dark_cal_properties(start=None, stop=None, include_images=False):
+def get_dark_cal_properties(start=None, stop=None, include_images=False, as_table=True):
     """
     Return a table of dark calibration properties between ``start`` and ``stop``.
 
-    If ``include_images`` is True then an additional column ``dark_image`` is
+    If ``include_images`` is True then an additional column or key ``image`` is
     defined which contains the corresponding 1024x1024 dark cal image.
 
-    :param start: Start time (default=beginning of mission)
-    :param stop: Stop time (default=now)
+    If ``as_table`` is True (default) then the result is an astropy Table object.
+    If False then a list of dicts is returned.  In this case the full contents
+    of the properties file including replica properties is available.
 
-    :returns: astropy Table of dark calibration properties
+    :param start: start time (default=beginning of mission)
+    :param stop: stop time (default=now)
+    :param include_images: include the dark cal images in output (default=False)
+    :param as_table: return a Table instead of a list (default=True)
+
+    :returns: astropy Table or list of dark calibration properties
     """
-    raise NotImplementedError()
+    # TODO: use a context manager or decorator to cache DARK_CAL
+    start_id = date_to_dark_id('1999:001' if start is None else start)
+    stop_id = date_to_dark_id(stop)
+    dark_dirs = [dark_id for dark_id in get_dark_cal_dirs()
+                 if dark_id >= start_id and dark_id <= stop_id]
+    props = []
+    for dark_id in dark_dirs:
+        DARK_CAL['id'] = dark_id
+        with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
+            prop = json.load(fh)
+            # Change unicode to ascii at top level
+            keys = prop.keys()
+            asciiprop = {}
+            for key in keys:
+                asciiprop[str(key)] = prop[key]
+            prop = asciiprop
+
+        if include_images:
+            hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
+            prop['image'] = hdus[0].data
+            hdus.close()
+
+        props.append(prop)
+
+    if as_table:
+        for prop in props:
+            del prop['replicas']
+        table_props = Table(props)
+        if include_images:
+            x = np.vstack([prop['image'][np.newaxis, :] for prop in props])
+            images = Column(x)
+            table_props['image'] = images
+        props = table_props
+
+    return props
