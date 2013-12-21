@@ -143,7 +143,7 @@ def get_zodi_props(dark_id):
     """
     global ZODI_PROPS
     if ZODI_PROPS is None:
-        dark_cal_dirs = dark_cal.get_dark_cal_dirs(source='ska')
+        dark_cal_dirs = dark_cal.get_dark_cal_dirs(SKA_FILES['dark_cals_dir'].abs)
         last_dark_dir = dark_cal_dirs.values()[-1]
         last_zodi = os.path.join(last_dark_dir, 'Result', 'zodi.csv')
         ZODI_PROPS = ascii.read(last_zodi, delimiter=',', guess=False)

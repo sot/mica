@@ -9,7 +9,8 @@ from astropy.table import Table, Column
 import pyyaks.context
 from Chandra.Time import DateTime
 
-from mica.common import MICA_ARCHIVE_PATH
+from mica.cache import lru_cache
+from mica.common import MICA_ARCHIVE_PATH, MissingDataError
 from . import file_defs
 
 DARK_CAL = pyyaks.context.ContextDict('dark_cal')
@@ -55,7 +56,8 @@ def dark_temp_scale(t_ccd, t_ccd_ref=-19.0):
     return np.exp(np.log(0.70) / 4.0 * (t_ccd - t_ccd_ref))
 
 
-def get_dark_cal_dirs(source='mica'):
+@lru_cache()
+def get_dark_cal_dirs(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     """
     Get an ordered dict of directory paths containing dark current calibration files,
     where the key is the dark cal identifier (YYYYDOY) and the value is the path.
@@ -63,41 +65,83 @@ def get_dark_cal_dirs(source='mica'):
     :param source: source of dark cal directories ('mica'|'ska')
     :returns: ordered dict of absolute directory paths
     """
-    files = {'ska': SKA_FILES, 'mica': MICA_FILES}[source]
-    dark_cal_ids = sorted([fn for fn in os.listdir(files['dark_cals_dir'].abs)
+    dark_cal_ids = sorted([fn for fn in os.listdir(dark_cals_dir)
                            if re.match(r'[12]\d{6}$', fn)])
-    dark_cal_dirs = [os.path.join(files['dark_cals_dir'].abs, id_)
+    dark_cal_dirs = [os.path.join(dark_cals_dir, id_)
                      for id_ in dark_cal_ids]
     return OrderedDict(zip(dark_cal_ids, dark_cal_dirs))
 
 
-def get_dark_cal_image(date, before_date=False, t_ccd_ref=None):
+def get_dark_cal_id(date, select='before'):
+    """
+    Return the dark calibration id corresponding to ``date``.
+
+    If ``select`` is ``'before'`` (default) then use the first calibration which
+    occurs before ``date``.  Other valid options are ``'after'`` and ``'nearest'``.
+
+    :param date: date in any DateTime format
+    :param select: method to select dark cal (before|nearest|after)
+
+    :returns: dark cal id string (YYYYDOY)
+    """
+
+    dark_cals = get_dark_cal_dirs()
+    dark_id = date_to_dark_id(date)
+
+    # Special case if dark_id is exactly an existing dark cal then return that dark
+    # cal regardless of the select method.
+    if dark_id in dark_cals:
+        return dark_id
+
+    dark_cal_ids = dark_cals.keys()
+    date_secs = DateTime(date).secs
+    dark_cal_secs = DateTime(np.array([dark_id_to_date(id_) for id_ in dark_cal_ids])).secs
+
+    if select == 'nearest':
+        ii = np.argmin(np.abs(dark_cal_secs - date_secs))
+    elif select in ('before', 'after'):
+        ii = np.searchsorted(dark_cal_secs, date_secs)
+        if select == 'before':
+            ii -= 1
+    else:
+        raise ValueError('select arg must be one of "nearest", "before", or "after"')
+
+    try:
+        out_dark_id = dark_cal_ids[ii]
+    except IndexError:
+        raise MissingDataError('No dark cal found {} {}'.format(select, date))
+
+    return out_dark_id
+
+
+def get_dark_cal_image(date, select='before', t_ccd_ref=None):
     """
     Return the dark calibration image (e-/s) nearest to ``date``.
 
-    If ``before_date`` is True (default) then use the first calibration which
-    occurs before ``date``.
+    If ``select`` is ``'before'`` (default) then use the first calibration which
+    occurs before ``date``.  Other valid options are ``'after'`` and ``'nearest'``.
 
     :param date: date in any DateTime format
-    :param before_date: use first cal before date
+    :param select: method to select dark cal (before|nearest|after)
     :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s
     """
+    DARK_CAL['id'] = get_dark_cal_id(date, select)
 
-    hdus = fits.open(os.path.join('proj', 'sot', 'ska', 'data', 'aca_dark_cal', date, 'imd.fits'))
+    hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
     dark = hdus[0].data
     hdus.close()
 
     if t_ccd_ref is not None:
+        with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
+            props = json.load(fh)
         # Scale factor to adjust data to an effective temperature of t_ccd_ref.
         # For t_ccds warmer than t_ccd_ref this scale factor is < 1, i.e. the
         # observed dark current is made smaller to match what it would be at the
         # lower reference temperature.
-
-        # t_ccd = ???
-        # dark *= dark_temp_scale(t_ccd, t_ccd_ref)
-        raise NotImplementedError('No code yet to get dark calibration temperature')
+        t_ccd = props['ccd_temp']
+        dark *= dark_temp_scale(t_ccd, t_ccd_ref)
 
     return dark
 
