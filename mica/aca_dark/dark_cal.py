@@ -22,16 +22,25 @@ MICA_FILES = pyyaks.context.ContextDict('update_mica_files',
                                         basedir=os.path.join(MICA_ARCHIVE_PATH))
 MICA_FILES.update(file_defs.MICA_FILES)
 
-__all__ = ['get_dark_cal_image', 'get_dark_cal_properties', 'dark_temp_scale',
-           'get_dark_cal_dirs']
-
 
 def date_to_dark_id(date):
+    """
+    Convert ``date`` to the corresponding YYYYDOY format for a dark cal identifiers.
+
+    :param date: any DateTime compatible format
+    :returns: dark id (YYYYDOY)
+    """
     date = DateTime(date).date
     return date[:4] + date[5:8]
 
 
 def dark_id_to_date(dark_id):
+    """
+    Convert ``dark_id`` (YYYYDOY) to the corresponding DateTime 'date' format.
+
+    :param date: dark id (YYYYDOY)
+    :returns: str in DateTime 'date' format
+    """
     return '{}:{}'.format(dark_id[:4], dark_id[4:])
 
 
@@ -127,6 +136,7 @@ def get_dark_cal_image(date, select='before', t_ccd_ref=None):
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s
     """
+    dark_cal_id_cache = DARK_CAL['id'].val  # TODO: do this with a decorator
     DARK_CAL['id'] = get_dark_cal_id(date, select)
 
     hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
@@ -143,14 +153,54 @@ def get_dark_cal_image(date, select='before', t_ccd_ref=None):
         t_ccd = props['ccd_temp']
         dark *= dark_temp_scale(t_ccd, t_ccd_ref)
 
+    DARK_CAL['id'] = dark_cal_id_cache
     return dark
 
 
-def get_dark_cal_properties(start=None, stop=None, include_images=False, as_table=True):
+def get_dark_cal_props(date, select='before', include_image=False):
+    """
+    Return a dark calibration properties structure for ``date``
+
+    If ``select`` is ``'before'`` (default) then use the first calibration which
+    occurs before ``date``.  Other valid options are ``'after'`` and ``'nearest'``.
+
+    If ``include_image`` is True then an additional column or key ``image`` is
+    defined which contains the corresponding 1024x1024 dark cal image.
+
+    :param date: date in any DateTime format
+    :param select: method to select dark cal (before|nearest|after)
+    :param include_image: include the dark cal images in output (default=False)
+
+    :returns: astropy Table or list of dark calibration properties
+    """
+    # TODO: use a context manager or decorator to cache DARK_CAL
+    dark_cal_id_cache = DARK_CAL['id'].val
+    DARK_CAL['id'] = get_dark_cal_id(date, select)
+
+    with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
+        props = json.load(fh)
+
+    # Change unicode to ascii at top level
+    keys = props.keys()
+    asciiprops = {}
+    for key in keys:
+        asciiprops[str(key)] = props[key]
+    props = asciiprops
+
+    if include_image:
+        hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
+        props['image'] = hdus[0].data
+        hdus.close()
+
+    DARK_CAL['id'] = dark_cal_id_cache
+    return props
+
+
+def get_dark_cal_props_table(start=None, stop=None, include_image=False, as_table=True):
     """
     Return a table of dark calibration properties between ``start`` and ``stop``.
 
-    If ``include_images`` is True then an additional column or key ``image`` is
+    If ``include_image`` is True then an additional column or key ``image`` is
     defined which contains the corresponding 1024x1024 dark cal image.
 
     If ``as_table`` is True (default) then the result is an astropy Table object.
@@ -159,40 +209,24 @@ def get_dark_cal_properties(start=None, stop=None, include_images=False, as_tabl
 
     :param start: start time (default=beginning of mission)
     :param stop: stop time (default=now)
-    :param include_images: include the dark cal images in output (default=False)
+    :param include_image: include the dark cal images in output (default=False)
     :param as_table: return a Table instead of a list (default=True)
 
     :returns: astropy Table or list of dark calibration properties
     """
-    # TODO: use a context manager or decorator to cache DARK_CAL
     start_id = date_to_dark_id('1999:001' if start is None else start)
     stop_id = date_to_dark_id(stop)
     dark_dirs = [dark_id for dark_id in get_dark_cal_dirs()
                  if dark_id >= start_id and dark_id <= stop_id]
-    props = []
-    for dark_id in dark_dirs:
-        DARK_CAL['id'] = dark_id
-        with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
-            prop = json.load(fh)
-            # Change unicode to ascii at top level
-            keys = prop.keys()
-            asciiprop = {}
-            for key in keys:
-                asciiprop[str(key)] = prop[key]
-            prop = asciiprop
 
-        if include_images:
-            hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
-            prop['image'] = hdus[0].data
-            hdus.close()
-
-        props.append(prop)
+    # Get the list of properties structures
+    props = [get_dark_cal_props(dark_id) for dark_id in dark_dirs]
 
     if as_table:
         for prop in props:
             del prop['replicas']
         table_props = Table(props)
-        if include_images:
+        if include_image:
             x = np.vstack([prop['image'][np.newaxis, :] for prop in props])
             images = Column(x)
             table_props['image'] = images
