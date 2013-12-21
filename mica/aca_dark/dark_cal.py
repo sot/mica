@@ -123,6 +123,7 @@ def get_dark_cal_id(date, select='before'):
     return out_dark_id
 
 
+@DARK_CAL.cache
 def get_dark_cal_image(date, select='before', t_ccd_ref=None):
     """
     Return the dark calibration image (e-/s) nearest to ``date``.
@@ -136,7 +137,6 @@ def get_dark_cal_image(date, select='before', t_ccd_ref=None):
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s
     """
-    dark_cal_id_cache = DARK_CAL['id'].val  # TODO: do this with a decorator
     DARK_CAL['id'] = get_dark_cal_id(date, select)
 
     hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
@@ -153,10 +153,10 @@ def get_dark_cal_image(date, select='before', t_ccd_ref=None):
         t_ccd = props['ccd_temp']
         dark *= dark_temp_scale(t_ccd, t_ccd_ref)
 
-    DARK_CAL['id'] = dark_cal_id_cache
     return dark
 
 
+@DARK_CAL.cache
 def get_dark_cal_props(date, select='before', include_image=False):
     """
     Return a dark calibration properties structure for ``date``
@@ -173,8 +173,6 @@ def get_dark_cal_props(date, select='before', include_image=False):
 
     :returns: astropy Table or list of dark calibration properties
     """
-    # TODO: use a context manager or decorator to cache DARK_CAL
-    dark_cal_id_cache = DARK_CAL['id'].val
     DARK_CAL['id'] = get_dark_cal_id(date, select)
 
     with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
@@ -192,7 +190,6 @@ def get_dark_cal_props(date, select='before', include_image=False):
         props['image'] = hdus[0].data
         hdus.close()
 
-    DARK_CAL['id'] = dark_cal_id_cache
     return props
 
 
