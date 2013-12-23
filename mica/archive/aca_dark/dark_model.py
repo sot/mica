@@ -1,4 +1,6 @@
-__all__ = ['get_dark_model']
+"""
+Routines related to the dark current model and guide / acq success prediction.
+"""
 
 
 def get_dark_model(date, t_ccd):
