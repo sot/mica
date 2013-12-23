@@ -1,5 +1,35 @@
 
 
+.. _api_aca_dark:
+
+:mod:`mica.archive.aca_dark`
+============================
+
+.. _api_dark_cal:
+
+:mod:`mica.archive.aca_dark.dark_cal`
+----------------------------------------
+
+.. automodule:: mica.archive.aca_dark.dark_cal
+    :members:
+
+.. _api_dark_model:
+
+:mod:`mica.archive.aca_dark.dark_model`
+----------------------------------------
+
+.. automodule:: mica.archive.aca_dark.dark_model
+    :members:
+
+.. _api_update_aca_dark:
+
+:mod:`mica.archive.aca_dark.update_aca_dark`
+--------------------------------------------
+
+.. automodule:: mica.archive.aca_dark.update_aca_dark
+    :members:
+
+
 :mod:`mica.archive.aca_hdr3`
 ============================
 

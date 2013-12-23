@@ -47,9 +47,9 @@ def dark_id_to_date(dark_id):
 def dark_temp_scale(t_ccd, t_ccd_ref=-19.0):
     """
     Return the multiplicative scale factor to convert a CCD dark map from
-    the actual temperature ``t_ccd` to the reference temperature ``t_ccd_ref``.
+    the actual temperature ``t_ccd`` to the reference temperature ``t_ccd_ref``.
 
-    Based on best global fit for dark current model in plot_predicted_warmpix.py.
+    Based on best global fit for dark current model in `plot_predicted_warmpix.py`.
     Previous value was 0.62 instead of 0.70.  This represents the change in
     dark current for each 4 degC decrease::
 
