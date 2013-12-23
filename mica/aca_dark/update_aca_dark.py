@@ -40,7 +40,7 @@ MICA_FILES.update(file_defs.MICA_FILES)
 
 
 def get_opt(args=None):
-    parser = argparse.ArgumentParser(description='Update the aca_dark database')
+    parser = argparse.ArgumentParser(description='Update the ACA dark cal database')
     parser.add_argument("--start",
                         help="Processing start date default=now - 30 days")
     parser.add_argument("--log-level",
