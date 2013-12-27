@@ -1,0 +1,42 @@
+<HTML>
+<HEAD>
+<TITLE>V&amp;V obsid {{ obsid }}</TITLE>
+<style type="text/css">
+  body { min-width:900px;
+  background-color: lightblue;
+  }
+  div.border{
+    background-color: white;
+    padding-left: 10px;
+    padding-bottom: 5px;
+    border-style: solid;
+    border-width: 5px;
+    border-radius: 20px;
+  }
+
+</style>
+</HEAD>
+<BODY>
+<div class="border">
+<H1>V&amp;V obsid {{ obsid }}</H1>
+
+<H2>AIPROPS</H@>
+<TABLE border=1>
+<TR>
+{% for field in ['datestart', 'datestop', 'obsid', 'pcad_mode',
+'aspect_mode', 'sim_mode'] %}
+<TH>{{ field }}</TD>
+{% endfor %}
+</TR>
+{% for row in aiprops %}
+<TR>
+{% for field in ['datestart', 'datestop', 'obsid', 'pcad_mode',
+'aspect_mode', 'sim_mode'] %}
+<TD>{{ row[field] }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+</TABLE>
+</div>
+</BODY>
+</HTML>
