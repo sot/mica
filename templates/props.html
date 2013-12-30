@@ -1,0 +1,52 @@
+<HTML>
+<HEAD>
+<TITLE>V&amp;V obsid {{ obsid }}</TITLE>
+<style type="text/css">
+  body { min-width:900px;
+  background:url('http://asc.harvard.edu/mta/ASPECT/blue_paper.gif'); }
+</style>
+</HEAD>
+<BODY>
+
+<H1>V&amp;V obsid {{ obsid }}</H1>
+
+
+<H2>fidprops</H2>
+{% for ai in vv['fidprops'] %}
+<TABLE border=1>
+<TR>
+{% for field in ['slot', 'id_status', 'id_string', 'id_num', 'mag_i_cmd', 'mag_i_avg', 'ang_z_nom', 'ang_y_nom'] %}
+<TH>{{ field }}</TH>
+{% endfor %}
+</TR>
+{% for fid in ai %}
+<TR>
+{% for field in ['slot', 'id_status', 'id_string', 'id_num', 'mag_i_cmd', 'mag_i_avg', 'ang_z_nom', 'ang_y_nom'] %}
+<TD>{{ fid[field] }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+</TABLE>
+{% endfor %}
+
+<H2>gsprops</H2>
+{% for ai in vv['gsprops'] %}
+<TABLE border=1>
+<TR>
+{% for field in ['slot', 'agasc_id', 'id_status', 'cel_loc_flag', 'ra','dec', 'ra_corr', 'dec_corr'] %}
+<TH>{{ field }}</TH>
+{% endfor %}
+</TR>
+{% for fid in ai %}
+<TR>
+{% for field in ['slot', 'agasc_id', 'id_status', 'cel_loc_flag', 'ra','dec', 'ra_corr', 'dec_corr'] %}
+<TD>{{ fid[field] }}</TD>
+{% endfor %}
+</TR>
+{% endfor %}
+</TABLE>
+{% endfor %}
+
+
+</BODY>
+</HTML>

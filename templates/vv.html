@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>V&amp;V obsid {{ obsid }}</TITLE>
+<style type="text/css">
+  body { width:1200px;
+  background-color: lightblue;
+  }
+pre {
+ white-space: pre-wrap;       /* css-3 */
+ white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+ white-space: -pre-wrap;      /* Opera 4-6 */
+ white-space: -o-pre-wrap;    /* Opera 7 */
+ word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
+  div.border{
+    background-color: white;
+    padding-left: 10px;
+    padding-bottom: 5px;
+    border-style: solid;
+    border-width: 5px;
+    border-radius: 20px;
+  }
+  div#left {
+    float: left;
+    width: 275px;
+    left: 0;
+  }
+  div#right {
+    float: right;
+    width: 875px;
+   
+  }
+  div#full {
+     clear: both;
+     width: 1200px;
+  }
+
+</style>
+</HEAD>
+<BODY>
+
+<A HREF="index.html">Up to Full Report</A>
+
+<H1>V&amp;V obsid {{ obsid }}</H1>
+
+{% if vv['has_errors'] is not none %}
+<H2>Processing Errors</H2>
+{% for error in vv['errors'] %}
+<P>{{ error }}</P>
+{% endfor %}
+{% endif %}
+
+<div id="left" class="border">
+<H2>Observation Parameters</H2>
+<TABLE border=1>
+{% for field in ['obs_id', 'seq_num', 'tstart',
+'tstop', 'ra_targ', 'dec_targ', 'ra_pnt', 'dec_pnt', 'roll_pnt',
+'instrume', 'si_mode', 'sim_z_offset', 'y_det_offset', 'z_det_offset',
+'ascdsver'] %}
+<TR><TD>{{ field }}</TD><TD>{{ obspar[field] }}</TD></TR>
+{% endfor %}
+</TABLE>
+</div>
+
+<div id="right" class="border">
+<H2>Slots</H2>
+<TABLE border=1>
+<TR>
+{% for field in ['slot', 'id_status', 'cel_loc_flag', 'dr_rms', 'dy_rms',
+'dz_rms', 'dy_mean', 'dz_mean'] %}
+<TH align='right'>{{ field|upper() }}</TH>
+{% endfor %}
+</TR>
+{% for slot in ['0', '1', '2', '3', '4', '5', '6', '7'] %}
+{% if slot in vv['slots'] %}
+{% if 'n_pnts' in slot %}
+<TR><TD><A target="_blank" HREF="slot_{{ slot }}.html">{{ slot }} [FULL REPORT]</A></TD>
+{% for field, form in [('id_status', '%5s'),
+('cel_loc_flag', '%s'), ('dr_rms', '%5.2f'), ('dy_rms', '%5.2f'), ('dz_rms', '%5.2f'),('dy_mean', '%5.2f'), ('dz_mean', '%5.2f')] %}<TD align='right'>{{ form|format(vv['slots'][slot][field]) }}</TD>
+{% endfor %}</TR>
+{% endif %}
+{% else %}
+<TR><TD>{{ slot }}</TD><TD align="right">OMITTED</TD><TD colspan=6></TD></TR>
+{% endif %}
+{% endfor %}
+</TABLE>
+
+<H2>Aspect Intervals</H2>
+<TABLE border=1>
+{% for i in vv['intervals'] %}
+<TR><TH>TSTART</TH><TD>{{i['TSTART']}}</TD><TH>TSTOP</TH><TD>{{i['TSTOP']}}</TD><TH><A target="_blank" HREF="{{i['loglink']}}">LOG</A><TH></TR>
+{% endfor %}
+</TABLE>
+
+<H2>
+<A target="_blank" HREF="aiprops.html">AIPROPS</A> and
+<A target="_blank" HREF="props.html">Guide/Fid Props</A></H2>
+
+
+
+</div>
+
+{% if official_vv_notes is not none %}
+<div id="full" class="border">
+<H2>Official V&amp;V Notes</H2>
+<TABLE border=1>
+<TR><TH>l2_ap_date</TH><TH>l2_ver</TH><TH>vv_ver</TH><TH>vv_state</TH><TH>comments</TH><TH>aspect review</TH></TR>
+{% for report in official_vv_notes %}
+<TR><TD>{{ report['l2_ap_date'] }}</TD>
+<TD>{{ report['l2_version']}}</TD>
+<TD>{{ report['vv_version']}}</TD>
+<TD>{{ report['vv_state'] }}</TD>
+<TD><PRE>{{ report['comments'] }}</PRE></TD>
+<TD><PRE>{{ report['aspect_review']['comments'] }}</PRE></TD></TR>
+{% endfor %}
+</TABLE>
+{% endif %}
+</div>
+
+
+
+
+
+</BODY>
+</HTML>
