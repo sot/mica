@@ -1,15 +1,33 @@
 
 
-:mod:`mica.archive.aca_l0`
-==========================
+.. _api_aca_dark:
 
-.. automodule:: mica.archive.aca_l0
+:mod:`mica.archive.aca_dark`
+============================
 
-Functions
----------
+.. _api_dark_cal:
 
-.. autofunction:: get_slot_data
-.. autofunction:: get_files
+:mod:`mica.archive.aca_dark.dark_cal`
+----------------------------------------
+
+.. automodule:: mica.archive.aca_dark.dark_cal
+    :members:
+
+.. _api_dark_model:
+
+:mod:`mica.archive.aca_dark.dark_model`
+----------------------------------------
+
+.. automodule:: mica.archive.aca_dark.dark_model
+    :members:
+
+.. _api_update_aca_dark:
+
+:mod:`mica.archive.aca_dark.update_aca_dark`
+--------------------------------------------
+
+.. automodule:: mica.archive.aca_dark.update_aca_dark
+    :members:
 
 
 :mod:`mica.archive.aca_hdr3`
@@ -22,6 +40,18 @@ Functions
    :members:
 .. autoclass:: MSIDset
    :members:
+
+
+:mod:`mica.archive.aca_l0`
+==========================
+
+.. automodule:: mica.archive.aca_l0
+
+Functions
+---------
+
+.. autofunction:: get_slot_data
+.. autofunction:: get_files
 
 
 :mod:`mica.archive.asp_l1`
@@ -37,6 +67,17 @@ Functions
 .. autofunction:: get_obs_dirs
 
 
+:mod:`mica.archive.obsid_archive`
+=================================
+
+Base Class used in mica.archive.asp_l1 and mica.archive.obspar
+
+.. automodule:: mica.archive.obsid_archive
+
+.. autoclass:: ObsArchive
+   :members:
+
+
 :mod:`mica.archive.obspar`
 ==========================
 
@@ -48,17 +89,6 @@ Functions
 .. autofunction:: get_dir
 .. autofunction:: get_obs_dirs
 .. autofunction:: get_obspar
-
-
-:mod:`mica.archive.obsid_archive`
-=================================
-
-Base Class used in mica.archive.asp_l1 and mica.archive.obspar
-
-.. automodule:: mica.archive.obsid_archive
-
-.. autoclass:: ObsArchive
-   :members:
 
 
 :mod:`mica.vv`
@@ -74,4 +104,3 @@ Functions
 .. autofunction:: get_vv_files
 .. autofunction:: get_rms_data
 .. autofunction:: get_arch_vv
-

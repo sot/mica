@@ -14,6 +14,6 @@ setup(name='mica',
       author_email='jconnelly@cfa.harvard.edu',
       license=license,
       zip_safe=False,
-      packages=['mica', 'mica.archive', 'mica.aca_dark', 'mica.vv',
+      packages=['mica', 'mica.archive', 'mica.archive.aca_dark', 'mica.vv',
                 'mica.starcheck', 'mica.catalog', 'mica.report'],
       )

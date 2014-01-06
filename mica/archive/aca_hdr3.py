@@ -8,11 +8,10 @@ import collections
 from scipy.interpolate import interp1d
 from Chandra.Time import DateTime
 from Ska.Numpy import search_both_sorted
-import mica.archive.aca_l0 as aca_l0
 
+from mica.archive import aca_l0
+from mica.common import MissingDataError
 
-class MissingDataError(Exception):
-    pass
 
 #In case it isn't obvious, for an MSID of HD3TLM<I><W> in ACA image data
 #for slot <S>, that maps to table 11.1 like:
