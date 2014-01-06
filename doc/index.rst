@@ -91,6 +91,10 @@ As an example, let's plot the raw and corrected warm pixel fraction over the mis
 .. image:: plots/aca_dark_warm_pix_frac.png
    :width: 500
 
+Note that the temperature assigned to a dark calibration is the mean of the temperature
+for the invidivual dark replicas (typically 5).  These in turn use ACA hdr3 diagnostic
+telemetry for high-resolution temperature readouts which are available before and after
+(but not during) each replica.
 
 Dark current modeling
 ^^^^^^^^^^^^^^^^^^^^^^^
