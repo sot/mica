@@ -138,7 +138,6 @@ class Obi(object):
 
     def save_plots_and_resid(self):
         self._save_info_json()
-        self._save_slot_pkl()
         self._save_info_pkl()
         #for slot in self.all_slot_data:
         #    self.plot_slot(slot, save=True, close=True)
