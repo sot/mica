@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import medfilt as medfilt
 from scipy.stats import scoreatpercentile
 
+from Chandra.Time import DateTime
 from Ska.Table import read_table
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
@@ -34,7 +35,7 @@ class InconsistentAspectIntervals(ValueError):
     pass
 
 # integer code version for lightweight database tracking
-VV_VERSION = 2
+VV_VERSION = 3
 
 logger = logging.getLogger('vv')
 
@@ -336,6 +337,10 @@ class Obi(object):
                              if k in save))
             slot.update(dict(mean_aacccdpt=mean_aacccdpt))
             slot.update(isdefault=self.isdefault)
+            if (save['slots'][slot_str]['type'] == 'FID'):
+                save['slots'][slot_str]['used'] = 1
+            else:
+                save['slots'][slot_str]['used'] = save['slots'][slot_str]['cel_loc_flag']
         # make a recarray
         save_rec = np.rec.fromrecords(
             [[save['slots'][slot_str].get(k) for k in self.table.dtype.names]
@@ -887,15 +892,39 @@ class AspectInterval(object):
             info.append(saveprop)
         return (prop, info, header)
 
+    def _read_ocat_stars(self):
+        import Ska.DBI
+        obsid = int(self.asol_header['OBS_ID'])
+        obi = int(self.asol_header['OBI_NUM'])
+        ocat_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', database='axafocat')
+        stars = ocat_db.fetchall("select * from stars where "
+                                 "obsid = {} and obi = {} "
+                                 "and type != 0".format(obsid, obi))
+        ocat_db.conn.close()
+        if len(np.unique(stars['obi'])) > 1:
+            raise ValueError("Multi-obi observation.  OCAT stars unhelpful to identify missing slot")
+        return stars
+
+    def _identify_missing_slot(self, slot):
+        datadir = self.aspdir
+        adat_files = glob(os.path.join(datadir, "pcadf*N???_adat{}1.fits*".format(slot)))
+        if not len(adat_files):
+            return None
+        hdulist = pyfits.open(adat_files[0])
+        header = hdulist[1].header
+        if header['IMGTYPE'] == 0:
+            return 'GUIDE'
+        if header['IMGTYPE'] == 1:
+            return 'FID'
+        if header['IMGTYPE'] == 2:
+            return 'MONITOR'
+        raise ValueError("Slot {} could not be identified from image data".format(slot))
+
+
     def _read_in_data(self):
         aiid = self.aiid
         datadir = self.aspdir
         opt = self.opt
-
-        (self.gsprop, self.gspr_info, self.h_gspr) \
-            = self._get_prop('guide', 'gspr')
-        (self.fidprop, self.fidpr_info, self.h_fidpr) \
-            = self._get_prop('fid', 'fidpr')
 
         logger.info('Reading aspect solution and header')
         #if opt['obc']:
@@ -939,6 +968,85 @@ class AspectInterval(object):
         logger.info('Reading gyro data')
         self.gdat = read_table(glob(
                 os.path.join(datadir, "%s_gdat1.fits*" % aiid))[0])
+
+
+        (self.gsprop, self.gspr_info, self.h_gspr) \
+            = self._get_prop('guide', 'gspr')
+        (self.fidprop, self.fidpr_info, self.h_fidpr) \
+            = self._get_prop('fid', 'fidpr')
+
+        missing_slots = [slot for slot in np.unique(self.cen['slot'])
+                         if (slot not in self.gsprop['slot']
+                             and slot not in self.fidprop['slot'])]
+
+        # Nothing else to do if there are no missing slots
+        if not len(missing_slots):
+            return
+
+        ocat_stars = self._read_ocat_stars()
+        tstart = self.asol_header['TSTART']
+        agasc_equinox = DateTime('2000:001:00:00:00.000')
+        dyear = (DateTime(tstart) - agasc_equinox) / 365.25
+        pm_to_degrees = dyear / (3600. * 1000.)
+        missing_info = []
+        for slot in missing_slots:
+            #stype = self._identify_missing_slot(slot)
+            #if stype is None:
+            #    logger.warn("No image data to identify missing slot {}".format(slot))
+            #    logger.warn("Skipping slot")
+            #missing_types.append(stype)
+            ocat_info = ocat_stars[ocat_stars['slot'] == slot][0]
+            if ocat_info['type'] == 3:
+                logger.info("Missing slot is MONITOR.  Skipping...")
+                continue
+            if ocat_info['type'] == 2:
+                logger.warn("Missing slot is FID. Skipping (not yet implemented)...")
+                continue
+            if ocat_info['type'] == 1:
+                import agasc
+                star_info = agasc.get_star(ocat_info['id'])
+                mock_prop = dict(cel_loc_flag=0,
+                                 id_status='OMITTED',
+                                 agasc_id=ocat_info['id'],
+                                 slot=slot,
+                                 type='GUIDE     ',
+                                 spectral_type='NONE      ',
+                                 ra_offset_obs=0,
+                                 dec_offset_obs=0,
+                                 mag_aca_avg=0,
+                                 mag_aca_min=0,
+                                 mag_aca_max=0,
+                                 aspq1_obs=0,
+                                 spoil_radius=0,
+                                 spoil_angle=0,
+                                 spoil_mag_aca=0)
+                for col in ['ra', 'dec', 'pos_err', 'pm_ra', 'pm_dec',
+                            'plx', 'plx_err', 'mag_aca', 'mag_aca_err',
+                            'class', 'mag', 'mag_err', 'mag_band', 'color1',
+                            'color1_err', 'var', 'aspq1', 'aspq2', 'aspq3']:
+                    mock_prop.update({col: star_info[col.upper()]})
+                ra = star_info['RA']
+                dec = star_info['DEC']
+                if star_info['PM_RA'] != -9999:
+                    ra = ra + star_info['PM_RA'] * pm_to_degrees
+                if star_info['PM_DEC'] != -9999:
+                    dec = dec + star_info['PM_DEC'] * pm_to_degrees
+                mock_prop.update({'pos_eci': [np.cos(np.radians(ra)) * np.cos(np.radians(dec)),
+                                              np.sin(np.radians(ra)) * np.cos(np.radians(dec)),
+                                              np.sin(np.radians(dec))],
+                                  'ra_corr': ra,
+                                  'dec_corr': dec})
+
+                self.gsprop.resize(len(self.gsprop) + 1)
+                self.gsprop[-1] = np.rec.fromrecords([[mock_prop[col]
+                                                       for col in self.gsprop.dtype.names]],
+                                                     dtype=self.gsprop.dtype)
+                self.gspr_info.append(dict(slot=slot,
+                                           tstart=self.asol_header['TSTART'],
+                                           tstop=self.asol_header['TSTOP'],
+                                           type='GUIDE     ',
+                                           id_status='OMITTED'))
+
 
 
     def _read_in_log(self):
@@ -1054,7 +1162,8 @@ class AspectInterval(object):
                                     asol['q_att'][:, ax])
                           for ax in range(0, 4)]).transpose()
         for star in gsprop:
-            logger.info('Processing star in slot %(slot)d' % star)
+            logger.info('Processing {} star in slot {}'.format(
+                    star['id_status'], star['slot']))
             ok = cen['slot'] == star['slot']
             ceni = cen[ok]
             logger.info('Found %d centroids ' % len(ceni))

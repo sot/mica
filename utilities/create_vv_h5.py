@@ -6,6 +6,7 @@ VV_DTYPE = np.dtype(
      ('revision', '<i4'),
      ('isdefault', '<i4'),
      ('aspect_1_id', '<i4'),
+     ('used', '<i4'), ('vv_version', '<i4'),
      ('ap_date', '|S21'),
      ('tstart', '<f8'), ('tstop', '<f8'),
      ('sim_z', '<f8'), ('sim_z_offset', '<f8'), ('instrument', '|S10'),
@@ -23,5 +24,5 @@ VV_DTYPE = np.dtype(
 vv_desc, byteorder = tables.descr_from_dtype(VV_DTYPE)
 filters = tables.Filters(complevel=5, complib='zlib')
 h5f = tables.openFile('vv.h5', 'a')
-tbl = h5f.createTable('/', 'vv', vv_desc, filters=filters)
+tbl = h5f.createTable('/', 'vv', vv_desc, filters=filters, expectedrows=1e6)
 h5f.close()
