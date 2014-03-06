@@ -1,6 +1,5 @@
 from __future__ import division
 import os
-import sys
 import re
 import logging
 import gzip
@@ -12,9 +11,8 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.table import Table
-from astropy.io import fits
 
-from Ska.Shell import getenv, tcsh, bash
+from Ska.Shell import bash
 import agasc
 import Ska.DBI
 from Chandra.Time import DateTime
@@ -24,7 +22,7 @@ from mica.catalog import catalog
 from mica.starcheck import starcheck
 from mica.archive import asp_l1
 import mica.vv
-from mica.vv import get_vv, get_vv_files, get_arch_vv
+from mica.vv import get_vv, get_vv_files
 from mica.version import version
 
 WANT_VV_VERSION = 2
