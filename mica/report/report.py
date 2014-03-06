@@ -470,7 +470,7 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
     ## Starcheck
     logger.info("Fetching starcheck catalog")
     try:
-        if summary['lts_lt_plan'] is not None:
+        if summary is not None and summary['lts_lt_plan'] is not None:
             plan = summary['lts_lt_plan']
             plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:02d}.000".format(
                     plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
