@@ -24,9 +24,10 @@ from mica.archive import asp_l1
 import mica.vv
 from mica.vv import get_vv, get_vv_files
 from mica.version import version
+from mica.common import MICA_ARCHIVE
 
 WANT_VV_VERSION = 2
-REPORT_VERSION = 1
+REPORT_VERSION = 2
 
 plt.rcParams['lines.markeredgewidth'] = 0
 
@@ -38,6 +39,13 @@ if not len(logger.handlers):
 ACA_DB = None
 DEFAULT_REPORT_ROOT = "/proj/web-icxc/htdocs/aspect/mica_reports"
 DAILY_PLOT_ROOT="http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
+
+FILES = {'sql_def': 'report_processing.sql'}
+DEFAULT_CONFIG = {
+    'dbi': 'sqlite',
+    'report_root': '/proj/web-icxc/htdocs/aspect/mica_reports',
+    'server': os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3')}
+
 
 def get_options():
     parser = argparse.ArgumentParser(
@@ -399,11 +407,16 @@ def get_aiprops(obsid):
             obsid))
     return aiprops
 
-def main(obsid, report_root=DEFAULT_REPORT_ROOT):
+def main(obsid, config=None):
+
+    if config is None:
+         config = DEFAULT_CONFIG
+    report_root=config['report_root']
 
     global ACA_DB
     if ACA_DB is None:
         ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+
 
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
@@ -671,16 +684,66 @@ def main(obsid, report_root=DEFAULT_REPORT_ROOT):
 
     f = open(os.path.join(outdir, 'notes.json'), 'w')
     notes = dict(report_version=REPORT_VERSION,
-                 product_version=version,
+                 vv_version=None,
+                 vv_revision=None,
+                 aspect_1_id=None,
                  last_sched=last_sched,
-                 obsid=obsid)
-    if summary is not None:
-        notes['lts_lt_plan'] = str(summary['lts_lt_plan'])
-        notes['soe_st_sched_date'] = str(summary['lts_lt_plan'])
-    f.write(json.dumps(notes, 
+                 ocat_status=report_status.get('ocat'),
+                 long_term=str(report_status.get('long_term')),
+                 short_term=str(report_status.get('short_term')),
+                 starcheck=report_status.get('starcheck'),
+                 obsid=obsid,
+                 checked_date=DateTime().date)
+    if vv:
+        notes['vv_version'] = vv.get('vv_version')
+        notes['vv_revision'] = vv.get('revision')
+        notes['aspect_1_id'] = vv.get('aspect_1_id')
+    f.write(json.dumps(notes,
                        sort_keys=True,
                        indent=4))
     f.close()
+    save_state_in_db(obsid, notes, config)
+
+
+def save_state_in_db(obsid, notes, config):
+
+    if (not os.path.exists(config['server'])
+        or os.stat(config['server']).st_size == 0):
+        if not os.path.exists(os.path.dirname(config['server'])):
+            os.makedirs(os.path.dirname(config['server']))
+        db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', FILES['sql_def'])
+        db_init_cmds = open(db_sql).read()
+        db = Ska.DBI.DBI(config['dbi'], config['server'])
+        db.execute(db_init_cmds)
+    else:
+        db = Ska.DBI.DBI(dbi=config['dbi'], server=config['server'])
+
+    notes['report_status'] = notes['last_sched']
+    del notes['last_sched']
+
+    idcheck = db.fetchone(
+        "select * from report_proc "
+        "where obsid = '{}' "
+        "and report_version = '{}'".format(obsid,
+                                           REPORT_VERSION))
+
+    if idcheck is None:
+        db.insert(notes, 'report_proc')
+    else:
+        db.execute("UPDATE report_proc SET "
+                   "checked_date = '{checked_date}', "
+                   "ocat_status = '{ocat_status}', "
+                   "report_status = '{report_status}', "
+                   "vv_version = '{vv_version}', "
+                   "vv_revision = '{vv_revision}', "
+                   "aspect_1_id = '{aspect_1_id}', "
+                   "report_version = '{report_version}', "
+                   "long_term = '{long_term}', "
+                   "short_term = '{short_term}', "
+                   "starcheck = '{starcheck}' "
+                   "where obsid = '{obsid}' "
+                   "and report_version = '{report_version}'".format(**notes))
+    db.conn.close()
 
 
 def update(report_root=DEFAULT_REPORT_ROOT):
@@ -695,6 +758,7 @@ def update(report_root=DEFAULT_REPORT_ROOT):
         main(obs['obsid'], report_root)
 
     ACA_DB.conn.close()
+
 
 def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
     for obsid in obsids:
