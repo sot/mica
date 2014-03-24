@@ -16,7 +16,7 @@ DATA = task_schedule.cfg \
 	mica/archive/obspar_def.sql mica/archive/archfiles_asp_l1_def.sql \
 	mica/archive/archfiles_aca_l0_def.sql \
 	mica/archive/processing_asp_l1_def.sql \
-	mica/starcheck/starcheck.sql
+	mica/starcheck/starcheck.sql mica/report/report_processing.sql
 
 TEMPLATES = templates/report.html templates/aiprops.html \
 	templates/props.html templates/vv.html \
