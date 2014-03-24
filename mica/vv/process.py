@@ -16,7 +16,9 @@ from mica.archive import obsid_archive
 from .core import Obi, VV_VERSION
 from .vv import FILES
 
-KNOWN_BAD_OBSIDS = json.loads(open(FILES['bad_obsid_list']).read())
+KNOWN_BAD_OBSIDS = []
+if os.path.exists(FILES['bad_obsid_list']):
+    KNOWN_BAD_OBSIDS = json.loads(open(FILES['bad_obsid_list']).read())
 
 logger = logging.getLogger('vv')
 
