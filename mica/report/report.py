@@ -407,11 +407,12 @@ def get_aiprops(obsid):
             obsid))
     return aiprops
 
-def main(obsid, config=None):
+def main(obsid, config=None, report_root=None):
 
     if config is None:
          config = DEFAULT_CONFIG
-    report_root=config['report_root']
+    if report_root is None:
+        report_root=config['report_root']
 
     global ACA_DB
     if ACA_DB is None:
@@ -755,7 +756,7 @@ def update(report_root=DEFAULT_REPORT_ROOT):
     recent_obs = ACA_DB.fetchall("select distinct obsid from cmd_states "
                              "where datestart > '{}'".format(DateTime(-7).date))
     for obs in recent_obs:
-        main(obs['obsid'], report_root)
+        main(obs['obsid'], config=None, report_root=report_root)
 
     ACA_DB.conn.close()
 
@@ -773,7 +774,7 @@ def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
         if not os.path.exists(outdir):
             try:
                 os.makedirs("{}".format(outdir))
-                main(obsid, report_root)
+                main(obsid, config=None, report_root=report_root)
             except:
                 os.makedirs("{}.ERR".format(outdir))
 
@@ -799,7 +800,7 @@ def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
         if not os.path.exists(outdir):
             try:
                 os.makedirs("{}".format(outdir))
-                main(obsid, report_root)
+                main(obsid, config=None, report_root=report_root)
             except:
                 os.makedirs("{}.ERR".format(outdir))
 
@@ -807,4 +808,4 @@ def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
 
 if __name__ == '__main__':
     opt = get_options()
-    main(opt.obsid, opt.report_root)
+    main(opt.obsid, config=None, report_root=opt.report_root)
