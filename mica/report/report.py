@@ -1,5 +1,6 @@
 from __future__ import division
 import os
+import sys
 import re
 import logging
 import gzip
@@ -706,7 +707,10 @@ def main(obsid, config=None, report_root=None):
     save_state_in_db(obsid, notes, config)
 
 
-def save_state_in_db(obsid, notes, config):
+def save_state_in_db(obsid, notes, config=None):
+
+    if config is None:
+         config = DEFAULT_CONFIG
 
     if (not os.path.exists(config['server'])
         or os.stat(config['server']).st_size == 0):
@@ -777,6 +781,20 @@ def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
                 main(obsid, config=None, report_root=report_root)
             except:
                 os.makedirs("{}.ERR".format(outdir))
+                etype, emess, traceback = sys.exc_info()
+                notes = dict(report_version=REPORT_VERSION,
+                             obsid=obsid,
+                             checked_date=DateTime().date,
+                             last_sched="{} {}".format(etype, emess),
+                             vv_version=None,
+                             vv_revision=None,
+                             aspect_1_id=None,
+                             ocat_status=None,
+                             long_term=None,
+                             short_term=None,
+                             starcheck=None)
+                save_state_in_db(obsid, notes, config=None)
+
 
 
 def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
@@ -803,6 +821,19 @@ def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
                 main(obsid, config=None, report_root=report_root)
             except:
                 os.makedirs("{}.ERR".format(outdir))
+                etype, emess, traceback = sys.exc_info()
+                notes = dict(report_version=REPORT_VERSION,
+                             obsid=obsid,
+                             checked_date=DateTime().date,
+                             last_sched="{} {}".format(etype, emess),
+                             vv_version=None,
+                             vv_revision=None,
+                             aspect_1_id=None,
+                             ocat_status=None,
+                             long_term=None,
+                             short_term=None,
+                             starcheck=None)
+                save_state_in_db(obsid, notes, config=None)
 
     ACA_DB.conn.close()
 
