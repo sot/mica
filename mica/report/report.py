@@ -39,7 +39,7 @@ if not len(logger.handlers):
 
 ACA_DB = None
 DEFAULT_REPORT_ROOT = "/proj/web-icxc/htdocs/aspect/mica_reports"
-DAILY_PLOT_ROOT="http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
+DAILY_PLOT_ROOT = "http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
 
 FILES = {'sql_def': 'report_processing.sql'}
 DEFAULT_CONFIG = {
@@ -73,7 +73,7 @@ def starcheck_orig_link(obsid):
     mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     if mp_dir is None:
         return None
-    starcheck_html="{top}{mp_dir}starcheck.html#obsid{obsid}".format(
+    starcheck_html = "{top}{mp_dir}starcheck.html#obsid{obsid}".format(
         top="https://icxc.harvard.edu/mp/mplogs",
         mp_dir=mp_dir,
         obsid=str(obsid))
@@ -102,7 +102,7 @@ def get_star_acq_stats(id):
                               where agasc_id = %d
                               order by tstart""" % int(id))
     if not len(acqs):
-        return None, dict(n_acqs=0, n_acq_noid=0, avg_mag=None)
+        return None, {'n_acqs': 0, 'n_acq_noid': 0, 'avg_mag': None}
     n_acqs = len(acqs)
     n_acq_noid = len(np.flatnonzero(acqs['obc_id'] == 'NOID'))
     avg_mag = np.mean(acqs[acqs['mag_obs'] < 13.94]['mag_obs'])
@@ -112,7 +112,7 @@ def get_star_acq_stats(id):
         acq['sc_link'] = '<A HREF="{link}">{obsid}</A>'.format(
             link=starcheck_link(acq['obsid']),
             obsid=acq['obsid'])
-    return acqs, dict(n_acqs=n_acqs, n_acq_noid=n_acq_noid, avg_mag=avg_mag)
+    return acqs, {'n_acqs': n_acqs, 'n_acq_noid': n_acq_noid, 'avg_mag': avg_mag}
 
 
 def get_star_trak_stats(id):
@@ -120,7 +120,8 @@ def get_star_trak_stats(id):
                                where id = %d
                                order by kalman_tstart""" % int(id))
     if not len(traks):
-        return None, dict(n_guis=0, n_bad=0, n_fail=0, n_obc_bad=0, avg_mag=None)
+        return None, {'n_guis': 0, 'n_bad': 0, 'n_fail': 0,
+                      'n_obc_bad': 0, 'avg_mag': None}
 
     n_guis = len(traks)
     n_bad = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) > 0.05))
@@ -132,25 +133,28 @@ def get_star_trak_stats(id):
     traks = rec_to_dict_list(traks)
     mytraks = []
     for trak in traks:
-        star = dict(
-            obsid=trak['obsid'],
-            tstart="{:11.1f}".format(trak['kalman_tstart']),
-            mag_obs="{:6.3f}".format(trak['aoacmag_median']),
-            mag_obs_rms = "{:.3f}".format(trak['aoacmag_rms']),
-            trak_frac="{:.1f}".format((100 * ((trak['n_samples']
-                               - trak['not_tracking_samples'])
-                              ) / trak['n_samples'])))
+        star = {
+            'obsid': trak['obsid'],
+            'tstart': "{:11.1f}".format(trak['kalman_tstart']),
+            'mag_obs': "{:6.3f}".format(trak['aoacmag_median']),
+            'mag_obs_rms': "{:.3f}".format(trak['aoacmag_rms']),
+            'trak_frac': "{:.1f}".format(
+                (100 * ((trak['n_samples']
+                         - trak['not_tracking_samples'])
+                        ) / trak['n_samples']))}
         for stat in ['obc_bad_status',
                      'def_pix', 'ion_rad', 'sat_pix',
                      'mult_star', 'quad_bound', 'common_col']:
-            star.update({stat: "{:.3f}".format(
-                        ((100 * trak["{}_samples".format(stat)])
-                         / trak['n_samples']))})
+            star[stat] = "{:.3f}".format(
+                ((100 * trak["{}_samples".format(stat)])
+                 / trak['n_samples']))
         star['sc_link'] = '<A HREF="{link}">{obsid}</A>'.format(
             link=starcheck_link(trak['obsid']),
             obsid=trak['obsid'])
         mytraks.append(star)
-    return mytraks, dict(n_guis=n_guis, n_bad=n_bad, n_fail=n_fail, n_obc_bad=n_obc_bad, avg_mag=avg_mag)
+    return mytraks, {'n_guis': n_guis, 'n_bad': n_bad,
+                     'n_fail': n_fail, 'n_obc_bad': n_obc_bad,
+                     'avg_mag': avg_mag}
 
 
 def get_obs_acq_stats(obsid):
@@ -239,21 +243,20 @@ def official_vv_notes(obsid):
 
 
 def obs_links(obsid, sequence=None, plan=None):
-    links = dict(
-        obscat=dict(
-            label="Target Param : {}".format(obsid),
-            link="https://icxc.cfa.harvard.edu/cgi-bin/mp/target_param.cgi?{}".format(obsid)),
-        mp_dir=None,
-        shortterm=None,
-        fot_dir=None,
-        fot_daily=None,
-        starcheck_html=None,
-        vv=None)
+    links = {
+        'obscat': {
+            'label': "Target Param : {}".format(obsid),
+            'link': "https://icxc.cfa.harvard.edu/cgi-bin/mp/target_param.cgi?{}".format(obsid)},
+        'mp_dir': None,
+        'shortterm': None,
+        'fot_dir': None,
+        'fot_daily': None,
+        'starcheck_html': None,
+        'vv': None}
     if sequence is not None:
-        links.update(dict(
-                seq_sum=dict(
-                    label="Seq. Summary : {}".format(sequence),
-                    link= "https://icxc.harvard.edu/cgi-bin/mp/target.cgi?{}".format(sequence))))
+        links['seq_sum'] = {
+            'label': "Seq. Summary : {}".format(sequence),
+            'link': "https://icxc.harvard.edu/cgi-bin/mp/target.cgi?{}".format(sequence)}
     mp_dir = None
     # if this is a science observation, only try to get a star catalog if it has a home
     # in the schedule either in the past or the near future
@@ -277,26 +280,22 @@ def obs_links(obsid, sequence=None, plan=None):
             dtm = datetime.datetime(year, 1, 1) + datetime.timedelta(doy - 1)
             month = dtm.strftime("%b")
             dom = dtm.strftime("%d")
-            links.update(
-                dict(fot_daily=dict(
-                    label="Daily Plots {}:{}".format(year, doy),
-                    link="{root}/{year}/{upper_month}/{lower_month}{day_of_month}_{doy}/".format(
-                        root=DAILY_PLOT_ROOT, year=year, upper_month=month.upper(), 
-                        lower_month=month.lower(), day_of_month=dom, doy=doy))))
+            links['fot_daily'] = {
+                'label': "Daily Plots {}:{}".format(year, doy),
+                'link': "{root}/{year}/{upper_month}/{lower_month}{day_of_month}_{doy}/".format(
+                    root=DAILY_PLOT_ROOT, year=year, upper_month=month.upper(),
+                    lower_month=month.lower(), day_of_month=dom, doy=doy)}
         vv, vvid = official_vv(obsid)
-        links.update(dict(
-                shortterm=dict(link=guess_shortterm(mp_dir),
-                               label="Short Term Sched. {}".format(mp_label)),
-                fot_dir=dict(link=guess_fot_summary(mp_dir),
-                             label="FOT Approved Sched. {}".format(mp_label)),
-                starcheck_html=dict(
-                    link="{top}{mp_dir}starcheck.html#obsid{obsid}".format(
-                        top="https://icxc.harvard.edu/mp/mplogs",
-                        obsid=obsid,
-                        mp_dir=mp_dir),
-                    label="Starcheck obsid {}".format(obsid)),
-                vv=dict(link=vv,
-                        label="CXCDS V&V (id={})".format(vvid))))
+        links['shortterm'] = {'link': guess_shortterm(mp_dir),
+                              'label': "Short Term Sched. {}".format(mp_label)}
+        links['fot_dir'] = {'link': guess_fot_summary(mp_dir),
+                            'label': "FOT Approved Sched. {}".format(mp_label)}
+        links['starcheck_html'] = {'link': "{top}{mp_dir}starcheck.html#obsid{obsid}".format(top="https://icxc.harvard.edu/mp/mplogs", obsid=obsid, mp_dir=mp_dir),
+                                   'label': "Starcheck obsid {}".format(obsid)}
+        links['mp_dir'] = {'link': mp_dir,
+                           'label': "Starcheck obsid {}".format(obsid)}
+        links['vv'] = {'link': vv,
+                       'label': "CXCDS V&V (id={})".format(vvid)}
     return links
 
 
@@ -305,8 +304,8 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
     sc = ['idx', 'slot', 'id', 'type', 'sz', 'mag', 'yang', 'zang']
     for row in starcheck_cat:
         sc_row = dict([(i, row[i]) for i in sc])
-        sc_row.update({"pass_notes": "{}{}".format(row['pass'] or '',
-                                                   row['notes'] or '')})
+        sc_row['pass_notes'] = "{}{}".format(row['pass'] or '',
+                                             row['notes'] or '')
         table.append(sc_row)
 
     if acqs is not None and len(acqs):
@@ -315,60 +314,60 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
                 if ((sc_row['slot'] == row['slot'])
                     and ((sc_row['type'] == 'ACQ')
                          or (sc_row['type'] == 'BOT'))):
-                    sc_row.update(dict(mag_obs=row['mag_obs'],
-                                       obc_id=row['obc_id'],
-                                       mag_source='acq'))
+                    sc_row['mag_obs'] = row['mag_obs']
+                    sc_row['obc_id'] = row['obc_id']
+                    sc_row['mag_source'] = 'acq'
     if trak is not None and len(trak):
         for row in trak:
             for sc_row in table:
                 if ((sc_row['slot'] == row['slot'])
                     and (sc_row['type'] != 'ACQ')):
-                    sc_row.update(dict(mag_obs=row['aoacmag_median'],
-                                       trak_frac=(100 * ((row['n_samples']
-                                                          - row['not_tracking_samples'])
-                                                         ) / row['n_samples']),
-                                       obc_bad_frac=(100 * ((row['obc_bad_status_samples']
-                                                             / row['n_samples']))),
-                                       mag_source='trak'))
+                    sc_row['mag_obs'] = row['aoacmag_median']
+                    sc_row['trak_frac'] = (100 * ((row['n_samples']
+                                                  - row['not_tracking_samples'])
+                                                  ) / row['n_samples'])
+                    sc_row['obc_bad_frac'] = (100 * ((row['obc_bad_status_samples']
+                                                      / row['n_samples'])))
+                    sc_row['mag_source'] = 'trak'
     if vv is not None:
         for sc_row in table:
             if sc_row['type'] != 'ACQ':
                 slot = sc_row['slot']
                 if (str(slot) in vv['slots']) and ('n_pts' in vv['slots'][str(slot)]):
                     vvslot = vv['slots'][str(slot)]
-                    sc_row.update(dict(dr_rms=vvslot['dr_rms'],
-                                       dz_rms=vvslot['dz_rms'],
-                                       dy_rms=vvslot['dy_rms'],
-                                       dy_mean=vvslot['dy_mean'],
-                                       dz_mean=vvslot['dz_mean'],
-                                       id_status=vvslot.get('id_status'),
-                                       cel_loc_flag=vvslot.get('cel_loc_flag')))
+                    sc_row['dr_rms'] = vvslot['dr_rms']
+                    sc_row['dz_rms'] = vvslot['dz_rms']
+                    sc_row['dy_rms'] = vvslot['dy_rms']
+                    sc_row['dy_mean'] = vvslot['dy_mean']
+                    sc_row['dz_mean'] = vvslot['dz_mean']
+                    sc_row['id_status'] = vvslot.get('id_status')
+                    sc_row['cel_loc_flag'] = vvslot.get('cel_loc_flag')
 
 
     # let's explicitly reformat everything
-    format_spec = dict(
-        idx="{:d}",
-        slot="{:d}",
-        id="{:d}",
-        type="{}",
-        sz="{}",
-        mag="{:6.3f}",
-        yang="{:d}",
-        zang="{:d}",
-        pass_notes="&nbsp;{}",
-        obc_id="{}",
-        mag_obs="{:6.3f}",
-        trak_frac="{:.0f}",
-        obc_bad_frac="{:.0f}",
-        mag_source="{}",
-        id_status="{}",
-        cel_loc_flag="{}",
-        dr_rms="{:6.3f}",
-        dz_rms="{:6.3f}",
-        dy_rms="{:6.3f}",
-        dy_mean="{:6.3f}",
-        dz_mean="{:6.3f}",
-        )
+    format_spec = {
+        'idx': "{:d}",
+        'slot': "{:d}",
+        'id': "{:d}",
+        'type': "{}",
+        'sz': "{}",
+        'mag': "{:6.3f}",
+        'yang': "{:d}",
+        'zang': "{:d}",
+        'pass_notes': "&nbsp;{}",
+        'obc_id': "{}",
+        'mag_obs': "{:6.3f}",
+        'trak_frac': "{:.0f}",
+        'obc_bad_frac': "{:.0f}",
+        'mag_source': "{}",
+        'id_status': "{}",
+        'cel_loc_flag': "{}",
+        'dr_rms': "{:6.3f}",
+        'dz_rms': "{:6.3f}",
+        'dy_rms': "{:6.3f}",
+        'dy_mean': "{:6.3f}",
+        'dz_mean': "{:6.3f}",
+        }
 
     opt_elem = ['mag_obs', 'obc_id', 'trak_frac', 'obc_bad_frac', 'mag_source',
                 'dr_rms', 'dz_rms', 'dy_rms', 'dy_mean', 'dz_mean',
@@ -396,11 +395,11 @@ def star_info(id):
     agasc_info = get_star(id)
     acqs, agg_acq = get_star_acq_stats(id)
     traks, agg_trak = get_star_trak_stats(id)
-    return dict(agasc_info=agasc_info,
-                acqs=acqs,
-                agg_acq=agg_acq,
-                traks=traks,
-                agg_trak=agg_trak)
+    return {'agasc_info': agasc_info,
+            'acqs': acqs,
+            'agg_acq': agg_acq,
+            'traks': traks,
+            'agg_trak': agg_trak}
 
 def get_aiprops(obsid):
     aiprops = ACA_DB.fetchall(
@@ -440,14 +439,14 @@ def main(obsid, config=None, report_root=None):
     # Links
     logger.info("Looking up obsid links")
 
-    all_progress = dict(science=['ocat',
-                             'long_term', 'short_term',
-                             'starcheck', 'observed',
-                             'engineering', 'aspect_1',
-                             'cxcds_vv', 'released'],
-                    er=['starcheck', 'observed',
-                         'engineering', 'cxcds_vv'])
-    report_status = dict()
+    all_progress = {'science': ['ocat',
+                                 'long_term', 'short_term',
+                                 'starcheck', 'observed',
+                                 'engineering', 'aspect_1',
+                                 'cxcds_vv', 'released'],
+                    'er': ['starcheck', 'observed',
+                           'engineering', 'cxcds_vv']}
+    report_status = {}
 
     er = summary is None and obsid > 40000
     progress = all_progress['er' if er else 'science']
@@ -538,10 +537,10 @@ def main(obsid, config=None, report_root=None):
 
     er_status = None
     if er:
-        stat_map = dict(ran='ran on',
-                        approved='approved for',
-                        ran_pretimelines='ran on',
-                        planned='planned for')
+        stat_map = {'ran': 'ran on',
+                    'approved': 'approved for',
+                    'ran_pretimelines': 'ran on',
+                    'planned': 'planned for'}
         er_status = "{} {}".format(stat_map[status], obs_sc['obs'][0]['mp_starcat_time'])
         run_obspar = None
         vv = None
@@ -653,7 +652,22 @@ def main(obsid, config=None, report_root=None):
                 f = open(star_page_file, 'w')
                 f.write(star_page)
                 f.close()
-                cat_row['idlink'] = '<A HREF="star_{id}.html" STYLE="text-decoration: none;" ONMOUSEOVER="return overlib (\'ACQ total:{n_acq} noid:{n_noid} <BR /> GUI total:{n_gui} bad:{n_bad} fail:{n_fail} obc_bad:{n_obc_bad} <BR /> Avg Mag {avg_mag:4.2f}\', WIDTH, 220);", ONMOUSEOUT="return nd();"> {id}</A>'.format(id=int(row['id']), n_acq=s['agg_acq']['n_acqs'], n_noid=s['agg_acq']['n_acq_noid'], n_gui=s['agg_trak']['n_guis'], n_bad=s['agg_trak']['n_bad'], n_fail=s['agg_trak']['n_fail'], n_obc_bad=s['agg_trak']['n_obc_bad'], avg_mag=s['agg_trak']['avg_mag'] or s['agg_acq']['avg_mag'] or 13.94)
+                cat_row['idlink'] = (
+                    '<A HREF="star_{id}.html" STYLE="text-decoration: none;"'
+                    'ONMOUSEOVER="return overlib '
+                    '(\'ACQ total:{n_acq} noid:{n_noid} <BR /> '
+                    'GUI total:{n_gui} bad:{n_bad} fail:{n_fail} obc_bad:{n_obc_bad} '
+                    '<BR /> Avg Mag {avg_mag:4.2f}\', WIDTH, 220);", ONMOUSEOUT="return nd();"> '
+                    '{id}</A>'.format(id=int(row['id']),
+                                      n_acq=s['agg_acq']['n_acqs'],
+                                      n_noid=s['agg_acq']['n_acq_noid'],
+                                      n_gui=s['agg_trak']['n_guis'],
+                                      n_bad=s['agg_trak']['n_bad'],
+                                      n_fail=s['agg_trak']['n_fail'],
+                                      n_obc_bad=s['agg_trak']['n_obc_bad'],
+                                      avg_mag=(s['agg_trak']['avg_mag']
+                                               or s['agg_acq']['avg_mag']
+                                               or 13.94)))
             else:
                 cat_row['idlink'] = "&nbsp;"
         else:
@@ -685,17 +699,17 @@ def main(obsid, config=None, report_root=None):
     f.close()
 
     f = open(os.path.join(outdir, 'notes.json'), 'w')
-    notes = dict(report_version=REPORT_VERSION,
-                 vv_version=None,
-                 vv_revision=None,
-                 aspect_1_id=None,
-                 last_sched=last_sched,
-                 ocat_status=report_status.get('ocat'),
-                 long_term=str(report_status.get('long_term')),
-                 short_term=str(report_status.get('short_term')),
-                 starcheck=report_status.get('starcheck'),
-                 obsid=obsid,
-                 checked_date=DateTime().date)
+    notes = {'report_version': REPORT_VERSION,
+             'vv_version': None,
+             'vv_revision': None,
+             'aspect_1_id': None,
+             'last_sched': last_sched,
+             'ocat_status': report_status.get('ocat'),
+             'long_term': str(report_status.get('long_term')),
+             'short_term': str(report_status.get('short_term')),
+             'starcheck': report_status.get('starcheck'),
+             'obsid': obsid,
+             'checked_date': DateTime().date}
     if vv:
         notes['vv_version'] = vv.get('vv_version')
         notes['vv_revision'] = vv.get('revision')
@@ -782,17 +796,17 @@ def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
             except:
                 os.makedirs("{}.ERR".format(outdir))
                 etype, emess, traceback = sys.exc_info()
-                notes = dict(report_version=REPORT_VERSION,
-                             obsid=obsid,
-                             checked_date=DateTime().date,
-                             last_sched="{} {}".format(etype, emess),
-                             vv_version=None,
-                             vv_revision=None,
-                             aspect_1_id=None,
-                             ocat_status=None,
-                             long_term=None,
-                             short_term=None,
-                             starcheck=None)
+                notes = {'report_version': REPORT_VERSION,
+                         'obsid': obsid,
+                         'checked_date': DateTime().date,
+                         'last_sched': "{} {}".format(etype, emess),
+                         'vv_version': None,
+                         'vv_revision': None,
+                         'aspect_1_id': None,
+                         'ocat_status': None,
+                         'long_term': None,
+                         'short_term': None,
+                         'starcheck': None}
                 save_state_in_db(obsid, notes, config=None)
 
 
@@ -822,17 +836,17 @@ def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
             except:
                 os.makedirs("{}.ERR".format(outdir))
                 etype, emess, traceback = sys.exc_info()
-                notes = dict(report_version=REPORT_VERSION,
-                             obsid=obsid,
-                             checked_date=DateTime().date,
-                             last_sched="{} {}".format(etype, emess),
-                             vv_version=None,
-                             vv_revision=None,
-                             aspect_1_id=None,
-                             ocat_status=None,
-                             long_term=None,
-                             short_term=None,
-                             starcheck=None)
+                notes = {'report_version': REPORT_VERSION,
+                         'obsid': obsid,
+                         'checked_date': DateTime().date,
+                         'last_sched': "{} {}".format(etype, emess),
+                         'vv_version': None,
+                         'vv_revision': None,
+                         'aspect_1_id': None,
+                         'ocat_status': None,
+                         'long_term': None,
+                         'short_term': None,
+                         'starcheck': None}
                 save_state_in_db(obsid, notes, config=None)
 
     ACA_DB.conn.close()
