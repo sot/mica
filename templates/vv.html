@@ -73,7 +73,7 @@ pre {
 </TR>
 {% for slot in ['0', '1', '2', '3', '4', '5', '6', '7'] %}
 {% if slot in vv['slots'] %}
-{% if 'n_pts' in slot %}
+{% if 'n_pts' in vv['slots'][slot] %}
 <TR><TD><A target="_blank" HREF="slot_{{ slot }}.html">{{ slot }} [FULL REPORT]</A></TD>
 {% for field, form in [('id_status', '%5s'),
 ('cel_loc_flag', '%s'), ('dr_rms', '%5.2f'), ('dy_rms', '%5.2f'), ('dz_rms', '%5.2f'),('dy_mean', '%5.2f'), ('dz_mean', '%5.2f')] %}<TD align='right'>{{ form|format(vv['slots'][slot][field]) }}</TD>
