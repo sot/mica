@@ -608,7 +608,7 @@ def main(obsid, config=None, report_root=None):
         f.close()
 
         for slot in vv['slots']:
-            if 'n_pts' not in slot:
+            if 'n_pts' not in vv['slots'][slot]:
                 continue
             slot_template = jinja_env.get_template('vv_slots_single.html')
             slot_page = slot_template.render(obsid=obsid,
