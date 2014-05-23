@@ -17,7 +17,7 @@ import pyyaks.context
 from Ska.engarchive import fetch_sci as fetch
 
 from mica.archive import aca_hdr3
-from mica.common import MissingDataError
+from mica.common import MICA_ARCHIVE_PATH, MissingDataError
 
 from . import file_defs
 from . import dark_cal
@@ -48,8 +48,8 @@ def get_opt(args=None):
                         default=pyyaks.logger.INFO,
                         help=("Logging level"))
     parser.add_argument("--data-root",
-                        default="archive",
-                        help="Root data directory (default='archive')")
+                        default=MICA_ARCHIVE_PATH,
+                        help="Root data directory (default=mica.common.MICA_ARCHIVE_PATH)")
 
     args = parser.parse_args(args)
     return args
