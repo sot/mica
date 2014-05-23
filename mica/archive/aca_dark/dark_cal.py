@@ -53,7 +53,7 @@ def dark_temp_scale(t_ccd, t_ccd_ref=-19.0):
     Previous value was 0.62 instead of 0.70.  This represents the change in
     dark current for each 4 degC decrease::
 
-      >>> from mica.aca_dark import temp_scalefac
+      >>> from mica.archive.aca_dark import temp_scalefac
       >>> print temp_scalefac(t_ccd=-15, t_ccd_ref=-19)
       0.7
 
