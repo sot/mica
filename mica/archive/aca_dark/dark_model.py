@@ -85,38 +85,24 @@ def get_acq_success(date, t_ccd, mag):
 
     :returns: Acquisition success probability(s)
     """
-    # Not yet vectorized
-    date, date_is_scalar = as_array(date)
-    t_ccd, t_ccd_is_scalar = as_array(t_ccd)
-    warm_fracs = []
-    if not date_is_scalar and not t_ccd_is_scalar:
-        if len(date) != len(t_ccd):
-            raise ValueError("No reasonable combination of dates and temperatures")
-        if len(date) > 1 and len(t_ccd) > 1:
-            for sdate, stemp  in izip(date, t_ccd):
-                warm_frac = get_warm_fracs(warm_threshold,
-                                           date=sdate, T_ccd=stemp)
-                warm_fracs.append(warm_frac)
-        elif len(date) > 1:
-            for sdate in date:
-                warm_frac = get_warm_fracs(warm_threshold,
-                                           date=sdate, T_ccd=t_ccd)
-                warm_fracs.append(warm_frac)
-        elif len(t_ccd) > 1:
-            for temp in t_ccd:
-                warm_frac = get_warm_fracs(warm_threshold,
-                                           date=date, T_ccd=temp)
-                warm_fracs.append(warm_frac)
-        else:
-            warm_frac = get_warm_fracs(warm_threshold,
-                                       date=date, T_ccd=t_ccd)
-            warm_fracs.append(warm_frac)
-    else:
-        warm_frac = get_warm_fracs(warm_threshold,
-                                   date=date, T_ccd=t_ccd)
-        return acq_success_prob(mag, warm_frac)
-    return acq_success_prob(mag, warm_fracs)
+    try:
+        dates = np.atleast_1d(DateTime(date).secs) + np.zeros_like(t_ccd)
+        t_ccds = np.atleast_1d(t_ccd) + np.zeros_like(DateTime(date).secs)
+        mags = np.atleast_1d(mag) + np.zeros_like(t_ccds)
+    except:
+        raise ValueError("No reasonable combination of dates and temperatures")
 
+    warm_fracs = []
+    for sdate, stemp  in izip(dates, t_ccds):
+        warm_frac = get_warm_fracs(warm_threshold,
+                                   date=sdate, T_ccd=stemp)
+        warm_fracs.append(warm_frac)
+    probs = acq_success_prob(mags, warm_fracs)
+    if (np.array(date).ndim == 0 and np.array(t_ccd).ndim == 0
+        and np.array(mag).ndim == 0):
+           return probs[0]
+    else:
+        return probs
 
 
 
