@@ -86,11 +86,13 @@ def get_acq_success(date, t_ccd, mag):
     :returns: Acquisition success probability(s)
     """
     try:
-        dates = np.atleast_1d(DateTime(date).secs) + np.zeros_like(t_ccd)
-        t_ccds = np.atleast_1d(t_ccd) + np.zeros_like(DateTime(date).secs)
-        mags = np.atleast_1d(mag) + np.zeros_like(t_ccds)
+        date = DateTime(date).secs
+        zeros = np.atleast_1d(np.zeros_like(date + mag + t_ccd))
+        dates = date + zeros
+        t_ccds = t_ccd + zeros
+        mags = mag + zeros
     except:
-        raise ValueError("No reasonable combination of dates and temperatures")
+        raise ValueError("Incompatible input shapes for 'date', 't_ccd', 'mag'")
 
     warm_fracs = []
     for sdate, stemp  in izip(dates, t_ccds):
@@ -98,6 +100,7 @@ def get_acq_success(date, t_ccd, mag):
                                    date=sdate, T_ccd=stemp)
         warm_fracs.append(warm_frac)
     probs = acq_success_prob(mags, warm_fracs)
+
     if (np.array(date).ndim == 0 and np.array(t_ccd).ndim == 0
         and np.array(mag).ndim == 0):
            return probs[0]
