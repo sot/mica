@@ -1166,7 +1166,7 @@ class AspectInterval(object):
             ok = cen['slot'] == star['slot']
             ceni = cen[ok]
             logger.info('Found %d centroids ' % len(ceni))
-            if not len(ceni):
+            if len(ceni) < 2:
                 continue
             q_atts = Quat(q_att[ok])
             Ts = q_atts.transform
