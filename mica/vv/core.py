@@ -454,9 +454,26 @@ class Obi(object):
 
     def _agg_slot_data(self):
         all_slot = self.all_slot_data
-        for slot_id in all_slot:
-            slot_data = all_slot[slot_id]
+        for slot_id in range(0, 8):
             slot_report = self.slot_report[str(slot_id)]
+            # get status info from guide or fid props
+            # just use the first aspect interval and assume the rest are the
+            # same (checked with _check_over_intervals)
+            if slot_report['type'] == 'FID':
+                slot_fidprop = self.aspect_intervals[0].fidprop[
+                    self.aspect_intervals[0].fidprop['slot'] == slot_id][0]
+                slot_report['id_status'] = slot_fidprop['id_status'].strip()
+            else:
+                slot_gsprop = self.aspect_intervals[0].gsprop[
+                    self.aspect_intervals[0].gsprop['slot'] == slot_id][0]
+                slot_report['id_status'] = slot_gsprop['id_status'].strip()
+                slot_report['cel_loc_flag'] = slot_gsprop['cel_loc_flag']
+                if slot_id == '7':
+                    raise ValueError
+
+            if slot_id not in all_slot:
+                continue
+            slot_data = all_slot[slot_id]
             if not ('dy' in slot_data and 'dz' in slot_data and 'mag' in slot_data):
                 continue
             # these should only be calculated over good data, right?
@@ -499,18 +516,6 @@ class Obi(object):
                 slot_report['enc_rad2'] = scoreatpercentile(slot_data['dr'],
                                                             starDrEncFrac2 * 100)
 
-            # get status info from guide or fid props
-            # just use the first aspect interval and assume the rest are the
-            # same (checked with _check_over_intervals)
-            if slot_report['type'] == 'FID':
-                slot_fidprop = self.aspect_intervals[0].fidprop[
-                    self.aspect_intervals[0].fidprop['slot'] == slot_id][0]
-                slot_report['id_status'] = slot_fidprop['id_status'].strip()
-            else:
-                slot_gsprop = self.aspect_intervals[0].gsprop[
-                    self.aspect_intervals[0].gsprop['slot'] == slot_id][0]
-                slot_report['id_status'] = slot_gsprop['id_status'].strip()
-                slot_report['cel_loc_flag'] = slot_gsprop['cel_loc_flag']
 
 
 
