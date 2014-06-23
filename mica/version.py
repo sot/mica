@@ -14,7 +14,7 @@ NOTE: this code copied from astropy and modified.  Any license restrictions
 therein are applicable.
 """
 
-version = '0.4dev'
+version = '0.4.1dev'
 
 _versplit = version.replace('dev', '').split('.')
 major = int(_versplit[0])
