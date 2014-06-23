@@ -109,6 +109,17 @@ Processing
 This module updates the MICA ACA dark current archive when new dark current calibrations
 are completed.  For details see the API documentation at :ref:`api_update_aca_dark`.
 
+Acquisition Success Analysis with Dark Current Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+See:
+
+.. toctree::
+   :maxdepth: 1
+
+   acquisition_data
+
+
 
 ACA diagnostic telemetry
 -------------------------
