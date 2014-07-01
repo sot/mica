@@ -27,6 +27,8 @@ The acquisition database includes two tables
 * acq_stats_data
 * acq_stats_warnings
 
+These tables are on the sybase server and there is presently no mica API to access them.
+
 The *acq_stats_data* table includes
 
 ========== ========================================================
@@ -91,14 +93,14 @@ Several of these parameters are available within the acquisition statistics data
 A value for the dark current distribution can presently be obtained using the current dark
 current model within mica.archive.aca_dark.dark_model.
 
-A histogram of the dark current distribution maybe obtained with:
+A histogram of the dark current distribution maybe obtained with::
 
-x, xbins, y = mica.archive.aca_dark.dark_model.get_dark_hist(date='2014:001', T_ccd='-14')
+  x, xbins, y = mica.archive.aca_dark.dark_model.get_dark_hist(date='2014:001', T_ccd='-14')
 
 The immediately useful value of the estimate of "warm" pixels from this model may be
-obtained with:
+obtained with::
 
-warm_frac = mica.archive.aca_dark.dark_model.get_warm_fracs(warm_threshold=100,
+  warm_frac = mica.archive.aca_dark.dark_model.get_warm_fracs(warm_threshold=100,
                                                             date='2014:001', T_ccd='-14')
 
 
@@ -169,7 +171,7 @@ starcheck warning status::
   
   np.save('acq_table.npy', acq)
 
-The resulting table would include these additional columns
+The resulting numpy save file of the recarray/table would include these columns
 
 ============== =======================================================
  Column        Description
@@ -182,3 +184,33 @@ common_column  star is marked as in common column
 known_bad_star acquisition star has already had multiple failures
 ============== =======================================================
 
+in addition to the columns copied in from the acq_stats_data table:
+
+========== ========================================================
+ Column    Description
+========== ========================================================
+obsid      the obsid
+obi        observation interval number
+tstart     observation (obspar) tstart (Chandra secs)
+tstop      observation tstart (Chandra secs)
+slot       ACA readout slot id
+idx        star catalog index id
+cat_pos    position in uploaded star catalog
+type       star catalog type (BOT or ACQ)
+agasc_id   AGASC (catalog) id
+obc_id     acquisition success indicator ('ID', or 'NOID')
+yang       commanded y-angle position for center of readout window
+zang       commanded z-angle position for center of readout window
+mag        catalog MAG_ACA of acquisition star
+color      catalog COLOR1 of acquisition star
+halfw      acquisition search box half width
+mag_obs    observed magnitude of star
+yang_obs   observed y-angle position of centroid of star
+zang_obs   observed z-angle position of centroid of star
+y_offset   mean y offset of all of the other acquired stars
+z_offset   mean z offset of all of the other acquired stars
+d_mag      observed mag - catalog mag
+d_yang     observed y-angle - (catalog y + y_offset)
+d_zang     observed z_angle - (catalog z + z_offset)
+revision   acq stats processing software version
+========== ========================================================
