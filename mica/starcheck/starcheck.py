@@ -64,7 +64,8 @@ def get_mp_dir(obsid, config=None):
                 logger.debug("ACIS ER {} not in timelines".format(obsid))
                 return (None, None, None)
             else:
-                raise ValueError("Obsid {} not found in timelines but should be there".format(obsid))
+                logger.debug("Obsid {} not found in timelines but should be there".format(obsid))
+                return (None, None, None)
         return (possible_runs[-1]['dir'], 'planned', possible_runs[-1]['date'])
     if poss['date'] < DateTime().date:
         return (actual_run['dir'], 'ran', poss['date'])
