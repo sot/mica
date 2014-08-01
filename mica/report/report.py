@@ -17,6 +17,8 @@ from Ska.Shell import bash
 import agasc
 import Ska.DBI
 from Chandra.Time import DateTime
+from Ska.engarchive import fetch_sci
+from kadi import events
 
 from mica.archive import obspar
 from mica.catalog import catalog
@@ -168,6 +170,25 @@ def get_obs_trak_stats(obsid):
 
     if len(guis):
         return Table(guis)
+
+def get_obs_temps(obsid, outdir):
+    manvrs = events.manvrs.filter(obsid=obsid)
+    dwells = events.dwells.filter(obsid=obsid)
+    if len(manvrs) and len(dwells):
+        ccd_temp = fetch_sci.MSID('AACCCDPT', manvrs[0].stop, dwells[0].stop)
+        fig = plt.figure(figsize=(4,2))
+        ax = plt.subplot(1, 1, 1)
+        ax.plot((ccd_temp.times - ccd_temp.times[0])/1000., ccd_temp.vals, 'b')
+        plt.setp(ax.get_xticklabels(), fontsize=8)
+        plt.setp(ax.get_yticklabels(), fontsize=8)
+        plt.ylabel('AACCCDPT (C)', fontsize=8)
+        plt.xlabel('Obs Time (ks)', fontsize=8)
+        plt.tight_layout()
+        fig.savefig(os.path.join(outdir, 'ccd_temp.png'))
+        plt.close(fig)
+        return {'max': ccd_temp.vals.max(),
+                'mean': ccd_temp.vals.mean(),
+                'figure': os.path.join(outdir, 'ccd_temp.png')}
 
 
 def target_summary(obsid):
@@ -531,7 +552,7 @@ def main(obsid, config=None, report_root=None):
     logger.info("Getting acq and trak stats")
     acqs = get_obs_acq_stats(obsid)
     trak = get_obs_trak_stats(obsid)
-
+    temps = get_obs_temps(obsid, outdir)
     if acqs or trak:
         last_sched = "eng. data available"
 
@@ -676,12 +697,14 @@ def main(obsid, config=None, report_root=None):
             else:
                 cat_row['idlink'] = ''
     template = jinja_env.get_template('report.html')
+
     page = template.render(cat_table=cat_table,
                            obs=obs,
                            sc=obs_sc,
                            vv=vv,
                            links=links,
                            target=summary,
+                           temps=temps,
                            er=er if er else None,
                            er_status=er_status,
                            last_sched=last_sched,
