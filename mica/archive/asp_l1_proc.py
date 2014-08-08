@@ -26,9 +26,9 @@ def update(obsids, config=None):
     logger.setLevel(logging.INFO)
     logger.addHandler(logging.StreamHandler())
 
-    apstat_db = Ska.DBI.DBI(dbi='sybase',
-                            server='sqlsao',
-                            database='axafapstat')
+    apstat_db = dict(dbi='sybase',
+                     server='sqlsao',
+                     database='axafapstat')
     proc_db_file = os.path.join(MICA_ARCHIVE, 'asp1', 'processing_asp_l1.db3')
     if not os.path.exists(proc_db_file) or os.stat(proc_db_file).st_size == 0:
         if not os.path.exists(config['data_root']):
@@ -37,7 +37,7 @@ def update(obsids, config=None):
             config['sql_def']))
         db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', config['sql_def'])
         db_init_cmds = file(db_sql).read()
-        proc_db = Ska.DBI.DBI(dbi='sqlite', server=proc_db_file)
+        proc_db = dict(dbi='sqlite', server=proc_db_file)
         proc_db.execute(db_init_cmds)
     else:
         proc_db = Ska.DBI.DBI(dbi='sqlite', server=proc_db_file)

@@ -123,9 +123,9 @@ class ObsArchive:
         and a handle to the axafapstat database
         """
         self._arc5 = Ska.arc5gl.Arc5gl()
-        self._apstat = Ska.DBI.DBI(dbi='sybase', server='sqlsao',
-                                   database='axafapstat')
-        self._aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase',
+        self._apstat = dict(dbi='sybase', server='sqlsao',
+                            database='axafapstat')
+        self._aca_db = dict(dbi='sybase', server='sybase',
                                    user='aca_read')
         config = self.config
         db_file = os.path.join(os.path.abspath(config['data_root']),
@@ -138,11 +138,11 @@ class ObsArchive:
             db_sql = os.path.join(os.environ['SKA_DATA'],
                                   'mica', config['sql_def'])
             db_init_cmds = file(db_sql).read()
-            db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
-                             autocommit=False)
-            db.execute(db_init_cmds, commit=True)
-        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
-                         autocommit=False)
+            with Ska.DBI.DBI(dbi='sqlite', server=db_file,
+                             autocommit=False) as db:
+                db.execute(db_init_cmds, commit=True)
+        db = dict(dbi='sqlite', server=db_file,
+              autocommit=False)
         self._archfiles_db = db
 
     def set_read_env(self):
@@ -153,8 +153,8 @@ class ObsArchive:
         config = self.config
         db_file = os.path.join(os.path.abspath(config['data_root']),
                                'archfiles.db3')
-        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
-                         autocommit=False)
+        db = dict(dbi='sqlite', server=db_file,
+              autocommit=False)
         self._archfiles_db = db
 
 
@@ -319,8 +319,9 @@ class ObsArchive:
         arc5.sendline("cd %s" % tempdir)
         arc5.sendline("obsid=%d" % obsid)
 
-        obis = apstat.fetchall(
-            "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
+        with Ska.DBI.DBI(**apstat) as db:
+            obis = db.fetchall(
+                "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
         if len(obis) > 1:
             minobi = np.min(obis['obi'])
             logger.info("limiting arc5gl to obi %d" % minobi)
@@ -447,8 +448,9 @@ class ObsArchive:
         logger.info("retrieving data for %d in %s" % (obsid, tempdir))
         arc5.sendline("obsid=%d" % obsid)
         # if multi-obi, limit to just the first obi
-        obis = apstat.fetchall(
-            "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
+        with Ska.DBI.DBI(**apstat) as db:
+            obis = db.fetchall(
+                "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
         if len(obis) > 1:
             minobi = np.min(obis['obi'])
             logger.info("limiting arc5gl to obi %d" % minobi)
@@ -461,30 +463,30 @@ class ObsArchive:
         archfiles = glob(os.path.join(tempdir, "*"))
         if not archfiles:
             raise ValueError("Retrieved no files")
-        db = self._archfiles_db
-        existing = db.fetchall(
-            "select * from archfiles where obsid = %d and revision = '%s'"
-            % (obsid, version))
-        for i, f in enumerate(archfiles):
-            # just copy the log files without inserting in db
-            if re.match('.+log.gz', f):
+        with Ska.DBI.DBI(**self._archfiles_db) as db:
+            existing = db.fetchall(
+                "select * from archfiles where obsid = %d and revision = '%s'"
+                % (obsid, version))
+            for i, f in enumerate(archfiles):
+                # just copy the log files without inserting in db
+                if re.match('.+log.gz', f):
+                    os.chmod(f, 0775)
+                    shutil.copy(f, obs_dir)
+                    os.remove(f)
+                    continue
+                arch_info = self.get_arch_info(i, f, archfiles)
+                arch_info['obsid'] = obsid
+                if (len(existing)
+                        and arch_info['filename'] in existing['filename']):
+                    logger.debug("skipping %s" % f)
+                    os.remove(f)
+                    continue
+
+                db.insert(arch_info, 'archfiles')
                 os.chmod(f, 0775)
                 shutil.copy(f, obs_dir)
                 os.remove(f)
-                continue
-            arch_info = self.get_arch_info(i, f, archfiles)
-            arch_info['obsid'] = obsid
-            if (len(existing)
-                    and arch_info['filename'] in existing['filename']):
-                logger.debug("skipping %s" % f)
-                os.remove(f)
-                continue
-
-            db.insert(arch_info, 'archfiles')
-            os.chmod(f, 0775)
-            shutil.copy(f, obs_dir)
-            os.remove(f)
-        db.commit()
+            db.commit()
         return obs_dir
 
     # this needs help
@@ -505,7 +507,6 @@ class ObsArchive:
         """
         logger = self.logger
         config = self.config
-        db = self._archfiles_db
         archive_dir = config['data_root']
 
         # for the obsid get the default and last version numbers
@@ -519,29 +520,30 @@ class ObsArchive:
         obs_ln_last = os.path.join(archive_dir, chunk_dir,
                                    "%05d_last" % obsid)
 
-        if default_ver is not None:
-            def_ver_dir = os.path.join(archive_dir, chunk_dir,
-                                       '%05d_v%02d' % (obsid, default_ver))
-            # link the default version
-            logger.info("linking %s -> %s" % (
-                os.path.relpath(def_ver_dir, chunk_dir_path),
-                obs_ln))
-            # don't use os.path.exists here because if we have a broken
-            # link we want to remove it too
-            if os.path.islink(obs_ln):
-                os.unlink(obs_ln)
-            os.symlink(
-                os.path.relpath(def_ver_dir, chunk_dir_path),
-                obs_ln)
-            logger.info("updating archfiles default rev to %d for %d"
-                        % (default_ver, obsid))
-            db.execute("""UPDATE archfiles SET isdefault = 1
-                          WHERE obsid = %d and revision = %d"""
-                       % (obsid, default_ver))
-            db.execute("""UPDATE archfiles SET isdefault = NULL
-                          WHERE obsid = %d and revision != %d"""
-                       % (obsid, default_ver))
-            db.commit()
+        with Ska.DBI.DBI(**self._archfiles_db) as db:
+            if default_ver is not None:
+                def_ver_dir = os.path.join(archive_dir, chunk_dir,
+                                           '%05d_v%02d' % (obsid, default_ver))
+                # link the default version
+                logger.info("linking %s -> %s" % (
+                    os.path.relpath(def_ver_dir, chunk_dir_path),
+                    obs_ln))
+                # don't use os.path.exists here because if we have a broken
+                # link we want to remove it too
+                if os.path.islink(obs_ln):
+                    os.unlink(obs_ln)
+                os.symlink(
+                    os.path.relpath(def_ver_dir, chunk_dir_path),
+                    obs_ln)
+                logger.info("updating archfiles default rev to %d for %d"
+                            % (default_ver, obsid))
+                db.execute("""UPDATE archfiles SET isdefault = 1
+                              WHERE obsid = %d and revision = %d"""
+                           % (obsid, default_ver))
+                db.execute("""UPDATE archfiles SET isdefault = NULL
+                              WHERE obsid = %d and revision != %d"""
+                           % (obsid, default_ver))
+                db.commit()
 
         # nothing to do if last_ver undefined
         if last_ver is None:
@@ -637,7 +639,8 @@ class ObsArchive:
                                   order by %(apstat_id)s"""
                         % query_vars)
         logger.debug(apstat_query)
-        todo = apstat.fetchall(apstat_query)
+        with Ska.DBI.DBI(**apstat) as db:
+            todo = db.fetchall(apstat_query)
         for obs in todo:
             logger.info("running get_arch for obsid %d run on %s"
                         % (obs['obsid'], obs['ap_date']))
@@ -682,9 +685,10 @@ class ObsArchive:
         prov_data = self.get_todo_from_links(archive_dir)
         for obs in prov_data:
             # check again for multi-obis and limit to first one
-            obis = apstat.fetchall(
-                "select distinct obi from obidet_0_5 where obsid = %d"
-                % obs['obsid'])
+            with Ska.DBI.DBI(**apstat) as db:
+                obis = db.fetchall(
+                    "select distinct obi from obidet_0_5 where obsid = %d"
+                    % obs['obsid'])
             minobi = np.min(obis['obi'])
             logger.info("checking database status for obsid %d obi %d ver %s, "
                         % (obs['obsid'], minobi, obs['revision']), )
@@ -698,7 +702,8 @@ class ObsArchive:
                                and revision = %(revision)d"""
                             % query_vars)
             logger.debug(apstat_query)
-            current_status = apstat.fetchall(apstat_query)
+            with Ska.DBI.DBI(**apstat) as db:
+                current_status = db.fetchall(apstat_query)
             if len(current_status) == 0:
                 raise ValueError(
                     "obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
@@ -710,8 +715,9 @@ class ObsArchive:
             # a query to get the quality from the max science_2 data that
             # used this aspect_solution.  Ugh.
             if config['apstat_table'] == 'aspect_1':
-                science_qual = apstat.fetchall(
-                    """select quality from science_2 where science_2_id in (
+                with Ska.DBI.DBI(**apstat) as db:
+                    science_qual = db.fetchall(
+                        """select quality from science_2 where science_2_id in (
                          select science_2_id from science_2_obi where science_1_id in (
                          select science_1_id from science_1 where aspect_1_id in (
                          select aspect_1_id from aspect_1

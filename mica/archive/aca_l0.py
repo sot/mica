@@ -124,7 +124,7 @@ def get_slot_data(start, stop, slot, imgsize=None,
         imgsize = [4, 6, 8]
     if db is None:
         dbfile = os.path.join(data_root, 'archfiles.db3')
-        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+        db = dict(dbi='sqlite', server=dbfile)
 
     data_files = _get_file_records(start, stop, slots=[slot],
                                     imgsize=imgsize, db=db,
@@ -205,8 +205,9 @@ class MSIDset(collections.OrderedDict):
 
 
 def obsid_times(obsid):
-    aca_db = Ska.DBI.DBI(dbi="sybase", server="sybase", user="aca_read")
-    obspars = aca_db.fetchall("""select * from obspar where obsid = %d
+    aca_db = dict(dbi="sybase", server="sybase", user="aca_read")
+    with Ska.DBI.DBI(aca_db) as db:
+        obspars = db.fetchall("""select * from obspar where obsid = %d
                                  order by obi""" % obsid)
     return obspars[0]['tstart'], obspars[0]['tstop']
 
@@ -305,7 +306,7 @@ def _get_file_records(start, stop=None, slots=None,
         imgsize = [4, 6, 8]
     if db is None:
         dbfile = os.path.join(data_root, 'archfiles.db3')
-        db = Ska.DBI.DBI(dbi='sqlite', server=dbfile)
+        db = dict(dbi='sqlite', server=dbfile)
 
     tstart = DateTime(start).secs
     tstop = DateTime(stop).secs
@@ -324,7 +325,8 @@ def _get_file_records(start, stop=None, slots=None,
                 'AND imgsize in (%s) '
                 'order by filetime asc '
                 % (tstart, tstart_pad, tstop, tstart, slot_str, imgsize_str))
-    files = db.fetchall(db_query)
+    with Ska.DBI.DBI(**db) as db:
+        files = db.fetchall(db_query)
     return files
 
 
@@ -348,7 +350,7 @@ class Updater(object):
         self.filetype = filetype or FILETYPE
         if db is None:
             dbfile = os.path.join(data_root, 'archfiles.db3')
-            db = Ska.DBI.DBI(dbi='sqlite', server=dbfile, autocommit=False)
+            db = dict(dbi='sqlite', server=dbfile, autocommit=False)
         self.db = db
         self.start = start
         self.stop = stop
@@ -402,45 +404,46 @@ class Updater(object):
         missing = []
         # for the entries after the start date, see if we have the
         # file or a later version
-        for file, idx in izip(ingested_files[-backcnt:], count(0)):
-            filename = file['filename']
-            db_match = self.db.fetchall(
-                "select * from archfiles where "
-                + "filename = '%s' or filename = '%s.gz'"
-                % (filename, filename))
-            if len(db_match):
-                continue
-            file_re = re.search(
-                r'acaf(\d+)N(\d{3})_(\d)_img0.fits(\.gz)?',
-                filename)
-            if not file_re:
-                continue
-            slot = int(file_re.group(3))
-            filetime = int(file_re.group(1))
-            version = int(file_re.group(2))
-            # if there is an old file and we're just looking for new ones
-            range_match = self.db.fetchall(
-                """SELECT * from archfiles
-                   WHERE filetime = %(filetime)d
-                   and slot = %(slot)d""" % dict(filetime=filetime, slot=slot))
-            if range_match and only_new:
-                continue
-            # if there is a newer file there already
-            version_match = self.db.fetchall(
-                """SELECT * from archfiles
-                   WHERE filetime = %(filetime)d
-                   and slot = %(slot)d
-                   and revision >= %(version)d"""
-                % dict(slot=slot, version=version, filetime=filetime))
-            if version_match:
-                continue
-            # and if made it this far add the file to the list
-            missing.append(file)
-            # and update the date through which data is complete to
-            # the time of the previous file ingest
-            if last_ok_date is None:
-                last_ok_date = \
-                    ingested_files[-backcnt:][idx - 1]['ingest_date']
+        with Ska.DBI.DBI(**self.db) as db:
+            for file, idx in izip(ingested_files[-backcnt:], count(0)):
+                filename = file['filename']
+                db_match = db.fetchall(
+                    "select * from archfiles where "
+                    + "filename = '%s' or filename = '%s.gz'"
+                    % (filename, filename))
+                if len(db_match):
+                    continue
+                file_re = re.search(
+                    r'acaf(\d+)N(\d{3})_(\d)_img0.fits(\.gz)?',
+                    filename)
+                if not file_re:
+                    continue
+                slot = int(file_re.group(3))
+                filetime = int(file_re.group(1))
+                version = int(file_re.group(2))
+                # if there is an old file and we're just looking for new ones
+                range_match = db.fetchall(
+                    """SELECT * from archfiles
+                       WHERE filetime = %(filetime)d
+                       and slot = %(slot)d""" % dict(filetime=filetime, slot=slot))
+                if range_match and only_new:
+                    continue
+                # if there is a newer file there already
+                version_match = db.fetchall(
+                    """SELECT * from archfiles
+                       WHERE filetime = %(filetime)d
+                       and slot = %(slot)d
+                       and revision >= %(version)d"""
+                    % dict(slot=slot, version=version, filetime=filetime))
+                if version_match:
+                    continue
+                # and if made it this far add the file to the list
+                missing.append(file)
+                # and update the date through which data is complete to
+                # the time of the previous file ingest
+                if last_ok_date is None:
+                    last_ok_date = \
+                        ingested_files[-backcnt:][idx - 1]['ingest_date']
 
         if last_ok_date is None:
             last_ok_date = ingested_files[-1]['ingest_date']
@@ -498,16 +501,16 @@ class Updater(object):
         :rtype: dictionary
         """
 
-        db = self.db
         # Check if filename is already in file lookup table
         # If so then delete temporary file and abort further processing.
         filename = os.path.basename(f)
-        if db.fetchall('SELECT filename FROM archfiles WHERE filename=?',
-                       (filename,)):
-            logger.debug(
-                'File %s already in archfiles - unlinking and skipping' % f)
-            os.unlink(f)
-            return None
+        with Ska.DBI.DBI(**self.db) as db:
+            if db.fetchall('SELECT filename FROM archfiles WHERE filename=?',
+                           (filename,)):
+                logger.debug(
+                    'File %s already in archfiles - unlinking and skipping' % f)
+                os.unlink(f)
+                return None
 
         logger.debug('Reading (%d / %d) %s' % (i, len(archfiles), filename))
         hdus = pyfits.open(f)
@@ -535,16 +538,17 @@ class Updater(object):
         archfiles_row['rows'] = len(hdu.data)
         hdus.close()
 
-        # remove old versions of this file
-        oldmatches = db.fetchall(
-            """SELECT * from archfiles
-               WHERE filetime = %(filetime)d
-               and slot = %(slot)d
-               and startmjf = %(startmjf)d and startmnf = %(startmnf)d
-               and stopmjf = %(stopmjf)d and stopmnf = %(stopmnf)d """
-            % archfiles_row)
-        if len(oldmatches):
-            self._arch_remove(oldmatches)
+        with Ska.DBI.DBI(**self.db) as db:
+            # remove old versions of this file
+            oldmatches = db.fetchall(
+                """SELECT * from archfiles
+                   WHERE filetime = %(filetime)d
+                   and slot = %(slot)d
+                   and startmjf = %(startmjf)d and startmnf = %(startmnf)d
+                   and stopmjf = %(stopmjf)d and stopmnf = %(stopmnf)d """
+                % archfiles_row)
+            if len(oldmatches):
+                self._arch_remove(oldmatches)
 
         interval_matches = _get_file_records(archfiles_row['tstart'],
                                               archfiles_row['tstop'],
@@ -578,28 +582,29 @@ class Updater(object):
         return archfiles_row
 
     def _arch_remove(self, defunct_matches):
-        for file_record in defunct_matches:
-            query = ("""delete from archfiles
-                          WHERE filetime = %(filetime)d
-                          and slot = %(slot)d
-                          and startmjf = %(startmjf)d
-                          and startmnf = %(startmnf)d
-                          and stopmjf = %(stopmjf)d
-                          and stopmnf = %(stopmnf)d """
-                       % file_record)
-            logger.info(query)
-            self.db.execute(query)
-            self.db.commit()
-            archdir = os.path.abspath(os.path.join(
-                    self.data_root,
-                    str(file_record['year']),
-                    "{0:03d}".format(file_record['doy'])
-                    ))
-            logger.info("deleting %s" %
-                        os.path.join(archdir, file_record['filename']))
-            real_file = os.path.join(archdir, file_record['filename'])
-            if os.path.exists(real_file):
-                os.unlink(real_file)
+        with Ska.DBI.DBI(**self.db) as db:
+            for file_record in defunct_matches:
+                query = ("""delete from archfiles
+                              WHERE filetime = %(filetime)d
+                              and slot = %(slot)d
+                              and startmjf = %(startmjf)d
+                              and startmnf = %(startmnf)d
+                              and stopmjf = %(stopmjf)d
+                              and stopmnf = %(stopmnf)d """
+                           % file_record)
+                logger.info(query)
+                db.execute(query)
+                db.commit()
+                archdir = os.path.abspath(os.path.join(
+                        self.data_root,
+                        str(file_record['year']),
+                        "{0:03d}".format(file_record['doy'])
+                        ))
+                logger.info("deleting %s" %
+                            os.path.join(archdir, file_record['filename']))
+                real_file = os.path.join(archdir, file_record['filename'])
+                if os.path.exists(real_file):
+                    os.unlink(real_file)
 
     def _move_archive_files(self, archfiles):
         """
@@ -683,13 +688,14 @@ class Updater(object):
             raise ValueError(
                 "non-release code attempted to write to official archive")
         count_inserted = 0
-        for i, f in enumerate(files):
-            arch_info = self._read_archfile(i, f, files)
-            if arch_info:
-                self._move_archive_files([f])
-                self.db.insert(arch_info, 'archfiles')
-                count_inserted += 1
-        self.db.commit()
+        with Ska.DBI.DBI(**self.db) as db:
+            for i, f in enumerate(files):
+                arch_info = self._read_archfile(i, f, files)
+                if arch_info:
+                    self._move_archive_files([f])
+                    db.insert(arch_info, 'archfiles')
+                    count_inserted += 1
+            db.commit()
         logger.info("Ingested %d files" % count_inserted)
 
     def update(self):
@@ -711,20 +717,22 @@ class Updater(object):
             db_sql = os.path.join(os.environ['SKA_DATA'],
                                   'mica', self.sql_def)
             db_init_cmds = file(db_sql).read()
-            self.db.execute(db_init_cmds, commit=True)
+            with Ska.DBI.DBI(**self.db) as db:
+                db.execute(db_init_cmds, commit=True)
         if self.start:
             datestart = DateTime(self.start)
         else:
             # Get datestart as the most-recent file time from archfiles table
             # will need min-of-max-slot-datestart
-            last_time = min([self.db.fetchone(
-                        "select max(filetime) from archfiles where slot = %d"
-                        % s)['max(filetime)'] for s in range(0, 8)])
-            if last_time is None:
-                raise ValueError(
-                    "No files in archive to do update-since-last-run mode.\n"
-                    + "Please specify a time with --start")
-            datestart = DateTime(last_time)
+            with Ska.DBI.DBI(**self.db) as db:
+                last_time = min([db.fetchone(
+                            "select max(filetime) from archfiles where slot = %d"
+                            % s)['max(filetime)'] for s in range(0, 8)])
+                if last_time is None:
+                    raise ValueError(
+                        "No files in archive to do update-since-last-run mode.\n"
+                        + "Please specify a time with --start")
+                datestart = DateTime(last_time)
         datestop = DateTime(self.stop)
         padding_seconds = 10000
         # loop over the specified time range in chunks of
