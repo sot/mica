@@ -172,10 +172,15 @@ def get_obs_trak_stats(obsid):
         return Table(guis)
 
 def get_obs_temps(obsid, outdir):
-    manvrs = events.manvrs.filter(obsid=obsid)
-    dwells = events.dwells.filter(obsid=obsid)
+    try:
+        manvrs = events.manvrs.filter(obsid=obsid)
+        dwells = events.dwells.filter(obsid=obsid)
+    except ValueError:
+        return None
     if len(manvrs) and len(dwells):
         ccd_temp = fetch_sci.MSID('AACCCDPT', manvrs[0].stop, dwells[0].stop)
+        if len(ccd_temp.vals) == 0:
+            return None
         fig = plt.figure(figsize=(4,2))
         ax = plt.subplot(1, 1, 1)
         ax.plot((ccd_temp.times - ccd_temp.times[0])/1000., ccd_temp.vals, 'b')
@@ -526,6 +531,7 @@ def main(obsid, config=None, report_root=None):
         page = template.render(obsid=obsid,
                                target=summary,
                                links=links,
+                               temps=None,
                                cat_table=None,
                                er=er if er else None,
                                last_sched=last_sched,
