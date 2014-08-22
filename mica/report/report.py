@@ -187,19 +187,9 @@ def get_obs_temps(obsid, outdir):
         ccd_temp = fetch_sci.MSID('AACCCDPT', manvrs[0].stop, dwells[0].stop)
         if len(ccd_temp.vals) == 0:
             return None
-        fig = plt.figure(figsize=(4,2))
-        ax = plt.subplot(1, 1, 1)
-        ax.plot((ccd_temp.times - ccd_temp.times[0])/1000., ccd_temp.vals, 'b')
-        plt.setp(ax.get_xticklabels(), fontsize=8)
-        plt.setp(ax.get_yticklabels(), fontsize=8)
-        plt.ylabel('AACCCDPT (C)', fontsize=8)
-        plt.xlabel('Obs Time (ks)', fontsize=8)
-        plt.tight_layout()
-        fig.savefig(os.path.join(outdir, 'ccd_temp.png'))
-        plt.close(fig)
         return {'max': ccd_temp.vals.max(),
-                'mean': ccd_temp.vals.mean(),
-                'figure': os.path.join(outdir, 'ccd_temp.png')}
+                'mean': ccd_temp.vals.mean()}
+
 
 
 def target_summary(obsid):
