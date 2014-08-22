@@ -175,6 +175,13 @@ cat['mp_starcat_time'], cat['mp_starcat_vcdu_cnt']) -}}
 {% for warn in sc['warnings'] %}{% if warn['idx'] is not none %}<PRE>{{- "WARNING: [%2s] %s. %s"|format(
 warn['idx'], warn['warning_type'], warn['warning']) }}
 {% else %}{{- "WARNING: %s"|format(warn['warning']) }}{% endif %}</PRE>{% endfor %}
+
+{% if temps is not none %}
+<PRE>
+CCD temps: {{ "mean %3.2f C, max %3.2 C"|format(temps['mean'], temps['max']) -}}
+</PRE>
+{% endif %}
+
 </div>
 <div id="rightlarge">
 <IMG SRC="starcheck.png">
@@ -203,24 +210,6 @@ warn['idx'], warn['warning_type'], warn['warning']) }}
 </TABLE>
 {% endif %}
 </div>
-
-{% if temps is not none %}
-<div id="fullwidth">
-<div class="border" style="float: left; margin-bottom: .5cm; padding-bottom: 20px;">
-<div id="leftsmall">
-<h2>CCD Temperatures</h2>
-<TABLE border=1 style="font-size:11px">
-<TR><TH></TH><TH align='right'>AACCCDPT</TH></TR>
-<TR><TD>Max</TD><TD>{{ "%3.2f"|format(temps['max']) }}</TD></TR>
-<TR><TD>Mean</TD><TD>{{ "%3.2f"|format(temps['mean']) }}</TD></TR>
-</TABLE>
-</div>
-<div id="rightlarge">
-<IMG SRC="ccd_temp.png">
-</div>
-</div>
-</div>
-{% endif %}
 
 <CENTER><FONT size="-2">mica.report version {{ version }}</FONT></CENTER>
 
