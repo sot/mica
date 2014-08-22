@@ -137,7 +137,11 @@ def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
             obs_idx=obs_idx,
             **warn)
         db.insert(warn_d, 'starcheck_warnings')
+    if obs['pred_ccd_temp'] is not None:
+        db.insert(dict(sc_id=sc_id, obsid=obs['obsid'], pred_ccd_temp=obs['pred_ccd_temp']),
+                  'starcheck_pred_temp')
     db.commit()
+
 
 
 def get_starcheck_catalog(obsid, mp_dir=None,

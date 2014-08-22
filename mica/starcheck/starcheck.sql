@@ -92,6 +92,12 @@ last_ap_date	datetime,
 CONSTRAINT fk_sp_id FOREIGN KEY (sc_id) REFERENCES starcheck_id (id)
 );
 
+create table starcheck_pred_temp
+(sc_id int not null,
+obsid int not null,
+pred_ccd_temp float,
+CONSTRAINT fk_spt_id FOREIGN KEY (sc_id) REFERENCES starcheck_id (id)
+);
 
 
 CREATE INDEX cat_id_idx on starcheck_catalog(sc_id);

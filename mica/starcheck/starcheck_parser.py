@@ -251,6 +251,15 @@ def get_warnings(obs_text):
     return warn
 
 
+def get_pred_temp(obs_text):
+    pred_line = re.search(
+        "Predicted Max CCD temperature: (-?\d+\.\d)\sC",
+        obs_text)
+    if not pred_line:
+        return None
+    return float(pred_line.group(1))
+
+
 def fix_obs(obs):
     # Fix broken starcheck.txt manually
     # obsid 11866 has non-ascii characters in the starcheck.txt file
@@ -277,8 +286,8 @@ def get_cat(obs_text):
         obs=obs,
         manvrs=get_manvrs(obs_text),
         catalog=get_catalog(obs_text),
-        warnings=get_warnings(obs_text))
-
+        warnings=get_warnings(obs_text),
+        pred_ccd_temp=get_pred_temp(obs_text))
 
 
 def read_starcheck(starcheck_file):
