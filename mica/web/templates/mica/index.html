@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block body %}
+<body class="with-background">
+{% endblock %}
+
+{% block content %}
+<p><p>
+<h1 align="center"> Mica portal </h1>
+
+<form action="" method="get">
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="right-label" class="right inline">Enter Obsid</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="right-label" name="obsid" placeholder="{{obsid}}">
+        </div>
+        <div class="large-4 columns"> &nbsp; </div>
+      </div>
+</form>
+
+{% if mica_url %}
+  <iframe class="mica" src="{{mica_url | safe}}"> </iframe>
+{% endif %}
+
+{% endblock %}
