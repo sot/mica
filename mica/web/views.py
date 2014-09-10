@@ -1,5 +1,6 @@
 from django.views.generic import TemplateView
 
+from kadi import events
 from kadi.events.views import BaseView
 
 
@@ -9,11 +10,15 @@ class IndexView(BaseView, TemplateView):
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
         context = super(IndexView, self).get_context_data(**kwargs)
-        obsid = self.request.GET.get('obsid')
+        obsid_or_date = self.request.GET.get('obsid_or_date')
         try:
-            obsid = int(obsid)
-        except TypeError:
-            obsid = None
+            obsid = int(obsid_or_date)
+        except:
+            try:
+                obsids = events.obsids.filter(start=obsid_or_date)
+                obsid = obsids[0].obsid
+            except:
+                obsid = None
 
         context['obsid'] = obsid
         if obsid is not None:
