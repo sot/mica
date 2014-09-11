@@ -176,9 +176,19 @@ cat['mp_starcat_time'], cat['mp_starcat_vcdu_cnt']) -}}
 warn['idx'], warn['warning_type'], warn['warning']) }}
 {% else %}{{- "WARNING: %s"|format(warn['warning']) }}{% endif %}</PRE>{% endfor %}
 
-{% if temps is not none %}
+{% if pred_temp is not none and temps is not none %}
 <PRE>
-CCD temps: {{ "mean %3.2f C, max %3.2 C"|format(temps['mean'], temps['max']) -}}
+CCD temps: {{ "mean %3.2f C, max %3.2f C, pred %3.2f"|format(temps['mean'], temps['max'], pred_temp) -}}
+</PRE>
+{% endif %}
+{% if pred_temp is not none and temps is none %}
+<PRE>
+CCD temps: {{ "pred %3.2f"|format(pred_temp) -}}
+</PRE>
+{% endif %}
+{% if pred_temp is none and temps is not none %}
+<PRE>
+CCD temps: {{ "mean %3.2f C, max %3.2f C"|format(temps['mean'], temps['max']) -}}
 </PRE>
 {% endif %}
 
