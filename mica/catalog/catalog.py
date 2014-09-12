@@ -162,13 +162,14 @@ def plot_starcheck(catalog, quat=None, field=None, title=None):
 
 
 def plot(obsid, mp_dir=None):
-    obs, cat, manvr = get_starcheck_catalog(obsid, mp_dir)
-    quat = Quaternion.Quat((obs['point_ra'],
-                            obs['point_dec'],
-                            obs['point_roll']))
-    field = agasc.get_agasc_cone(obs['point_ra'], obs['point_dec'],
+    sc = get_starcheck_catalog(obsid, mp_dir)
+    quat = Quaternion.Quat((sc['obs']['point_ra'],
+                            sc['obs']['point_dec'],
+                            sc['obs']['point_roll']))
+    field = agasc.get_agasc_cone(sc['obs']['point_ra'], sc['obs']['point_dec'],
                                  radius=1.5,
-                                 date=DateTime(obs['mp_starcat_time']).date)
-    fig = plot_starcheck(cat, quat, field,
-                         title="RA %.2f Dec %.2f" % (obs['point_ra'], obs['point_dec']))
-    return fig, cat, obs
+                                 date=DateTime(sc['obs']['mp_starcat_time']).date)
+    fig = plot_starcheck(sc['cat'], quat, field,
+                         title="RA %.2f Dec %.2f" % (sc['obs']['point_ra'],
+                                                     sc['obs']['point_dec']))
+    return fig, sc['cat'], sc['obs']

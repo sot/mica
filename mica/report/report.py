@@ -187,19 +187,9 @@ def get_obs_temps(obsid, outdir):
         ccd_temp = fetch_sci.MSID('AACCCDPT', manvrs[0].stop, dwells[0].stop)
         if len(ccd_temp.vals) == 0:
             return None
-        fig = plt.figure(figsize=(4,2))
-        ax = plt.subplot(1, 1, 1)
-        ax.plot((ccd_temp.times - ccd_temp.times[0])/1000., ccd_temp.vals, 'b')
-        plt.setp(ax.get_xticklabels(), fontsize=8)
-        plt.setp(ax.get_yticklabels(), fontsize=8)
-        plt.ylabel('AACCCDPT (C)', fontsize=8)
-        plt.xlabel('Obs Time (ks)', fontsize=8)
-        plt.tight_layout()
-        fig.savefig(os.path.join(outdir, 'ccd_temp.png'))
-        plt.close(fig)
         return {'max': ccd_temp.vals.max(),
-                'mean': ccd_temp.vals.mean(),
-                'figure': os.path.join(outdir, 'ccd_temp.png')}
+                'mean': ccd_temp.vals.mean()}
+
 
 
 def target_summary(obsid):
@@ -528,6 +518,7 @@ def main(obsid, config=None, report_root=None):
         if len(obs_sc['catalog']) == 0:
             raise LookupError("Observation has no catalog")
         fig, cat, obs = catalog.plot(obsid, mp_dir)
+        sc = starcheck.get_starcheck_catalog(obsid, mp_dir)
         fig.savefig(os.path.join(outdir, 'starcheck.png'))
         plt.close('all')
     except LookupError as detail:
@@ -538,6 +529,7 @@ def main(obsid, config=None, report_root=None):
                                target=summary,
                                links=links,
                                temps=None,
+                               pred_temp=None,
                                cat_table=None,
                                er=er if er else None,
                                last_sched=last_sched,
@@ -565,6 +557,7 @@ def main(obsid, config=None, report_root=None):
     acqs = get_obs_acq_stats(obsid)
     trak = get_obs_trak_stats(obsid)
     temps = get_obs_temps(obsid, outdir)
+    pred_temp = sc['pred_temp']
     if acqs or trak:
         last_sched = "eng. data available"
 
@@ -717,6 +710,7 @@ def main(obsid, config=None, report_root=None):
                            links=links,
                            target=summary,
                            temps=temps,
+                           pred_temp=pred_temp,
                            er=er if er else None,
                            er_status=er_status,
                            last_sched=last_sched,

@@ -183,7 +183,17 @@ def get_starcheck_catalog(obsid, mp_dir=None,
     manvr = dbh.fetchall("select * from starcheck_manvr "
                          "where sc_id = %d and obsid = %d"
                          % (sc_id, obsid))
-    return obs, cat, manvr
+    temp = dbh.fetchone("select pred_ccd_temp from starcheck_pred_temp "
+                        "where sc_id = {} and obsid = {}".format(
+            sc_id, obsid))
+    pred_temp = None
+    if temp:
+        pred_temp = temp['pred_ccd_temp']
+    return {'obs': obs,
+            'cat': cat,
+            'manvr': manvr,
+            'mp_dir': mp_dir,
+            'pred_temp': pred_temp}
 
 
 def get_options():
