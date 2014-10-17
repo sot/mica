@@ -468,8 +468,6 @@ class Obi(object):
                     self.aspect_intervals[0].gsprop['slot'] == slot_id][0]
                 slot_report['id_status'] = slot_gsprop['id_status'].strip()
                 slot_report['cel_loc_flag'] = slot_gsprop['cel_loc_flag']
-                if slot_id == '7':
-                    raise ValueError
 
             if slot_id not in all_slot:
                 continue
