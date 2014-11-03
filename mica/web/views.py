@@ -2,7 +2,7 @@ from django.views.generic import TemplateView
 
 from kadi import events
 from kadi.events.views import BaseView
-
+import mica.pcad_table
 
 class IndexView(BaseView, TemplateView):
     template_name = 'mica/index.html'
@@ -30,5 +30,29 @@ class IndexView(BaseView, TemplateView):
             url = ('https://icxc.harvard.edu/aspect/mica_reports/{}/{}/index.html'
                    .format(obsid[:2], obsid))
             context['mica_url'] = url
+
+        return context
+
+class AcqView(BaseView, TemplateView):
+    template_name = 'mica/acq.html'
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super(AcqView, self).get_context_data(**kwargs)
+
+        obsid = self.request.GET.get('obsid', None)
+        print(repr(obsid))
+        if obsid is not None:
+            try:
+                obsid = int(obsid)
+            except:
+                obsid = None
+
+        context['obsid'] = obsid or ''
+
+        if obsid:
+            obsid = format(obsid, '05d')
+            pcad_data = mica.pcad_table.get_acq_table(obsid)
+            context['pcad_data'] = pcad_data
 
         return context
