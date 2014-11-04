@@ -15,6 +15,7 @@ import Ska.arc5gl
 import Ska.DBI
 from Chandra.Time import DateTime
 import Ska.File
+from astropy.table import Table
 import mica.version as mica_version
 
 # borrowed from telem_archive
@@ -81,6 +82,8 @@ class ObsArchive:
                 (example /data/aca/archive/asp1)
     * temp_root: directory for temporary storage of fetched
                 telemetry
+    * bad_obsids: file containing list of obsids that should be
+                ignored when in regular update mode
     * cols: headers that will be included in file lookup table
     * sql_def: sql file to build file lookup archfiles table
     * apstat_table: axafapstat database table from which to find
@@ -591,7 +594,19 @@ class ObsArchive:
                     obs = dict(obsid=int(lmatch.group(1)),
                                revision=int(lmatch.group(2)))
                     todo_obs.append(obs)
-        return todo_obs
+        if not os.path.exists(self.config['bad_obsids']):
+            return todo_obs
+        # If there is a table of bad obsids for this type, exclude them
+        bad_obsids = Table.read(self.config['bad_obsids'], format='ascii')
+        ok_redo = []
+        for obs in todo_obs:
+            if obs['obsid'] not in bad_obsids['obsid']:
+                ok_redo.append(obs)
+            else:
+                logger.info("Skipping obsid {}; in {} 'bad_obsid' table".format(
+                        self.config['label'], obs['obsid']))
+        return ok_redo
+
 
     def update(self):
         """
