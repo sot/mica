@@ -540,6 +540,23 @@ def main(obsid, config=None, report_root=None):
         f = open(full_report_file, 'w')
         f.write(page)
         f.close()
+        notes = {'report_version': REPORT_VERSION,
+                 'vv_version': None,
+                 'vv_revision': None,
+                 'aspect_1_id': None,
+                 'last_sched': last_sched,
+                 'ocat_status': report_status.get('ocat'),
+                 'long_term': str(report_status.get('long_term')),
+                 'short_term': str(report_status.get('short_term')),
+                 'starcheck': report_status.get('starcheck'),
+                 'obsid': obsid,
+                 'checked_date': DateTime().date}
+        f = open(os.path.join(outdir, 'notes.json'), 'w')
+        f.write(json.dumps(notes,
+                           sort_keys=True,
+                           indent=4))
+        f.close()
+        save_state_in_db(obsid, notes, config)
         return
 
     if not er and 'shortterm' in links:
