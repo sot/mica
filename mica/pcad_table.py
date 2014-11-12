@@ -4,6 +4,7 @@ from Chandra.Time import DateTime
 from Ska.engarchive import fetch
 from astropy.table import Table, Column
 #import mica.archive.aca_l0
+import mica.starcheck
 
 msids = ['AOACASEQ', 'AOACQSUC', 'AOFREACQ', 'AOFWAIT', 'AOREPEAT',
          'AOACSTAT', 'AOACHIBK', 'AOFSTAR', 'AOFATTMD', 'AOACPRGS',
@@ -41,6 +42,16 @@ def get_acq_table(obsid):
     vals, times = compress_data(vals, times)
     d_times = times['time'] - DateTime(manvr.guide_start).secs
 
+    starcheck = mica.starcheck.get_starcheck_catalog(int(obsid))
+    if 'cat' not in starcheck:
+        raise ValueError('No starcheck catalog found for {}'.format(obsid))
+    catalog = Table(starcheck['cat'])
+    catalog.sort('idx')
+    slot_for_pos = [cat_row['slot'] for cat_row in catalog if
+                    (cat_row['type'] == 'ACQ') or (cat_row['type'] == 'BOT')]
+    pos_for_slot = dict([(slot, idx) for idx, slot in enumerate(slot_for_pos)])
+
+
     #l0_data = {}
     #for slot in range(0, 8):
     #    l0_data[slot] = mica.archive.aca_l0.get_slot_data(start_time - 5,
@@ -56,9 +67,11 @@ def get_acq_table(obsid):
             slot_data[m] = drow[m]
         for slot in range(0, 8):
         #for slot in [1]:
-            row_dict = {'slot': slot}
+            row_dict = {'slot': slot, 'catpos': pos_for_slot[slot]}
             for col in per_slot:
-                row_dict[col] = drow['{}{}'.format(col, slot)]
+                if col not in ['AOACQID']:
+                    row_dict[col] = drow['{}{}'.format(col, slot)]
+            row_dict['POS_ACQID'] = drow['AOACQID{}'.format(pos_for_slot[slot])]
             #idx = np.searchsorted(l0_data[slot]['TIME'], trow['time'])
             #for col in ['GLBSTAT', 'IMGSIZE', 'IMGSTAT', 'BGDAVG', 'BGDSTAT', 'IMGFUNC1']:
             #    row_dict[col] = l0_data[slot][idx - 1][col]

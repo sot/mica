@@ -60,11 +60,14 @@ style="background-color: lightgray;"
 {% for slot in slice.slots %}
 <td>
 <table class='pcad' border=1
-{% if slot.AOACFCT == 'TRAK' and slot.AOACQID == 'ID  ' %}
+{% if slice.AOACASEQ == 'AQXN' and slot.AOACFCT == 'TRAK' %}
 style="background-color: lightgreen;"
 {% endif %}
-{% if slot.AOACFCT == 'TRAK' and slot.AOACQID == 'NOID' %}
+{% if slice.AOACASEQ == 'GUID' and slot.AOACFCT == 'TRAK' and slot.POS_ACQID == 'NOID' %}
 style="background-color: yellow;"
+{% endif %}
+{% if slice.AOACASEQ == 'GUID' and slot.AOACFCT == 'TRAK' and slot.POS_ACQID == 'ID  ' %}
+style="background-color: lightgreen;"
 {% endif %}
 {% if slice.AOACASEQ == 'AQXN' and slot.AOACFCT == 'SRCH' %}
 style="background-color: lightblue;"
@@ -72,7 +75,7 @@ style="background-color: lightblue;"
 >
 <tr><td>slot</td><td>{{slot.slot}}</td></tr>
 <tr><td>acfct</td><td>{{ slot.AOACFCT }}</td><tr>
-<tr><td>acqid</td><td>{{ slot.AOACQID }}</td><tr>
+<tr><td>acqid</td><td>{{ slot.POS_ACQID }} [idx: {{slot.catpos}}]</td><tr>
 <tr><td>mag</td><td>{{ slot.AOACMAG }}</td><tr>
 <tr><td>yang</td><td>{{ slot.AOACYAN }}</td><tr>
 <tr><td>zang</td><td>{{ slot.AOACZAN }}</td><tr>
