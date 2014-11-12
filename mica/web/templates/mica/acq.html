@@ -99,6 +99,11 @@ bgcolor='red'
 bgcolor='red'
 {% endif %}
 >{{ slot.AOACIDP }}</td></tr>
+<tr><td>sat_pix</td><td
+{% if slot.AOACISP == 'ERR' %}
+bgcolor='red'
+{% endif %}
+>{{ slot.AOACISP }}</td></tr>
 </table>
 </td>
 {% endfor %}
