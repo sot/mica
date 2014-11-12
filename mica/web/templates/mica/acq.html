@@ -57,6 +57,21 @@ style="background-color: lightgray;"
 <tr><td>AORFSTR2</td><td>{{ slice.AORFSTR2 }}</td></tr>
 </table>
 </td>
+<td>
+<table class='pcad' border=1>
+<tr><td>slot</td></tr>
+<tr><td>acfct</td><tr>
+<tr><td>acqid</td><tr>
+<tr><td>mag</td><tr>
+<tr><td>yang</td><tr>
+<tr><td>zang</td><tr>
+<tr><td>ion_rad</td></tr>
+<tr><td>mult_star</td></tr>
+<tr><td>comm_col</td></tr>
+<tr><td>def_pix</td></tr>
+<tr><td>sat_pix</td></tr>
+</table>
+</td>
 {% for slot in slice.slots %}
 <td>
 <table class='pcad' border=1
@@ -73,33 +88,33 @@ style="background-color: lightgreen;"
 style="background-color: lightblue;"
 {% endif %}
 >
-<tr><td>slot</td><td>{{slot.slot}}</td></tr>
-<tr><td>acfct</td><td>{{ slot.AOACFCT }}</td><tr>
-<tr><td>acqid</td><td>{{ slot.POS_ACQID }} [idx: {{slot.catpos}}]</td><tr>
-<tr><td>mag</td><td>{{ slot.AOACMAG }}</td><tr>
-<tr><td>yang</td><td>{{ slot.AOACYAN }}</td><tr>
-<tr><td>zang</td><td>{{ slot.AOACZAN }}</td><tr>
-<tr><td>ion_rad</td><td
+<tr><td>{{slot.slot}}</td></tr>
+<tr><td>{{ slot.AOACFCT }}</td><tr>
+<tr><td>{{ slot.POS_ACQID }} [idx: {{slot.catpos}}]</td><tr>
+<tr><td>{{ slot.AOACMAG }}</td><tr>
+<tr><td>{{ slot.AOACYAN }}</td><tr>
+<tr><td>{{ slot.AOACZAN }}</td><tr>
+<tr><td
 {% if slot.AOACIIR == 'ERR' %}
 bgcolor='red'
 {% endif %}
 >{{ slot.AOACIIR }}</td></tr>
-<tr><td>mult_star</td><td
+<tr><td
 {% if slot.AOACIMS == 'ERR' %}
 bgcolor='red'
 {% endif %}
 >{{ slot.AOACIMS }}</td></tr>
-<tr><td>comm_col</td><td
+<tr><td
 {% if slot.AOACICC == 'ERR' %}
 bgcolor='red'
 {% endif %}
 >{{ slot.AOACICC }}</td></tr>
-<tr><td>def_pix</td><td
+<tr><td
 {% if slot.AOACIDP == 'ERR' %}
 bgcolor='red'
 {% endif %}
 >{{ slot.AOACIDP }}</td></tr>
-<tr><td>sat_pix</td><td
+<tr><td
 {% if slot.AOACISP == 'ERR' %}
 bgcolor='red'
 {% endif %}
