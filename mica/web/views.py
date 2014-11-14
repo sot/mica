@@ -2,7 +2,7 @@ from django.views.generic import TemplateView
 
 from kadi import events
 from kadi.events.views import BaseView
-import mica.pcad_table
+import mica.web.pcad_table
 
 class IndexView(BaseView, TemplateView):
     template_name = 'mica/index.html'
@@ -52,7 +52,7 @@ class AcqView(BaseView, TemplateView):
 
         if obsid:
             obsid = format(obsid, '05d')
-            pcad_data = mica.pcad_table.get_acq_table(obsid)
+            pcad_data = mica.web.pcad_table.get_acq_table(obsid)
             context['pcad_data'] = pcad_data
 
         return context
