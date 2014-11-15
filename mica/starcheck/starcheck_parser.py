@@ -107,6 +107,16 @@ def get_dither(obs_text):
                         dither_z_amp=float(dither_re.group(3)),
                         dither_y_period=float(dither_re.group(4)),
                         dither_z_period=float(dither_re.group(5)))
+        dis_dither_re = re.match(
+            "Dither:\sOFF\s*",
+            oline)
+        if dis_dither_re:
+            return dict(dither_state='OFF',
+                        dither_y_amp=float(0),
+                        dither_z_amp=float(0),
+                        dither_y_period=None,
+                        dither_z_period=None)
+
     return {}
 
 
