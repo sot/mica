@@ -437,7 +437,7 @@ def main(obsid, config=None, report_root=None):
         report_root=config['report_root']
 
     global ACA_DB
-    if ACA_DB is None:
+    if ACA_DB is None or not ACA_DB.conn._is_connected:
         ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
 
 
@@ -814,7 +814,7 @@ def save_state_in_db(obsid, notes, config=None):
 def update(report_root=DEFAULT_REPORT_ROOT):
 
     global ACA_DB
-    if ACA_DB is None:
+    if ACA_DB is None or not ACA_DB.conn._is_connected:
         ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
 
     recent_obs = ACA_DB.fetchall("select distinct obsid from cmd_states "
