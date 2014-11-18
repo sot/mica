@@ -745,7 +745,6 @@ def main(obsid, config=None, report_root=None):
     f.write(json.dumps(cat_table, sort_keys=True, indent=4))
     f.close()
 
-    f = open(os.path.join(outdir, 'notes.json'), 'w')
     notes = {'report_version': REPORT_VERSION,
              'vv_version': None,
              'vv_revision': None,
@@ -761,6 +760,7 @@ def main(obsid, config=None, report_root=None):
         notes['vv_version'] = vv.get('vv_version')
         notes['vv_revision'] = vv.get('revision')
         notes['aspect_1_id'] = vv.get('aspect_1_id')
+    f = open(os.path.join(outdir, 'notes.json'), 'w')
     f.write(json.dumps(notes,
                        sort_keys=True,
                        indent=4))
