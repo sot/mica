@@ -53,7 +53,8 @@ FILES = {'sql_def': 'report_processing.sql'}
 DEFAULT_CONFIG = {
     'dbi': 'sqlite',
     'report_root': '/proj/web-icxc/htdocs/aspect/mica_reports',
-    'server': os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3')}
+    'server': os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3'),
+    'update_mode': True}
 
 
 def get_options():
@@ -825,36 +826,55 @@ def update(report_root=DEFAULT_REPORT_ROOT):
     ACA_DB.conn.close()
 
 
-def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
+def process_obsids(obsids, config=None, report_root=None):
+    if config is None:
+         config = DEFAULT_CONFIG
+    if report_root is None:
+        report_root=config['report_root']
+
     for obsid in obsids:
         strobs = "%05d" % obsid
         chunk_dir = strobs[0:2]
         topdir = os.path.join(report_root, chunk_dir)
         outdir = os.path.join(topdir, strobs)
-        if os.path.exists(outdir):
+        if os.path.exists(outdir) and not config['update_mode']:
             logger.info("Skipping {}, output dir exists.".format(obsid))
+            continue
         if os.path.exists("{}.ERR".format(outdir)):
             logger.info("Skipping {}, output.ERR dir exists.".format(obsid))
+            continue
         if not os.path.exists(outdir):
-            try:
-                os.makedirs("{}".format(outdir))
-                main(obsid, config=None, report_root=report_root)
-            except:
-                os.makedirs("{}.ERR".format(outdir))
-                etype, emess, traceback = sys.exc_info()
-                notes = {'report_version': REPORT_VERSION,
-                         'obsid': obsid,
-                         'checked_date': DateTime().date,
-                         'last_sched': "{} {}".format(etype, emess),
-                         'vv_version': None,
-                         'vv_revision': None,
-                         'aspect_1_id': None,
-                         'ocat_status': None,
-                         'long_term': None,
-                         'short_term': None,
-                         'starcheck': None}
-                save_state_in_db(obsid, notes, config=None)
+            os.makedirs("{}".format(outdir))
 
+        try:
+            main(obsid, config=config, report_root=report_root)
+        except:
+            os.makedirs("{}.ERR".format(outdir))
+            import traceback
+            etype, emess, trace = sys.exc_info()
+            logger.info("Failed report on {}".format(obsid))
+            trace_file = open(os.path.join("{}.ERR".format(outdir),
+                                  'trace.txt'), 'w')
+            traceback.print_tb(trace, file=trace_file)
+            trace_file.close()
+            notes = {'report_version': REPORT_VERSION,
+                     'obsid': obsid,
+                     'checked_date': DateTime().date,
+                     'last_sched': "{}".format(str(emess)),
+                     'vv_version': None,
+                     'vv_revision': None,
+                     'aspect_1_id': None,
+                     'ocat_status': None,
+                     'long_term': None,
+                     'short_term': None,
+                     'starcheck': None}
+            f = open(os.path.join("{}.ERR".format(outdir),
+                                  'notes.json'), 'w')
+            f.write(json.dumps(notes,
+                               sort_keys=True,
+                               indent=4))
+            f.close()
+            save_state_in_db(obsid, notes, config=None)
 
 
 def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
