@@ -821,7 +821,7 @@ def update(report_root=DEFAULT_REPORT_ROOT):
     recent_obs = ACA_DB.fetchall("select distinct obsid from cmd_states "
                              "where datestart > '{}'".format(DateTime(-7).date))
     for obs in recent_obs:
-        main(obs['obsid'], config=None, report_root=report_root)
+        process_obsids([obs['obsid']], report_root=report_root)
 
     ACA_DB.conn.close()
 
