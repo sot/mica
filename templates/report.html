@@ -91,9 +91,9 @@ button {
 <tr><td></td><th align='right'>DEC:</th><td><td>{{ "%3.6f"|format(target['dec']) }}</td></tr>
 <tr><td></td><th>Exp. Time:</th><td><td>{{ target['approved_exposure_time'] }}</td></tr>
 </table>
-{% endif %}
 &nbsp;
 </div>
+{% endif %}
 </div>
 
 <div id="rightsmall" class="border" style="padding-top: 10px;">
@@ -135,6 +135,7 @@ Links: <br>
 {{"OBSID %5d"|format(obs.obsid) -}}
 {% if obs.target_id %}
 <PRE>
+{% if obs.target_id %}
 {{"%-22s %-6s SIM Z offset: %-5d (%-.2fmm) Grating: %-5s"|format(
 obs.target_id, obs.sci_instr, obs.sim_z_offset_steps,
 obs.sim_z_offset_mm, obs.grating) -}}
@@ -143,13 +144,16 @@ obs.sim_z_offset_mm, obs.grating) -}}
 {{- "RA, Dec, Roll (deg): %12.6f %12.6f %12.6f"|format(
 obs.point_ra, obs.point_dec, obs.point_roll) -}}
 {% endif %}
-{% if obs.dither_state is defined and obs.obsid < 40000 %}
+{% if obs.dither_state is defined and obs.dither_state == 'ON' and obs.obsid < 40000 %}
 {{- "Dither : %-3s Y_amp=%4.1f  Z_amp=%4.1f  Y_period=%6.1f Z_period=%6.1f"|format(
 obs.dither_state, obs.dither_y_amp, obs.dither_z_amp,
 obs.dither_y_period, obs.dither_z_period) -}}
+{% endif %}
+{% if obs.dither_state is defined and obs.dither_state == 'OFF' %}
+{{- "Dither : %-3s "|format(obs.dither_state) -}}
+{% endif %}
 </PRE>
 {% endif %}
-
 
 {% for manvr in sc['manvr'] %}
 <PRE>

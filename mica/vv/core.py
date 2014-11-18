@@ -230,7 +230,6 @@ class Obi(object):
         obsid = ai_list[0]['OBS_ID']
         revision = ai_list[0]['REVISION']
         obi = ai_list[0]['OBI_NUM']
-        aspect_1_id, ap_date = self._asp1_lookup(obsid, obi, revision)
         for ai in ai_list:
             if ai['OBS_ID'] != obsid:
                 raise ValueError
@@ -255,10 +254,16 @@ class Obi(object):
                      'intervals': ai_list,
                      'slots': self.slot_report,
                      'sim': self.sim_report,
-                     'vv_version': VV_VERSION,
-                     'aspect_1_id': aspect_1_id,
-                      'errors': [str(e) for e in self._errors],
-                     'ap_date': str(ap_date)}
+                      'vv_version': VV_VERSION,
+                      'errors': [str(e) for e in self._errors]}
+
+        try:
+            aspect_1_id, ap_date = self._asp1_lookup(obsid, obi, revision)
+            self._info['aspect_1_id'] =  aspect_1_id
+            self._info['ap_date'] =  str(ap_date)
+        except:
+            logger.warn("Could not determine aspect_1_id/date from database")
+
         # we don't care about the DateTimeType for ap_date,
         # so just cast to a string
 
@@ -985,7 +990,12 @@ class AspectInterval(object):
         if not len(missing_slots):
             return
 
-        ocat_stars = self._read_ocat_stars()
+        try:
+            ocat_stars = self._read_ocat_stars()
+        except:
+            logger.warn('Could not get OCAT stars from database')
+            logger.warn('Skipping checks for missing slots')
+            return
         tstart = self.asol_header['TSTART']
         agasc_equinox = DateTime('2000:001:00:00:00.000')
         dyear = (DateTime(tstart) - agasc_equinox) / 365.25

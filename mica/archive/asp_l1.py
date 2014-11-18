@@ -23,6 +23,7 @@ ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'caldbver', 'content',
 #config = ConfigObj('asp1.conf')
 CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'asp1'),
               temp_root=os.path.join(MICA_ARCHIVE, 'temp'),
+              bad_obsids=os.path.join(MICA_ARCHIVE, 'asp1', 'asp_l1_bad_obsids.dat'),
               sql_def='archfiles_asp_l1_def.sql',
               apstat_table='aspect_1',
               apstat_id='aspect_1_id',

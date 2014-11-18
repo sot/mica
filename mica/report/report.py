@@ -53,7 +53,9 @@ FILES = {'sql_def': 'report_processing.sql'}
 DEFAULT_CONFIG = {
     'dbi': 'sqlite',
     'report_root': '/proj/web-icxc/htdocs/aspect/mica_reports',
-    'server': os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3')}
+    'server': os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3'),
+    'update_mode': True,
+    'retry_failure': False}
 
 
 def get_options():
@@ -437,7 +439,7 @@ def main(obsid, config=None, report_root=None):
         report_root=config['report_root']
 
     global ACA_DB
-    if ACA_DB is None:
+    if ACA_DB is None or not ACA_DB.conn._is_connected:
         ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
 
 
@@ -540,6 +542,23 @@ def main(obsid, config=None, report_root=None):
         f = open(full_report_file, 'w')
         f.write(page)
         f.close()
+        notes = {'report_version': REPORT_VERSION,
+                 'vv_version': None,
+                 'vv_revision': None,
+                 'aspect_1_id': None,
+                 'last_sched': last_sched,
+                 'ocat_status': report_status.get('ocat'),
+                 'long_term': str(report_status.get('long_term')),
+                 'short_term': str(report_status.get('short_term')),
+                 'starcheck': report_status.get('starcheck'),
+                 'obsid': obsid,
+                 'checked_date': DateTime().date}
+        f = open(os.path.join(outdir, 'notes.json'), 'w')
+        f.write(json.dumps(notes,
+                           sort_keys=True,
+                           indent=4))
+        f.close()
+        save_state_in_db(obsid, notes, config)
         return
 
     if not er and 'shortterm' in links:
@@ -727,7 +746,6 @@ def main(obsid, config=None, report_root=None):
     f.write(json.dumps(cat_table, sort_keys=True, indent=4))
     f.close()
 
-    f = open(os.path.join(outdir, 'notes.json'), 'w')
     notes = {'report_version': REPORT_VERSION,
              'vv_version': None,
              'vv_revision': None,
@@ -743,6 +761,7 @@ def main(obsid, config=None, report_root=None):
         notes['vv_version'] = vv.get('vv_version')
         notes['vv_revision'] = vv.get('revision')
         notes['aspect_1_id'] = vv.get('aspect_1_id')
+    f = open(os.path.join(outdir, 'notes.json'), 'w')
     f.write(json.dumps(notes,
                        sort_keys=True,
                        indent=4))
@@ -797,47 +816,88 @@ def save_state_in_db(obsid, notes, config=None):
 def update(report_root=DEFAULT_REPORT_ROOT):
 
     global ACA_DB
-    if ACA_DB is None:
+    if ACA_DB is None or not ACA_DB.conn._is_connected:
         ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
 
     recent_obs = ACA_DB.fetchall("select distinct obsid from cmd_states "
                              "where datestart > '{}'".format(DateTime(-7).date))
     for obs in recent_obs:
-        main(obs['obsid'], config=None, report_root=report_root)
+        process_obsids([obs['obsid']], report_root=report_root)
 
     ACA_DB.conn.close()
 
 
-def process_obsids(obsids, report_root=DEFAULT_REPORT_ROOT):
+def process_obsids(obsids, config=None, report_root=None):
+    if config is None:
+         config = DEFAULT_CONFIG
+    if report_root is None:
+        report_root=config['report_root']
+
     for obsid in obsids:
         strobs = "%05d" % obsid
         chunk_dir = strobs[0:2]
         topdir = os.path.join(report_root, chunk_dir)
         outdir = os.path.join(topdir, strobs)
-        if os.path.exists(outdir):
+        if os.path.exists(outdir) and not config['update_mode']:
             logger.info("Skipping {}, output dir exists.".format(obsid))
-        if os.path.exists("{}.ERR".format(outdir)):
-            logger.info("Skipping {}, output.ERR dir exists.".format(obsid))
+            continue
+        if not config['retry_failure'] and os.path.exists(os.path.join(outdir, "proc_err")):
+            logger.info("Skipping {}, previous processing error.".format(obsid))
+            continue
         if not os.path.exists(outdir):
-            try:
-                os.makedirs("{}".format(outdir))
-                main(obsid, config=None, report_root=report_root)
-            except:
-                os.makedirs("{}.ERR".format(outdir))
-                etype, emess, traceback = sys.exc_info()
-                notes = {'report_version': REPORT_VERSION,
-                         'obsid': obsid,
-                         'checked_date': DateTime().date,
-                         'last_sched': "{} {}".format(etype, emess),
-                         'vv_version': None,
-                         'vv_revision': None,
-                         'aspect_1_id': None,
-                         'ocat_status': None,
-                         'long_term': None,
-                         'short_term': None,
-                         'starcheck': None}
-                save_state_in_db(obsid, notes, config=None)
-
+            os.makedirs("{}".format(outdir))
+        # Delete files from old failure if reprocessing
+        for failfile in ['proc_err', 'trace.txt']:
+            if os.path.exists(os.path.join(outdir, failfile)):
+                os.unlink(os.path.join(outdir, failfile))
+        try:
+            main(obsid, config=config, report_root=report_root)
+        except:
+            import traceback
+            etype, emess, trace = sys.exc_info()
+            logger.info("Failed report on {}".format(obsid))
+            # Make an empty file to record the error status
+            f = open(os.path.join(outdir, 'proc_err'), 'w')
+            f.close()
+            # Write out the traceback too
+            trace_file = open(os.path.join(outdir, 'trace.txt'), 'w')
+            traceback.print_tb(trace, file=trace_file)
+            trace_file.close()
+            # Write out a notes jason file
+            notes = {'report_version': REPORT_VERSION,
+                     'obsid': obsid,
+                     'checked_date': DateTime().date,
+                     'last_sched': "{}".format(str(emess)),
+                     'vv_version': None,
+                     'vv_revision': None,
+                     'aspect_1_id': None,
+                     'ocat_status': None,
+                     'long_term': None,
+                     'short_term': None,
+                     'starcheck': None}
+            f = open(os.path.join(outdir, 'notes.json'), 'w')
+            f.write(json.dumps(notes,
+                               sort_keys=True,
+                               indent=4))
+            f.close()
+            # Make a stub html page
+            proc_date = DateTime().date
+            jinja_env = jinja2.Environment(
+                loader=jinja2.FileSystemLoader(
+                    os.path.join(os.environ['SKA'], 'data', 'mica', 'templates')))
+            jinja_env.line_comment_prefix = '##'
+            jinja_env.line_statement_prefix = '#'
+            template = jinja_env.get_template('proc_error.html')
+            page = template.render(obsid=obsid,
+                                   proc_date=proc_date,
+                                   version=version)
+            full_report_file = os.path.join(outdir, 'index.html')
+            logger.info("Writing out error stub report to {}".format(full_report_file))
+            f = open(full_report_file, 'w')
+            f.write(page)
+            f.close()
+            # Save the bad state in the database
+            save_state_in_db(obsid, notes, config=None)
 
 
 def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
