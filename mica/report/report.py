@@ -54,7 +54,8 @@ DEFAULT_CONFIG = {
     'dbi': 'sqlite',
     'report_root': '/proj/web-icxc/htdocs/aspect/mica_reports',
     'server': os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3'),
-    'update_mode': True}
+    'update_mode': True,
+    'retry_failure': False}
 
 
 def get_options():
@@ -840,12 +841,15 @@ def process_obsids(obsids, config=None, report_root=None):
         if os.path.exists(outdir) and not config['update_mode']:
             logger.info("Skipping {}, output dir exists.".format(obsid))
             continue
-        if os.path.exists(os.path.join(outdir, "proc_err")):
+        if not config['retry_failure'] and os.path.exists(os.path.join(outdir, "proc_err")):
             logger.info("Skipping {}, previous processing error.".format(obsid))
             continue
         if not os.path.exists(outdir):
             os.makedirs("{}".format(outdir))
-
+        # Delete files from old failure if reprocessing
+        for failfile in ['proc_err', 'trace.txt']:
+            if os.path.exists(os.path.join(outdir, failfile)):
+                os.unlink(os.path.join(outdir, failfile))
         try:
             main(obsid, config=config, report_root=report_root)
         except:
