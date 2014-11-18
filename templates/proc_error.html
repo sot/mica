@@ -1,0 +1,67 @@
+<HTML>
+<HEAD>
+<TITLE>Obsid {{ obsid }}</TITLE>
+<script type="text/javascript" src="/aspect/overlib.js"></script>
+<style type="text/css">
+  body { min-width:900px;
+         margin-left: 20px;
+         background-color: lightblue;
+}
+  div#fullwidth {
+    clear: both;
+    position: static;
+    width:1200px;
+    left:0px;
+  }
+  div#leftmain {
+    float: left;
+    width: 780px;
+    left:0px;
+    top: 0px;
+  }
+  div#leftsmall {
+    float: left;
+    width: 765px;
+  }
+  div.border{
+    background-color: white;
+    padding-left: 10px;
+    padding-bottom: 5px;
+    border-style: solid;
+    border-width: 5px;
+    border-radius: 20px;
+  }
+  div#rightlarge {
+    float: right;
+    width: 415px;
+  }
+  div#rightsmall {
+    float: right;
+    width: 375px;
+    left:900px;
+    top: 0px;
+  }
+
+button {
+    background:none!important;
+     border:none; 
+     padding:0!important;
+     color:#069;
+     text-decoration:underline;
+     cursor:pointer;
+}
+</style>
+</HEAD>
+<BODY>
+<div id="fullwidth">
+<div id="leftmain">
+<div class="border" style="padding: 10px; margin-bottom: .5cm">
+<P>There was an error making a report for {{ obsid }} when attempted on {{ proc_date }}.  Please contact aspect_help if you need the report for this page.</P>
+</div>
+</div>
+</div>
+
+<CENTER><FONT size="-2">mica.report version {{ version }}</FONT></CENTER>
+
+</BODY>
+</HTML>

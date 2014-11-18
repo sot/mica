@@ -840,8 +840,8 @@ def process_obsids(obsids, config=None, report_root=None):
         if os.path.exists(outdir) and not config['update_mode']:
             logger.info("Skipping {}, output dir exists.".format(obsid))
             continue
-        if os.path.exists("{}.ERR".format(outdir)):
-            logger.info("Skipping {}, output.ERR dir exists.".format(obsid))
+        if os.path.exists(os.path.join(outdir, "proc_err")):
+            logger.info("Skipping {}, previous processing error.".format(obsid))
             continue
         if not os.path.exists(outdir):
             os.makedirs("{}".format(outdir))
@@ -849,14 +849,17 @@ def process_obsids(obsids, config=None, report_root=None):
         try:
             main(obsid, config=config, report_root=report_root)
         except:
-            os.makedirs("{}.ERR".format(outdir))
             import traceback
             etype, emess, trace = sys.exc_info()
             logger.info("Failed report on {}".format(obsid))
-            trace_file = open(os.path.join("{}.ERR".format(outdir),
-                                  'trace.txt'), 'w')
+            # Make an empty file to record the error status
+            f = open(os.path.join(outdir, 'proc_err'), 'w')
+            f.close()
+            # Write out the traceback too
+            trace_file = open(os.path.join(outdir, 'trace.txt'), 'w')
             traceback.print_tb(trace, file=trace_file)
             trace_file.close()
+            # Write out a notes jason file
             notes = {'report_version': REPORT_VERSION,
                      'obsid': obsid,
                      'checked_date': DateTime().date,
@@ -868,12 +871,28 @@ def process_obsids(obsids, config=None, report_root=None):
                      'long_term': None,
                      'short_term': None,
                      'starcheck': None}
-            f = open(os.path.join("{}.ERR".format(outdir),
-                                  'notes.json'), 'w')
+            f = open(os.path.join(outdir, 'notes.json'), 'w')
             f.write(json.dumps(notes,
                                sort_keys=True,
                                indent=4))
             f.close()
+            # Make a stub html page
+            proc_date = DateTime().date
+            jinja_env = jinja2.Environment(
+                loader=jinja2.FileSystemLoader(
+                    os.path.join(os.environ['SKA'], 'data', 'mica', 'templates')))
+            jinja_env.line_comment_prefix = '##'
+            jinja_env.line_statement_prefix = '#'
+            template = jinja_env.get_template('proc_error.html')
+            page = template.render(obsid=obsid,
+                                   proc_date=proc_date,
+                                   version=version)
+            full_report_file = os.path.join(outdir, 'index.html')
+            logger.info("Writing out error stub report to {}".format(full_report_file))
+            f = open(full_report_file, 'w')
+            f.write(page)
+            f.close()
+            # Save the bad state in the database
             save_state_in_db(obsid, notes, config=None)
 
 

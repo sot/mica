@@ -21,7 +21,7 @@ DATA = task_schedule.cfg \
 TEMPLATES = templates/report.html templates/aiprops.html \
 	templates/props.html templates/vv.html \
 	templates/vv_slots_single.html \
-	templates/star.html
+	templates/star.html templates/proc_error.html
 
 install: install_doc
 	mkdir -p $(INSTALL_SHARE)
