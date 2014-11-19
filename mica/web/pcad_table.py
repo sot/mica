@@ -62,7 +62,10 @@ def get_acq_table(obsid):
     simple_data = []
     for drow, trow in zip(vals, times):
         slot_data = {'slots': [],
-                     'time': trow['time']}
+                     'time': trow['time'],
+                     'aorfstr1_slot': slot_for_pos[int(drow['AORFSTR1'])],
+                     'aorfstr2_slot': slot_for_pos[int(drow['AORFSTR2'])],
+                     }
         for m in msids:
             slot_data[m] = drow[m]
         for slot in range(0, 8):

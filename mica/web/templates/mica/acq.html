@@ -54,8 +54,8 @@ style="background-color: lightgray;"
 <tr><td>AOACQSUC</td><td>{{ slice.AOACQSUC }}</td></tr>
 <tr><td>AOFREACQ</td><td>{{ slice.AOFREACQ }}</td></tr>
 {% if slice.AOACASEQ == 'GUID' %}
-<tr><td>AORFSTR1</td><td>{{ slice.AORFSTR1 }}</td></tr>
-<tr><td>AORFSTR2</td><td>{{ slice.AORFSTR2 }}</td></tr>
+<tr><td>AORFSTR1</td><td>{{ slice.AORFSTR1 }} (slot = {{ slice.aorfstr1_slot }})</td></tr>
+<tr><td>AORFSTR2</td><td>{{ slice.AORFSTR2 }} (slot = {{ slice.aorfstr2_slot }})</td></tr>
 {% endif %}
 </table>
 </td>
