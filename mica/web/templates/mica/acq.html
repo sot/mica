@@ -63,6 +63,7 @@ style="background-color: lightgray;"
 <table class='pcad' border=1>
 <tr><td>slot</td></tr>
 <tr><td>acfct</td><tr>
+<tr><td>aoimage</td></tr>
 {% if slice.AOACASEQ == 'GUID' %}
 <tr><td>acqid</td><tr>
 {% endif %}
@@ -94,6 +95,7 @@ style="background-color: lightblue;"
 >
 <tr><td>{{slot.slot}}</td></tr>
 <tr><td>{{ slot.AOACFCT }}</td><tr>
+<tr><td>{{ slot.AOIMAGE }}</td></tr>
 {% if slice.AOACASEQ == 'GUID' %}
 <tr><td>{{ slot.POS_ACQID }} [idx: {{slot.catpos}}]</td><tr>
 {% endif %}

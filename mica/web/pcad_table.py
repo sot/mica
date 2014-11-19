@@ -9,7 +9,7 @@ import mica.starcheck
 msids = ['AOACASEQ', 'AOACQSUC', 'AOFREACQ', 'AOFWAIT', 'AOREPEAT',
          'AOACSTAT', 'AOACHIBK', 'AOFSTAR', 'AOFATTMD', 'AOACPRGS',
          'AOATUPST', 'AONSTARS', 'AOPCADMD', 'AORFSTR1', 'AORFSTR2']
-per_slot = ['AOACQID', 'AOACFCT',
+per_slot = ['AOACQID', 'AOACFCT', 'AOIMAGE',
             'AOACMAG', 'AOACYAN', 'AOACZAN',
             'AOACICC', 'AOACIDP', 'AOACIIR', 'AOACIMS',
             'AOACIQB', 'AOACISP']
