@@ -62,14 +62,14 @@ style="background-color: lightgray;"
 <td>
 <table class='pcad' border=1>
 <tr><td>slot</td></tr>
-<tr><td>acfct</td><tr>
+<tr><td>acfct</td></tr>
 <tr><td>aoimage</td></tr>
 {% if slice.AOACASEQ == 'GUID' %}
-<tr><td>acqid</td><tr>
+<tr><td>acqid</td></tr>
 {% endif %}
-<tr><td>mag</td><tr>
-<tr><td>yang</td><tr>
-<tr><td>zang</td><tr>
+<tr><td>mag</td></tr>
+<tr><td>yang</td></tr>
+<tr><td>zang</td></tr>
 <tr><td>ion_rad</td></tr>
 <tr><td>mult_star</td></tr>
 <tr><td>comm_col</td></tr>
@@ -94,14 +94,14 @@ style="background-color: lightblue;"
 {% endif %}
 >
 <tr><td>{{slot.slot}}</td></tr>
-<tr><td>{{ slot.AOACFCT }}</td><tr>
+<tr><td>{{ slot.AOACFCT }}</td></tr>
 <tr><td>{{ slot.AOIMAGE }}</td></tr>
 {% if slice.AOACASEQ == 'GUID' %}
-<tr><td>{{ slot.POS_ACQID }} [idx: {{slot.catpos}}]</td><tr>
+<tr><td>{{ slot.POS_ACQID }} [idx: {{slot.catpos}}]</td></tr>
 {% endif %}
-<tr><td>{{ slot.AOACMAG }}</td><tr>
-<tr><td>{{ slot.AOACYAN }}</td><tr>
-<tr><td>{{ slot.AOACZAN }}</td><tr>
+<tr><td>{{ slot.AOACMAG }}</td></tr>
+<tr><td>{{ slot.AOACYAN }}</td></tr>
+<tr><td>{{ slot.AOACZAN }}</td></tr>
 <tr><td
 {% if slot.AOACIIR == 'ERR' %}
 bgcolor='red'
