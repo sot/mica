@@ -1,14 +1,18 @@
 from kadi import events
-#import numpy as np
+import numpy as np
 from Chandra.Time import DateTime
 from Ska.engarchive import fetch
 from astropy.table import Table, Column
+from mica.quaternion import Quat
+import Ska.quatutil
 #import mica.archive.aca_l0
 import mica.starcheck
+import agasc
 
 msids = ['AOACASEQ', 'AOACQSUC', 'AOFREACQ', 'AOFWAIT', 'AOREPEAT',
          'AOACSTAT', 'AOACHIBK', 'AOFSTAR', 'AOFATTMD', 'AOACPRGS',
-         'AOATUPST', 'AONSTARS', 'AOPCADMD', 'AORFSTR1', 'AORFSTR2']
+         'AOATUPST', 'AONSTARS', 'AOPCADMD', 'AORFSTR1', 'AORFSTR2',
+         'AOATTQT1', 'AOATTQT2', 'AOATTQT3', 'AOATTQT4']
 per_slot = ['AOACQID', 'AOACFCT', 'AOIMAGE',
             'AOACMAG', 'AOACYAN', 'AOACZAN',
             'AOACICC', 'AOACIDP', 'AOACIIR', 'AOACIMS',
@@ -18,6 +22,44 @@ slot_msids = [field + '%s' % slot
               for field in per_slot
               for slot in range(0, 8)]
 
+def deltas_vs_obc_quat(vals, times, catalog):
+    # Ignore misalign
+    aca_misalign = np.array([[1.0,0,0], [0,1,0],[0,0,1]])
+    q_att = Quat(np.array([vals['AOATTQT1'],
+                           vals['AOATTQT2'],
+                           vals['AOATTQT3'],
+                           vals['AOATTQT4']]).transpose())
+    Ts = q_att.transform
+    acqs = catalog[(catalog['type'] == 'BOT') | (catalog['type'] == 'ACQ')]
+
+    # Compute the multiplicative factor to convert from the AGASC proper motion
+    # field to degrees.  The AGASC PM is specified in milliarcsecs / year, so this
+    # is dyear * (degrees / milliarcsec)
+    agasc_equinox = DateTime('2000:001:00:00:00.000')
+    dyear = (DateTime(times[0]) - agasc_equinox) / 365.25
+    pm_to_degrees = dyear / (3600. * 1000.)
+    R2A = 206264.81
+
+    dy = {}
+    dz = {}
+    for slot in range(0, 8):
+        agasc_id = acqs[acqs['slot'] == slot][0]['id']
+        star = agasc.get_star(agasc_id)
+        ra = star['RA']
+        dec = star['DEC']
+        if star['PM_RA'] != -9999:
+            ra = star['RA'] + star['PM_RA'] * pm_to_degrees
+        if star['PM_DEC'] != -9999:
+            dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
+        star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
+        d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
+                       star_pos_eci).transpose()
+        yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
+        zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
+        dy[slot] = vals['AOACYAN{}'.format(slot)] - yag
+        dz[slot] = vals['AOACZAN{}'.format(slot)] - zag
+
+    return dy, dz
 
 def get_acq_table(obsid):
 
@@ -51,6 +93,12 @@ def get_acq_table(obsid):
                     (cat_row['type'] == 'ACQ') or (cat_row['type'] == 'BOT')]
     pos_for_slot = dict([(slot, idx) for idx, slot in enumerate(slot_for_pos)])
 
+    dy, dz = deltas_vs_obc_quat(vals, times['time'], catalog)
+    for slot in range(0, 8):
+        vals.add_column(Column(name='dy{}'.format(slot),
+                               data=dy[slot].data))
+        vals.add_column(Column(name='dz{}'.format(slot),
+                               data=dz[slot].data))
 
     #l0_data = {}
     #for slot in range(0, 8):
@@ -74,6 +122,8 @@ def get_acq_table(obsid):
             for col in per_slot:
                 if col not in ['AOACQID']:
                     row_dict[col] = drow['{}{}'.format(col, slot)]
+            for col in ['dy', 'dz']:
+                row_dict[col] = drow['{}{}'.format(col, slot)]
             row_dict['POS_ACQID'] = drow['AOACQID{}'.format(pos_for_slot[slot])]
             #idx = np.searchsorted(l0_data[slot]['TIME'], trow['time'])
             #for col in ['GLBSTAT', 'IMGSIZE', 'IMGSTAT', 'BGDAVG', 'BGDSTAT', 'IMGFUNC1']:
