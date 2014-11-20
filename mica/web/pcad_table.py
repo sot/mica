@@ -83,6 +83,9 @@ def get_acq_table(obsid):
     vals, times = compress_data(vals, times)
     d_times = times['time'] - DateTime(manvr.guide_start).secs
 
+    # Get the catalog for the stars
+    # This is used both to map ACQID to the right slot and
+    # to get the star positions to estimate deltas later
     starcheck = mica.starcheck.get_starcheck_catalog(int(obsid))
     if 'cat' not in starcheck:
         raise ValueError('No starcheck catalog found for {}'.format(obsid))
@@ -91,7 +94,12 @@ def get_acq_table(obsid):
     slot_for_pos = [cat_row['slot'] for cat_row in catalog if
                     (cat_row['type'] == 'ACQ') or (cat_row['type'] == 'BOT')]
     pos_for_slot = dict([(slot, idx) for idx, slot in enumerate(slot_for_pos)])
+    # Also, save out the starcheck index for each slot for later
+    index_for_slot = dict([(cat_row['slot'], cat_row['idx'])
+                           for cat_row in catalog if
+                           (cat_row['type'] == 'ACQ') or (cat_row['type'] == 'BOT')])
 
+    # Estimate the offsets from the expected catalog positions
     dy, dz = deltas_vs_obc_quat(vals, times['time'], catalog)
     for slot in range(0, 8):
         vals.add_column(Column(name='dy{}'.format(slot),
@@ -110,7 +118,9 @@ def get_acq_table(obsid):
         for m in msids:
             slot_data[m] = drow[m]
         for slot in range(0, 8):
-            row_dict = {'slot': slot, 'catpos': pos_for_slot[slot]}
+            row_dict = {'slot': slot,
+                        'catpos': pos_for_slot[slot],
+                        'index': index_for_slot[slot]}
             for col in per_slot:
                 if col not in ['AOACQID']:
                     row_dict[col] = drow['{}{}'.format(col, slot)]
