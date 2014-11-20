@@ -5,7 +5,6 @@ from Ska.engarchive import fetch
 from astropy.table import Table, Column
 from mica.quaternion import Quat
 import Ska.quatutil
-#import mica.archive.aca_l0
 import mica.starcheck
 import agasc
 
@@ -100,12 +99,6 @@ def get_acq_table(obsid):
         vals.add_column(Column(name='dz{}'.format(slot),
                                data=dz[slot].data))
 
-    #l0_data = {}
-    #for slot in range(0, 8):
-    #    l0_data[slot] = mica.archive.aca_l0.get_slot_data(start_time - 5,
-    #                                                      stop_time,
-    #                                                      slot)
-
     # make a list of dicts of the table
     simple_data = []
     for drow, trow in zip(vals, times):
@@ -117,7 +110,6 @@ def get_acq_table(obsid):
         for m in msids:
             slot_data[m] = drow[m]
         for slot in range(0, 8):
-        #for slot in [1]:
             row_dict = {'slot': slot, 'catpos': pos_for_slot[slot]}
             for col in per_slot:
                 if col not in ['AOACQID']:
@@ -125,21 +117,11 @@ def get_acq_table(obsid):
             for col in ['dy', 'dz']:
                 row_dict[col] = drow['{}{}'.format(col, slot)]
             row_dict['POS_ACQID'] = drow['AOACQID{}'.format(pos_for_slot[slot])]
-            #idx = np.searchsorted(l0_data[slot]['TIME'], trow['time'])
-            #for col in ['GLBSTAT', 'IMGSIZE', 'IMGSTAT', 'BGDAVG', 'BGDSTAT', 'IMGFUNC1']:
-            #    row_dict[col] = l0_data[slot][idx - 1][col]
             slot_data['slots'].append(row_dict)
         simple_data.append(slot_data)
 
     return simple_data
 
-#from django.template import Template, Context
-#acq_template = open('templates/acq.html').read()
-#template = Template(acq_template)
-#c = Context({'vals': simple_data})
-#f = open('out.html', 'w')
-#f.write(template.render(c))
-#f.close()
 
 
 
