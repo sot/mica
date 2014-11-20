@@ -101,12 +101,12 @@ style="background-color: lightblue;"
 {% if slice.AOACASEQ == 'GUID' %}
 <tr><td>{{ slot.POS_ACQID }} [idx: {{slot.catpos}}]</td></tr>
 {% endif %}
-<tr><td>{{ slot.AOACMAG }}</td></tr>
-<tr><td>{{ slot.AOACYAN }}</td></tr>
-<tr><td>{{ slot.AOACZAN }}</td></tr>
+<tr><td style="text-align:right">{{ slot.AOACMAG|floatformat:2 }}</td></tr>
+<tr><td style="text-align:right">{{ slot.AOACYAN|floatformat:2 }}</td></tr>
+<tr><td style="text-align:right">{{ slot.AOACZAN|floatformat:2 }}</td></tr>
 {% if slot.AOACFCT == 'TRAK' %}
-<tr><td>{{ slot.dy }}</td></tr>
-<tr><td>{{ slot.dz }}</td></tr>
+<tr><td style="text-align:right">{{ slot.dy|floatformat:2 }}</td></tr>
+<tr><td style="text-align:right">{{ slot.dz|floatformat:2 }}</td></tr>
 {% else %}
 <tr><td>&nbsp;</td></tr>
 <tr><td>&nbsp;</td></tr>
