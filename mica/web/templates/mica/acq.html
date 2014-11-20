@@ -75,6 +75,7 @@ style="background-color: lightgray;"
 <tr><td>zang</td></tr>
 <tr><td>dy</td></tr>
 <tr><td>dz</td></tr>
+<tr><td>dmag</td></tr>
 <tr><td>ion_rad</td></tr>
 <tr><td>mult_star</td></tr>
 <tr><td>comm_col</td></tr>
@@ -113,7 +114,9 @@ style="background-color: lightblue;"
 {% if slot.AOACFCT == 'TRAK' %}
 <tr><td style="text-align:right">{{ slot.dy|floatformat:2 }}</td></tr>
 <tr><td style="text-align:right">{{ slot.dz|floatformat:2 }}</td></tr>
+<tr><td style="text-align:right">{{ slot.dmag|floatformat:2 }}</td></tr>
 {% else %}
+<tr><td>&nbsp;</td></tr>
 <tr><td>&nbsp;</td></tr>
 <tr><td>&nbsp;</td></tr>
 {% endif %}

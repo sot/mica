@@ -91,13 +91,13 @@ def get_acq_table(obsid):
         raise ValueError('No starcheck catalog found for {}'.format(obsid))
     catalog = Table(starcheck['cat'])
     catalog.sort('idx')
-    slot_for_pos = [cat_row['slot'] for cat_row in catalog if
-                    (cat_row['type'] == 'ACQ') or (cat_row['type'] == 'BOT')]
+    # Filter the catalog to be just acquisition stars
+    catalog = catalog[(catalog['type'] == 'ACQ') | (catalog['type'] == 'BOT')]
+    slot_for_pos = [cat_row['slot'] for cat_row in catalog]
     pos_for_slot = dict([(slot, idx) for idx, slot in enumerate(slot_for_pos)])
     # Also, save out the starcheck index for each slot for later
     index_for_slot = dict([(cat_row['slot'], cat_row['idx'])
-                           for cat_row in catalog if
-                           (cat_row['type'] == 'ACQ') or (cat_row['type'] == 'BOT')])
+                           for cat_row in catalog])
 
     # Estimate the offsets from the expected catalog positions
     dy, dz = deltas_vs_obc_quat(vals, times['time'], catalog)
@@ -106,6 +106,10 @@ def get_acq_table(obsid):
                                data=dy[slot].data))
         vals.add_column(Column(name='dz{}'.format(slot),
                                data=dz[slot].data))
+        cat_entry = catalog[catalog['slot'] == slot][0]
+        dmag = vals['AOACMAG{}'.format(slot)] - cat_entry['mag']
+        vals.add_column(Column(name='dmag{}'.format(slot),
+                               data=dmag.data))
 
     # make a list of dicts of the table
     simple_data = []
@@ -124,7 +128,7 @@ def get_acq_table(obsid):
             for col in per_slot:
                 if col not in ['AOACQID']:
                     row_dict[col] = drow['{}{}'.format(col, slot)]
-            for col in ['dy', 'dz']:
+            for col in ['dy', 'dz', 'dmag']:
                 row_dict[col] = drow['{}{}'.format(col, slot)]
             row_dict['POS_ACQID'] = drow['AOACQID{}'.format(pos_for_slot[slot])]
             slot_data['slots'].append(row_dict)
