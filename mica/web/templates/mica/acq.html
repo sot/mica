@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+table.pcad td {
+line-height: 1rem;
+padding: .4rem;
+font-size: .7rem;
+}
+table.pcad tr {
+background-color: transparent;
+}
+table.pcad {border-spacing: 5px;}
+</style>
+{% endblock %}
+
+{% block body %}
+<body class="with-background">
+{% endblock %}
+
+{% block content %}
+<p><p>
+<h1 align="center"> PCAD Acquisition Table </h1>
+
+<form action="" method="get">
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="right-label" class="right inline">Obsid</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="right-label" name="obsid" value="{{obsid}}">
+        </div>
+        <div class="large-4 columns"> &nbsp; </div>
+      </div>
+</form>
+
+{% if pcad_data %}
+<TABLE class='pcad' border=1>
+{% for slice in pcad_data %}
+<tr
+{% if slice.AOACASEQ == 'GUID' %}
+style="background-color: lightgray;"
+{% endif %}
+>
+<td>
+<table class='pcad' border=1>
+<tr><td>time</td><td>{{ slice.time }}</td></tr>
+<tr><td>AOPCADMD</td><td>{{ slice.AOPCADMD }}</td></tr>
+<tr><td>AOACASEQ</td><td>{{ slice.AOACASEQ }}</td></tr>
+<tr><td>AOACHIBK</td><td>{{ slice.AOACHIBK }}</td></tr>
+<tr><td>AOACSTAT</td><td>{{ slice.AOACSTAT }}</td></tr>
+<tr><td>AOACPRGS</td><td>{{ slice.AOACPRGS }}</td></tr>
+<tr><td>AOACQSUC</td><td>{{ slice.AOACQSUC }}</td></tr>
+<tr><td>AOFREACQ</td><td>{{ slice.AOFREACQ }}</td></tr>
+{% if slice.AOACASEQ == 'GUID' %}
+<tr><td>AORFSTR1</td><td>{{ slice.AORFSTR1 }} (slot = {{ slice.aorfstr1_slot }})</td></tr>
+<tr><td>AORFSTR2</td><td>{{ slice.AORFSTR2 }} (slot = {{ slice.aorfstr2_slot }})</td></tr>
+{% endif %}
+</table>
+</td>
+<td>
+<table class='pcad' border=1>
+<tr><td>slot</td></tr>
+{% if slice.AOACASEQ == 'GUID' %}
+<tr><td>index</td></tr>
+{% endif %}
+<tr><td>acfct</td></tr>
+<tr><td>aoimage</td></tr>
+{% if slice.AOACASEQ == 'GUID' %}
+<tr><td>acqid</td></tr>
+{% endif %}
+<tr><td>mag</td></tr>
+<tr><td>yang</td></tr>
+<tr><td>zang</td></tr>
+<tr><td>dy</td></tr>
+<tr><td>dz</td></tr>
+<tr><td>dmag</td></tr>
+<tr><td>ion_rad</td></tr>
+<tr><td>mult_star</td></tr>
+<tr><td>comm_col</td></tr>
+<tr><td>def_pix</td></tr>
+<tr><td>sat_pix</td></tr>
+</table>
+</td>
+{% for slot in slice.slots %}
+<td>
+<table class='pcad' border=1
+{% if slice.AOACASEQ == 'AQXN' and slot.AOACFCT == 'TRAK' %}
+style="background-color: lightgreen;"
+{% endif %}
+{% if slice.AOACASEQ == 'GUID' and slot.AOACFCT == 'TRAK' and slot.POS_ACQID == 'NOID' %}
+style="background-color: yellow;"
+{% endif %}
+{% if slice.AOACASEQ == 'GUID' and slot.AOACFCT == 'TRAK' and slot.POS_ACQID == 'ID  ' %}
+style="background-color: lightgreen;"
+{% endif %}
+{% if slice.AOACASEQ == 'AQXN' and slot.AOACFCT == 'SRCH' %}
+style="background-color: lightblue;"
+{% endif %}
+>
+<tr><td>{{slot.slot}}</td></tr>
+{% if slice.AOACASEQ == 'GUID' %}
+<tr><td>{{ slot.index }}</td></tr>
+{% endif %}
+<tr><td>{{ slot.AOACFCT }}</td></tr>
+<tr><td>{{ slot.AOIMAGE }}</td></tr>
+{% if slice.AOACASEQ == 'GUID' %}
+<tr><td>{{ slot.POS_ACQID }}</td></tr>
+{% endif %}
+<tr><td style="text-align:right">{{ slot.AOACMAG|floatformat:2 }}</td></tr>
+<tr><td style="text-align:right">{{ slot.AOACYAN|floatformat:2 }}</td></tr>
+<tr><td style="text-align:right">{{ slot.AOACZAN|floatformat:2 }}</td></tr>
+{% if slot.AOACFCT == 'TRAK' %}
+<tr><td style="text-align:right">{{ slot.dy|floatformat:2 }}</td></tr>
+<tr><td style="text-align:right">{{ slot.dz|floatformat:2 }}</td></tr>
+<tr><td style="text-align:right">{{ slot.dmag|floatformat:2 }}</td></tr>
+{% else %}
+<tr><td>&nbsp;</td></tr>
+<tr><td>&nbsp;</td></tr>
+<tr><td>&nbsp;</td></tr>
+{% endif %}
+<tr><td
+{% if slot.AOACIIR == 'ERR' %}
+bgcolor='red'
+{% endif %}
+>{{ slot.AOACIIR }}</td></tr>
+<tr><td
+{% if slot.AOACIMS == 'ERR' %}
+bgcolor='red'
+{% endif %}
+>{{ slot.AOACIMS }}</td></tr>
+<tr><td
+{% if slot.AOACICC == 'ERR' %}
+bgcolor='red'
+{% endif %}
+>{{ slot.AOACICC }}</td></tr>
+<tr><td
+{% if slot.AOACIDP == 'ERR' %}
+bgcolor='red'
+{% endif %}
+>{{ slot.AOACIDP }}</td></tr>
+<tr><td
+{% if slot.AOACISP == 'ERR' %}
+bgcolor='red'
+{% endif %}
+>{{ slot.AOACISP }}</td></tr>
+</table>
+</td>
+{% endfor %}
+</tr>
+{% endfor %}
+<TABLE>
+<BODY>
+{% endif %}
+
+{% endblock %}
