@@ -595,7 +595,8 @@ class ObsArchive:
                     obs = dict(obsid=int(lmatch.group(1)),
                                revision=int(lmatch.group(2)))
                     todo_obs.append(obs)
-        if not os.path.exists(self.config['bad_obsids']):
+        if ('bad_obsids' not in self.config
+            or not os.path.exists(self.config['bad_obsids'])):
             return todo_obs
         # If there is a table of bad obsids for this type, exclude them
         bad_obsids = Table.read(self.config['bad_obsids'], format='ascii')
