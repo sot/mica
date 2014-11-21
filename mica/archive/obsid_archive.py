@@ -228,7 +228,8 @@ class ObsArchive:
             else:
                 db_query += 'AND revision = %d ' % revision
         db_query += "order by tstart"
-        files = self._archfiles_db.fetchall(db_query)
+        with Ska.DBI.DBI(**self._archfiles_db) as db:
+            files = db.fetchall(db_query)
         return files
 
     def get_dir(self, obsid):
