@@ -11,7 +11,6 @@ class IndexView(BaseView, TemplateView):
         context = super(IndexView, self).get_context_data(**kwargs)
 
         obsid = self.request.GET.get('obsid_or_date', None)
-        print(repr(obsid))
         if obsid is not None:
             try:
                 obsid = int(obsid)
@@ -40,7 +39,6 @@ class AcqView(BaseView, TemplateView):
         context = super(AcqView, self).get_context_data(**kwargs)
 
         obsid = self.request.GET.get('obsid', None)
-        print(repr(obsid))
         if obsid is not None:
             try:
                 obsid = int(obsid)
