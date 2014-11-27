@@ -182,10 +182,10 @@ def process(obsid, version='last'):
     obi = get_arch_vv(obsid, version)
     if not os.path.exists(FILES['temp_root']):
         os.makedirs(FILES['temp_root'])
-    obi.tempdir = tempfile.mkdtemp(dir=FILES['temp_root'])
-    obi.save_plots_and_resid()
     if obi is None:
         return None
+    obi.tempdir = tempfile.mkdtemp(dir=FILES['temp_root'])
+    obi.save_plots_and_resid()
     shelf_file = os.path.join(FILES['data_root'],
                               FILES['shelf_file'])
     obi.shelve_info(shelf_file)
