@@ -158,7 +158,6 @@ def main():
     archive.logger.setLevel(logging.INFO)
     archive.logger.addHandler(logging.StreamHandler())
     obsids = archive.update()
-    asp_l1_proc.update(obsids)
 
 if __name__ == '__main__':
     main()

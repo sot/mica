@@ -693,6 +693,9 @@ class ObsArchive:
             last_id_fh = open(last_id_file, 'w')
             last_id_fh.write("%d" % obs[config['apstat_id']])
             last_id_fh.close()
+            if config['label'] == 'asp_l1':
+                import mica.archive.asp_l1_proc
+                mica.archive.asp_l1_proc.update([obs['obsid']])
             updated_obsids.append(obs['obsid'])
         if not len(todo):
             logger.info("No new data")
@@ -759,5 +762,8 @@ class ObsArchive:
                     logger.debug(ve)
                     continue
                 self.update_link(obs['obsid'])
+            if config['label'] == 'asp_l1':
+                import mica.archive.asp_l1_proc
+                mica.archive.asp_l1_proc.update([obs['obsid']])
             updated_obsids.append(obs['obsid'])
         return updated_obsids
