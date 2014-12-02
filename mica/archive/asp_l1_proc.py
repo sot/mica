@@ -24,7 +24,8 @@ def update(obsids, config=None):
         config = DEFAULT_CONFIG
     logger = logging.getLogger('asp 1 proc table')
     logger.setLevel(logging.INFO)
-    logger.addHandler(logging.StreamHandler())
+    if not len(logger.handlers):
+        logger.addHandler(logging.StreamHandler())
 
     apstat_db = dict(dbi='sybase',
                      server='sqlsao',
