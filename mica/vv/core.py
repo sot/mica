@@ -1012,8 +1012,29 @@ class AspectInterval(object):
                 logger.info("Missing slot is MONITOR.  Skipping...")
                 continue
             if ocat_info['type'] == 2:
-                logger.warn("Missing slot is FID. Skipping (not yet implemented)...")
-                continue
+                logger.warn("Missing slot is FID.")
+                mock_prop = dict(
+                                 id_status='OMITTED',
+                                 slot=slot,
+                                 id_string=ocat_info['id'],
+                                 id_num=ocat_info['id'],
+                                 ang_y_nom=ocat_info['y_ang'],
+                                 ang_z_nom=ocat_info['z_ang'],
+                                 mag_i_cmd=0,
+                                 mag_i_avg=0,
+                                 mag_i_min=0,
+                                 mag_i_max=0,
+                                 p_lsi=np.array([0,0,0]),
+                                 )
+                self.fidprop.resize(len(self.fidprop) + 1)
+                self.fidprop[-1] = np.rec.fromrecords([[mock_prop[col]
+                                                       for col in self.fidprop.dtype.names]],
+                                                     dtype=self.fidprop.dtype)
+                self.fidpr_info.append(dict(slot=slot,
+                                            tstart=self.asol_header['TSTART'],
+                                            tstop=self.asol_header['TSTOP'],
+                                            id_status='OMITTED'))
+
             if ocat_info['type'] == 1:
                 import agasc
                 star_info = agasc.get_star(ocat_info['id'])
