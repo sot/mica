@@ -305,10 +305,10 @@ def obs_links(obsid, sequence=None, plan=None):
             month = dtm.strftime("%b")
             dom = dtm.strftime("%d")
             links['fot_daily'] = {
-                'label': "Daily Plots {}:{}".format(year, doy),
-                'link': "{root}/{year}/{upper_month}/{lower_month}{day_of_month}_{doy}/".format(
+                'label': "Daily Plots {}:{:03d}".format(year, int(doy)),
+                'link': "{root}/{year}/{upper_month}/{lower_month}{day_of_month:02d}_{doy:03d}/".format(
                     root=DAILY_PLOT_ROOT, year=year, upper_month=month.upper(),
-                    lower_month=month.lower(), day_of_month=dom, doy=doy)}
+                    lower_month=month.lower(), day_of_month=int(dom), doy=int(doy))}
         vv, vvid = official_vv(obsid)
         links['shortterm'] = {'link': guess_shortterm(mp_dir),
                               'label': "Short Term Sched. {}".format(mp_label)}
