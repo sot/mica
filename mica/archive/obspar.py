@@ -257,7 +257,7 @@ def get_obspar_file(obsid, version='default'):
     :returns: path of obspar or None
     """
     dirs = archive.get_obs_dirs(obsid)
-    if version in dirs:
+    if dirs is not None and version in dirs:
         obsparfiles = glob(os.path.join(dirs[version], 'axaff*par*'))
         if len(obsparfiles):
             return obsparfiles[0]
