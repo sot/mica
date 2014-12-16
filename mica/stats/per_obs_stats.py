@@ -52,9 +52,10 @@ cat_cols = [
 
 stat_cols = [
     ('acqid', 'bool'),
-    ('anything_tracked', 'bool'),
-    ('probably_tracked', 'bool'),
-    ('tracked_at_trans', 'bool'),
+    ('star_tracked', 'bool'),
+    ('spoiler_tracked', 'bool'),
+    ('img_func', 'S7'),
+    ('n_trak_interv', 'int'),
     ('max_trak_cdy',  'float'),
     ('min_trak_cdy',  'float'),
     ('mean_trak_cdy', 'float'),
@@ -96,6 +97,9 @@ agasc_cols = [
     ('acqq1', 'int'),
     ('acqq2', 'int'),
     ('acqq4', 'int')]
+
+use_cols = [
+    ('known_bad', 'bool')]
 
 table_file = 'acq_stats.h5'
 
@@ -242,7 +246,7 @@ def get_modern_data(manvr, dwell, starcheck):
                 name=field, data=raw_eng_data[field].vals))
         times = Table([raw_eng_data['AOACASEQ'].times],
                       names=['time'])
-    if len(eng_data['AOACASEQ']):
+    if not len(eng_data['AOACASEQ']):
         raise ValueError("No telemetry for obsid {}".format(manvr.get_obsid()))
 
     # Estimate the offsets from the expected catalog positions
@@ -298,8 +302,7 @@ def get_modern_data(manvr, dwell, starcheck):
         eng_data.add_column(
             Column(
                 name='POS_ACQID{}'.format(slot),
-                data=eng_data['AOACQID{}'.format(
-                        pos_for_slot[slot])]))
+                data=eng_data['AOACQID{}'.format(pos_for_slot[slot])]))
 
     return eng_data, times['time'], one_shot_length, star_info
 
@@ -317,15 +320,19 @@ def calc_acq_stats(manvr, vals, times):
                      & (times < DateTime(manvr.guide_start).secs + 1))
         acq_data = vals[acq_times]
         aoacfct = acq_data['AOACFCT{}'.format(slot)]
-        stats['anything_tracked'] = np.any(aoacfct == 'TRAK')
         # Does it look like the desired star was tracked?
-        stats['probably_tracked'] = False
-        if stats['anything_tracked']:
+        stats['star_tracked'] = False
+        stats['spoiler_tracked'] = False
+        if np.any(aoacfct == 'TRAK'):
             trak = acq_data[aoacfct == 'TRAK']
             corr_dy = trak['corr_dy{}'.format(slot)]
             corr_dz = trak['corr_dz{}'.format(slot)]
-            if ((np.min(corr_dy) < 5.0) & (np.min(corr_dz) < 5.0)):
-                stats['probably_tracked'] = True
+            # cheating here and ignoring spherical trig
+            corr_dr = (corr_dy ** 2 + corr_dz ** 2) ** .5
+            if np.min(corr_dr) < 5.0 :
+                stats['star_tracked'] = True
+            if np.max(corr_dr) >= 5.0:
+                stats['spoiler_tracked'] = True
             stats['mean_trak_cdy'] = np.mean(corr_dy)
             stats['min_trak_cdy'] = np.min(corr_dy)
             stats['max_trak_cdy'] = np.max(corr_dy)
@@ -335,12 +342,19 @@ def calc_acq_stats(manvr, vals, times):
             stats['mean_trak_mag'] = np.mean(trak['AOACMAG{}'.format(slot)])
             stats['min_trak_mag'] = np.min(trak['AOACMAG{}'.format(slot)])
             stats['max_trak_mag'] = np.max(trak['AOACMAG{}'.format(slot)])
-        # Did we try to find the star more than once?
-        stats['tracked_at_trans'] = aoacfct[-2] == 'TRAK'
+            # Did we try to find the star more than once?
+            stats['n_trak_interv'] = 0
+            for i, stat in enumerate(aoacfct):
+                if (i + 1) < len(aoacfct):
+                    if stat != 'TRAK' and aoacfct[i + 1] == 'TRAK':
+                        stats['n_trak_interv'] += 1
+
+        stats['img_func'] = None
+        tracked_at_trans = aoacfct[-2] == 'TRAK'
         # I think it makes slightly more sense to use the
         # "-2" values of these because the quaternions were updated
         # but the star positions weren't at -1
-        if stats['tracked_at_trans']:
+        if tracked_at_trans:
             stats['dy'] = acq_data[-2]['dy{}'.format(slot)]
             stats['dz'] = acq_data[-2]['dz{}'.format(slot)]
             stats['cdy'] = acq_data[-2]['corr_dy{}'.format(slot)]
@@ -348,6 +362,13 @@ def calc_acq_stats(manvr, vals, times):
             stats['mag_obs'] = acq_data[-2]['AOACMAG{}'.format(slot)]
             stats['yang_obs'] = acq_data[-2]['AOACYAN{}'.format(slot)]
             stats['zang_obs'] = acq_data[-2]['AOACZAN{}'.format(slot)]
+            if ((stats['cdy'] ** 2 + stats['cdz'] ** 2) ** .5) < 5.0:
+                stats['img_func'] = 'star'
+            else:
+                stats['img_func'] = 'spoiler'
+        else:
+            stats['img_func'] = aoacfct[-2]
+
         guide_data = vals[guide_times]
         flag_map = {'AOACIDP': 'def_pix',
                     'AOACIIR': 'ion_rad',
@@ -361,11 +382,9 @@ def calc_acq_stats(manvr, vals, times):
 
 
 def get_obsids_to_update():
-    kadi_obsids = events.obsids.filter('2012:116')
+    kadi_obsids = events.obsids.filter('2011:001')
     obsids = [o.obsid for o in kadi_obsids]
     return obsids
-#    return [55754]
-#    return [11576]
 
 
 def get_stats(obsid):
@@ -418,11 +437,12 @@ def get_stats(obsid):
 
 def table_stats(obsid_info, acq_stats, star_info, catalog):
     logger.info("arranging stats into tabular data")
-    cols = o_cols + cat_cols + stat_cols + agasc_cols
+    cols = o_cols + cat_cols + stat_cols + agasc_cols + use_cols
     table = Table(np.zeros((1, 8), dtype=cols).flatten())
     for col in np.dtype(o_cols).names:
         if col in obsid_info:
             table[col][:] = obsid_info[col]
+    # Make a mask to identify 'missing' slots
     missing_slots = np.zeros(8, dtype=bool)
     for slot in range(0, 8):
         row = table[slot]
@@ -438,13 +458,15 @@ def table_stats(obsid_info, acq_stats, star_info, catalog):
             continue
         for col in np.dtype(agasc_cols).names:
             row[col] = star_info[slot][col.upper()]
+        row['known_bad'] = False
+    # Exclude any rows that are missing
     table = table[~missing_slots]
     return table
 
 
 def save_stats(t):
     if not os.path.exists(table_file):
-        cols = o_cols + cat_cols + stat_cols + agasc_cols
+        cols = o_cols + cat_cols + stat_cols + agasc_cols + use_cols
         desc, byteorder = tables.descr_from_dtype(np.dtype(cols))
         filters = tables.Filters(complevel=5, complib='zlib')
         h5 = tables.openFile(table_file, 'a')
@@ -480,7 +502,7 @@ def update():
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, acq_stats, star_info, catalog = get_stats(obsid)
-        except ValueError:
+        except:
             logger.info("Skipping obsid {}".format(obsid))
             continue
         t = table_stats(obsid_info, acq_stats, star_info, catalog)
