@@ -19,87 +19,72 @@ logger.addHandler(logging.StreamHandler())
 
 ID_DIST_LIMIT = 1.5
 
-msids = ['AOACASEQ', 'AOACQSUC', 'AOFREACQ', 'AOFWAIT', 'AOREPEAT',
-         'AOACSTAT', 'AOACHIBK', 'AOFSTAR', 'AOFATTMD', 'AOACPRGS',
-         'AOATUPST', 'AONSTARS', 'AOPCADMD', 'AORFSTR1', 'AORFSTR2',
-         'AOATTQT1', 'AOATTQT2', 'AOATTQT3', 'AOATTQT4']
-per_slot = ['AOACQID', 'AOACFCT', 'AOIMAGE',
-            'AOACMAG', 'AOACYAN', 'AOACZAN',
-            'AOACICC', 'AOACIDP', 'AOACIIR', 'AOACIMS',
-            'AOACIQB', 'AOACISP']
-
-slot_msids = [field + '%s' % slot
-              for field in per_slot
-              for slot in range(0, 8)]
-
-o_cols = [
-    ('obsid', 'int'),
-    ('obi', 'int'),
-    ('acq_start', 'S21'),
-    ('guide_start', 'S21'),
-    ('guide_tstart', 'float'),
-    ('one_shot_length', 'float'),
-    ('revision', 'S15')]
-
-cat_cols = [
-    ('slot', 'int'),
-    ('idx', 'int'),
-    ('type', 'S5'),
-    ('yang', 'float'),
-    ('zang', 'float'),
-    ('halfw', 'int'),
-    ('mag', 'float')]
-
-stat_cols = [
-    ('acqid', 'bool'),
-    ('star_tracked', 'bool'),
-    ('spoiler_tracked', 'bool'),
-    ('img_func', 'S7'),
-    ('n_trak_interv', 'int'),
-    ('max_trak_cdy',  'float'),
-    ('min_trak_cdy',  'float'),
-    ('mean_trak_cdy', 'float'),
-    ('max_trak_cdz',  'float'),
-    ('min_trak_cdz',  'float'),
-    ('mean_trak_cdz', 'float'),
-    ('max_trak_mag',  'float'),
-    ('min_trak_mag',  'float'),
-    ('mean_trak_mag', 'float'),
-    ('cdy', 'float'),
-    ('cdz', 'float'),
-    ('dy', 'float'),
-    ('dz', 'float'),
-    ('ion_rad', 'bool'),
-    ('def_pix', 'bool'),
-    ('mult_star', 'bool'),
-    ('sat_pix', 'bool'),
-    ('mag_obs', 'float'),
-    ('yang_obs', 'float'),
-    ('zang_obs', 'float')]
-
-agasc_cols = [
-    ('agasc_id', 'int'),
-    ('color1', 'float'),
-    ('ra', 'float'),
-    ('dec', 'float'),
-    ('epoch', 'float'),
-    ('pm_ra', 'int'),
-    ('pm_dec', 'int'),
-    ('var', 'int'),
-    ('pos_err', 'int'),
-    ('mag_aca', 'float'),
-    ('mag_err', 'int'),
-    ('mag_band', 'int'),
-    ('pos_catid', 'int'),
-    ('aspq1', 'int'),
-    ('aspq2', 'int'),
-    ('aspq3', 'int'),
-    ('acqq1', 'int'),
-    ('acqq2', 'int'),
-    ('acqq4', 'int')]
-
-use_cols = [
-    ('known_bad', 'bool')]
+ACQ_COLS = {
+    'obs': [
+        ('obsid', 'int'),
+        ('obi', 'int'),
+        ('acq_start', 'S21'),
+        ('guide_start', 'S21'),
+        ('guide_tstart', 'float'),
+        ('one_shot_length', 'float'),
+        ('revision', 'S15')],
+    'cat': [
+        ('slot', 'int'),
+        ('idx', 'int'),
+        ('type', 'S5'),
+        ('yang', 'float'),
+        ('zang', 'float'),
+        ('halfw', 'int'),
+        ('mag', 'float')],
+    'stat': [
+        ('acqid', 'bool'),
+        ('star_tracked', 'bool'),
+        ('spoiler_tracked', 'bool'),
+        ('img_func', 'S7'),
+        ('n_trak_interv', 'int'),
+        ('max_trak_cdy',  'float'),
+        ('min_trak_cdy',  'float'),
+        ('mean_trak_cdy', 'float'),
+        ('max_trak_cdz',  'float'),
+        ('min_trak_cdz',  'float'),
+        ('mean_trak_cdz', 'float'),
+        ('max_trak_mag',  'float'),
+        ('min_trak_mag',  'float'),
+        ('mean_trak_mag', 'float'),
+        ('cdy', 'float'),
+        ('cdz', 'float'),
+        ('dy', 'float'),
+        ('dz', 'float'),
+        ('ion_rad', 'bool'),
+        ('def_pix', 'bool'),
+        ('mult_star', 'bool'),
+        ('sat_pix', 'bool'),
+        ('mag_obs', 'float'),
+        ('yang_obs', 'float'),
+        ('zang_obs', 'float')],
+    'agasc': [
+        ('agasc_id', 'int'),
+        ('color1', 'float'),
+        ('ra', 'float'),
+        ('dec', 'float'),
+        ('epoch', 'float'),
+        ('pm_ra', 'int'),
+        ('pm_dec', 'int'),
+        ('var', 'int'),
+        ('pos_err', 'int'),
+        ('mag_aca', 'float'),
+        ('mag_err', 'int'),
+        ('mag_band', 'int'),
+        ('pos_catid', 'int'),
+        ('aspq1', 'int'),
+        ('aspq2', 'int'),
+        ('aspq3', 'int'),
+        ('acqq1', 'int'),
+        ('acqq2', 'int'),
+        ('acqq4', 'int')],
+    'bad': [
+        ('known_bad', 'bool')]
+    }
 
 table_file = 'acq_stats.h5'
 
@@ -114,12 +99,6 @@ def deltas_vs_obc_quat(vals, times, catalog):
     Ts = q_att.transform
     acqs = catalog[(catalog['type'] == 'BOT') | (catalog['type'] == 'ACQ')]
 
-    # Compute the multiplicative factor to convert from the AGASC proper motion
-    # field to degrees.  The AGASC PM is specified in milliarcsecs / year, so this
-    # is dyear * (degrees / milliarcsec)
-    agasc_equinox = DateTime('2000:001:00:00:00.000')
-    dyear = (DateTime(times[0]) - agasc_equinox) / 365.25
-    pm_to_degrees = dyear / (3600. * 1000.)
     R2A = 206264.81
 
     dy = {}
@@ -134,10 +113,19 @@ def deltas_vs_obc_quat(vals, times, catalog):
         star = agasc.get_star(agasc_id)
         ra = star['RA']
         dec = star['DEC']
-        if star['PM_RA'] != -9999:
-            ra = star['RA'] + star['PM_RA'] * pm_to_degrees
-        if star['PM_DEC'] != -9999:
-            dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
+        if (star['PM_RA'] != -9999 or star['PM_DEC'] != -9999):
+            # Compute the multiplicative factor to convert from
+            # the AGASC proper motion field to degrees.  The AGASC PM
+            # is specified in milliarcsecs / year, so this is
+            # dyear * (degrees / milliarcsec)
+            dyear = ((DateTime(times[0]).secs
+                     - DateTime("{}:001".format(int(star['EPOCH']))).secs)
+                     / 365.25)
+            pm_to_degrees = dyear / (3600. * 1000.)
+            if star['PM_RA'] != -9999:
+                ra = star['RA'] + star['PM_RA'] * pm_to_degrees
+            if star['PM_DEC'] != -9999:
+                dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
         star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
         d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
                        star_pos_eci).transpose()
@@ -232,6 +220,18 @@ def get_modern_data(manvr, dwell, starcheck):
                            for cat_row in catalog])
 
     # Get telemetry
+    msids = ['AOACASEQ', 'AOACQSUC', 'AOFREACQ', 'AOFWAIT', 'AOREPEAT',
+             'AOACSTAT', 'AOACHIBK', 'AOFSTAR', 'AOFATTMD', 'AOACPRGS',
+             'AOATUPST', 'AONSTARS', 'AOPCADMD', 'AORFSTR1', 'AORFSTR2',
+             'AOATTQT1', 'AOATTQT2', 'AOATTQT3', 'AOATTQT4']
+    per_slot = ['AOACQID', 'AOACFCT', 'AOIMAGE',
+                'AOACMAG', 'AOACYAN', 'AOACZAN',
+                'AOACICC', 'AOACIDP', 'AOACIIR', 'AOACIMS',
+                'AOACIQB', 'AOACISP']
+    slot_msids = [field + '%s' % slot
+                  for field in per_slot
+                  for slot in range(0, 8)]
+
     start_time = DateTime(manvr.acq_start).secs
     stop_time = DateTime(dwell.start).secs + 100
     raw_eng_data = fetch.MSIDset(msids + slot_msids,
@@ -329,7 +329,7 @@ def calc_acq_stats(manvr, vals, times):
             corr_dz = trak['corr_dz{}'.format(slot)]
             # cheating here and ignoring spherical trig
             corr_dr = (corr_dy ** 2 + corr_dz ** 2) ** .5
-            if np.min(corr_dr) < 5.0 :
+            if np.min(corr_dr) < 5.0:
                 stats['star_tracked'] = True
             if np.max(corr_dr) >= 5.0:
                 stats['spoiler_tracked'] = True
@@ -382,9 +382,17 @@ def calc_acq_stats(manvr, vals, times):
 
 
 def get_obsids_to_update():
-    kadi_obsids = events.obsids.filter('2011:001')
+    try:
+        h5 = tables.openFile(table_file, 'r')
+        tbl = h5.getNode('/', 'data')
+        last_tstart = tbl.cols.guide_tstart[tbl.colindexes['guide_tstart'][-1]]
+        h5.close()
+    except:
+        last_tstart = '1998:001'
+    kadi_obsids = events.obsids.filter(start=last_tstart)
     obsids = [o.obsid for o in kadi_obsids]
-    return obsids
+    # Skip the first obsid (as we already have it in the table)
+    return obsids[1:]
 
 
 def get_stats(obsid):
@@ -435,11 +443,12 @@ def get_stats(obsid):
     return obsid_info, acq_stats, star_info, catalog
 
 
-def table_stats(obsid_info, acq_stats, star_info, catalog):
+def table_acq_stats(obsid_info, acq_stats, star_info, catalog):
     logger.info("arranging stats into tabular data")
-    cols = o_cols + cat_cols + stat_cols + agasc_cols + use_cols
+    cols = (ACQ_COLS['obs'] + ACQ_COLS['cat'] + ACQ_COLS['stat']
+            + ACQ_COLS['agasc'] + ACQ_COLS['bad'])
     table = Table(np.zeros((1, 8), dtype=cols).flatten())
-    for col in np.dtype(o_cols).names:
+    for col in np.dtype(ACQ_COLS['obs']).names:
         if col in obsid_info:
             table[col][:] = obsid_info[col]
     # Make a mask to identify 'missing' slots
@@ -449,14 +458,14 @@ def table_stats(obsid_info, acq_stats, star_info, catalog):
         if slot not in catalog['slot']:
             missing_slots[slot] = True
             continue
-        for col in np.dtype(cat_cols).names:
+        for col in np.dtype(ACQ_COLS['cat']).names:
             row[col] = catalog[catalog['slot'] == slot][0][col]
-        for col in np.dtype(stat_cols).names:
+        for col in np.dtype(ACQ_COLS['stat']).names:
             if col in acq_stats[slot]:
                 row[col] = acq_stats[slot][col]
         if slot not in star_info:
             continue
-        for col in np.dtype(agasc_cols).names:
+        for col in np.dtype(ACQ_COLS['agasc']).names:
             row[col] = star_info[slot][col.upper()]
         row['known_bad'] = False
     # Exclude any rows that are missing
@@ -464,16 +473,17 @@ def table_stats(obsid_info, acq_stats, star_info, catalog):
     return table
 
 
-def save_stats(t):
+def save_acq_stats(t):
     if not os.path.exists(table_file):
-        cols = o_cols + cat_cols + stat_cols + agasc_cols + use_cols
+        cols = (ACQ_COLS['obs'] + ACQ_COLS['cat'] + ACQ_COLS['stat']
+                + ACQ_COLS['agasc'] + ACQ_COLS['bad'])
         desc, byteorder = tables.descr_from_dtype(np.dtype(cols))
         filters = tables.Filters(complevel=5, complib='zlib')
         h5 = tables.openFile(table_file, 'a')
         tbl = h5.createTable('/', 'data', desc, filters=filters,
                              expectedrows=1e6)
         tbl.cols.obsid.createIndex()
-        tbl.cols.guide_tstart.createIndex()
+        tbl.cols.guide_tstart.createCSIndex()
         h5.close()
         del h5
     h5 = tables.openFile(table_file, 'a')
@@ -487,6 +497,10 @@ def save_stats(t):
             raise ValueError(
                 "Could not update {}; different number of slots".format(
                     t[0]['obsid']))
+        # preserve any 'known_bad' status
+        for row in obsid_rec:
+            slot = row['slot']
+            t['known_bad'][t['slot'] == slot] = row['known_bad']
         tbl.modifyCoordinates(have_obsid_coord, t._data)
     else:
         tbl.append(t._data)
@@ -502,11 +516,11 @@ def update():
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, acq_stats, star_info, catalog = get_stats(obsid)
-        except:
+        except ValueError:
             logger.info("Skipping obsid {}".format(obsid))
             continue
-        t = table_stats(obsid_info, acq_stats, star_info, catalog)
-        save_stats(t)
+        t = table_acq_stats(obsid_info, acq_stats, star_info, catalog)
+        save_acq_stats(t)
 
 
 def main():
