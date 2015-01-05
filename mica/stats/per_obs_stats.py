@@ -87,7 +87,8 @@ ACQ_COLS = {
         ('known_bad', 'bool')]
     }
 
-table_file = 'acq_stats.h5'
+SKA = os.environ['SKA']
+table_file = os.path.join(SKA, 'data', 'acq_stats', 'acq_stats.h5')
 
 
 def deltas_vs_obc_quat(vals, times, catalog):
