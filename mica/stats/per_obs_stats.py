@@ -1,4 +1,5 @@
 import os
+import sys
 import agasc
 from kadi import events
 from Ska.engarchive import fetch
@@ -97,7 +98,7 @@ def deltas_vs_obc_quat(vals, times, catalog):
                            vals['AOATTQT3'],
                            vals['AOATTQT4']]).transpose())
     Ts = q_att.transform
-    acqs = catalog[(catalog['type'] == 'BOT') | (catalog['type'] == 'ACQ')]
+    acqs = catalog
 
     R2A = 206264.81
 
@@ -109,8 +110,14 @@ def deltas_vs_obc_quat(vals, times, catalog):
             continue
         agasc_id = acqs[acqs['slot'] == slot][0]['id']
         if agasc_id is None:
+            logger.info("No agasc id for slot {}, skipping".format(slot))
             continue
-        star = agasc.get_star(agasc_id)
+        try:
+            star = agasc.get_star(agasc_id)
+        except:
+            logger.info("agasc error on slot {}:{}".format(
+                    slot, sys.exc_info()[0]))
+            continue
         ra = star['RA']
         dec = star['DEC']
         if (star['PM_RA'] != -9999 or star['PM_DEC'] != -9999):
@@ -455,7 +462,7 @@ def table_acq_stats(obsid_info, acq_stats, star_info, catalog):
     missing_slots = np.zeros(8, dtype=bool)
     for slot in range(0, 8):
         row = table[slot]
-        if slot not in catalog['slot']:
+        if slot not in catalog['slot'] or slot not in acq_stats:
             missing_slots[slot] = True
             continue
         for col in np.dtype(ACQ_COLS['cat']).names:
@@ -519,9 +526,11 @@ def update():
         except ValueError:
             logger.info("Skipping obsid {}".format(obsid))
             continue
+        if not len(acq_stats):
+            logger.info("Skipping obsid {}".format(obsid))
+            continue
         t = table_acq_stats(obsid_info, acq_stats, star_info, catalog)
         save_acq_stats(t)
-
 
 def main():
     update()
