@@ -128,10 +128,11 @@ def deltas_vs_obc_quat(vals, times, catalog):
             # dyear * (degrees / milliarcsec)
             dyear = ((DateTime(times[0]).secs
                      - DateTime("{}:001".format(int(star['EPOCH']))).secs)
-                     / 365.25)
+                     / (86400 * 365.25))
             pm_to_degrees = dyear / (3600. * 1000.)
             if star['PM_RA'] != -9999:
-                ra = star['RA'] + star['PM_RA'] * pm_to_degrees
+                ra_scale = np.cos(np.radians(dec))
+                ra = star['RA'] + star['PM_RA'] * pm_to_degrees / ra_scale
             if star['PM_DEC'] != -9999:
                 dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
         star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
