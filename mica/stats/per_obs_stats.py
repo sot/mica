@@ -399,7 +399,7 @@ def get_obsids_to_update():
         last_tstart = tbl.cols.guide_tstart[tbl.colindexes['guide_tstart'][-1]]
         h5.close()
     except:
-        last_tstart = '1998:001'
+        last_tstart = '2002:007'
     kadi_obsids = events.obsids.filter(start=last_tstart)
     obsids = [o.obsid for o in kadi_obsids]
     # Skip the first obsid (as we already have it in the table)
