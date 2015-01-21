@@ -543,6 +543,12 @@ def save_acq_stats(t):
 def update():
     obsids = get_obsids_to_update()
     for obsid in obsids:
+        import time
+        t = time.localtime()
+        # Don't run during kadi update
+        if t.tm_hour == 7:
+            logger.info("Sleeping")
+            time.sleep(3720)
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, acq_stats, star_info, catalog, temp = get_stats(obsid)
