@@ -88,7 +88,8 @@ ACQ_COLS = {
         ('n100_warm_frac', 'float'),
         ('ccd_temp', 'float')],
     'bad': [
-        ('known_bad', 'bool')]
+        ('known_bad', 'bool'),
+        ('bad_comment', 'S15')]
     }
 
 SKA = os.environ['SKA']
@@ -498,6 +499,7 @@ def table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp):
         row['ccd_temp'] = temp['ccd_temp']
         row['n100_warm_frac'] = temp['n100_warm_frac']
         row['known_bad'] = False
+        row['bad_comment'] = ''
     # Exclude any rows that are missing
     table = table[~missing_slots]
     return table
@@ -531,6 +533,7 @@ def save_acq_stats(t):
         for row in obsid_rec:
             slot = row['slot']
             t['known_bad'][t['slot'] == slot] = row['known_bad']
+            t['bad_comment'][t['slot'] == slot] = row['bad_comment']
         tbl.modifyCoordinates(have_obsid_coord, t._data)
     else:
         tbl.append(t._data)
