@@ -220,8 +220,6 @@ def search_agasc(yang, zang, field_agasc, q_aca):
 
 
 def get_modern_data(manvr, dwell, starcheck):
-    if 'cat' not in starcheck:
-        raise ValueError('No starcheck catalog found for {}'.format(manvr.get_obsid()))
     catalog = Table(starcheck['cat'])
     catalog.sort('idx')
     # Filter the catalog to be just acquisition stars
@@ -436,9 +434,18 @@ def get_stats(obsid):
     acq_start = manvr.acq_start
     guide_start = manvr.guide_start
     try:
-        starcheck = mica.starcheck.get_starcheck_catalog(int(obsid))
+        starcheck = mica.starcheck.get_starcheck_catalog(int(obsid),
+                                                         tstart=manvr.start)
     except:
         raise ValueError("Problem looking up starcheck for {}".format(obsid))
+    if 'cat' not in starcheck or not len(starcheck['cat']):
+        raise ValueError('No starcheck catalog found for {}'.format(
+                manvr.get_obsid()))
+    starcat_time = DateTime(starcheck['cat']['mp_starcat_time'][0]).secs
+    starcat_dtime = starcat_time - DateTime(manvr.start).secs
+    # If it looks like the wrong starcheck by time, give up
+    if abs(starcat_dtime) > 30:
+        raise ValueError("Starcheck cat time delta is {}".format(starcat_dtime))
     vals, times, one_shot, star_info = get_modern_data(manvr, dwell, starcheck)
 
     acq_stats = calc_acq_stats(manvr, vals, times)
