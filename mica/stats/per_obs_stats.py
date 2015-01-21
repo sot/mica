@@ -2,7 +2,7 @@ import os
 import sys
 import agasc
 from kadi import events
-from Ska.engarchive import fetch
+from Ska.engarchive import fetch, fetch_sci
 from astropy.table import Table, Column
 from Chandra.Time import DateTime
 import mica.archive.obspar
@@ -12,6 +12,7 @@ import numpy as np
 import Ska.quatutil
 import Ska.astro
 from mica.quaternion import Quat
+import mica.archive.aca_dark.dark_model
 import logging
 
 logger = logging.getLogger('star_stats')
@@ -83,6 +84,9 @@ ACQ_COLS = {
         ('acqq1', 'int'),
         ('acqq2', 'int'),
         ('acqq4', 'int')],
+    'temp': [
+        ('n100_warm_frac', 'float'),
+        ('ccd_temp', 'float')],
     'bad': [
         ('known_bad', 'bool')]
     }
@@ -449,13 +453,21 @@ def get_stats(obsid):
     catalog.sort('idx')
     # Filter the catalog to be just acquisition stars
     catalog = catalog[(catalog['type'] == 'ACQ') | (catalog['type'] == 'BOT')]
-    return obsid_info, acq_stats, star_info, catalog
+    time = DateTime(guide_start).secs
+    ccd_temp = np.mean(fetch_sci.MSID('AACCCDPT',
+                                      time-250,
+                                      time+250).vals)
+    warm_threshold = 100.0
+    warm_frac = mica.archive.aca_dark.dark_model.get_warm_fracs(
+        warm_threshold, time, ccd_temp)
+    temps = {'ccd_temp': ccd_temp, 'n100_warm_frac': warm_frac}
+    return obsid_info, acq_stats, star_info, catalog, temps
 
 
-def table_acq_stats(obsid_info, acq_stats, star_info, catalog):
+def table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp):
     logger.info("arranging stats into tabular data")
     cols = (ACQ_COLS['obs'] + ACQ_COLS['cat'] + ACQ_COLS['stat']
-            + ACQ_COLS['agasc'] + ACQ_COLS['bad'])
+            + ACQ_COLS['agasc'] + ACQ_COLS['temp'] + ACQ_COLS['bad'])
     table = Table(np.zeros((1, 8), dtype=cols).flatten())
     for col in np.dtype(ACQ_COLS['obs']).names:
         if col in obsid_info:
@@ -476,6 +488,8 @@ def table_acq_stats(obsid_info, acq_stats, star_info, catalog):
             continue
         for col in np.dtype(ACQ_COLS['agasc']).names:
             row[col] = star_info[slot][col.upper()]
+        row['ccd_temp'] = temp['ccd_temp']
+        row['n100_warm_frac'] = temp['n100_warm_frac']
         row['known_bad'] = False
     # Exclude any rows that are missing
     table = table[~missing_slots]
@@ -485,7 +499,7 @@ def table_acq_stats(obsid_info, acq_stats, star_info, catalog):
 def save_acq_stats(t):
     if not os.path.exists(table_file):
         cols = (ACQ_COLS['obs'] + ACQ_COLS['cat'] + ACQ_COLS['stat']
-                + ACQ_COLS['agasc'] + ACQ_COLS['bad'])
+                + ACQ_COLS['agasc'] + ACQ_COLS['temp'] + ACQ_COLS['bad'])
         desc, byteorder = tables.descr_from_dtype(np.dtype(cols))
         filters = tables.Filters(complevel=5, complib='zlib')
         h5 = tables.openFile(table_file, 'a')
@@ -524,14 +538,14 @@ def update():
     for obsid in obsids:
         logger.info("Processing obsid {}".format(obsid))
         try:
-            obsid_info, acq_stats, star_info, catalog = get_stats(obsid)
+            obsid_info, acq_stats, star_info, catalog, temp = get_stats(obsid)
         except ValueError:
             logger.info("Skipping obsid {}".format(obsid))
             continue
         if not len(acq_stats):
             logger.info("Skipping obsid {}".format(obsid))
             continue
-        t = table_acq_stats(obsid_info, acq_stats, star_info, catalog)
+        t = table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp)
         save_acq_stats(t)
 
 def main():
