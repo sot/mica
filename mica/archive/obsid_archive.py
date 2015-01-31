@@ -725,13 +725,15 @@ class ObsArchive:
             with Ska.DBI.DBI(**apstat) as db:
                 current_status = db.fetchall(apstat_query)
             if len(current_status) == 0:
-                raise ValueError(
-                    "obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
+                logger.warn(
+                    "warning: obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
                     % query_vars)
+                continue
             if len(current_status) > 1:
-                raise ValueError(
-                    "obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
+                logger.warn(
+                    "warning: obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
                     % query_vars)
+                continue
             # a query to get the quality from the max science_2 data that
             # used this aspect_solution.  Ugh.
             if config['apstat_table'] == 'aspect_1':
