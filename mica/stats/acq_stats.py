@@ -96,7 +96,7 @@ SKA = os.environ['SKA']
 table_file = os.path.join(SKA, 'data', 'acq_stats', 'acq_stats.h5')
 
 
-def deltas_vs_obc_quat(vals, times, catalog):
+def _deltas_vs_obc_quat(vals, times, catalog):
     # Ignore misalign
     aca_misalign = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     q_att = Quat(np.array([vals['AOATTQT1'],
@@ -262,7 +262,7 @@ def get_modern_data(manvr, dwell, starcheck):
         raise ValueError("No telemetry for obsid {}".format(manvr.get_obsid()))
 
     # Estimate the offsets from the expected catalog positions
-    dy, dz, star_info = deltas_vs_obc_quat(eng_data, times['time'], catalog)
+    dy, dz, star_info = _deltas_vs_obc_quat(eng_data, times['time'], catalog)
     # And add the deltas to the table
     for slot in range(0, 8):
         if slot not in dy:
@@ -295,7 +295,7 @@ def get_modern_data(manvr, dwell, starcheck):
     corr_eng_data['AOATTQT2'][uncorr_times] = q_corr.q.transpose()[1]
     corr_eng_data['AOATTQT3'][uncorr_times] = q_corr.q.transpose()[2]
     corr_eng_data['AOATTQT4'][uncorr_times] = q_corr.q.transpose()[3]
-    corr_dy, corr_dz, si = deltas_vs_obc_quat(corr_eng_data, times['time'], catalog)
+    corr_dy, corr_dz, si = _deltas_vs_obc_quat(corr_eng_data, times['time'], catalog)
     # delete the now-extra copy of the data
     del corr_eng_data
     # And add the corrected deltas to the table
@@ -393,7 +393,7 @@ def calc_acq_stats(manvr, vals, times):
     return acq_stats
 
 
-def get_obsids_to_update():
+def _get_obsids_to_update():
     try:
         h5 = tables.openFile(table_file, 'r')
         tbl = h5.getNode('/', 'data')
@@ -505,7 +505,7 @@ def table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp):
     return table
 
 
-def save_acq_stats(t):
+def _save_acq_stats(t):
     if not os.path.exists(table_file):
         cols = (ACQ_COLS['obs'] + ACQ_COLS['cat'] + ACQ_COLS['stat']
                 + ACQ_COLS['agasc'] + ACQ_COLS['temp'] + ACQ_COLS['bad'])
@@ -544,7 +544,7 @@ def save_acq_stats(t):
 
 
 def update():
-    obsids = get_obsids_to_update()
+    obsids = _get_obsids_to_update()
     for obsid in obsids:
         import time
         t = time.localtime()
@@ -562,7 +562,7 @@ def update():
             logger.info("Skipping obsid {}".format(obsid))
             continue
         t = table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp)
-        save_acq_stats(t)
+        _save_acq_stats(t)
 
 
 def get_stats(filter=True):
