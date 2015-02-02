@@ -407,7 +407,7 @@ def get_obsids_to_update():
     return obsids[1:]
 
 
-def get_stats(obsid):
+def calc_stats(obsid):
     obspar = mica.archive.obspar.get_obspar(obsid)
     if not obspar:
         raise ValueError("No obspar for {}".format(obsid))
@@ -554,7 +554,7 @@ def update():
             time.sleep(3720)
         logger.info("Processing obsid {}".format(obsid))
         try:
-            obsid_info, acq_stats, star_info, catalog, temp = get_stats(obsid)
+            obsid_info, acq_stats, star_info, catalog, temp = calc_stats(obsid)
         except ValueError:
             logger.info("Skipping obsid {}".format(obsid))
             continue
