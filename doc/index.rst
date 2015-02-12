@@ -13,6 +13,8 @@ Contents:
 
    :ref:`Mica Archive <archive-label>`
 
+   :ref:`Mica Stats <stats-label>`
+
    :ref:`Mica VV <vv-label>`
 
 .. _archive-label:
@@ -321,13 +323,33 @@ Methods are also provided to retrieve a list of files by obsid and time range.
    ...                          stop='2012:030')
 
 
+.. _stats-label:
+
+Mica.stats
+=============
+
+The :mod:`mica.stats.acq_stats` module includes code to gather acquisition statistics
+data for each observation and return those data to the user.
+
+Access stats data
+-----------------
+
+To get the whole acquisition table data:
+
+   >>> from mica.stats.acq_stats import get_stats
+   >>> stats = get_stats()
+   >>> stats[(stats['obsid'] == 5438) & (stats['slot'] == 1)][0]['dy']
+   8.4296239297976854
+
+The hdf5 in-kernel searches may be faster working with the table directly for some
+operations.
 
 .. _vv-label:
 
 Mica.VV
 ==============
 
-The :mod:`mica.vv` module provides tools to created and inspect V&V-type data
+The :mod:`mica.vv` module provides tools to create and inspect V&V-type data
 
 Access Mica V&V Data
 --------------------

@@ -145,12 +145,22 @@ def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
 
 
 def get_starcheck_catalog(obsid, mp_dir=None,
-                          config=None):
+                          config=None, tstart=None):
     if config is None:
         config = DEFAULT_CONFIG
     sc_dbi = config['dbi']
     sc_server = config['server']
     dbh = Ska.DBI.DBI(dbi=sc_dbi, server=sc_server)
+    # tstart will override mp_dir
+    if tstart is not None:
+        # if this should be in timelines
+        if DateTime(tstart).date > '2002:007':
+            timeline = get_timeline_at_date(DateTime(tstart).date)
+            if mp_dir is not None:
+                if timeline['mp_dir'] != mp_dir:
+                    raise ValueError(
+                        "mp_dir was specified but inconsistent with tstart")
+            mp_dir = timeline['mp_dir']
     if mp_dir is None:
         # in this mode, just get last NPNT interval
         # not clear about what obi we'll get, but..

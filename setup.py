@@ -15,6 +15,7 @@ setup(name='mica',
       license=license,
       zip_safe=False,
       packages=['mica', 'mica.archive', 'mica.archive.aca_dark', 'mica.vv',
-                'mica.starcheck', 'mica.catalog', 'mica.report', 'mica.web'],
+                'mica.starcheck', 'mica.catalog', 'mica.report', 'mica.web',
+                'mica.stats'],
       package_data={'mica.web': ['templates/*/*.html', 'templates/*.html']},
       )
