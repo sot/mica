@@ -199,6 +199,11 @@ def target_summary(obsid):
     ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
                                     and target.obsid = {}""".format(obsid))
+    # If this target didn't have a proposal, just get whatever is there
+    if ocat_info is None:
+        ocat_info = ocat_db.fetchone("""select * from target where
+                                    target.obsid = {}""".format(obsid))
+
     ocat_db.conn.close()
     del ocat_db
     return ocat_info
