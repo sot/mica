@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import medfilt as medfilt
 from scipy.stats import scoreatpercentile
 
+import Ska.Numpy
 from Chandra.Time import DateTime
 from Ska.Table import read_table
 from Ska.astro import sph_dist
@@ -941,6 +942,11 @@ class AspectInterval(object):
         asol_file = glob(
             os.path.join(datadir, "%s_asol1.fits*" % aiid))[0]
         asol = read_table(asol_file)
+        # Add code to handle first processing of 16091 with
+        # non-confirming asol file
+        if ('dtheta' not in asol.dtype.names
+            and 'DTHETA' in asol.dtype.names):
+            asol = Ska.Numpy.add_column(asol, 'dtheta', asol['DTHETA'])
         hdulist = pyfits.open(asol_file)
         header = hdulist[1].header
         self.asol_header = header
