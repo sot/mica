@@ -29,7 +29,7 @@ def get_timeline_at_date(date):
     aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
     return aca_db.fetchone(
         "select * from timeline_loads where datestop >= '%s' "
-        " and datestart <= '%s' and scs <= 130 "
+        " and datestart <= '%s' and scs <= 130 order by datestart desc"
         % (date, date))
 
 def get_mp_dir(obsid, config=None):
