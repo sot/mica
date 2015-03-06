@@ -11,7 +11,6 @@ import re
 import logging
 import gzip
 import jinja2
-import time
 import datetime
 import json
 from glob import glob
@@ -269,20 +268,10 @@ def official_vv_notes(obsid, summary):
                         """.format(vvid=report['vvid']))
         report['aspect_review'] = aspect_rev
 
-    if summary['data_rights'] != 'N':
-        # python-sybase seems to return 0 indexed months.
-        # this month + 1 code should just add padding if we leave python sybase
-        nowdate = datetime.datetime.fromtimestamp(time.time())
-        pubdate = datetime.datetime(summary['public_avail'].year,
-                                    summary['public_avail'].month + 1,
-                                    summary['public_avail'].day,
-                                    summary['public_avail'].hour,
-                                    summary['public_avail'].minute)
-        delta = nowdate - pubdate
-        if delta.days < 1:
-            for report in all_vv:
-                if report['comments'] != '':
-                    report['comments'] = 'Hidden'
+    if summary['status'] != 'archived':
+        for report in all_vv:
+            if report['comments'] != '':
+                report['comments'] = 'Hidden'
 
     del vv_db
     return all_vv
