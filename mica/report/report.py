@@ -11,6 +11,7 @@ import re
 import logging
 import gzip
 import jinja2
+import time
 import datetime
 import json
 from glob import glob
@@ -255,17 +256,33 @@ def official_vv(obsid):
 
 
 
-def official_vv_notes(obsid):
+def official_vv_notes(obsid, summary):
     vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='jeanconn', database='axafvv',
                         numpy=False)
     all_vv = vv_db.fetchall("""select * from vvreport where obsid = {obsid}
                         """.format(obsid=obsid))
     if not len(all_vv):
         return None
+
     for report in all_vv:
         aspect_rev = vv_db.fetchone("""select * from vvreview where vvid = {vvid}
                         """.format(vvid=report['vvid']))
         report['aspect_review'] = aspect_rev
+
+    if summary['data_rights'] != 'N':
+        # python-sybase seems to return 0 indexed months.
+        # this month + 1 code should just add padding if we leave python sybase
+        nowdate = datetime.datetime.fromtimestamp(time.time())
+        pubdate = datetime.datetime(summary['public_avail'].year,
+                                    summary['public_avail'].month + 1,
+                                    summary['public_avail'].day,
+                                    summary['public_avail'].hour,
+                                    summary['public_avail'].minute)
+        delta = nowdate - pubdate
+        if delta.days < 1:
+            for report in all_vv:
+                if report['comments'] != '':
+                    report['comments'] = 'Hidden'
 
     del vv_db
     return all_vv
@@ -670,7 +687,11 @@ def main(obsid, config=None, report_root=None):
             f.write(slot_page)
             f.close()
 
-        official_notes=official_vv_notes(obsid)
+        official_notes = official_vv_notes(obsid, summary)
+        for rep in official_notes:
+            if rep['comments'] == 'Hidden':
+                rep['comments'] = """
+<A target="_blank" HREF="{}">{}</A><BR>(<A target="_blank" HREF="https://icxc2.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A> once first)</BR>""".format(links['vv']['link'], links['vv']['label'])
         vv_template = jinja_env.get_template('vv.html')
         vv['has_errors'] = (('errors' in vv) and (len(vv['errors']))) or None
         vv_page = vv_template.render(obsid=obsid,

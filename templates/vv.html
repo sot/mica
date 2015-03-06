@@ -104,12 +104,13 @@ pre {
 <div id="full" class="border">
 <H2>Official V&amp;V Notes</H2>
 <TABLE border=1>
-<TR><TH>l2_ap_date</TH><TH>l2_ver</TH><TH>vv_ver</TH><TH>vv_state</TH><TH>aspect review</TH></TR>
+<TR><TH>l2_ap_date</TH><TH>l2_ver</TH><TH>vv_ver</TH><TH>vv_state</TH><TH>comments</TH><TH>aspect review</TH></TR>
 {% for report in official_vv_notes %}
 <TR><TD>{{ report['l2_ap_date'] }}</TD>
 <TD>{{ report['l2_version']}}</TD>
 <TD>{{ report['vv_version']}}</TD>
 <TD>{{ report['vv_state'] }}</TD>
+<TD><PRE>{{ report['comments'] }}</PRE></TD>
 <TD><PRE>{{ report['aspect_review']['comments'] }}</PRE></TD></TR>
 {% endfor %}
 </TABLE>
