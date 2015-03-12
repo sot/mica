@@ -268,7 +268,7 @@ def official_vv_notes(obsid, summary):
                         """.format(vvid=report['vvid']))
         report['aspect_review'] = aspect_rev
 
-    if summary['status'] != 'archived':
+    if summary['status'] != 'archived' and summary['data_rights'] != 'N':
         for report in all_vv:
             if report['comments'] != '':
                 report['comments'] = 'Hidden'
@@ -677,9 +677,10 @@ def main(obsid, config=None, report_root=None):
             f.close()
 
         official_notes = official_vv_notes(obsid, summary)
-        for rep in official_notes:
-            if rep['comments'] == 'Hidden':
-                rep['comments'] = """
+        if official_notes:
+            for rep in official_notes:
+                if rep['comments'] == 'Hidden':
+                    rep['comments'] = """
 <A target="_blank" HREF="{}">{}</A><BR>(<A target="_blank" HREF="https://icxc2.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A> once first)</BR>""".format(links['vv']['link'], links['vv']['label'])
         vv_template = jinja_env.get_template('vv.html')
         vv['has_errors'] = (('errors' in vv) and (len(vv['errors']))) or None
