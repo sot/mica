@@ -469,10 +469,10 @@ def main(obsid, config=None, report_root=None):
     jinja_env.line_statement_prefix = '#'
 
     logger.info("Making report for {}".format(obsid))
-    logger.info("Getting target info from axafapstat")
+    logger.debug("Getting target info from axafapstat")
     summary = target_summary(obsid)
     # Links
-    logger.info("Looking up obsid links")
+    logger.debug("Looking up obsid links")
 
     all_progress = {'science': ['ocat',
                                  'long_term', 'short_term',
@@ -495,7 +495,7 @@ def main(obsid, config=None, report_root=None):
 
     if not er and (summary['status'] in
                    ['canceled', 'unobserved', 'untriggered']):
-        logger.info(
+        logger.debug(
             "Obsid {obsid} has status {status}".format(
                 obsid=obsid, status=summary['status']))
 
@@ -515,7 +515,7 @@ def main(obsid, config=None, report_root=None):
                 str(summary['soe_st_sched_date']))
 
     ## Starcheck
-    logger.info("Fetching starcheck catalog")
+    logger.debug("Fetching starcheck catalog")
     try:
         if summary is not None and summary['lts_lt_plan'] is not None:
             plan = summary['lts_lt_plan']
@@ -525,7 +525,7 @@ def main(obsid, config=None, report_root=None):
                 raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         obs_sc, mp_dir, status = get_starcheck(obsid)
-        logger.info("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
+        logger.debug("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
         if obs_sc['obs'][0]['point_ra'] is None:
             raise LookupError("Observation has no pointing.")
         if len(obs_sc['catalog']) == 0:
@@ -583,7 +583,7 @@ def main(obsid, config=None, report_root=None):
     report_status['starcheck'] = mp_dir
 
     # engineering data available
-    logger.info("Getting acq and trak stats")
+    logger.debug("Getting acq and trak stats")
     acqs = get_obs_acq_stats(obsid)
     trak = get_obs_trak_stats(obsid)
     temps = get_obs_temps(obsid, outdir)
@@ -629,7 +629,7 @@ def main(obsid, config=None, report_root=None):
         for file in vv_files:
             newfile = os.path.join(outdir, os.path.basename(file))
             if not os.path.exists(newfile):
-                logger.info("linking {} into {}".format(file, outdir))
+                logger.debug("linking {} into {}".format(file, outdir))
                 bash("ln -s {} {}".format(file, outdir))
         asp_dir = asp_l1.get_obs_dirs(obsid)['last']
         asp_logs = sorted(glob(os.path.join(asp_dir, "asp*log*gz")))
@@ -639,7 +639,7 @@ def main(obsid, config=None, report_root=None):
                 newlogname = "{}.txt".format(logmatch.group(1))
                 newlog = os.path.join(outdir, newlogname)
                 if not os.path.exists(newlog):
-                    logger.info("copying/gunzipping asp log {}".format(newlog))
+                    logger.debug("copying/gunzipping asp log {}".format(newlog))
                     logtext = gzip.open(log).readlines()
                     f = open(newlog, 'w')
                     f.writelines(logtext)
@@ -650,7 +650,7 @@ def main(obsid, config=None, report_root=None):
         aiprops_template = jinja_env.get_template('aiprops.html')
         aiprops_page = aiprops_template.render(obsid=obsid, aiprops=aiprops)
         aiprops_page_file = os.path.join(outdir, 'aiprops.html')
-        logger.info("AIPROPS report to {}".format(aiprops_page_file))
+        logger.debug("AIPROPS report to {}".format(aiprops_page_file))
         f = open(aiprops_page_file, 'w')
         f.write(aiprops_page)
         f.close()
@@ -658,7 +658,7 @@ def main(obsid, config=None, report_root=None):
         props_template = jinja_env.get_template('props.html')
         props_page = props_template.render(obsid=obsid, vv=vv)
         props_page_file = os.path.join(outdir, 'props.html')
-        logger.info("GS/FIDPROPS report to {}".format(props_page_file))
+        logger.debug("GS/FIDPROPS report to {}".format(props_page_file))
         f = open(props_page_file, 'w')
         f.write(props_page)
         f.close()
@@ -671,7 +671,7 @@ def main(obsid, config=None, report_root=None):
                                              vv=vv,
                                              slot=slot)
             slot_page_file = os.path.join(outdir, "slot_{}.html".format(slot))
-            logger.info("VV SLOT report to {}".format(slot_page_file))
+            logger.debug("VV SLOT report to {}".format(slot_page_file))
             f = open(slot_page_file, 'w')
             f.write(slot_page)
             f.close()
@@ -690,7 +690,7 @@ def main(obsid, config=None, report_root=None):
                                      official_vv_notes=official_notes,
                                      )
         vv_page_file = os.path.join(outdir, 'vv.html')
-        logger.info("VV report to {}".format(vv_page_file))
+        logger.debug("VV report to {}".format(vv_page_file))
         f = open(vv_page_file, 'w')
         f.write(vv_page)
         f.close()
@@ -709,7 +709,7 @@ def main(obsid, config=None, report_root=None):
                     agg_acq=s['agg_acq'],
                     agg_trak=s['agg_trak'])
                 star_page_file = os.path.join(outdir, 'star_%d.html' % int(row['id']))
-                logger.info("Writing out star info to {}".format(star_page_file))
+                logger.debug("Writing out star info to {}".format(star_page_file))
                 f = open(star_page_file, 'w')
                 f.write(star_page)
                 f.close()
@@ -858,7 +858,7 @@ def process_obsids(obsids, config=None, report_root=None):
             logger.info("Skipping {}, output dir exists.".format(obsid))
             continue
         if not config['retry_failure'] and os.path.exists(os.path.join(outdir, "proc_err")):
-            logger.info("Skipping {}, previous processing error.".format(obsid))
+            logger.warn("Skipping {}, previous processing error.".format(obsid))
             continue
         if not os.path.exists(outdir):
             os.makedirs("{}".format(outdir))
@@ -871,7 +871,7 @@ def process_obsids(obsids, config=None, report_root=None):
         except:
             import traceback
             etype, emess, trace = sys.exc_info()
-            logger.info("Failed report on {}".format(obsid))
+            logger.warn("Failed report on {}".format(obsid))
             # Make an empty file to record the error status
             f = open(os.path.join(outdir, 'proc_err'), 'w')
             f.close()
