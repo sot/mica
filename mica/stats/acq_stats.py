@@ -542,6 +542,7 @@ def _save_acq_stats(t):
                              expectedrows=1e6)
         tbl.cols.obsid.createIndex()
         tbl.cols.guide_tstart.createCSIndex()
+        tbl.cols.agasc_id.createIndex()
         h5.close()
         del h5
     h5 = tables.openFile(table_file, 'a')
