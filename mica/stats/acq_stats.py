@@ -7,7 +7,7 @@ from Ska.engarchive import fetch, fetch_sci
 from astropy.table import Table, Column
 from Chandra.Time import DateTime
 import mica.archive.obspar
-import mica.starcheck
+from mica.starcheck import get_starcheck_catalog
 import tables
 import numpy as np
 import Ska.quatutil
@@ -461,18 +461,64 @@ def calc_stats(obsid):
     acq_start = manvr.acq_start
     guide_start = manvr.guide_start
     try:
-        starcheck = mica.starcheck.get_starcheck_catalog(int(obsid),
-                                                         tstart=manvr.start)
+        starcheck = get_starcheck_catalog(obsid,
+                                          tstart=manvr.start)
     except:
-        raise ValueError("Problem looking up starcheck for {}".format(obsid))
+        # bad timelines for these observations, skip the tstart
+        # input for get_starcheck_catalog
+        if obsid in [1966]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2002/JAN1202/oflsa')
+        elif obsid in [3105, 2741, 61334, 61333, 61332, 61331, 3358, 3357]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2002/JAN2802/oflsd/')
+        elif obsid in [61261]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2002/MAR1902/oflsa/')
+        elif obsid in [3471, 3086, 61250, 61249, 3094, 3066, 3115, 2833, 3464, 3175]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2002/MAR2502/oflsb/')
+        elif obsid in [3663, 61185, 61184, 3392, 61183]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2002/MAY2402/oflsa/')
+        elif obsid in [60983]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2002/OCT2102/oflsc/')
+        elif obsid in [60640, 60639, 60638, 60637, 60636, 60635, 60634, 60633]:
+            raise ValueError("Starcheck not available for PCHECK_JUL2003")
+        elif obsid in [60616, 60615]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2003/JUL2103/oflsc/')
+        elif obsid in [3911]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2003/JUL2803/oflsc/')
+        elif obsid in [4162]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2003/SEP2903/oflsa/')
+        elif obsid in [60401]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2004/JAN1904/oflsb/')
+        elif obsid in [59921, 5035]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2004/DEC1404/oflsc/')
+        elif obsid in [58548, 58547, 58546, 7753]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2007/JAN2907/oflsb/')
+        elif obsid in [7936, 7463]:
+            starcheck = get_starcheck_catalog(obsid,
+                                              mp_dir='/2007/MAY2807/oflsb/')
+        else:
+            raise ValueError("Problem looking up starcheck for {}".format(obsid))
     if 'cat' not in starcheck or not len(starcheck['cat']):
         raise ValueError('No starcheck catalog found for {}'.format(
                 manvr.get_obsid()))
     starcat_time = DateTime(starcheck['cat']['mp_starcat_time'][0]).secs
     starcat_dtime = starcat_time - DateTime(manvr.start).secs
     # If it looks like the wrong starcheck by time, give up
-    if abs(starcat_dtime) > 30:
+    if abs(starcat_dtime) > 300:
         raise ValueError("Starcheck cat time delta is {}".format(starcat_dtime))
+    if abs(starcat_dtime) > 30:
+        logger.warn("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
     vals, times, one_shot, star_info = get_modern_data(manvr, dwell, starcheck)
 
     acq_stats = calc_acq_stats(manvr, vals, times)
