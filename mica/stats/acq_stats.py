@@ -585,11 +585,11 @@ def update(opt):
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, acq_stats, star_info, catalog, temp = calc_stats(obsid)
-        except ValueError:
-            logger.info("Skipping obsid {}".format(obsid))
+        except ValueError as e:
+            logger.info("Skipping obsid {}: {}".format(obsid, e))
             continue
         if not len(acq_stats):
-            logger.info("Skipping obsid {}".format(obsid))
+            logger.info("Skipping obsid {}, no stats determined".format(obsid))
             continue
         t = table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp)
         _save_acq_stats(t)
