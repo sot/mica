@@ -18,7 +18,8 @@ import logging
 
 logger = logging.getLogger('star_stats')
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
+if not len(logger.handlers):
+    logger.addHandler(logging.StreamHandler())
 
 ID_DIST_LIMIT = 1.5
 
