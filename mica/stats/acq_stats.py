@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import agasc
 from kadi import events
 from Ska.engarchive import fetch, fetch_sci
@@ -94,6 +95,18 @@ ACQ_COLS = {
 
 SKA = os.environ['SKA']
 table_file = os.path.join(SKA, 'data', 'acq_stats', 'acq_stats.h5')
+
+
+def get_options():
+    parser = argparse.ArgumentParser(
+        description="Update acq stats table")
+    parser.add_argument("--check-missing",
+                        action='store_true',
+                        help="check for missing observations in table and reprocess")
+    parser.add_argument("--obsid",
+                        help="specific obsid to process.  Not required in regular update mode")
+    opt = parser.parse_args()
+    return opt
 
 
 def _deltas_vs_obc_quat(vals, times, catalog):
@@ -393,18 +406,30 @@ def calc_acq_stats(manvr, vals, times):
     return acq_stats
 
 
-def _get_obsids_to_update():
-    try:
-        h5 = tables.openFile(table_file, 'r')
-        tbl = h5.getNode('/', 'data')
-        last_tstart = tbl.cols.guide_tstart[tbl.colindexes['guide_tstart'][-1]]
-        h5.close()
-    except:
-        last_tstart = '2002:007'
-    kadi_obsids = events.obsids.filter(start=last_tstart)
-    obsids = [o.obsid for o in kadi_obsids]
-    # Skip the first obsid (as we already have it in the table)
-    return obsids[1:]
+def _get_obsids_to_update(check_missing=False):
+    if check_missing:
+        last_tstart = '2007:271'
+        kadi_obsids = events.obsids.filter(start=last_tstart)
+        try:
+            h5 = tables.openFile(table_file, 'r')
+            tbl = h5.root.data[:]
+            h5.close()
+        except:
+            raise ValueError
+        # get all obsids that aren't already in tbl
+        obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl['obsid']]
+    else:
+        try:
+            h5 = tables.openFile(table_file, 'r')
+            tbl = h5.getNode('/', 'data')
+            last_tstart = tbl.cols.guide_tstart[tbl.colindexes['guide_tstart'][-1]]
+            h5.close()
+        except:
+            last_tstart = '2002:012'
+        kadi_obsids = events.obsids.filter(start=last_tstart)
+        # Skip the first obsid (as we already have it in the table)
+        obsids = [o.obsid for o in kadi_obsids][1:]
+    return obsids
 
 
 def calc_stats(obsid):
@@ -543,8 +568,11 @@ def _save_acq_stats(t):
     h5.close()
 
 
-def update():
-    obsids = _get_obsids_to_update()
+def update(opt):
+    if opt.obsid:
+        obsids = [int(opt.obsid)]
+    else:
+        obsids = _get_obsids_to_update(check_missing=opt.check_missing)
     for obsid in obsids:
         import time
         t = time.localtime()
@@ -582,7 +610,8 @@ def get_stats(filter=True):
 
 
 def main():
-    update()
+    opt = get_options()
+    update(opt)
 
 
 if __name__ == '__main__':
