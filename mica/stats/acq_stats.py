@@ -439,7 +439,7 @@ def calc_stats(obsid):
     manvr = None
     dwell = None
     try:
-        manvrs = events.manvrs.filter(obsid=obsid)
+        manvrs = events.manvrs.filter(obsid=obsid, n_dwell__gt=0)
         dwells = events.dwells.filter(obsid=obsid)
         if manvrs.count() and dwells.count() == 1:
             manvr = manvrs[0]
