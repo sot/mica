@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import mica.stats.acq_stats
-mica.stats.acq_stats.update()
+mica.stats.acq_stats.main()
 
 import os
 table_file = mica.stats.acq_stats.table_file
