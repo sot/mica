@@ -25,17 +25,13 @@ from . import dark_cal
 logger = None
 ZODI_PROPS = None
 
-DARK_CAL = pyyaks.context.ContextDict('dark_cal')
+# Bring in definitions from dark_cal pyyaks
+DARK_CAL = dark_cal.DARK_CAL
 
-# Pointer to Ska processing files.  This is hardwired to flight Ska since dark
-# cal files are an OTS input here.
-SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir='/proj/sot/ska')
+SKA_FILES = dark_cal.SKA_FILES
 SKA_FILES.update(file_defs.SKA_FILES)
 
-# Set up file definitions for Mica ACA dark archive.  This needs to be created
-# now for the script import process, so use a temporary directory as basedir.
-# It will be updated in main().
-MICA_FILES = pyyaks.context.ContextDict('update_mica_files', basedir='/tmp')
+MICA_FILES = dark_cal.MICA_FILES
 MICA_FILES.update(file_defs.MICA_FILES)
 
 
