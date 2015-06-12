@@ -2,11 +2,9 @@ from __future__ import division
 import os
 import sys
 import warnings
-# Ignore compiler warnings that seem to be coming from a django.db
-# interaction (via kadi.events)
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
-    import compiler
+# Import this before kadi events skips the deprecation warning
+import compiler
+
 import re
 import logging
 import gzip
