@@ -4,8 +4,8 @@ import tables
 import asciitable
 import numpy as np
 import urllib
-import mx.DateTime
 from itertools import izip
+import time
 from Chandra.Time import DateTime
 import Ska.Numpy
 import logging
@@ -38,9 +38,14 @@ def get_options():
 def make_data_table(lines):
     files = asciitable.read(lines,
                             names=['filename', 'status', 'ingest_time'])
-    ingest_dates = [DateTime(mx.DateTime.strptime(
-                t, '%b%t%d%t%Y%t%I:%M%p')).date
-                    for t in files['ingest_time']]
+    # replace variable spaces with single spaces and then strptime
+    ingest_dates = [time.strftime(
+            "%Y:%j:%H:%M:%S.000",
+            time.strptime(
+                t, '%b %d %Y %I:%M%p'))
+                    for t in
+                    [' '.join(f.split())
+                     for f in files['ingest_time']]]
     file_re = re.compile(r'acaf(\d{9,})N(\d{3})_(\d)_img0.fits(\.gz)?')
     filetimes = [int(file_re.search(f).group(1)) for f in files['filename']]
     versions = [int(file_re.search(f).group(2)) for f in files['filename']]
@@ -53,11 +58,11 @@ def make_data_table(lines):
     return files
 
 
-def make_table_from_scratch(table_file, cda_fetch_url, start='1999:001'):
+def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
     logger.info("Fetching new CDA list from %s" % start)
-    startmx = DateTime(start).mxDateTime
-    query = ("?tstart=%s&pattern=acaimgc%%25&submit=Search"
-             % startmx.strftime("%m-%d-%Y"))
+    ct_start = DateTime(start)
+    query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
+            ct_start.mon, ct_start.day, ct_start.year))
     url = cda_fetch_url + query
     new_lines = urllib.urlopen(url).readlines()
     files = make_data_table(new_lines)
@@ -90,12 +95,11 @@ def update_cda_table(data_root=None,
     h5f = tables.openFile(table_file, 'a')
     tbl = h5f.getNode('/', 'data')
     cda_files = tbl[:]
-    lastdate = cda_files[-1]['ingest_date']
-    lastmx = DateTime(lastdate).mxDateTime
+    lastdate = DateTime(cda_files[-1]['ingest_date'])
 
-    logger.info("Fetching new CDA list from %s" % lastdate)
-    query = ("?tstart=%s&pattern=acaimgc%%25&submit=Search"
-             % lastmx.strftime("%m-%d-%Y"))
+    logger.info("Fetching new CDA list from %s" % lastdate.date)
+    query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
+            lastdate.mon, lastdate.day, lastdate.year))
     url = cda_fetch_url + query
     new_lines = urllib.urlopen(url).readlines()
     files = make_data_table(new_lines)
