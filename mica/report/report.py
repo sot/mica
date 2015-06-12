@@ -33,6 +33,13 @@ from mica.vv import get_vv, get_vv_files
 from mica.version import version
 from mica.common import MICA_ARCHIVE
 
+# Ignore known numexpr.necompiler and table.conditions warning
+warnings.filterwarnings(
+    'ignore',
+    message="using `oa_ndim == 0` when `op_axes` is NULL is deprecated.*",
+    category=DeprecationWarning)
+
+
 WANT_VV_VERSION = 2
 REPORT_VERSION = 2
 
