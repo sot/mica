@@ -151,7 +151,7 @@ def plot_starcheck(catalog, quat=None, field=None, title=None):
         color[ok] = frontcolor
         size = symsize(bright_field['MAG_ACA'])
         ax.scatter(bright_field['yang'], bright_field['zang'],
-                   c=color, s=size, edgecolors=color)
+                   c=color.tolist(), s=size, edgecolors=color.tolist())
         if title is not None:
             fig.suptitle(title)
     return fig
