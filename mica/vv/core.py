@@ -495,12 +495,11 @@ class Obi(object):
                 smean = ma.mean(data)
                 slot_report['%s_mean' % axdir] = smean
                 med = ma.median(data)
-                slot_report['%s_med' % axdir] = med
+                slot_report['%s_med' % axdir] = med.item()
                 srms = ma.sqrt(ma.mean((data - med) ** 2))
                 slot_report['%s_rms' % axdir] = srms
                 bad_frac = frac_bad(data, med, dyz_big_lim)
                 slot_report['frac_%s_big' % axdir] = bad_frac
-
             slot_report['frac_%s_big' % axdir] = bad_frac
             slot_report['rad_off'] = np.sqrt(slot_report['dy_med'] ** 2
                                       + slot_report['dz_med'] ** 2)
