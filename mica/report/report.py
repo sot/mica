@@ -623,6 +623,11 @@ def main(obsid, config=None, report_root=None):
             if vv is None or 'vv_version' not in vv or vv['vv_version'] < WANT_VV_VERSION:
                 mica.vv.process.process(obsid, version="last")
                 vv = get_vv(obsid, version='last')
+            for slot in vv['slots']:
+                if isinstance(vv['slots'][slot]['dy_med'], list):
+                    mica.vv.process.process(obsid, version="last")
+                    vv = get_vv(obsid, version='last')
+                    break
             vv_files = get_vv_files(obsid, version='last')
             last_sched = "complete through mica v&v"
         except LookupError:
