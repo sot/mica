@@ -16,6 +16,14 @@ from mica.quaternion import Quat
 import mica.archive.aca_dark.dark_model
 import logging
 
+import warnings
+# Ignore known numexpr.necompiler and table.conditions warning
+warnings.filterwarnings(
+    'ignore',
+    message="using `oa_ndim == 0` when `op_axes` is NULL is deprecated.*",
+    category=DeprecationWarning)
+
+
 logger = logging.getLogger('star_stats')
 logger.setLevel(logging.INFO)
 if not len(logger.handlers):
