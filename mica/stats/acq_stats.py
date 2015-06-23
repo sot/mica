@@ -615,9 +615,9 @@ def _save_acq_stats(t):
             slot = row['slot']
             t['known_bad'][t['slot'] == slot] = row['known_bad']
             t['bad_comment'][t['slot'] == slot] = row['bad_comment']
-        tbl.modifyCoordinates(have_obsid_coord, t._data)
+        tbl.modifyCoordinates(have_obsid_coord, t.as_array())
     else:
-        tbl.append(t._data)
+        tbl.append(t.as_array())
     logger.info("saving stats to h5 table")
     tbl.flush()
     h5.flush()
