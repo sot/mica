@@ -231,6 +231,10 @@ class Obi(object):
         obsid = ai_list[0]['OBS_ID']
         revision = ai_list[0]['REVISION']
         obi = ai_list[0]['OBI_NUM']
+        if len(self.aiids) > 1:
+            logger.warn(
+                "Warning: obsid {} has {} aspect intervals".format(
+                    obsid, len(self.aiids)))
         for ai in ai_list:
             if ai['OBS_ID'] != obsid:
                 raise ValueError
