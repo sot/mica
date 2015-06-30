@@ -934,6 +934,8 @@ class AspectInterval(object):
         datadir = self.aspdir
         opt = self.opt
 
+        logger.info('Processing aspect interval {}'.format(
+                self.aiid))
         logger.debug('Reading aspect solution and header')
         #if opt['obc']:
         #    asol = read_table(glob(
