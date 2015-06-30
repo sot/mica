@@ -231,6 +231,10 @@ class Obi(object):
         obsid = ai_list[0]['OBS_ID']
         revision = ai_list[0]['REVISION']
         obi = ai_list[0]['OBI_NUM']
+        if len(self.aiids) > 1:
+            logger.warn(
+                "Warning: obsid {} has {} aspect intervals".format(
+                    obsid, len(self.aiids)))
         for ai in ai_list:
             if ai['OBS_ID'] != obsid:
                 raise ValueError
@@ -881,7 +885,7 @@ class AspectInterval(object):
     def _get_prop(self, propname, propstring):
         "Read gsprops or fidprops file"
         datadir = self.aspdir
-        logger.info('Reading %s stars' % propname)
+        logger.debug('Reading %s stars' % propname)
         gsfile = glob(os.path.join(
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
         # don't filter for only good stars at this point
@@ -934,7 +938,9 @@ class AspectInterval(object):
         datadir = self.aspdir
         opt = self.opt
 
-        logger.info('Reading aspect solution and header')
+        logger.info('Processing aspect interval {}'.format(
+                self.aiid))
+        logger.debug('Reading aspect solution and header')
         #if opt['obc']:
         #    asol = read_table(glob(
         #            os.path.join(datadir, "%s_osol1.fits*" % aiid))[0])
@@ -952,21 +958,21 @@ class AspectInterval(object):
         self.asol_header = header
         self.asol = asol
 
-        logger.info('Reading aspect quality')
+        logger.debug('Reading aspect quality')
         self.aqual = read_table(glob(
                 os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0])
 
         #if opt['noacal']:
         #    aca_misalign = np.array([[1.0,0,0], [0,1,0],[0,0,1]])
         #else:
-        logger.info('Reading ACA and FTS align file')
+        logger.debug('Reading ACA and FTS align file')
         acal = read_table(glob(
                 os.path.join(datadir, "%s_acal1.fits*" % aiid))[0])
         self.aca_misalign = acal['aca_misalign'].reshape(3, 3)
         self.fts_misalign = acal['fts_misalign'].reshape(3, 3)
         self.acal = acal
 
-        logger.info('Reading Centroids')
+        logger.debug('Reading Centroids')
         cen = read_table(glob(
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         # do we want the other algs?
@@ -978,7 +984,7 @@ class AspectInterval(object):
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         self.integ_time = self.cenhdulist[1].header['INTGTIME']
 
-        logger.info('Reading gyro data')
+        logger.debug('Reading gyro data')
         self.gdat = read_table(glob(
                 os.path.join(datadir, "%s_gdat1.fits*" % aiid))[0])
 
@@ -1114,7 +1120,7 @@ class AspectInterval(object):
         fidpr_info = self.fidpr_info
         integ_time = self.integ_time
 
-        logger.info('Calculating fid solution quality')
+        logger.debug('Calculating fid solution quality')
 
         lsi0_stt = [h_fidpr['LSI0STT%d' % x] for x in [1, 2, 3]]
         stt0_stf = [h_fidpr['STT0STF%d' % x] for x in [1, 2, 3]]
@@ -1195,7 +1201,7 @@ class AspectInterval(object):
         aca_misalign = self.aca_misalign
         integ_time = self.integ_time
 
-        logger.info('Interpolating quaternions')
+        logger.debug('Interpolating quaternions')
         q_att = np.array([np.interp(cen['time'],
                                     asol['time'],
                                     asol['q_att'][:, ax])
@@ -1205,12 +1211,11 @@ class AspectInterval(object):
                     star['id_status'], star['slot']))
             ok = cen['slot'] == star['slot']
             ceni = cen[ok]
-            logger.info('Found %d centroids ' % len(ceni))
+            logger.debug('Found %d centroids ' % len(ceni))
             if len(ceni) < 2:
                 continue
             q_atts = Quat(q_att[ok])
             Ts = q_atts.transform
-            logger.info('Found %d centroids ' % len(ceni))
             # use ang_y or ang_y_sm?
             #inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)
             d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
