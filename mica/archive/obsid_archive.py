@@ -586,6 +586,7 @@ class ObsArchive:
         logger.info("Checking for updates to obsids with provisional data")
         chunk_dirs = glob(os.path.join(archive_dir, "??"))
         todo_obs = []
+        # get the obsids that have provisional data
         for cdir in chunk_dirs:
             last_links = glob(os.path.join(cdir, "?????_last"))
             for link in last_links:
@@ -595,19 +596,31 @@ class ObsArchive:
                     obs = dict(obsid=int(lmatch.group(1)),
                                revision=int(lmatch.group(2)))
                     todo_obs.append(obs)
-        if ('bad_obsids' not in self.config
-            or not os.path.exists(self.config['bad_obsids'])):
-            return todo_obs
-        # If there is a table of bad obsids for this type, exclude them
-        bad_obsids = Table.read(self.config['bad_obsids'], format='ascii')
+        # exclude bad obsids if there is such a list
+        bad_obsids = []
+        if ('bad_obsids' in self.config
+            and os.path.exists(self.config['bad_obsids'])):
+            # If there is a table of bad obsids for this type, exclude them
+            bad_obsids = Table.read(self.config['bad_obsids'], format='ascii')['obsid']
         ok_redo = []
         for obs in todo_obs:
-            if obs['obsid'] not in bad_obsids['obsid']:
+            if obs['obsid'] not in bad_obsids:
                 ok_redo.append(obs)
             else:
                 logger.info("Skipping obsid {}; in {} 'bad_obsid' table".format(
                         self.config['label'], obs['obsid']))
-        return ok_redo
+        # Check to see if there actually is any newer data for the obsids
+        has_new = []
+        for obs in ok_redo:
+            def_ver = self.get_ver_num(obs['obsid'], 'default')
+            last_ver = self.get_ver_num(obs['obsid'], 'last')
+            # if the last version is now the default version
+            # or if the last version is now different from what
+            # we have
+            if ((obs['revision'] == def_ver) or
+                (obs['revision'] != last_ver)):
+                has_new.append(obs)
+        return has_new
 
 
     def update(self):
@@ -753,7 +766,15 @@ class ObsArchive:
                         current_status['quality'] = 'X'
                 else:
                     # if there are no science_2 entries at all for the obsid
-                    # try an update anyway
+                    # see if it is discarded
+                    with Ska.DBI.DBI(dbi='sybase', server='sqlsao', database='axafocat') as db:
+                        target_status = db.fetchone(
+                            "select status from target where obsid = {}".format(obs['obsid']))
+                        if target_status['status'] == 'discarded':
+                            logger.info("Skipping {}, obsid 'discarded'".format(
+                                    obs['obsid']))
+                            continue
+                    # otherwise, set to 'X' as an unknown status and try it anyway
                     current_status['quality'] = 'X'
             if current_status['quality'] != 'P':
                 try:
