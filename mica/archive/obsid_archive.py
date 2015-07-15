@@ -328,7 +328,7 @@ class ObsArchive:
                 "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
         if len(obis) > 1:
             minobi = np.min(obis['obi'])
-            logger.info("limiting arc5gl to obi %d" % minobi)
+            logger.debug("limiting arc5gl to obi %d" % minobi)
             arc5.sendline("obi=%d" % minobi)
         if version != 'default':
             arc5.sendline("version=%s" % version)
