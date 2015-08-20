@@ -217,7 +217,7 @@ def get_dark_cal_props_table(start=None, stop=None, include_image=False, as_tabl
                  if dark_id >= start_id and dark_id <= stop_id]
 
     # Get the list of properties structures
-    props = [get_dark_cal_props(dark_id) for dark_id in dark_dirs]
+    props = [get_dark_cal_props(dark_id, include_image=include_image) for dark_id in dark_dirs]
 
     if as_table:
         for prop in props:
