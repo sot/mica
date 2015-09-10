@@ -337,6 +337,27 @@ def get_files(obsid=None, start=None, stop=None, revision=None):
                              revision=revision)
 
 
+def get_obsids(start=None, stop=None, revision=None):
+    """
+    List obsids with obspars in a time range.
+
+      >>> from mica.archive import obspar
+      >>> obsids = obspar.get_obsids('2015:001', '2015:003')
+
+
+    :param start: time range start (Chandra.Time compatible)
+    :param stop: time range stop (Chandra.Time compatible)
+    :param revision: revision integer or 'last'
+                     defaults to current released version
+    :returns: list of obsids
+    """
+    files = archive._get_file_records(start=start, stop=stop,
+                                      revision=revision)
+    if len(files) == 0:
+        return []
+    return files['obsid'].tolist()
+
+
 def main():
     """
     Run the update process to get new obspars, save them in the Ska
