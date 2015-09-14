@@ -691,7 +691,7 @@ def main(obsid, config=None, report_root=None):
             for rep in official_notes:
                 if rep['comments'] == 'Hidden':
                     rep['comments'] = """
-<A target="_blank" HREF="{}">{}</A><BR>(<A target="_blank" HREF="https://icxc2.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A> once first)</BR>""".format(links['vv']['link'], links['vv']['label'])
+<A target="_blank" HREF="{}">{}</A><BR>(<A target="_blank" HREF="https://icxc.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A> once first)</BR>""".format(links['vv']['link'], links['vv']['label'])
         vv_template = jinja_env.get_template('vv.html')
         vv['has_errors'] = (('errors' in vv) and (len(vv['errors']))) or None
         vv_page = vv_template.render(obsid=obsid,
