@@ -44,25 +44,31 @@ def dark_id_to_date(dark_id):
     return '{}:{}'.format(dark_id[:4], dark_id[4:])
 
 
-def dark_temp_scale(t_ccd, t_ccd_ref=-19.0):
+def dark_temp_scale(t_ccd, t_ccd_ref=-19.0, scale_4c=1.0 / 0.70):
     """
     Return the multiplicative scale factor to convert a CCD dark map from
-    the actual temperature ``t_ccd`` to the reference temperature ``t_ccd_ref``.
+    the actual temperature ``t_ccd`` to the reference temperature ``t_ccd_ref``::
+
+      scale_4c ** ((t_ccd_ref - t_ccd) / 4.0)
 
     Based on best global fit for dark current model in `plot_predicted_warmpix.py`.
-    Previous value was 0.62 instead of 0.70.  This represents the change in
-    dark current for each 4 degC decrease::
+    This represents the multiplicative change in dark current for each 4 degC
+    increase::
 
-      >>> from mica.archive.aca_dark import temp_scalefac
-      >>> print temp_scalefac(t_ccd=-15, t_ccd_ref=-19)
+      >>> from mica.archive.aca_dark import dark_temp_scale
+      >>> print(dark_temp_scale(t_ccd=-15, t_ccd_ref=-19))
       0.7
+
+    The default value for ``scale_4c`` is written as 1.0 / 0.7 because the
+    equation was previously written using 1 / scale_4c with a value of 0.7.
 
     :param t_ccd: actual temperature (degC)
     :param t_ccd_ref: reference temperature (degC, default=-19.0)
+    :param scale_4c: increase in dark current per 4 degC increase
 
     :returns: scale factor
     """
-    return np.exp(np.log(0.70) / 4.0 * (t_ccd - t_ccd_ref))
+    return scale_4c ** ((t_ccd_ref - t_ccd) / 4.0)
 
 
 @lru_cache()
