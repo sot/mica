@@ -14,6 +14,7 @@ from mica.common import MICA_ARCHIVE_PATH, MissingDataError
 from . import file_defs
 
 DARK_CAL = pyyaks.context.ContextDict('dark_cal')
+DARK_SCALE_4C = 1.0 / 0.70  # Increase in dark current per 4 degC increase in T_ccd
 
 SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir='/proj/sot/ska')
 SKA_FILES.update(file_defs.SKA_FILES)
@@ -44,7 +45,7 @@ def dark_id_to_date(dark_id):
     return '{}:{}'.format(dark_id[:4], dark_id[4:])
 
 
-def dark_temp_scale(t_ccd, t_ccd_ref=-19.0, scale_4c=1.0 / 0.70):
+def dark_temp_scale(t_ccd, t_ccd_ref=-19.0, scale_4c=None):
     """
     Return the multiplicative scale factor to convert a CCD dark map from
     the actual temperature ``t_ccd`` to the reference temperature ``t_ccd_ref``::
@@ -68,6 +69,9 @@ def dark_temp_scale(t_ccd, t_ccd_ref=-19.0, scale_4c=1.0 / 0.70):
 
     :returns: scale factor
     """
+    if scale_4c is None:
+        scale_4c = DARK_SCALE_4C
+
     return scale_4c ** ((t_ccd_ref - t_ccd) / 4.0)
 
 
