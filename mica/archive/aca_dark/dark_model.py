@@ -2,12 +2,12 @@
 Routines related to the dark current model and guide / acq success prediction.
 """
 
-from itertools import izip
 import numpy as np
 from numpy import exp, log, arange
 
 import Ska.Numpy
 from Chandra.Time import DateTime
+from chandra_aca import star_probs
 
 # Define a common fixed binning of dark current distribution
 import darkbins
@@ -17,6 +17,11 @@ import darkbins
 
 # Fixed gaussian for smoothing the broken power law
 dx = 0.1
+"""
+Functions related to the empirical fits of dark current distribution
+over the mission history.
+"""
+
 sigma = 0.30                            # Gaussian sigma in log space
 xg = arange(-2.5 * sigma, 2.5 * sigma, dx, dtype=float)
 yg = exp(-0.5 * (xg / sigma) ** 2)
@@ -30,13 +35,8 @@ xall = darkbins.bin_centers
 imin = 0
 imax = len(xall)
 
-# scale and offset fit of polynomial to acq failures in log space
-acq_fit = {
-    'scale': (-0.491, 0.990, 0.185),
-    'offset': (0.280, 0.999, -1.489),
-    }
-
 warm_threshold = 100.
+
 
 def get_dark_model(date, t_ccd):
     """
@@ -52,7 +52,7 @@ def get_dark_model(date, t_ccd):
 
 def get_dark_hist(date, t_ccd):
     """
-    Return the dark current histogram corresponding to ``date`` and ``t_ccd``.
+    Return the model dark current histogram corresponding to ``date`` and ``t_ccd``.
 
     :param date: date in any DateTime format
     :param t_ccd: CCD temperature (deg C)
@@ -76,8 +76,7 @@ def get_acq_success(date, t_ccd, mag):
     Any of the inputs can be scalars or arrays, with the output being the result of
     the broadcasted dimension of the inputs.
 
-    This is based on the dark model and acquisition success fitting presented
-    in the State of the ACA 2013 (sot/state_of_aca/guide_acq_stats)
+    ** This function is DEPRECATED.  Use chandra_aca.star_probs.acq_success_prob instead. **
 
     :param date: Date(s) (scalar or np.ndarray)
     :param t_ccd: CD temperature(s) (degC, scalar or np.ndarray)
@@ -85,49 +84,8 @@ def get_acq_success(date, t_ccd, mag):
 
     :returns: Acquisition success probability(s)
     """
-    try:
-        date = DateTime(date).secs
-        zeros = np.atleast_1d(np.zeros_like(date + mag + t_ccd))
-        dates = date + zeros
-        t_ccds = t_ccd + zeros
-        mags = mag + zeros
-    except:
-        raise ValueError("Incompatible input shapes for 'date', 't_ccd', 'mag'")
-
-    warm_fracs = []
-    for sdate, stemp  in izip(dates, t_ccds):
-        warm_frac = get_warm_fracs(warm_threshold,
-                                   date=sdate, T_ccd=stemp)
-        warm_fracs.append(warm_frac)
-    probs = acq_success_prob(mags, warm_fracs)
-
-    if (np.array(date).ndim == 0 and np.array(t_ccd).ndim == 0
-        and np.array(mag).ndim == 0):
-           return probs[0]
-    else:
-        return probs
-
-
-
-def get_guide_success(date, t_ccd, mag):
-    """
-    Return probability of guide (bad_trak) success for given date, temperature and mag.
-
-    Any of the inputs can be scalars or arrays, with the output being the result of
-    the broadcasted dimension of the inputs.
-
-    This is based on the dark model and guide success fitting presented
-    in the State of the ACA 2013 (sot/state_of_aca/guide_acq_stats)
-
-    :param date: Date(s) (scalar or np.ndarray)
-    :param t_ccd: CD temperature(s) (degC, scalar or np.ndarray)
-    :param mag: Star magnitude(s) (scalar or np.ndarray)
-
-    :returns: Guide success probability(s)
-    """
-    raise NotImplementedError()
-
-
+    print('DeprecationWarning: use chandra_aca.star_probs.get_acq_prob instead')
+    return star_probs.acq_success_prob(date, t_ccd, mag)
 
 
 def acq_success_prob(mag, warm_frac, prob_offset=0):
@@ -135,18 +93,14 @@ def acq_success_prob(mag, warm_frac, prob_offset=0):
     Calculate probability of acquisition success for a star with ``mag``
     magnitude and a CCD warm fraction ``warm_frac``.  Uses the empirical relation:
 
-       P_acq_success = offset(mag) + scale(mag) * warm_frac
+       P_acq_success = Probit(offset(mag) + scale(mag) * (warm_frac - warm_frac0))
 
-    In ../guide_acq_success/plot_acq_success.py we find the best fit relation:
-
-      log10(scale) = 0.185 + 0.990 * (mag - 10) + -0.491 * (mag - 10)**2
-      log10(offset) = -1.489 + 0.888 * (mag - 10) + 0.280 * (mag - 10)**2
+    This function is DEPRECATED.  Use star_probs.model_acq_success_prob instead.
     """
-    mag10 = mag - 10.0
-    scale = 10. ** np.polyval(acq_fit['scale'], mag10)
-    offset = 10. ** np.polyval(acq_fit['offset'], mag10)
-    # these are actually fits on failure prob, so subtract from 1.00
-    return 1.00 - (offset + scale * warm_frac - prob_offset)
+    from starcheck import star_probs
+    print('DeprecationWarning: use chandra_aca.star_probs.model_acq_success_prob instead')
+    prob = star_probs.model_acq_success_prob(mag, warm_frac)
+    return prob + prob_offset
 
 
 def smooth_broken_pow(pars, x):
