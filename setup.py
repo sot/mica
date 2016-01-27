@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 from mica.version import version
 
@@ -9,7 +9,7 @@ All rights reserved."""
 
 setup(name='mica',
       description='Mica aspects archive',
-      version=str(version),
+      version=version,
       author='Jean Connelly',
       author_email='jconnelly@cfa.harvard.edu',
       license=license,
