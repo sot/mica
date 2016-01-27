@@ -15,6 +15,7 @@ import Ska.DBI
 SC1 = ' IDX SLOT        ID  TYPE   SZ  MINMAG    MAG   MAXMAG   YANG   ZANG DIM RES HALFW'
 SC2 = ' IDX SLOT        ID  TYPE   SZ  MINMAG    MAG   MAXMAG   YANG   ZANG DIM RES HALFW NOTES'
 SC3 = ' IDX SLOT        ID  TYPE   SZ  MINMAG    MAG   MAXMAG   YANG   ZANG DIM RES HALFW PASS NOTES'
+SC4 = ' IDX SLOT        ID  TYPE   SZ   P_ACQ    MAG   MAXMAG   YANG   ZANG DIM RES HALFW PASS NOTES'
 
 HDRS = [
     dict(
@@ -49,6 +50,17 @@ HDRS = [
         final_dtype = [('idx', '<i8'), ('slot', '<i8'), ('idnote', '|S3'), ('id', '<i8'),
                        ('type', '|S3'), ('sz', '|S3'),
                        ('minmag', '<f8'), ('mag', '<f8'), ('maxmag', '<f8'),
+                       ('yang', '<i8'), ('zang', '<i8'), ('dim', '<i8'),
+                       ('res', '<i8'), ('halfw', '<i8'), ('pass', '|S5'), ('notes', '|S5')]),
+    dict(
+        pattern=SC4,
+        hdrs=['idx', 'slot', 'id', 'type', 'sz', 'p_acq', 'mag', 'maxmag',
+              'yang', 'zang', 'dim', 'res', 'halfw', 'pass', 'notes'],
+        col_starts=(1, 4, 7, 19, 25, 30, 38, 46, 54, 61, 68, 72, 76, 81, 87),
+        col_ends=(2, 7, 18, 24, 29, 37, 45, 53, 60, 67, 71, 75, 80, 86, 92),
+        final_dtype = [('idx', '<i8'), ('slot', '<i8'), ('idnote', '|S3'), ('id', '<i8'),
+                       ('type', '|S3'), ('sz', '|S3'),
+                       ('p_acq', '<f8'), ('mag', '<f8'), ('maxmag', '<f8'),
                        ('yang', '<i8'), ('zang', '<i8'), ('dim', '<i8'),
                        ('res', '<i8'), ('halfw', '<i8'), ('pass', '|S5'), ('notes', '|S5')]),
     ]
@@ -200,6 +212,8 @@ def get_catalog(obs_text):
     for row, idx in izip(rawcat, count()):
         catrow = dict()
         for field in row.dtype.names:
+            if field not in OKTYPE.keys():
+                continue
             if field == 'id':
                 idmatch = re.match("(\D+)?(\d+)?", str(row[field]))
                 catrow['idnote'] = idmatch.group(1)
