@@ -4,6 +4,13 @@ from Ska.DBI import DBI
 
 
 def get_acq_data(agasc_id):
+    """
+    Fetch acquisition history from mica acq stats for an agasc id
+
+    :param agasc_id: AGASC id
+    :returns: list of dicts of acquisitions
+    """
+
     acq = Table(acq_stats.get_stats())
     acq_star = acq[acq['agasc_id'] == agasc_id]
     acq_table = []
@@ -21,6 +28,12 @@ def get_acq_data(agasc_id):
 
 
 def get_gui_data(agasc_id):
+    """
+    Fetch guide/track history from Sybase for an agasc id
+
+    :param agasc_id: AGASC id
+    :returns: list of dicts of uses as guide stars
+    """
     db = DBI(dbi='sybase', server='sybase', user='aca_read')
     gui = db.fetchall('select * from trak_stats_data where id = {}'.format(
             agasc_id))
@@ -40,6 +53,12 @@ def get_gui_data(agasc_id):
 
 
 def get_star_stats(agasc_id):
+    """
+    Fetch acq and gui history of a star
+
+    :param agasc_id: AGASC id
+    :returns: 2 lists, first of acq attempts, second of guide attempts
+    """
     acq_table = get_acq_data(agasc_id)
     gui_table = get_gui_data(agasc_id)
     return acq_table, gui_table
