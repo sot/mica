@@ -37,9 +37,11 @@ def get_gui_data(agasc_id):
     :param agasc_id: AGASC id
     :returns: list of dicts of uses as guide stars
     """
-    db = DBI(dbi='sybase', server='sybase', user='aca_read')
-    gui = db.fetchall('select * from trak_stats_data where id = {}'.format(
-            agasc_id))
+    with DBI(dbi='sybase', server='sybase', user='aca_read') as db:
+        gui = db.fetchall('select * from trak_stats_data where id = {}'.format(
+                agasc_id))
+    if not len(gui):
+        return []
     gui = Table(gui)
     gui.sort('kalman_datestart')
     # make list of dicts for use in light templates in kadi web app
