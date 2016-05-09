@@ -13,12 +13,15 @@ def get_acq_data(agasc_id):
 
     acq = Table(acq_stats.get_stats())
     acq_star = acq[acq['agasc_id'] == agasc_id]
+    # make list of dicts for use in light templates in kadi web app
     acq_table = []
     acq_star.sort('guide_start')
     for s in acq_star:
         srec = {}
+        # Use these columns as they are named from the mica acq stats table
         for col in ['type', 'obsid', 'obi', 'slot', 'mag', 'mag_obs', 'star_tracked']:
             srec[col] = s[col]
+        # rename these columns in the dictionary
         srec['date'] = s['guide_start']
         srec['acq_dy'] = s['cdy']
         srec['acq_dz'] = s['cdz']
@@ -39,11 +42,14 @@ def get_gui_data(agasc_id):
             agasc_id))
     gui = Table(gui)
     gui.sort('kalman_datestart')
+    # make list of dicts for use in light templates in kadi web app
     gui_table = []
     for s in gui:
         srec = {}
+        # Use these columns as they are named from the mica acq stats table
         for col in ['type', 'obsid', 'obi', 'slot']:
             srec[col] = s[col]
+        # rename these columns in the dictionary
         srec['date'] = s['kalman_datestart']
         srec['mag'] = s['mag_exp']
         srec['mag_obs'] = s['aoacmag_mean']
