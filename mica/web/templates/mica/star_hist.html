@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+table.pcad td {
+line-height: 1rem;
+padding: .4rem;
+font-size: .7rem;
+}
+table.pcad tr {
+background-color: transparent;
+}
+table.pcad {border-spacing: 5px;}
+</style>
+{% endblock %}
+
+{% block body %}
+<body class="with-background">
+{% endblock %}
+
+{% block content %}
+<p><p>
+<h1 align="center"> Star History </h1>
+
+<form action="" method="get">
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="right-label" class="right inline">AGASC id</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="right-label" name="agasc_id" value="{{agasc_id}}">
+        </div>
+        <div class="large-4 columns"> &nbsp; </div>
+      </div>
+</form>
+
+{% if has_hist %}
+{% if acq_table %}
+<H3>Acquisition History</H3>
+<TABLE class='pcad' border=1>
+<tr>
+<th>date</th>
+<th>obsid</th>
+<th>obi</th>
+<th>type</th>
+<th>slot</th>
+<th>mag</th>
+<th>mag obs</th>
+<th>star tracked</th>
+<th>acq id</th>
+<th>dy (corr)</th>
+<th>dz (corr)</th>
+</tr>
+{% for acq in acq_table %}
+<tr>
+<td>{{ acq.date }}</td>
+<td>{{ acq.obsid }}</td>
+<td>{{ acq.obi }}</td>
+<td>{{ acq.type }}</td>
+<td>{{ acq.slot }}</td>
+<td>{{ acq.mag|floatformat:3 }}</td>
+<td>{{ acq.mag_obs|floatformat:3 }}</td>
+<td>{{ acq.star_tracked }}</td>
+<td>{{ acq.id }}</td>
+<td>{{ acq.acq_dy|floatformat:3 }}</td>
+<td>{{ acq.acq_dz|floatformat:3 }}</td>
+</tr>
+{% endfor %}
+</TABLE>
+{% endif %}
+
+{% if gui_table %}
+<H3>Guide History</H3>
+<TABLE class='pcad' border=1>
+<tr>
+<th>date</th>
+<th>obsid</th>
+<th>obi</th>
+<th>type</th>
+<th>slot</th>
+<th>mag</th>
+<th>mean mag</th>
+<th>% not track</th>
+</tr>
+{% for gui in gui_table %}
+<tr>
+<td>{{ gui.date }}</td>
+<td>{{ gui.obsid }}</td>
+<td>{{ gui.obi }}</td>
+<td>{{ gui.type }}</td>
+<td>{{ gui.slot }}</td>
+<td>{{ gui.mag|floatformat:3 }}</td>
+<td>{{ gui.mag_obs|floatformat:3 }}</td>
+<td>{{ gui.perc_not_track|floatformat:3 }}</td>
+</tr>
+{% endfor %}
+</TABLE>
+{% endif %}
+
+
+<BODY>
+{% endif %}
+
+{% endblock %}

@@ -31,6 +31,37 @@ class IndexView(BaseView, TemplateView):
 
         return context
 
+
+class StarHistView(BaseView, TemplateView):
+    template_name = 'mica/star_hist.html'
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super(StarHistView, self).get_context_data(**kwargs)
+
+        agasc_id = self.request.GET.get('agasc_id', None)
+        if agasc_id is not None:
+            try:
+                agasc_id = int(agasc_id)
+            except:
+                agasc_id = None
+
+        context['agasc_id'] = agasc_id or ''
+
+        if agasc_id:
+            import mica.web.star_hist
+            acq_table, gui_table = mica.web.star_hist.get_star_stats(agasc_id)
+            if len(acq_table) or len(gui_table):
+                context['has_hist'] = 1
+            if len(acq_table):
+                context['acq_table'] = acq_table
+            if len(gui_table):
+                context['gui_table'] = gui_table
+
+        return context
+
+
+
 class AcqView(BaseView, TemplateView):
     template_name = 'mica/acq.html'
 
