@@ -98,8 +98,8 @@ table.pcad {border-spacing: 5px;}
 </TABLE>
 {% endif %}
 
-
-<BODY>
+{% else %}
+<H3>No acq or guide history for star {{ agasc_id }}</H3>
 {% endif %}
 
 {% endblock %}
