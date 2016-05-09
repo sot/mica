@@ -2,12 +2,6 @@ from astropy.table import Table
 from mica.stats import acq_stats
 from Ska.DBI import DBI
 
-ACQ_COLS = ['date', 'type', 'obsid', 'obi', 'slot', 'mag',
-            'mag_obs', 'id', 'stat_flags', 'star_tracked', 'acq_dy', 'acq_dz']
-
-GUI_COLS = ['date', 'type', 'obsid', 'obi', 'slot', 'mag',
-            'mag_obs', 'perc_not_track']
-
 
 def get_acq_data(agasc_id):
     acq = Table(acq_stats.get_stats())
