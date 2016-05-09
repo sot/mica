@@ -38,7 +38,8 @@ def get_gui_data(agasc_id):
     :returns: list of dicts of uses as guide stars
     """
     with DBI(dbi='sybase', server='sybase', user='aca_read') as db:
-        gui = db.fetchall('select * from trak_stats_data where id = {}'.format(
+        gui = db.fetchall(
+            'select * from trak_stats_data where type != "FID" and id = {}'.format(
                 agasc_id))
     if not len(gui):
         return []
