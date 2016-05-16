@@ -142,7 +142,12 @@ def get_star_trak_stats(id):
     n_bad = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) > 0.05))
     n_fail = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) == 1))
     n_obc_bad = len(np.flatnonzero((traks['obc_bad_status_samples'] / traks['n_samples']) > 0.05))
-    avg_mag = np.mean(traks[traks['aoacmag_mean'] < 13.94]['aoacmag_mean'])
+    # substitute in 13.94 for any that are already 'None'
+    no_mag = np.equal(traks['aoacmag_mean'], None)
+    traks['aoacmag_mean'][no_mag] = 13.94
+    traks['aoacmag_median'][no_mag] = 13.94
+    traks['aoacmag_rms'][no_mag] = 0.0
+    avg_mag = np.mean(traks['aoacmag_mean'])
 
     # make a list of dictionaries to make it easy to add values to the rows
     traks = rec_to_dict_list(traks)
