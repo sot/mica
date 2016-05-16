@@ -344,11 +344,14 @@ def get_obsids(start=None, stop=None, revision=None):
       >>> from mica.archive import obspar
       >>> obsids = obspar.get_obsids('2015:001', '2015:003')
 
+    To retrieve the complete set of obsids used over a time range,
+    use kadi (kadi.events.obsid) instead of this obspar-based method.
 
     :param start: time range start (Chandra.Time compatible)
     :param stop: time range stop (Chandra.Time compatible)
-    :param revision: revision integer or 'last'
-                     defaults to current released version
+    :param revision: None, revision integer, or 'last'
+                     None is equivalent to limiting the search
+                     to those with 'default'/released obspars.
     :returns: list of obsids
     """
     files = archive._get_file_records(start=start, stop=stop,
