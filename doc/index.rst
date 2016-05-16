@@ -323,6 +323,12 @@ Methods are also provided to retrieve a list of files by obsid and time range.
    ...                          stop='2012:030')
 
 
+And a method is provided to fetch obsids that have obspars:
+
+   >>> obspar.get_obsids('2016:001', '2016:002')
+   [51365, 18736, 18036, 18203]
+
+
 .. _stats-label:
 
 Mica.stats
