@@ -231,15 +231,6 @@ class Obi(object):
         obsid = ai_list[0]['OBS_ID']
         revision = ai_list[0]['REVISION']
         obi = ai_list[0]['OBI_NUM']
-        if len(self.aiids) > 1:
-            logger.warn(
-                "Warning: obsid {} has {} aspect intervals".format(
-                    obsid, len(self.aiids)))
-        for ai in ai_list:
-            if ai['OBS_ID'] != obsid:
-                raise ValueError
-            if ai['REVISION'] != revision:
-                raise ValueError
         fidprops = [[dict(zip(r.dtype.names,r)) for r in getattr(ai, 'fidprop')]
                     for ai in self.aspect_intervals]
         gsprops = [[dict(zip(r.dtype.names,r)) for r in getattr(ai, 'gsprop')]
@@ -544,9 +535,30 @@ class Obi(object):
 
     def _check_over_intervals(self):
         """
-        Check all aspect intervals and confirm that slots don't
+        Check all aspect intervals and confirm that they are consistent and that slots don't
         drop out, change status, or change type.
         """
+        ai_list = self._aiid_info()
+        obsid = ai_list[0]['OBS_ID']
+        revision = ai_list[0]['REVISION']
+        for ai in ai_list:
+            if ai['OBS_ID'] != obsid:
+                raise ValueError("aspect interval obsids don't match")
+            if ai['REVISION'] != revision:
+                raise ValueError("aspect interval revisions don't match")
+        if '7' in self.slot_report and self.slot_report['7']['type'] == 'MONITOR':
+            if len(self.aiids) != 2:
+                wtext = "Warning: monitor window obsid {} has {} aspect intervals".format(
+                    obsid, len(self.aiids))
+                self._errors.append(wtext)
+                logger.warn(wtext)
+        else:
+            if len(self.aiids) > 1:
+                wtext = "Warning: obsid {} has {} aspect intervals".format(
+                    obsid, len(self.aiids))
+                self._errors.append(wtext)
+                logger.warn(wtext)
+
         for t in ('gsprop', 'fidprop'):
             if getattr(self.aspect_intervals[0], t) is None:
                 continue
