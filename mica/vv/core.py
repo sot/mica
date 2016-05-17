@@ -127,14 +127,14 @@ class Obi(object):
         self._find_aspect_intervals()
         self._process_aspect_intervals()
         self._concat_slot_data()
-        try:
-            self._check_over_intervals()
-        except InconsistentAspectIntervals as e:
-            self._errors.append(e)
         self._sim_data()
         self.slot_report = dict()
         self._label_slots()
         self._agg_slot_data()
+        try:
+            self._check_over_intervals()
+        except InconsistentAspectIntervals as e:
+            self._errors.append(e)
         self._get_info()
 
     def save_plots_and_resid(self):
