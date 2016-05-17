@@ -532,7 +532,7 @@ class Obi(object):
         for gs in getattr(ai, 'gsprop'):
             self.slot_report[str(gs.slot)] = dict(
                 slot=gs.slot,
-                type='GUIDE')
+                type=gs['type'].rstrip())
         if getattr(ai, 'fidprop') is not None:
             self.fid_list = list(getattr(ai, 'fidprop').slot)
             for fl in getattr(ai, 'fidprop'):
