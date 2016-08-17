@@ -1,6 +1,8 @@
 from astropy.table import Table
-from mica.stats import acq_stats
 from Ska.DBI import DBI
+from Chandra.Time import DateTime
+from mica.stats import acq_stats
+
 
 
 def get_acq_data(agasc_id):
@@ -61,13 +63,21 @@ def get_gui_data(agasc_id):
     return gui_table
 
 
-def get_star_stats(agasc_id):
+def get_star_stats(agasc_id, start=None, stop=None):
     """
     Fetch acq and gui history of a star
 
     :param agasc_id: AGASC id
+    :param start: start of optional time filter (>=) (Chandra.Time compatible)
+    :param stop: stop time of optional time filter (<) (Chandra.time compatible)
     :returns: 2 lists, first of acq attempts, second of guide attempts
     """
     acq_table = get_acq_data(agasc_id)
     gui_table = get_gui_data(agasc_id)
+    if start is not None:
+        acq_table = [s for s in acq_table if s['date'] >= DateTime(start).date]
+        gui_table = [s for s in gui_table if s['date'] >= DateTime(start).date]
+    if stop is not None:
+        acq_table = [s for s in acq_table if s['date'] < DateTime(stop).date]
+        gui_table = [s for s in gui_table if s['date'] < DateTime(stop).date]
     return acq_table, gui_table
