@@ -117,6 +117,13 @@ table.pcad {border-spacing: 5px;}
 </tr>
 {% endfor %}
 </TABLE>
+{% if acq_table %}
+Notes: In the acquisition history table, "dy (corr)" and "dz (corr)" are the offset from
+the expected/commanded position in arcsecs based on the star positions after correction
+(corr) with the one-shot update.  In the acquisition and guide history tables, "mag" is
+the AGASC magnitude.
+{% endif %}
+
 {% endif %}
 
 {% else %}
