@@ -26,13 +26,34 @@ table.pcad {border-spacing: 5px;}
       <div class="row">
         <div class="large-2 columns"> &nbsp; </div>
         <div class="large-3 columns">
-          <label for="right-label" class="right inline">AGASC id</label>
+          <label for="agasc_id" class="right inline">AGASC id</label>
         </div>
         <div class="large-3 columns">
-          <input type="text" id="right-label" name="agasc_id" value="{{agasc_id}}">
+          <input type="text" id="agasc_id" name="agasc_id" value="{{agasc_id}}">
         </div>
         <div class="large-4 columns"> &nbsp; </div>
       </div>
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="start" class="right inline">start time</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="start" name="start" value="{{start}}">
+        </div>
+        <div class="large-4 columns"> &nbsp; </div>
+      </div>
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="stop" class="right inline">stop time</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="stop" name="stop" value="{{stop}}">
+        </div>
+        <div class="large-4 columns"> &nbsp; </div>
+      </div>
+      <input type="submit" value="Submit"  style="display: none;">
 </form>
 
 {% if has_hist %}
@@ -99,7 +120,7 @@ table.pcad {border-spacing: 5px;}
 {% endif %}
 
 {% else %}
-<H3>No acq or guide history for star {{ agasc_id }}</H3>
+<H3>No acq or guide history for star :{{ agasc_id }}:</H3>
 {% endif %}
 
 {% endblock %}

@@ -45,12 +45,20 @@ class StarHistView(BaseView, TemplateView):
                 agasc_id = int(agasc_id)
             except:
                 agasc_id = None
+        start = self.request.GET.get('start', None)
+        stop = self.request.GET.get('stop', None)
+        if start == '':
+            start = None
+        if stop == '':
+            stop = None
 
         context['agasc_id'] = agasc_id or ''
+        context['start'] = start or ''
+        context['stop'] = stop or ''
 
         if agasc_id:
             import mica.web.star_hist
-            acq_table, gui_table = mica.web.star_hist.get_star_stats(agasc_id)
+            acq_table, gui_table = mica.web.star_hist.get_star_stats(agasc_id, start, stop)
             if len(acq_table) or len(gui_table):
                 context['has_hist'] = 1
             if len(acq_table):
