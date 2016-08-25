@@ -68,7 +68,7 @@ def get_acq_table(obsid):
     manvr = manvrs[0]
 
     start_time = DateTime(manvr.acq_start).secs
-    stop_time = DateTime(manvr.guide_start).secs + 3
+    stop_time = start_time + (60 * 5)
     acq_data = fetch.MSIDset(msids + slot_msids, start_time, stop_time)
 
     vals = Table([acq_data[col].vals for col in msids],
@@ -81,7 +81,6 @@ def get_acq_table(obsid):
         return data[data['AOREPEAT'] == '0 '], dtime[data['AOREPEAT'] == '0 ']
 
     vals, times = compress_data(vals, times)
-    d_times = times['time'] - DateTime(manvr.guide_start).secs
 
     # Get the catalog for the stars
     # This is used both to map ACQID to the right slot and
@@ -113,7 +112,12 @@ def get_acq_table(obsid):
 
     # make a list of dicts of the table
     simple_data = []
+    kalm_start = None
     for drow, trow in zip(vals, times):
+        if (kalm_start is None) and (drow['AOACASEQ'] == 'KALM'):
+            kalm_start = trow['time']
+        if (kalm_start is not None) and (trow['time'] > kalm_start + 5):
+            continue
         slot_data = {'slots': [],
                      'time': trow['time'],
                      'aorfstr1_slot': slot_for_pos[int(drow['AORFSTR1'])],
