@@ -85,7 +85,9 @@ def get_acq_table(obsid):
     # Get the catalog for the stars
     # This is used both to map ACQID to the right slot and
     # to get the star positions to estimate deltas later
-    starcheck = mica.starcheck.get_starcheck_catalog(int(obsid))
+    timeline_at_acq = mica.starcheck.starcheck.get_timeline_at_date(manvr.start)
+    starcheck = mica.starcheck.get_starcheck_catalog(int(obsid),
+                                                     mp_dir=timeline_at_acq['mp_dir'])
     if 'cat' not in starcheck:
         raise ValueError('No starcheck catalog found for {}'.format(obsid))
     catalog = Table(starcheck['cat'])
