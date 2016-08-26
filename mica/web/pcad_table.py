@@ -86,9 +86,7 @@ def get_acq_table(obsid):
     # This is used both to map ACQID to the right slot and
     # to get the star positions to estimate deltas later
     timeline_at_acq = mica.starcheck.starcheck.get_timeline_at_date(manvr.start)
-    mp_dir = None
-    if timeline_at_acq is not None:
-        mp_dir = timeline_at_acq['mp_dir']
+    mp_dir = None if (timeline_at_acq is None) else timeline_at_acq['mp_dir']
     starcheck = mica.starcheck.get_starcheck_catalog(int(obsid),
                                                      mp_dir=mp_dir)
     if 'cat' not in starcheck:
