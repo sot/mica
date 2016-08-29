@@ -51,8 +51,7 @@ def deltas_vs_obc_quat(vals, times, catalog):
         if star['PM_DEC'] != -9999:
             dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
         star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
-        d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
-                       star_pos_eci).transpose()
+        d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)), star_pos_eci).transpose()
         yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
         zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
         dy[slot] = vals['AOACYAN{}'.format(slot)] - yag
@@ -68,11 +67,10 @@ def get_acq_table(obsid):
     manvr = manvrs[0]
 
     start_time = DateTime(manvr.acq_start).secs
-    stop_time = DateTime(manvr.guide_start).secs + 3
+    stop_time = start_time + (60 * 5)
     acq_data = fetch.MSIDset(msids + slot_msids, start_time, stop_time)
 
-    vals = Table([acq_data[col].vals for col in msids],
-                 names=msids)
+    vals = Table([acq_data[col].vals for col in msids], names=msids)
     for field in slot_msids:
         vals.add_column(Column(name=field, data=acq_data[field].vals))
         times = Table([acq_data['AOACASEQ'].times], names=['time'])
@@ -81,12 +79,13 @@ def get_acq_table(obsid):
         return data[data['AOREPEAT'] == '0 '], dtime[data['AOREPEAT'] == '0 ']
 
     vals, times = compress_data(vals, times)
-    d_times = times['time'] - DateTime(manvr.guide_start).secs
 
     # Get the catalog for the stars
     # This is used both to map ACQID to the right slot and
     # to get the star positions to estimate deltas later
-    starcheck = mica.starcheck.get_starcheck_catalog(int(obsid))
+    timeline_at_acq = mica.starcheck.starcheck.get_timeline_at_date(manvr.start)
+    mp_dir = None if (timeline_at_acq is None) else timeline_at_acq['mp_dir']
+    starcheck = mica.starcheck.get_starcheck_catalog(int(obsid), mp_dir=mp_dir)
     if 'cat' not in starcheck:
         raise ValueError('No starcheck catalog found for {}'.format(obsid))
     catalog = Table(starcheck['cat'])
@@ -96,24 +95,25 @@ def get_acq_table(obsid):
     slot_for_pos = [cat_row['slot'] for cat_row in catalog]
     pos_for_slot = dict([(slot, idx) for idx, slot in enumerate(slot_for_pos)])
     # Also, save out the starcheck index for each slot for later
-    index_for_slot = dict([(cat_row['slot'], cat_row['idx'])
-                           for cat_row in catalog])
+    index_for_slot = dict([(cat_row['slot'], cat_row['idx']) for cat_row in catalog])
 
     # Estimate the offsets from the expected catalog positions
     dy, dz = deltas_vs_obc_quat(vals, times['time'], catalog)
     for slot in range(0, 8):
-        vals.add_column(Column(name='dy{}'.format(slot),
-                               data=dy[slot].data))
-        vals.add_column(Column(name='dz{}'.format(slot),
-                               data=dz[slot].data))
+        vals.add_column(Column(name='dy{}'.format(slot), data=dy[slot].data))
+        vals.add_column(Column(name='dz{}'.format(slot), data=dz[slot].data))
         cat_entry = catalog[catalog['slot'] == slot][0]
         dmag = vals['AOACMAG{}'.format(slot)] - cat_entry['mag']
-        vals.add_column(Column(name='dmag{}'.format(slot),
-                               data=dmag.data))
+        vals.add_column(Column(name='dmag{}'.format(slot), data=dmag.data))
 
     # make a list of dicts of the table
     simple_data = []
+    kalm_start = None
     for drow, trow in zip(vals, times):
+        if (kalm_start is None) and (drow['AOACASEQ'] == 'KALM'):
+            kalm_start = trow['time']
+        if (kalm_start is not None) and (trow['time'] > kalm_start + 5):
+            continue
         slot_data = {'slots': [],
                      'time': trow['time'],
                      'aorfstr1_slot': slot_for_pos[int(drow['AORFSTR1'])],
