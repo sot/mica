@@ -2,13 +2,12 @@
 import os
 import re
 import tables
-import asciitable
+from astropy.table import Table, Column
 import numpy as np
 from six.moves import urllib, zip
 
 import time
 from Chandra.Time import DateTime
-import Ska.Numpy
 import logging
 import argparse
 
@@ -37,8 +36,8 @@ def get_options():
 
 
 def make_data_table(lines):
-    files = asciitable.read(lines,
-                            names=['filename', 'status', 'ingest_time'])
+    files = Table.read(lines, format='ascii.csv',
+                       names=['filename', 'status', 'ingest_time'])
     # replace variable spaces with single spaces and then strptime
     ingest_dates = [time.strftime(
             "%Y:%j:%H:%M:%S.000",
@@ -51,11 +50,11 @@ def make_data_table(lines):
     filetimes = [int(file_re.search(f).group(1)) for f in files['filename']]
     versions = [int(file_re.search(f).group(2)) for f in files['filename']]
     now_dates = np.repeat(DateTime().date, len(ingest_dates))
-    files = Ska.Numpy.add_column(files, 'ingest_date', ingest_dates)
-    files = Ska.Numpy.add_column(files, 'aca_ingest', now_dates)
-    files = Ska.Numpy.add_column(files, 'filetime', filetimes)
-    files = Ska.Numpy.add_column(files, 'version', versions)
-    files.sort(order=['aca_ingest', 'ingest_date', 'filename'])
+    files.add_column(Column(ingest_dates, 'ingest_date'))
+    files.add_column(Column(now_dates, 'aca_ingest'))
+    files.add_column(Column(filetimes, 'filetime'))
+    files.add_column(Column(versions, 'version'))
+    files.sort(['aca_ingest', 'ingest_date', 'filename'])
     return files
 
 
