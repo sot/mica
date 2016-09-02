@@ -64,6 +64,7 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
     query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
             ct_start.mon, ct_start.day, ct_start.year))
     url = cda_fetch_url + query
+    logger.info("URL for fetch {}".format(url))
     new_lines = urllib.request.urlopen(url).readlines()
     files = make_data_table(new_lines)
     logger.info("Creating new table at %s" % table_file)
@@ -93,42 +94,49 @@ def update_cda_table(data_root=None,
         make_table_from_scratch(table_file, cda_fetch_url)
 
     h5f = tables.openFile(table_file, 'a')
-    tbl = h5f.getNode('/', 'data')
-    cda_files = tbl[:]
-    lastdate = DateTime(cda_files[-1]['ingest_date'])
+    try:
+        tbl = h5f.getNode('/', 'data')
+        cda_files = tbl[:]
+        lastdate = DateTime(cda_files[-1]['ingest_date'])
+        logger.info("Fetching new CDA list from %s" % lastdate.date)
+        query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
+                lastdate.mon, lastdate.day, lastdate.year))
+        url = cda_fetch_url + query
+        logger.info("URL for fetch {}".format(url))
+        new_lines = urllib.request.urlopen(url).readlines()
+        files = make_data_table(new_lines)
+        match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
+        if len(match) == 0:
+            raise ValueError("no overlap")
+        match_last_idx = match[-1]
+        i_diff = 0
+        for have_entry, new_entry in zip(cda_files[match_last_idx:], files):
+            if have_entry['filename'] != new_entry['filename']:
+                break
+            i_diff += 1
 
-    logger.info("Fetching new CDA list from %s" % lastdate.date)
-    query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
-            lastdate.mon, lastdate.day, lastdate.year))
-    url = cda_fetch_url + query
-    new_lines = urllib.request.urlopen(url).readlines()
-    files = make_data_table(new_lines)
-    match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
-    if len(match) == 0:
-        raise ValueError("no overlap")
-    match_last_idx = match[-1]
+        if i_diff < len(files):
+            logger.info("Updating %s with %d new rows"
+                        % (table_file, len(files[i_diff:])))
+            for file in files[i_diff:]:
+                logger.debug(file)
+                row = tbl.row
+                row['filename'] = file['filename']
+                row['status'] = file['status']
+                row['ingest_time'] = file['ingest_time']
+                row['ingest_date'] = file['ingest_date']
+                row['aca_ingest'] = file['aca_ingest']
+                row['filetime'] = file['filetime']
+                row.append()
+            tbl.flush()
+    except Exception as err:
+        if new_lines is not None:
+            logger.info("Text of attempted table")
+            logger.info("".join(new_lines))
+            raise(err)
+    finally:
+        h5f.close()
 
-    i_diff = 0
-    for have_entry, new_entry in zip(cda_files[match_last_idx:], files):
-        if have_entry['filename'] != new_entry['filename']:
-            break
-        i_diff += 1
-
-    if i_diff < len(files):
-        logger.info("Updating %s with %d new rows"
-                    % (table_file, len(files[i_diff:])))
-        for file in files[i_diff:]:
-            logger.debug(file)
-            row = tbl.row
-            row['filename'] = file['filename']
-            row['status'] = file['status']
-            row['ingest_time'] = file['ingest_time']
-            row['ingest_date'] = file['ingest_date']
-            row['aca_ingest'] = file['aca_ingest']
-            row['filetime'] = file['filetime']
-            row.append()
-        tbl.flush()
-    h5f.close()
 
 
 def main():
