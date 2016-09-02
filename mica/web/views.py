@@ -58,6 +58,13 @@ class StarHistView(BaseView, TemplateView):
 
         if agasc_id:
             import mica.web.star_hist
+            import agasc
+            try:
+                agasc_info = agasc.get_star(agasc_id)
+                context['star_info'] = [(key, agasc_info[key]) for key in agasc_info.dtype.names]
+            except IdNotFound:
+                context['star_info'] = []
+                pass
             acq_table, gui_table = mica.web.star_hist.get_star_stats(agasc_id, start, stop)
             if len(acq_table) or len(gui_table):
                 context['has_hist'] = 1
@@ -65,6 +72,7 @@ class StarHistView(BaseView, TemplateView):
                 context['acq_table'] = acq_table
             if len(gui_table):
                 context['gui_table'] = gui_table
+
 
         return context
 

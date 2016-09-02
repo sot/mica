@@ -127,6 +127,37 @@ the AGASC magnitude.
 
 {% endif %}
 
+
+<div class="border">
+<H1>AGASC info</H1>
+<TABLE border=1>
+<TR><TD WIDTH="30%" VALIGN="TOP">
+<TABLE>
+<TR>
+{% for fname, fval in star_info|slice:"0:15" %}
+<TR><TD>{{ fname }}</TD><TD>{{ fval }}</TD></TR>
+{% endfor %}
+</TABLE>
+</TD><TD WIDTH="30%" VALIGN="TOP">
+<TABLE>
+<TR>
+{% for fname, fval in star_info|slice:"15:30" %}
+<TR><TD>{{ fname }}</TD><TD>{{ fval }}</TD></TR>
+{% endfor %}
+</TABLE>
+</TD><TD WIDTH="30%" VALIGN="TOP">
+<TABLE>
+<TR>
+{% for fname, fval in star_info|slice:"30:" %}
+<TR><TD>{{ fname }}</TD><TD>{{ fval }}</TD></TR>
+{% endfor %}
+</TABLE>
+</TD></TR>
+</TABLE>
+</div>
+
+
+
 {% else %}
 {% if agasc_id != '' %}
 <H3>No acq or guide history for star :{{ agasc_id }}:</H3>
