@@ -127,7 +127,9 @@ the AGASC magnitude.
 {% endif %}
 
 {% else %}
+{% if agasc_id != '' %}
 <H3>No acq or guide history for star :{{ agasc_id }}:</H3>
+{% endif %}
 {% endif %}
 
 {% endblock %}
