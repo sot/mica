@@ -14,6 +14,7 @@ import Ska.quatutil
 import Ska.astro
 from mica.quaternion import Quat
 import mica.archive.aca_dark.dark_model
+from chandra_aca import yagzag_to_pixels
 import logging
 
 import warnings
@@ -99,7 +100,12 @@ ACQ_COLS = {
         ('ccd_temp', 'float')],
     'bad': [
         ('known_bad', 'bool'),
-        ('bad_comment', 'S15')]
+        ('bad_comment', 'S15'),
+        ('dc_id', 'S7'),
+        ('dc_tccd', 'float'),
+        ('dc_max_val', 'int'),
+        ('dc_max_row', 'int'),
+        ('dc_max_col', 'int')]
     }
 
 SKA = os.environ['SKA']
@@ -542,6 +548,7 @@ def calc_stats(obsid):
     # Filter the catalog to be just acquisition stars
     catalog = catalog[(catalog['type'] == 'ACQ') | (catalog['type'] == 'BOT')]
     time = DateTime(guide_start).secs
+    dc_max = get_dark_map_bright(time, catalog)
     ccd_temp = np.mean(fetch_sci.MSID('AACCCDPT',
                                       time-250,
                                       time+250).vals)
@@ -549,10 +556,37 @@ def calc_stats(obsid):
     warm_frac = mica.archive.aca_dark.dark_model.get_warm_fracs(
         warm_threshold, time, ccd_temp)
     temps = {'ccd_temp': ccd_temp, 'n100_warm_frac': warm_frac}
-    return obsid_info, acq_stats, star_info, catalog, temps
+    return obsid_info, acq_stats, star_info, catalog, temps, dc_max
 
 
-def table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp):
+def get_dark_map_bright(time, catalog):
+    dark_cal = mica.archive.aca_dark.get_dark_cal_props(time, select='before', include_image=True)
+    image = dark_cal['image']
+    row_idx = np.repeat(np.arange(-512, 512), 1024).reshape(1024,1024)
+    col_idx = np.repeat(np.arange(-512, 512), 1024).reshape(1024,1024).transpose()
+    slot_worst_pix = {}
+    for slot in catalog:
+        corner1 = yagzag_to_pixels(slot['yang'] - slot['halfw'], slot['zang'] + slot['halfw'])
+        corner2 = yagzag_to_pixels(slot['yang'] + slot['halfw'], slot['zang'] - slot['halfw'])
+        row_ranges = (int(corner2[0]) - 1, int(np.ceil(corner1[0])) + 1)
+        col_ranges = (int(corner2[1]) - 1, int(np.ceil(corner1[1])) + 1)
+        sl_image = image[row_ranges[0]+512:row_ranges[1]+513,
+                         col_ranges[0]+512:col_ranges[1]+513]
+        sl_row = row_idx[row_ranges[0]+512:row_ranges[1]+513,
+                         col_ranges[0]+512:col_ranges[1]+513]
+        sl_col = col_idx[row_ranges[0]+512:row_ranges[1]+513,
+                         col_ranges[0]+512:col_ranges[1]+513]
+        max_idx = np.argmax(sl_image)
+        slot_worst_pix[slot['slot']] = {
+            'id': dark_cal['id'],
+            'tccd': dark_cal['ccd_temp'],
+            'val': int(sl_image.flatten()[max_idx]),
+            'row': sl_row.flatten()[max_idx],
+            'col': sl_col.flatten()[max_idx]}
+    return slot_worst_pix
+
+
+def table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp, dc_max):
     logger.info("arranging stats into tabular data")
     cols = (ACQ_COLS['obs'] + ACQ_COLS['cat'] + ACQ_COLS['stat']
             + ACQ_COLS['agasc'] + ACQ_COLS['temp'] + ACQ_COLS['bad'])
@@ -578,6 +612,11 @@ def table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp):
             row[col] = star_info[slot][col.upper()]
         row['ccd_temp'] = temp['ccd_temp']
         row['n100_warm_frac'] = temp['n100_warm_frac']
+        row['dc_id'] = dc_max[slot]['id']
+        row['dc_tccd'] = dc_max[slot]['tccd']
+        row['dc_max_val'] = dc_max[slot]['val']
+        row['dc_max_row'] = dc_max[slot]['row']
+        row['dc_max_col'] = dc_max[slot]['col']
         row['known_bad'] = False
         row['bad_comment'] = ''
     # Exclude any rows that are missing
@@ -638,14 +677,14 @@ def update(opt):
             time.sleep(3720)
         logger.info("Processing obsid {}".format(obsid))
         try:
-            obsid_info, acq_stats, star_info, catalog, temp = calc_stats(obsid)
+            obsid_info, acq_stats, star_info, catalog, temp, dc_max = calc_stats(obsid)
         except ValueError as e:
             logger.info("Skipping obsid {}: {}".format(obsid, e))
             continue
         if not len(acq_stats):
             logger.info("Skipping obsid {}, no stats determined".format(obsid))
             continue
-        t = table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp)
+        t = table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp, dc_max)
         _save_acq_stats(t)
 
 
