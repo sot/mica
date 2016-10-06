@@ -476,7 +476,7 @@ def calc_stats(obsid):
         # input for get_starcheck_catalog
         if obsid in [1966]:
             starcheck = get_starcheck_catalog(obsid,
-                                              mp_dir='/2002/JAN1202/oflsa')
+                                              mp_dir='/2002/JAN1202/oflsa/')
         elif obsid in [3105, 2741, 61334, 61333, 61332, 61331, 3358, 3357]:
             starcheck = get_starcheck_catalog(obsid,
                                               mp_dir='/2002/JAN2802/oflsd/')
