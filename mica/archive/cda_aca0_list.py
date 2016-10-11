@@ -63,14 +63,11 @@ def make_data_table(lines):
                     for t in
                     [' '.join(f.split())
                      for f in files['ingest_time']]]
+    files['ingest_date'] = ingest_dates
     file_re = re.compile(r'acaf(\d{9,})N(\d{3})_(\d)_img0.fits(\.gz)?')
-    filetimes = [int(file_re.search(f).group(1)) for f in files['filename']]
-    versions = [int(file_re.search(f).group(2)) for f in files['filename']]
-    now_dates = np.repeat(DateTime().date, len(ingest_dates))
-    files.add_column(Column(ingest_dates, 'ingest_date'))
-    files.add_column(Column(now_dates, 'aca_ingest'))
-    files.add_column(Column(filetimes, 'filetime'))
-    files.add_column(Column(versions, 'version'))
+    files['aca_ingest'] = np.repeat(DateTime().date, len(ingest_dates))
+    files['filetime'] = [int(file_re.search(f).group(1)) for f in files['filename']]
+    files['version'] = [int(file_re.search(f).group(2)) for f in files['filename']]
     files.sort(['aca_ingest', 'ingest_date', 'filename'])
     return files
 
