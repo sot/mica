@@ -53,7 +53,7 @@ def get_options():
 
 
 def make_data_table(lines):
-    files = Table.read(lines, format='ascii.csv',
+    files = Table.read(lines, format='ascii.csv', guess=False,
                        names=['filename', 'status', 'ingest_time'])
     # replace variable spaces with single spaces and then strptime
     ingest_dates = [time.strftime(
