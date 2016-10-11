@@ -1,4 +1,21 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+"""
+Maintain a table with a list of of aca level 0 files in the Chandra Data Archive.
+
+This module calls the CGI available from:
+
+https://icxc.harvard.edu/dbtm/CDA/aspect_fetch.html
+
+fetches the list of aca0 files, and updates a full list of files in 'MICA_ARCHIVE/aca0/cda_aca0.h5'.
+That list should be of all available aca level 0 files in the Chandra Data Archive.  When called
+from the update_aca_l0.py update script in the mica cron job, this module attempts to use the end
+of the complete data in cda_aca0.h5 to form the query for new files, so only recent file names
+are fetched.
+
+The list of files in cda_aca0.h5 is compared against the list of files that have been archived in
+MICA_ARCHIVE so that none are missed.
+"""
+
 import os
 import re
 import tables
