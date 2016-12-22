@@ -17,6 +17,7 @@ import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
+from chandra_aca.aca_image import ACAImage
 # import kadi later in obsid_times
 
 import mica.version as mica_version
@@ -169,6 +170,66 @@ def get_slot_data(start, stop, slot, imgsize=None,
     oktime = ((all_rows['TIME'] >= DateTime(start).secs)
                & (all_rows['TIME'] <= DateTime(stop).secs))
     return all_rows[oktime]
+
+
+def get_l0_images(start, stop, slot, imgsize=None, columns=None):
+    """
+    For a the given parameters, retrieve telemetry and construct a
+    masked array of the MSIDs available in that telemetry.
+
+      >>> from mica.archive import aca_l0
+      >>> slot_data = aca_l0.get_slot_data('2012:001', '2012:002', slot=7)
+      >>> temp_ccd_8x8 = aca_l0.get_slot_data('2005:001', '2005:010',
+      ...                                     slot=6, imgsize=[8],
+      ...                                     columns=['TIME', 'TEMPCCD'])
+
+    :param start: start time of requested interval
+    :param stop: stop time of requested interval
+    :param slot: slot number integer (in the range 0 -> 7)
+    :param imgsize: list of integers of desired image sizes (default=[4, 6, 8])
+    :param columns: list of columns in meta
+
+    :returns: list of ACAImage objects
+    """
+    if columns is None:
+        # Default to a more typically-useful subset of ACA_DTYPE_NAMES
+        columns = list(ACA_DTYPE_NAMES)
+        columns.remove('FILENAME')
+        columns.remove('END_INTEG_TIME')
+        # Remove HDR3 telemetry and repeats like IMGFID2, IMGFID3, IMGFID4
+        for name in list(columns):
+            if re.match(r'[2-9]', name[-1]):
+                columns.remove(name)
+
+    dat = get_slot_data(start, stop, slot, imgsize=imgsize, columns=columns)
+
+    columns.remove('IMGRAW')
+    if 'QUALITY' in columns:
+        columns.remove('QUALITY')
+        ok = dat['QUALITY'] == 0
+        dat = dat[ok]
+
+    # Convert temperatures from K to degC
+    for temp in ('TEMPCCD', 'TEMPHOUS', 'TEMPPRIM', 'TEMPSEC'):
+        if temp in dat.dtype.names:
+            dat[temp] -= 273.15
+
+    imgs = []
+    masked = np.ma.masked
+    for i, row in enumerate(dat):
+        imgraw = dat['IMGRAW'][i].reshape(8, 8, order='F')
+        sz = row['IMGSIZE']
+        if sz < 8:
+            imgraw = imgraw[:sz, :sz]
+
+        if np.any(imgraw.mask):
+            raise ValueError('unexpected masked elements found')
+
+        meta = {name: row[name] for name in columns if row[name] is not masked}
+
+        imgs.append(ACAImage(imgraw, meta=meta))
+
+    return imgs
 
 
 class MSID(object):
@@ -795,6 +856,7 @@ class Updater(object):
         else:
             logger.info("No missing files")
 
+
 def main():
     """
     Command line interface to fetch ACA L0 telemetry from the CXC Archive
@@ -806,4 +868,5 @@ def main():
     updater.update()
 
 if __name__ == '__main__':
-    main()
+    # main()
+    pass
