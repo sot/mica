@@ -178,6 +178,9 @@ a file archive of ACA L0 telemetry.  This telemetry is stored in
 directories by year and day-of-year, and ingested filenames are stored
 in a lookup table.  
 
+Get_files()
+^^^^^^^^^^^^
+
 Methods are provided to retrieve files and read those data files into
 data structures.
 
@@ -203,7 +206,10 @@ The values from those files may be read and plotted directly:
    .. image:: plots/tempccd_from_files.png
 
 
-This particular loop/plot will break if the images aren't filtered on
+Get_slot_data()
+^^^^^^^^^^^^^^^
+
+The loop/plot above will break if the images aren't filtered on
 "imgsize=[6, 8]", as the 'TEMPCCD' columns is only available in 6x6
 and 8x8 data.  That's one reason to use the convenience function
 :func:`~mica.archive.aca_l0.get_slot_data()`, as it places the values in a
@@ -256,9 +262,13 @@ to create this:
 
    .. image:: plots/slot_2.gif
 
+
+Get_l0_images()
+^^^^^^^^^^^^^^^
+
 An alternate way to access ACA L0 image is via the
 :func:`~mica.archive.aca_l0.get_l0_images()` function.  This returns a Python list of
-`ACAImage` objects (see the ``chandra_aca.aca_image`` docs for details).  Each of these
+``ACAImage`` objects (see the ``chandra_aca.aca_image`` docs for details).  Each of these
 objects contains the image along with relevant meta-data for each readout:: ``['TIME',
 'IMGROW0', 'IMGCOL0', 'BGDAVG', 'IMGSTAT', 'IMGFUNC1', 'IMGSIZE', 'INTEG']``.
 
