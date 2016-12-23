@@ -174,39 +174,34 @@ def get_slot_data(start, stop, slot, imgsize=None,
 
 def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     """
-    For a the given parameters, retrieve telemetry and construct a
-    masked array of the MSIDs available in that telemetry.
+    Get ACA L0 images for the given  ``start`` and ``stop`` times and
+    the given ``slot``.  Optionally filter on image size via ``imgsize``
+    or change the default image metadata via ``columns``.
 
       >>> from mica.archive import aca_l0
-      >>> slot_data = aca_l0.get_slot_data('2012:001', '2012:002', slot=7)
-      >>> temp_ccd_8x8 = aca_l0.get_slot_data('2005:001', '2005:010',
-      ...                                     slot=6, imgsize=[8],
-      ...                                     columns=['TIME', 'TEMPCCD'])
+      >>> imgs = aca_l0.get_l0_images('2012:001', '2012:002', slot=7)
+      >>> imgs = aca_l0.get_l0_images('2005:001', '2005:002', slot=6, imgsize=[8])
 
     :param start: start time of requested interval
     :param stop: stop time of requested interval
     :param slot: slot number integer (in the range 0 -> 7)
     :param imgsize: list of integers of desired image sizes (default=[4, 6, 8])
-    :param columns: list of columns in meta
+    :param columns: image meta-data columns
 
     :returns: list of ACAImage objects
     """
     if columns is None:
-        # Default to a more typically-useful subset of ACA_DTYPE_NAMES
-        columns = list(ACA_DTYPE_NAMES)
-        columns.remove('FILENAME')
-        columns.remove('END_INTEG_TIME')
-        # Remove HDR3 telemetry and repeats like IMGFID2, IMGFID3, IMGFID4
-        for name in list(columns):
-            if re.match(r'[2-9]', name[-1]):
-                columns.remove(name)
+        columns = ['TIME', 'BGDAVG', 'IMGSTAT', 'IMGFUNC1', 'IMGSIZE']
+    if 'IMGROW0' not in columns:
+        columns.append('IMGROW0')
+    if 'IMGCOL0' not in columns:
+        columns.append('IMGCOL0')
 
-    dat = get_slot_data(start, stop, slot, imgsize=imgsize, columns=columns)
+    slot_columns = list(set(columns + ['QUALITY', 'IMGRAW', 'IMGSIZE']))
+    dat = get_slot_data(start, stop, slot, imgsize=imgsize, columns=slot_columns)
 
-    columns.remove('IMGRAW')
-    if 'QUALITY' in columns:
-        columns.remove('QUALITY')
-        ok = dat['QUALITY'] == 0
+    ok = dat['QUALITY'] == 0
+    if not(np.all(ok)):
         dat = dat[ok]
 
     # Convert temperatures from K to degC
@@ -214,19 +209,21 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
         if temp in dat.dtype.names:
             dat[temp] -= 273.15
 
+    # Masked array col access ~100 times slower than ndarray so convert
+    dat = dat.filled(-9999)
+
     imgs = []
-    masked = np.ma.masked
+    imgsizes = dat['IMGSIZE']
+    imgraws = dat['IMGRAW']
+    cols = {name: dat[name] for name in columns}
+
     for i, row in enumerate(dat):
-        imgraw = dat['IMGRAW'][i].reshape(8, 8, order='F')
-        sz = row['IMGSIZE']
+        imgraw = imgraws[i].reshape(8, 8, order='F')
+        sz = imgsizes[i]
         if sz < 8:
             imgraw = imgraw[:sz, :sz]
 
-        if np.any(imgraw.mask):
-            raise ValueError('unexpected masked elements found')
-
-        meta = {name: row[name] for name in columns if row[name] is not masked}
-
+        meta = {name: col[i] for name, col in cols.iteritems() if col[i] != -9999}
         imgs.append(ACAImage(imgraw, meta=meta))
 
     return imgs
