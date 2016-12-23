@@ -256,6 +256,45 @@ to create this:
 
    .. image:: plots/slot_2.gif
 
+An alternate way to access ACA L0 image is via the
+:func:`~mica.archive.aca_l0.get_l0_images()` function.  This returns a Python list of
+`ACAImage` objects (see the ``chandra_aca.aca_image`` docs for details).  Each of these
+objects contains the image along with relevant meta-data for each readout:: ``['TIME',
+'IMGROW0', 'IMGCOL0', 'BGDAVG', 'IMGSTAT', 'IMGFUNC1', 'IMGSIZE', 'INTEG']``.
+
+For example::
+
+  >>> imgs = aca_l0.get_l0_images(98585849, 98585884, slot=2)
+  >>> imgs[0]  # ACAImage rounds the values for viewing
+  <ACAImage row0=-246 col0=116
+  array([[  32,   81,   81,  212,  262,   98,   32,   27],
+         [  21,   48,  305, 1170,  830,  169,   65,   38],
+         [  38,   87,  825, 3434, 2635,  393,  147,   59],
+         [  54,  114,  508, 3614, 5408, 1284,  398,   92],
+         [  76,  163,  448, 2548, 5534, 1547,  344,  202],
+         [  65,  103,  256,  809, 2602, 1656,  426,  114],
+         [  16,   38,   54,  327, 1416, 1574,  502,  114],
+         [  10,   16,   43,  103,  371, 1191,  491,   92]])>
+
+  >>> imgs[0].aca[-240, 118]  # Access row=-240, col=118
+  53.90625
+
+  >>> imgs[0].meta
+  {'BGDAVG': 25,
+   'IMGCOL0': 116,
+   'IMGFUNC1': 1,
+   'IMGROW0': -246,
+   'IMGSIZE': 8,
+   'IMGSTAT': 0,
+   'INTEG': 1.696,
+   'TIME': 98585849.940383524}
+
+  >>> imgs[0].TIME
+  98585849.940383524
+
+  >>> imgs[0].row0, imgs[0].col0  # shortcut: row0 => IMGROW0
+  (-246, 116)
+
 
 Aspect L1 products
 ------------------
