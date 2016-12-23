@@ -224,7 +224,7 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     cols = {name: dat[name] for name in columns}
 
     for i, row in enumerate(dat):
-        imgraw = imgraws[i].reshape(8, 8, order='F')
+        imgraw = imgraws[i].reshape(8, 8)
         sz = imgsizes[i]
         if sz < 8:
             imgraw = imgraw[:sz, :sz]
