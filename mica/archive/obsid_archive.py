@@ -9,7 +9,7 @@ import re
 import logging
 import shutil
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 
 import Ska.arc5gl
 import Ska.DBI

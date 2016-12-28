@@ -2,7 +2,7 @@ from __future__ import division
 
 import os
 import re
-import pyfits
+import astropy.io.fits as pyfits
 import pickle
 import json
 import shelve

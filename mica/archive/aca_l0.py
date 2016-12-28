@@ -4,7 +4,7 @@ import re
 import logging
 import shutil
 import time
-import pyfits
+import astropy.io.fits as pyfits
 import numpy as np
 import numpy.ma as ma
 import argparse
