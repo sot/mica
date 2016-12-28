@@ -10,8 +10,9 @@ import numpy.ma as ma
 import argparse
 import collections
 import tables
-from itertools import izip, count
+from itertools import count
 
+from six.moves import zip
 import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
@@ -395,7 +396,7 @@ class Updater(object):
                     startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
-        for idate, backcnt in izip(ingested_files[::-1]['ingest_date'],
+        for idate, backcnt in zip(ingested_files[::-1]['ingest_date'],
                                    count(1)):
             if idate < startdate:
                 break
@@ -405,7 +406,7 @@ class Updater(object):
         # for the entries after the start date, see if we have the
         # file or a later version
         with Ska.DBI.DBI(**self.db) as db:
-            for file, idx in izip(ingested_files[-backcnt:], count(0)):
+            for file, idx in zip(ingested_files[-backcnt:], count(0)):
                 filename = file['filename']
                 db_match = db.fetchall(
                     "select * from archfiles where "
@@ -632,7 +633,7 @@ class Updater(object):
                 os.makedirs(archdir)
             if not os.path.exists(archfile):
                 logger.debug('mv %s %s' % (os.path.abspath(f), archfile))
-                os.chmod(f, 0775)
+                os.chmod(f, 0o775)
                 shutil.move(f, archfile)
             if os.path.exists(f):
                 logger.info('Unlinking %s' % os.path.abspath(f))

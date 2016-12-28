@@ -297,7 +297,7 @@ class ObsArchive:
             if len(versions) > 1:
                 raise ValueError("Different version files in %s" % tempdir)
         # update version to number
-        version = versions.keys()[0]
+        version = list(versions.keys())[0]
         return version
 
     def get_ver_num(self, obsid, version='default'):
@@ -474,7 +474,7 @@ class ObsArchive:
             for i, f in enumerate(archfiles):
                 # just copy the log files without inserting in db
                 if re.match('.+log.gz', f):
-                    os.chmod(f, 0775)
+                    os.chmod(f, 0o775)
                     shutil.copy(f, obs_dir)
                     os.remove(f)
                     continue
@@ -487,7 +487,7 @@ class ObsArchive:
                     continue
 
                 db.insert(arch_info, 'archfiles')
-                os.chmod(f, 0775)
+                os.chmod(f, 0o775)
                 shutil.copy(f, obs_dir)
                 os.remove(f)
             db.commit()

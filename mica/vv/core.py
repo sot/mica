@@ -1,4 +1,5 @@
 from __future__ import division
+
 import os
 import re
 import pyfits
@@ -24,6 +25,7 @@ from Chandra.Time import DateTime
 from Ska.Table import read_table
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
+import six
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -178,7 +180,7 @@ class Obi(object):
             if not 'n_pts' in slot:
                 continue
             # ignore the arrays
-            save = dict((k, v) for k, v in slot.iteritems()
+            save = dict((k, v) for k, v in six.iteritems(slot)
                         if type(v) not in [np.ndarray, np.ma.core.MaskedArray])
             slist.append(save)
         return slist
@@ -231,9 +233,9 @@ class Obi(object):
         obsid = ai_list[0]['OBS_ID']
         revision = ai_list[0]['REVISION']
         obi = ai_list[0]['OBI_NUM']
-        fidprops = [[dict(zip(r.dtype.names,r)) for r in getattr(ai, 'fidprop')]
+        fidprops = [[dict(zip(r.dtype.names, r)) for r in getattr(ai, 'fidprop')]
                     for ai in self.aspect_intervals]
-        gsprops = [[dict(zip(r.dtype.names,r)) for r in getattr(ai, 'gsprop')]
+        gsprops = [[dict(zip(r.dtype.names, r)) for r in getattr(ai, 'gsprop')]
                    for ai in self.aspect_intervals]
         self._info = {'obsid': int(obsid),
                      'revision': revision,
@@ -408,7 +410,7 @@ class Obi(object):
 
     def _sim_data(self):
         ai_0 = self.aspect_intervals[0]
-        sim_keys = ai_0.sim.keys()
+        sim_keys = list(ai_0.sim.keys())
         all_sim = dict()
         for d in sim_keys:
             if len(ai_0.sim[d]):

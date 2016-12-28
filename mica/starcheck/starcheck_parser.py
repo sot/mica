@@ -5,11 +5,12 @@ import sys
 import re
 import subprocess
 import json
-from itertools import izip, count
+from itertools import count
 import numpy as np
 import asciitable
 import Ska.Shell
 import Ska.DBI
+from six.moves import zip
 
 
 SC1 = ' IDX SLOT        ID  TYPE   SZ  MINMAG    MAG   MAXMAG   YANG   ZANG DIM RES HALFW'
@@ -209,7 +210,7 @@ def get_catalog(obs_text):
                              col_ends=hdrformat['col_ends'],
                              names=hdrformat['hdrs'])
     cat = []
-    for row, idx in izip(rawcat, count()):
+    for row, idx in zip(rawcat, count()):
         catrow = dict()
         for field in row.dtype.names:
             if field not in OKTYPE.keys():
@@ -318,7 +319,7 @@ def read_starcheck(starcheck_file):
     sc_text = open(starcheck_file, 'r').read()
     chunks = re.split("={20,}\s?\n?\n", sc_text)
     catalogs = []
-    for chunk, idx in izip(chunks, count()):
+    for chunk, idx in zip(chunks, count()):
         obs = get_cat(chunk)
         if obs:
             catalogs.append(obs)

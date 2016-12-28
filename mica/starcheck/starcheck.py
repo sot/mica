@@ -2,10 +2,11 @@ import os
 import re
 import logging
 import argparse
-from itertools import izip, count
+from itertools import count
 from operator import itemgetter
 import numpy as np
 
+from six.moves import zip
 from Chandra.Time import DateTime
 import Ska.Shell
 import Ska.DBI
@@ -270,7 +271,7 @@ def update(config=None):
             db.commit()
 
         starcheck = read_starcheck(st)
-        for (obs, obs_idx) in izip(starcheck, count(0)):
+        for (obs, obs_idx) in zip(starcheck, count(0)):
             ingest_obs(obs, obs_idx, sc_id, st, db, existing=existing)
         logger.info("Done with %s; updating touch file" % st)
         Ska.Shell.bash("touch -r %s %s" % (st, FILES['touch_file']),
