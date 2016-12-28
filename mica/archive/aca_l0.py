@@ -17,6 +17,7 @@ import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
+# import kadi later in obsid_times
 
 import mica.version as mica_version
 from mica.common import MICA_ARCHIVE, MissingDataError
@@ -206,11 +207,13 @@ class MSIDset(collections.OrderedDict):
 
 
 def obsid_times(obsid):
-    aca_db = dict(dbi="sybase", server="sybase", user="aca_read")
-    with Ska.DBI.DBI(**aca_db) as db:
-        obspars = db.fetchall("""select * from obspar where obsid = %d
-                                 order by obi""" % obsid)
-    return obspars[0]['tstart'], obspars[0]['tstop']
+    from kadi import events  # Kadi is a big import so defer
+    dwells = events.dwells.filter(obsid=obsid)
+    n_dwells = len(dwells)
+    tstart = dwells[0].tstart
+    tstop = dwells[n_dwells - 1].tstop
+
+    return tstart, tstop
 
 
 def get_files(obsid=None, start=None, stop=None,
