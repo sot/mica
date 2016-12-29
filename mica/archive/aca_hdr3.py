@@ -73,10 +73,23 @@ a_to_d = np.rec.fromrecords(a_to_d, names=['hex', 'tempC'])
 x = np.array([int(a, 16) for a in a_to_d['hex']])
 ad_func = interp1d(x, a_to_d['tempC'], kind='cubic', bounds_error=False)
 
+
 def ad_temp(msids):
+
     def func(slot_data):
         sum = two_byte_sum(msids)(slot_data)
-        return ad_func(sum)
+        # As of scipy 0.17 cannot interpolate a masked array.  In this
+        # case we can temporarily fill with some value that will always
+        # be in the range, then re-mask afterward.
+        masked = isinstance(sum, np.ma.MaskedArray)
+        if masked:
+            mask = sum.mask
+            sum = sum.filled(16000)
+        out = ad_func(sum)
+        if masked:
+            out = np.ma.MaskedArray(out, mask=mask)
+        return out
+
     return func
 
 # dictionary that defines the header 3 'MSID's.
