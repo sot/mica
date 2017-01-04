@@ -13,7 +13,7 @@ import pyyaks.context
 from Chandra.Time import DateTime
 from chandra_aca.aca_image import ACAImage
 
-from chandra_aca.dark_scale import dark_temp_scale
+from chandra_aca.dark_model import dark_temp_scale
 from mica.cache import lru_cache
 from mica.common import MICA_ARCHIVE_PATH, MissingDataError
 from . import file_defs
