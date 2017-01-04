@@ -1,2 +1,2 @@
 from .dark_cal import *
-from .dark_model import *
+from chandra_aca.dark_model import *
