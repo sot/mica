@@ -98,9 +98,8 @@ def get_rms_data():
 
     :returns: numpy array of RMS data for each star/obsid/version
     """
-    h5f = tables.openFile(FILES['h5_file'], 'r')
-    tbl = h5f.getNode('/', 'vv')
-    data = tbl[:]
-    h5f.close()
+    tables_open_file = getattr(tables, 'open_file', None) or tables.openFile
+    with tables_open_file(FILES['h5_file'], 'r') as h5f:
+        data = h5f.root.vv[:]
     return data
 
