@@ -1,8 +1,8 @@
 import os
 import numpy as np
-from mica import vv
-from mica.vv import process
-from mica import common
+from .. import vv
+from .. import process
+from ... import common
 
 
 def test_get_vv_dir():
