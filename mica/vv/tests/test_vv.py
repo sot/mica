@@ -18,15 +18,15 @@ def test_get_vv_files():
 def test_get_rms_data():
     data = vv.get_rms_data()
     dz_rms = data[(data['obsid'] == 16505) & (data['slot'] == 4) & (data['isdefault'] == 1)]['dz_rms'][0]
-    np.testing.assert_allclose(dz_rms, 0.047886185719034906)
+    assert np.allclose(dz_rms, 0.047886185719034906)
 
 
 def test_get_vv():
     obs = vv.get_vv(16504)
-    np.testing.assert_allclose(obs['slots']['7']['dz_rms'], 0.11610256063309182)
+    assert np.allclose(obs['slots']['7']['dz_rms'], 0.11610256063309182)
 
 
 def test_run_vv():
     obi = process.get_arch_vv(2121)
-    np.testing.assert_allclose(obi.info()['sim']['max_d_dy'], 0.002197265625)
+    assert np.allclose(obi.info()['sim']['max_d_dy'], 0.002197265625)
 
