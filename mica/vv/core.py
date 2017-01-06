@@ -260,7 +260,7 @@ class Obi(object):
             self._info['aspect_1_id'] =  aspect_1_id
             self._info['ap_date'] =  str(ap_date)
         except:
-            logger.warn("Could not determine aspect_1_id/date from database")
+            logger.warn("Could not determine aspect_1_id/date from Sybase database")
 
         # we don't care about the DateTimeType for ap_date,
         # so just cast to a string
