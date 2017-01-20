@@ -1,4 +1,5 @@
-from __future__ import division
+from __future__ import division, print_function
+
 import os
 import sys
 import warnings
@@ -16,6 +17,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.table import Table
+from six.moves import zip
 
 from Ska.Shell import bash
 import agasc
@@ -940,7 +942,7 @@ def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
     obs = ACA_DB.fetchall("select * from observations_all order by kalman_idstart desc")
     for ob in obs:
         obsid = ob['obsid']
-        print ob['date']
+        print(ob['date'])
         strobs = "%05d" % obsid
         chunk_dir = strobs[0:2]
         topdir = os.path.join(report_root, chunk_dir)

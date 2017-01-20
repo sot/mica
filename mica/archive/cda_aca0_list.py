@@ -3,8 +3,8 @@ import re
 import tables
 import asciitable
 import numpy as np
-import urllib
-from itertools import izip
+from six.moves import urllib, zip
+
 import time
 from Chandra.Time import DateTime
 import Ska.Numpy
@@ -64,7 +64,7 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
     query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
             ct_start.mon, ct_start.day, ct_start.year))
     url = cda_fetch_url + query
-    new_lines = urllib.urlopen(url).readlines()
+    new_lines = urllib.request.urlopen(url).readlines()
     files = make_data_table(new_lines)
     logger.info("Creating new table at %s" % table_file)
     h5f = tables.openFile(table_file, 'a',
@@ -101,7 +101,7 @@ def update_cda_table(data_root=None,
     query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
             lastdate.mon, lastdate.day, lastdate.year))
     url = cda_fetch_url + query
-    new_lines = urllib.urlopen(url).readlines()
+    new_lines = urllib.request.urlopen(url).readlines()
     files = make_data_table(new_lines)
     match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
     if len(match) == 0:
@@ -109,7 +109,7 @@ def update_cda_table(data_root=None,
     match_last_idx = match[-1]
 
     i_diff = 0
-    for have_entry, new_entry in izip(cda_files[match_last_idx:], files):
+    for have_entry, new_entry in zip(cda_files[match_last_idx:], files):
         if have_entry['filename'] != new_entry['filename']:
             break
         i_diff += 1

@@ -2,7 +2,7 @@
 Routines related to the dark current model and guide / acq success prediction.
 """
 
-from itertools import izip
+from six.moves import zip
 import numpy as np
 from numpy import exp, log, arange
 
@@ -10,7 +10,7 @@ import Ska.Numpy
 from Chandra.Time import DateTime
 
 # Define a common fixed binning of dark current distribution
-import darkbins
+from . import darkbins
 
 # Some constants and globals.  Done this way to support sherpa fitting.
 # Needs to be re-worked to be nicer.
@@ -95,7 +95,7 @@ def get_acq_success(date, t_ccd, mag):
         raise ValueError("Incompatible input shapes for 'date', 't_ccd', 'mag'")
 
     warm_fracs = []
-    for sdate, stemp  in izip(dates, t_ccds):
+    for sdate, stemp  in zip(dates, t_ccds):
         warm_frac = get_warm_fracs(warm_threshold,
                                    date=sdate, T_ccd=stemp)
         warm_fracs.append(warm_frac)

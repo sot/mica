@@ -1,4 +1,5 @@
 from __future__ import division
+
 import os
 import tempfile
 import json
@@ -40,7 +41,7 @@ def _file_vv(obi):
     else:
         logger.info("obsid dir %s already exists" % obs_dir)
     for f in glob(os.path.join(obi.tempdir, "*")):
-        os.chmod(f, 0775)
+        os.chmod(f, 0o775)
         shutil.copy(f, obs_dir)
         os.remove(f)
     logger.info("moved VV files to {}".format(obs_dir))

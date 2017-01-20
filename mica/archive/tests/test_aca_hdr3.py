@@ -13,6 +13,7 @@ def test_MSIDset():
     lengths as regression tests.
     """
     msids = [hdr3['msid'] for hdr3 in aca_hdr3.HDR3_DEF.values() if 'value' in hdr3]
+    msids = sorted(msids)
 
     # Read all MSIDs as a set
     dat = aca_hdr3.MSIDset(msids, '2010:001', '2010:003')
@@ -27,6 +28,6 @@ def test_MSIDset():
     val_lengths = np.array([len(dat[msid].vals) for msid in msids])
     time_lengths = np.array([len(dat[msid].times) for msid in msids])
     assert np.all(val_lengths == time_lengths)
-    assert np.all(val_lengths == [40528, 44432, 44432, 10679, 44432, 10760, 10731, 44432,
-                                  44432, 10679, 44432, 44432, 44432, 44432, 40991, 44432,
-                                  40991, 44432, 44432, 40991, 10679])
+    assert np.all(val_lengths == [10679, 40991, 40991, 40528, 40514, 40514, 40991, 40991, 40514,
+                                  40991, 40514, 40514, 40991, 40514, 10731, 40528, 40528, 40528,
+                                  10679, 10760, 10679])

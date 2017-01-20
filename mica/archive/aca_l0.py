@@ -4,18 +4,20 @@ import re
 import logging
 import shutil
 import time
-import pyfits
+import astropy.io.fits as pyfits
 import numpy as np
 import numpy.ma as ma
 import argparse
 import collections
 import tables
-from itertools import izip, count
+from itertools import count
 
+from six.moves import zip
 import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
+# import kadi later in obsid_times
 
 import mica.version as mica_version
 from mica.common import MICA_ARCHIVE, MissingDataError
@@ -205,11 +207,13 @@ class MSIDset(collections.OrderedDict):
 
 
 def obsid_times(obsid):
-    aca_db = dict(dbi="sybase", server="sybase", user="aca_read")
-    with Ska.DBI.DBI(**aca_db) as db:
-        obspars = db.fetchall("""select * from obspar where obsid = %d
-                                 order by obi""" % obsid)
-    return obspars[0]['tstart'], obspars[0]['tstop']
+    from kadi import events  # Kadi is a big import so defer
+    dwells = events.dwells.filter(obsid=obsid)
+    n_dwells = len(dwells)
+    tstart = dwells[0].tstart
+    tstop = dwells[n_dwells - 1].tstop
+
+    return tstart, tstop
 
 
 def get_files(obsid=None, start=None, stop=None,
@@ -395,7 +399,7 @@ class Updater(object):
                     startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
-        for idate, backcnt in izip(ingested_files[::-1]['ingest_date'],
+        for idate, backcnt in zip(ingested_files[::-1]['ingest_date'],
                                    count(1)):
             if idate < startdate:
                 break
@@ -405,7 +409,7 @@ class Updater(object):
         # for the entries after the start date, see if we have the
         # file or a later version
         with Ska.DBI.DBI(**self.db) as db:
-            for file, idx in izip(ingested_files[-backcnt:], count(0)):
+            for file, idx in zip(ingested_files[-backcnt:], count(0)):
                 filename = file['filename']
                 db_match = db.fetchall(
                     "select * from archfiles where "
@@ -632,7 +636,7 @@ class Updater(object):
                 os.makedirs(archdir)
             if not os.path.exists(archfile):
                 logger.debug('mv %s %s' % (os.path.abspath(f), archfile))
-                os.chmod(f, 0775)
+                os.chmod(f, 0o775)
                 shutil.move(f, archfile)
             if os.path.exists(f):
                 logger.info('Unlinking %s' % os.path.abspath(f))

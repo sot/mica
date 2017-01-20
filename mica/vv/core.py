@@ -1,7 +1,8 @@
 from __future__ import division
+
 import os
 import re
-import pyfits
+import astropy.io.fits as pyfits
 import pickle
 import json
 import shelve
@@ -21,9 +22,10 @@ from scipy.stats import scoreatpercentile
 
 import Ska.Numpy
 from Chandra.Time import DateTime
-from Ska.Table import read_table
+from astropy.table import Table
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
+import six
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -50,7 +52,7 @@ def parse_obspar(file):
                'r': float,
                's': str}
     try:
-        lines = gzip.open(file).readlines()
+        lines = gzip.open(file, 'rt').readlines()
     except IOError:
         lines = open(file).readlines()
     obs_read = csv.DictReader(lines,
@@ -178,7 +180,7 @@ class Obi(object):
             if not 'n_pts' in slot:
                 continue
             # ignore the arrays
-            save = dict((k, v) for k, v in slot.iteritems()
+            save = dict((k, v) for k, v in six.iteritems(slot)
                         if type(v) not in [np.ndarray, np.ma.core.MaskedArray])
             slist.append(save)
         return slist
@@ -231,9 +233,9 @@ class Obi(object):
         obsid = ai_list[0]['OBS_ID']
         revision = ai_list[0]['REVISION']
         obi = ai_list[0]['OBI_NUM']
-        fidprops = [[dict(zip(r.dtype.names,r)) for r in getattr(ai, 'fidprop')]
+        fidprops = [[dict(zip(r.dtype.names, r)) for r in getattr(ai, 'fidprop')]
                     for ai in self.aspect_intervals]
-        gsprops = [[dict(zip(r.dtype.names,r)) for r in getattr(ai, 'gsprop')]
+        gsprops = [[dict(zip(r.dtype.names, r)) for r in getattr(ai, 'gsprop')]
                    for ai in self.aspect_intervals]
         self._info = {'obsid': int(obsid),
                      'revision': revision,
@@ -258,7 +260,7 @@ class Obi(object):
             self._info['aspect_1_id'] =  aspect_1_id
             self._info['ap_date'] =  str(ap_date)
         except:
-            logger.warn("Could not determine aspect_1_id/date from database")
+            logger.warn("Could not determine aspect_1_id/date from Sybase database")
 
         # we don't care about the DateTimeType for ap_date,
         # so just cast to a string
@@ -408,7 +410,7 @@ class Obi(object):
 
     def _sim_data(self):
         ai_0 = self.aspect_intervals[0]
-        sim_keys = ai_0.sim.keys()
+        sim_keys = list(ai_0.sim.keys())
         all_sim = dict()
         for d in sim_keys:
             if len(ai_0.sim[d]):
@@ -519,16 +521,16 @@ class Obi(object):
 
     def _label_slots(self):
         ai = self.aspect_intervals[0]
-        self.guide_list = list(getattr(ai, 'gsprop').slot)
+        self.guide_list = list(getattr(ai, 'gsprop')['slot'])
         for gs in getattr(ai, 'gsprop'):
-            self.slot_report[str(gs.slot)] = dict(
-                slot=gs.slot,
+            self.slot_report[str(gs['slot'])] = dict(
+                slot=gs['slot'],
                 type=gs['type'].rstrip())
         if getattr(ai, 'fidprop') is not None:
-            self.fid_list = list(getattr(ai, 'fidprop').slot)
+            self.fid_list = list(getattr(ai, 'fidprop')['slot'])
             for fl in getattr(ai, 'fidprop'):
-                self.slot_report[str(fl.slot)] = dict(
-                    slot=fl.slot,
+                self.slot_report[str(fl['slot'])] = dict(
+                    slot=fl['slot'],
                     type='FID')
         else:
             self.fid_list = []
@@ -562,30 +564,30 @@ class Obi(object):
         for t in ('gsprop', 'fidprop'):
             if getattr(self.aspect_intervals[0], t) is None:
                 continue
-            slot_id = getattr(self.aspect_intervals[0], t).slot
-            slot_status = getattr(self.aspect_intervals[0], t).id_status
+            slot_id = getattr(self.aspect_intervals[0], t)['slot']
+            slot_status = getattr(self.aspect_intervals[0], t)['id_status']
             slot_type = 'FID'
             if t == 'gsprop':
-                slot_type = getattr(self.aspect_intervals[0], t).type
+                slot_type = getattr(self.aspect_intervals[0], t)['type']
                 slot_cel_loc_flag = getattr(self.aspect_intervals[0], t)['cel_loc_flag']
             for ai in self.aspect_intervals[1:]:
-                if len(slot_id) != len(getattr(ai, t).slot):
+                if len(slot_id) != len(getattr(ai, t)['slot']):
                     raise InconsistentAspectIntervals(
                         "differing %s slots across aspect intervals" % t)
-                if ((len(slot_id) == len(getattr(ai, t).slot)) &
-                    (not np.all([slot_id == getattr(ai, t).slot]))):
+                if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
+                    (not np.all([slot_id == getattr(ai, t)['slot']]))):
                     raise InconsistentAspectIntervals(
                         "differing %s slots across aspect intervals" % t)
-                if ((len(slot_id) == len(getattr(ai, t).slot)) &
+                if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
                     (not np.all([slot_status == getattr(ai, t).id_status]))):
                     raise InconsistentAspectIntervals(
                         "differing %s status across aspect intervals" % t)
                 if t == 'gsprop':
-                    if ((len(slot_id) == len(getattr(ai, t).slot)) &
+                    if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
                         (not np.all([slot_type == getattr(ai, t).type]))):
                         raise InconsistentAspectIntervals(
                             "differing %s type across aspect intervals" % t)
-                    if ((len(slot_id) == len(getattr(ai, t).slot)) &
+                    if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
                         (not np.all([slot_cel_loc_flag == getattr(ai, t)['cel_loc_flag']]))):
                         raise InconsistentAspectIntervals(
                             "differing %s cel_loc_flag across aspect intervals" % t)
@@ -901,11 +903,11 @@ class AspectInterval(object):
         gsfile = glob(os.path.join(
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
         # don't filter for only good stars at this point
-        prop = read_table(gsfile)
+        prop = Table.read(gsfile)
         info = []
         hdulist = pyfits.open(os.path.join(datadir, gsfile))
         header = hdulist[1].header
-        proptable = read_table(os.path.join(datadir, gsfile))
+        proptable = Table.read(os.path.join(datadir, gsfile))
         for gs in proptable:
             saveprop = dict(slot=gs['slot'],
                             id_status=gs['id_status'],
@@ -959,7 +961,7 @@ class AspectInterval(object):
         #else:
         asol_file = glob(
             os.path.join(datadir, "%s_asol1.fits*" % aiid))[0]
-        asol = read_table(asol_file)
+        asol = Table.read(asol_file)
         # Add code to handle first processing of 16091 with
         # non-confirming asol file
         if ('dtheta' not in asol.dtype.names
@@ -971,21 +973,21 @@ class AspectInterval(object):
         self.asol = asol
 
         logger.debug('Reading aspect quality')
-        self.aqual = read_table(glob(
+        self.aqual = Table.read(glob(
                 os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0])
 
         #if opt['noacal']:
         #    aca_misalign = np.array([[1.0,0,0], [0,1,0],[0,0,1]])
         #else:
         logger.debug('Reading ACA and FTS align file')
-        acal = read_table(glob(
+        acal = Table.read(glob(
                 os.path.join(datadir, "%s_acal1.fits*" % aiid))[0])
         self.aca_misalign = acal['aca_misalign'].reshape(3, 3)
         self.fts_misalign = acal['fts_misalign'].reshape(3, 3)
         self.acal = acal
 
         logger.debug('Reading Centroids')
-        cen = read_table(glob(
+        cen = Table.read(glob(
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         # do we want the other algs?
         self.cen = cen[(cen['alg'] == opt['alg'])
@@ -997,7 +999,7 @@ class AspectInterval(object):
         self.integ_time = self.cenhdulist[1].header['INTGTIME']
 
         logger.debug('Reading gyro data')
-        self.gdat = read_table(glob(
+        self.gdat = Table.read(glob(
                 os.path.join(datadir, "%s_gdat1.fits*" % aiid))[0])
 
 
@@ -1271,8 +1273,8 @@ class AspectInterval(object):
         abs_sim_dy0 = 10.0
         abs_sim_dz0 = 10.0
         n_med = 21
-        medf_dy = medfilt(self.asol.dy * mm2a, kernel_size=n_med)
-        medf_dz = medfilt(self.asol.dz * mm2a, kernel_size=n_med)
+        medf_dy = medfilt(self.asol['dy'] * mm2a, kernel_size=n_med)
+        medf_dz = medfilt(self.asol['dz'] * mm2a, kernel_size=n_med)
         d_dy = abs(medf_dy[1:] - medf_dy[:-1])
         d_dz = abs(medf_dz[1:] - medf_dz[:-1])
         self.sim = dict(time=self.asol['time'][:-1],

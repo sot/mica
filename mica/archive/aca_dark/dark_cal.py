@@ -3,6 +3,8 @@ import os
 from collections import OrderedDict
 import json
 
+from six.moves import zip
+
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table, Column
@@ -118,7 +120,7 @@ def get_dark_cal_id(date, select='before'):
     if dark_id in dark_cals:
         return dark_id
 
-    dark_cal_ids = dark_cals.keys()
+    dark_cal_ids = list(dark_cals.keys())
     date_secs = DateTime(date).secs
     dark_cal_secs = DateTime(np.array([dark_id_to_date(id_) for id_ in dark_cal_ids])).secs
 
@@ -195,7 +197,7 @@ def get_dark_cal_props(date, select='before', include_image=False):
         props = json.load(fh)
 
     # Change unicode to ascii at top level
-    keys = props.keys()
+    keys = list(props.keys())
     asciiprops = {}
     for key in keys:
         asciiprops[str(key)] = props[key]
