@@ -52,6 +52,7 @@ Functions
 
 .. autofunction:: get_slot_data
 .. autofunction:: get_files
+.. autofunction:: get_l0_images
 
 
 :mod:`mica.archive.asp_l1`

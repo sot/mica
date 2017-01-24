@@ -12,6 +12,11 @@ New BSD/3-clause BSD License
 Copyright (c) 2012 Smithsonian Astrophysical Observatory
 All rights reserved."""
 
+try:
+    from testr.setup_helper import cmdclass
+except ImportError:
+    cmdclass = {}
+
 setup(name='mica',
       description='Mica aspects archive',
       version=version,
@@ -22,7 +27,7 @@ setup(name='mica',
       packages=['mica', 'mica.archive', 'mica.archive.tests', 'mica.archive.aca_dark',
                 'mica.vv', 'mica.vv.tests',
                 'mica.starcheck', 'mica.catalog', 'mica.report', 'mica.web',
-                'mica.stats'],
+                'mica.stats', 'mica.archive.tests'],
       package_data={'mica.web': ['templates/*/*.html', 'templates/*.html']},
       tests_require=['pytest'],
       cmdclass=cmdclass,

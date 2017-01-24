@@ -3,6 +3,7 @@ import os
 from collections import OrderedDict
 import json
 
+import six
 from six.moves import zip
 
 import numpy as np
@@ -10,6 +11,7 @@ from astropy.io import fits
 from astropy.table import Table, Column
 import pyyaks.context
 from Chandra.Time import DateTime
+from chandra_aca.aca_image import ACAImage
 
 from mica.cache import lru_cache
 from mica.common import MICA_ARCHIVE_PATH, MissingDataError
@@ -142,7 +144,50 @@ def get_dark_cal_id(date, select='before'):
 
 
 @DARK_CAL.cache
-def get_dark_cal_image(date, select='before', t_ccd_ref=None):
+def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=False):
+    """
+    Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding
+    dark_props file.
+
+    :param date: date in any DateTime format
+    :param select: method to select dark cal (before|nearest|after)
+    :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
+    :param aca_image: return an AcaImage instance
+
+    :returns: 1024 x 1024 ndarray with dark cal image in e-/s, props dict
+    """
+    DARK_CAL['id'] = get_dark_cal_id(date, select)
+
+    hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
+    dark = hdus[0].data
+    hdus.close()
+
+    with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
+        props = json.load(fh)
+
+    # Change unicode to ascii at top level
+    if six.PY2:
+        keys = list(props.keys())
+        asciiprops = {}
+        for key in keys:
+            asciiprops[str(key)] = props[key]
+        props = asciiprops
+
+    if t_ccd_ref is not None:
+        # Scale factor to adjust data to an effective temperature of t_ccd_ref.
+        # For t_ccds warmer than t_ccd_ref this scale factor is < 1, i.e. the
+        # observed dark current is made smaller to match what it would be at the
+        # lower reference temperature.
+        t_ccd = props['ccd_temp']
+        dark *= dark_temp_scale(t_ccd, t_ccd_ref)
+
+    if aca_image:
+        dark = ACAImage(dark, row0=-512, col0=-512)
+
+    return dark, props
+
+
+def get_dark_cal_image(date, select='before', t_ccd_ref=None, aca_image=False):
     """
     Return the dark calibration image (e-/s) nearest to ``date``.
 
@@ -152,30 +197,17 @@ def get_dark_cal_image(date, select='before', t_ccd_ref=None):
     :param date: date in any DateTime format
     :param select: method to select dark cal (before|nearest|after)
     :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
+    :param aca_image: return an ACAImage instance instead of ndarray
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s
     """
-    DARK_CAL['id'] = get_dark_cal_id(date, select)
-
-    hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
-    dark = hdus[0].data
-    hdus.close()
-
-    if t_ccd_ref is not None:
-        with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
-            props = json.load(fh)
-        # Scale factor to adjust data to an effective temperature of t_ccd_ref.
-        # For t_ccds warmer than t_ccd_ref this scale factor is < 1, i.e. the
-        # observed dark current is made smaller to match what it would be at the
-        # lower reference temperature.
-        t_ccd = props['ccd_temp']
-        dark *= dark_temp_scale(t_ccd, t_ccd_ref)
-
+    dark, props = _get_dark_cal_image_props(date, select=select, t_ccd_ref=t_ccd_ref,
+                                            aca_image=aca_image)
     return dark
 
 
-@DARK_CAL.cache
-def get_dark_cal_props(date, select='before', include_image=False):
+def get_dark_cal_props(date, select='before', include_image=False, t_ccd_ref=None,
+                       aca_image=False):
     """
     Return a dark calibration properties structure for ``date``
 
@@ -188,25 +220,16 @@ def get_dark_cal_props(date, select='before', include_image=False):
     :param date: date in any DateTime format
     :param select: method to select dark cal (before|nearest|after)
     :param include_image: include the dark cal images in output (default=False)
+    :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
+    :param aca_image: return an ACAImage instance instead of ndarray
 
-    :returns: astropy Table or list of dark calibration properties
+    :returns: dict of dark calibration properties
     """
-    DARK_CAL['id'] = get_dark_cal_id(date, select)
-
-    with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
-        props = json.load(fh)
-
-    # Change unicode to ascii at top level
-    keys = list(props.keys())
-    asciiprops = {}
-    for key in keys:
-        asciiprops[str(key)] = props[key]
-    props = asciiprops
+    dark, props = _get_dark_cal_image_props(date, select=select, t_ccd_ref=None,
+                                            aca_image=aca_image)
 
     if include_image:
-        hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
-        props['image'] = hdus[0].data
-        hdus.close()
+        props['image'] = dark
 
     return props
 
