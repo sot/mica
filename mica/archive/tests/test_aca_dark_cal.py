@@ -3,8 +3,10 @@ Basic functionality and regression tests for ACA dark cal module.
 """
 
 import numpy as np
+import pytest
 
 from ..aca_dark import dark_cal
+from chandra_aca.aca_image import ACAImage
 
 
 def test_date_to_dark_id():
@@ -29,20 +31,30 @@ def test_get_dark_cal_id():
     assert dark_cal.get_dark_cal_id('2007:008', 'after') == '2007069'
 
 
-def test_get_dark_cal_image():
-    image = dark_cal.get_dark_cal_image('2007:008')
+@pytest.mark.parametrize('aca_image', [True, False])
+def test_get_dark_cal_image(aca_image):
+    image = dark_cal.get_dark_cal_image('2007:008', aca_image=aca_image)
     assert image.shape == (1024, 1024)
+    if aca_image:
+        assert image.row0 == -512
+        assert image.col0 == -512
+        assert image.aca[-511, -511] == image[1, 1]
+        assert image.aca[511, 0] == image[1023, 512]
+    else:
+        assert type(image) is np.ndarray
 
 
-def test_get_dark_cal_props():
+@pytest.mark.parametrize('aca_image', [True, False])
+def test_get_dark_cal_props(aca_image):
     props = dark_cal.get_dark_cal_props('2007:008')
     assert len(props['replicas']) == 5
     assert props['start'] == '2007:006:01:56:46.817'
 
-    props = dark_cal.get_dark_cal_props('2007:008', include_image=True)
+    props = dark_cal.get_dark_cal_props('2007:008', include_image=True, aca_image=aca_image)
     assert len(props['replicas']) == 5
     assert props['start'] == '2007:006:01:56:46.817'
     assert props['image'].shape == (1024, 1024)
+    assert type(props['image']) is (ACAImage if aca_image else np.ndarray)
 
 
 def test_get_dark_cal_props_table():
