@@ -579,12 +579,12 @@ class Obi(object):
                     raise InconsistentAspectIntervals(
                         "differing %s slots across aspect intervals" % t)
                 if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
-                    (not np.all([slot_status == getattr(ai, t).id_status]))):
+                    (not np.all([slot_status == getattr(ai, t)['id_status']]))):
                     raise InconsistentAspectIntervals(
                         "differing %s status across aspect intervals" % t)
                 if t == 'gsprop':
                     if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
-                        (not np.all([slot_type == getattr(ai, t).type]))):
+                        (not np.all([slot_type == getattr(ai, t)['type']]))):
                         raise InconsistentAspectIntervals(
                             "differing %s type across aspect intervals" % t)
                     if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
