@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+table.pcad td {
+line-height: 1rem;
+padding: .4rem;
+font-size: .7rem;
+}
+table.pcad tr {
+background-color: transparent;
+}
+table.pcad {border-spacing: 5px;}
+</style>
+{% endblock %}
+
+{% block body %}
+<body class="with-background">
+{% endblock %}
+
+{% block content %}
+<p><p>
+<h1 align="center"> Star History </h1>
+
+<form action="" method="get">
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="agasc_id" class="right inline">AGASC id</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="agasc_id" name="agasc_id" value="{{agasc_id}}">
+        </div>
+        <div class="row">
+          <div class="large-4 columns"><input type="submit" value="Submit"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="start" class="right inline">start time</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="start" name="start" value="{{start}}">
+        </div>
+        <div class="large-4 columns"> &nbsp; </div>
+      </div>
+      <div class="row">
+        <div class="large-2 columns"> &nbsp; </div>
+        <div class="large-3 columns">
+          <label for="stop" class="right inline">stop time</label>
+        </div>
+        <div class="large-3 columns">
+          <input type="text" id="stop" name="stop" value="{{stop}}">
+        </div>
+        <div class="large-4 columns"> &nbsp; </div>
+      </div>
+</form>
+
+{% if has_hist %}
+{% if acq_table %}
+<H3>Acquisition History</H3>
+<TABLE class='pcad' border=1>
+<tr>
+<th>date</th>
+<th>obsid</th>
+<th>obi</th>
+<th>type</th>
+<th>slot</th>
+<th>mag</th>
+<th>mag obs</th>
+<th>star tracked</th>
+<th>acq id</th>
+<th>dy (corr)</th>
+<th>dz (corr)</th>
+</tr>
+{% for acq in acq_table %}
+<tr>
+<td>{{ acq.date }}</td>
+<td>{{ acq.obsid }}</td>
+<td>{{ acq.obi }}</td>
+<td>{{ acq.type }}</td>
+<td>{{ acq.slot }}</td>
+<td>{{ acq.mag|floatformat:3 }}</td>
+<td>{{ acq.mag_obs|floatformat:3 }}</td>
+<td>{{ acq.star_tracked }}</td>
+<td>{{ acq.id }}</td>
+<td>{{ acq.acq_dy|floatformat:3 }}</td>
+<td>{{ acq.acq_dz|floatformat:3 }}</td>
+</tr>
+{% endfor %}
+</TABLE>
+{% endif %}
+
+{% if gui_table %}
+<H3>Guide History</H3>
+<TABLE class='pcad' border=1>
+<tr>
+<th>date</th>
+<th>obsid</th>
+<th>obi</th>
+<th>type</th>
+<th>slot</th>
+<th>mag</th>
+<th>mean mag</th>
+<th>% not track</th>
+</tr>
+{% for gui in gui_table %}
+<tr>
+<td>{{ gui.date }}</td>
+<td>{{ gui.obsid }}</td>
+<td>{{ gui.obi }}</td>
+<td>{{ gui.type }}</td>
+<td>{{ gui.slot }}</td>
+<td>{{ gui.mag|floatformat:3 }}</td>
+<td>{{ gui.mag_obs|floatformat:3 }}</td>
+<td>{{ gui.perc_not_track|floatformat:3 }}</td>
+</tr>
+{% endfor %}
+</TABLE>
+{% if acq_table %}
+Notes: In the acquisition history table, "dy (corr)" and "dz (corr)" are the offset from
+the expected/commanded position in arcsecs based on the star positions after correction
+(corr) with the one-shot update.  In the acquisition and guide history tables, "mag" is
+the AGASC magnitude.
+{% endif %}
+
+{% endif %}
+
+
+<div class="border">
+<H1>AGASC info</H1>
+<TABLE border=1>
+<TR><TD WIDTH="30%" VALIGN="TOP">
+<TABLE>
+<TR>
+{% for fname, fval in star_info|slice:"0:15" %}
+<TR><TD>{{ fname }}</TD><TD>{{ fval }}</TD></TR>
+{% endfor %}
+</TABLE>
+</TD><TD WIDTH="30%" VALIGN="TOP">
+<TABLE>
+<TR>
+{% for fname, fval in star_info|slice:"15:30" %}
+<TR><TD>{{ fname }}</TD><TD>{{ fval }}</TD></TR>
+{% endfor %}
+</TABLE>
+</TD><TD WIDTH="30%" VALIGN="TOP">
+<TABLE>
+<TR>
+{% for fname, fval in star_info|slice:"30:" %}
+<TR><TD>{{ fname }}</TD><TD>{{ fval }}</TD></TR>
+{% endfor %}
+</TABLE>
+</TD></TR>
+</TABLE>
+</div>
+
+
+
+{% else %}
+{% if agasc_id != '' %}
+<H3>No acq or guide history for star :{{ agasc_id }}:</H3>
+{% endif %}
+{% endif %}
+
+{% endblock %}
