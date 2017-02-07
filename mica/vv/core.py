@@ -911,8 +911,7 @@ class AspectInterval(object):
         info = []
         hdulist = pyfits.open(os.path.join(datadir, gsfile))
         header = hdulist[1].header
-        proptable = Table.read(os.path.join(datadir, gsfile))
-        for gs in proptable:
+        for gs in prop:
             saveprop = dict(slot=gs['slot'],
                             id_status=gs['id_status'],
                             tstart=header['TSTART'],
