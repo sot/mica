@@ -33,6 +33,10 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
+import warnings
+from astropy.units import UnitsWarning
+warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
+
 
 class InconsistentAspectIntervals(ValueError):
     pass
