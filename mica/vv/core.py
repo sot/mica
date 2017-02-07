@@ -975,10 +975,10 @@ class AspectInterval(object):
         self.asol_header = header
         self.asol = asol
 
+
         logger.debug('Reading aspect quality')
         self.aqual = Table.read(glob(
-                os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0])
-
+                os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0], hdu=1)
         #if opt['noacal']:
         #    aca_misalign = np.array([[1.0,0,0], [0,1,0],[0,0,1]])
         #else:
