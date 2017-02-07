@@ -1096,10 +1096,7 @@ class AspectInterval(object):
                                   'ra_corr': ra,
                                   'dec_corr': dec})
 
-                self.gsprop.resize(len(self.gsprop) + 1)
-                self.gsprop[-1] = np.rec.fromrecords([[mock_prop[col]
-                                                       for col in self.gsprop.dtype.names]],
-                                                     dtype=self.gsprop.dtype)
+                self.gsprop.add_row(mock_prop)
                 self.gspr_info.append(dict(slot=slot,
                                            tstart=self.asol_header['TSTART'],
                                            tstop=self.asol_header['TSTOP'],
