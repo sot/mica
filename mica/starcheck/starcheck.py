@@ -26,12 +26,15 @@ FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
              sql_def='starcheck.sql')
 
 # this doesn't belong in starcheck
-def get_timeline_at_date(date):
-    aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-    return aca_db.fetchone(
+def get_timeline_at_date(date, timelines_db=None):
+    if timelines_db is None:
+        timelines_db = Ska.DBI.DBI(dbi='sqlite',
+                         server='/proj/sot/ska/data/cmd_states/cmd_states.db3')
+    return timelines_db.fetchone(
         "select * from timeline_loads where datestop >= '%s' "
         " and datestart <= '%s' and scs <= 130 order by datestart desc"
         % (date, date))
+
 
 def get_mp_dir(obsid, config=None):
     if config is None:
