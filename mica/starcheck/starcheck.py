@@ -39,6 +39,38 @@ def get_timeline_at_date(date, timelines_db=None):
         % (date, date))
 
 
+def get_flickpix_mons(start=None, config=None):
+    if config is None:
+        config = DEFAULT_CONFIG
+    db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
+    # I'm ignoring the weird case of SIR obsids or whatever where the following ER keeps
+    # the MON
+    mons = db.fetchall("""select obsid, mp_starcat_time, type, sz, yang, zang, dir
+                          from starcheck_catalog, starcheck_id
+                          where type = 'MON' and obsid > 40000
+                          and starcheck_id.id = starcheck_catalog.sc_id""")
+    mons = Table(mons)
+    if start is not None:
+        mons = mons[mons['mp_starcat_time'] >= DateTime(start).date]
+    statuses = []
+    # Check which ones actually ran or are likely to run
+    for mon in mons:
+        print mon
+        try:
+            actual_catalog = get_catalog_at_date(mon['mp_starcat_time'])
+            if (actual_catalog is not None and actual_catalog['obs']['obsid'] == mon['obsid']
+                    and actual_catalog['mp_dir'] == mon['dir']):
+                statuses.append(actual_catalog['status'])
+            else:
+                statuses.append('none')
+        except LookupError:
+            statuses.append('none')
+    # Add that status info to the table and filter on it
+    mons['status'] = statuses
+    mons = mons[mons['status'] != 'none']
+    return mons
+
+
 def get_catalog_at_date(date, config=None, timelines_db=None):
     """
     For a given date, return a dictionary describing the starcheck catalog that should apply.
