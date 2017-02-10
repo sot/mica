@@ -27,6 +27,7 @@ FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
 
 # this doesn't belong in starcheck
 def get_timeline_at_date(date, timelines_db=None):
+    date = DateTime(date).date
     if timelines_db is None:
         timelines_db = Ska.DBI.DBI(dbi='sqlite',
                          server='/proj/sot/ska/data/cmd_states/cmd_states.db3')
