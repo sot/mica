@@ -31,8 +31,10 @@ def test_run_vv():
     assert np.allclose(obi.info()['sim']['max_d_dy'], 0.002197265625)
 
 def test_run_vv_omitted_slot():
-    obi = process.get_arch_vv(19991, version='last')
+    # This test run on obsid with omitted slot is just testing for unhandled exceptions
+    process.get_arch_vv(19991, version='last')
 
 def test_run_vv_multi_interval():
-    obi = process.get_arch_vv(18980, version='last')
+    # This test run on obsid with multiple intervals is just testing for unhandled exceptions
+    process.get_arch_vv(18980, version='last')
 
