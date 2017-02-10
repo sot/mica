@@ -36,45 +36,56 @@ def get_timeline_at_date(date, timelines_db=None):
         % (date, date))
 
 
-def get_mp_dir(obsid, config=None):
+def get_mp_dir(obsid, config=None, timelines_db=None):
+    """
+    Get the mission planning directory for an obsid and some status information.  If the obsid catalog was
+    used more than once (multi-obi or rescheduled after being maneuvered-to but not science observed during
+    an SCS107 vehicle interval), return the directory and details of the last one used on the spacecraft.
+    """
     if config is None:
         config = DEFAULT_CONFIG
-    aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-    possible_runs = aca_db.fetchall(
-        "select * from tl_obsids where obsid = %d" % obsid)
-    if not len(possible_runs):
-        db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
-        sc = db.fetchall(
+    if timelines_db is None:
+        timelines_db = Ska.DBI.DBI(dbi='sqlite',
+                                   server='/proj/sot/ska/data/cmd_states/cmd_states.db3')
+    last_tl = timelines_db.fetchone(
+        "select max(datestop) as datestop from timelines")['datestop']
+    with Ska.DBI.DBI(dbi='sqlite', server=config['server']) as db:
+        starchecks = db.fetchall(
             """select * from starcheck_obs, starcheck_id
                where obsid = %d and starcheck_id.id = starcheck_obs.sc_id
                order by sc_id """ % obsid)
-        if len(sc):
-            if sc[-1]['mp_starcat_time'] < '2001:001:00:00:00.000':
-                return (sc[-1]['dir'], 'ran_pretimelines', sc[-1]['mp_starcat_time'])
-            return (sc[-1]['dir'], 'planned', sc[-1]['mp_starcat_time'])
-    actual_run = None
-    if not len(possible_runs):
-        return (None, None, None)
-    for poss in possible_runs:
-        tl = get_timeline_at_date(poss['date'])
-        if tl is not None and poss['dir'] == tl['mp_dir']:
-            actual_run = poss
-            break
-    if actual_run is None:
-        last_tl = aca_db.fetchone(
-            "select max(datestop) as datestop from timelines")['datestop']
-        if poss['date'] <= last_tl:
-            if obsid > 60000:
-                logger.debug("ACIS ER {} not in timelines".format(obsid))
-                return (None, None, None)
+        # If this predates timelines data just return the last record that matches
+        # and hope for the best
+        if len(starchecks) and (starchecks[-1]['mp_starcat_time'] < '2001:001:00:00:00.000'):
+            return (starchecks[-1]['dir'], 'ran_pretimelines', starchecks[-1]['mp_starcat_time'])
+        # And if there's nothing do, a quick check to see if it is in other database
+        # to throw an error if it is just missing in mica
+        if not len(starchecks):
+            tl_obsids = timelines_db.fetchall("select * from tl_obsids where obsid = {}".format(
+                    obsid))
+            if len(tl_obsids):
+                raise ValueError(
+                    "Obsid {} in parsed loads in tl_obsids but not in mica starcheck".format(obsid))
+            return (None, None, None)
+        # Go through the entries backwards (which are in ingest/date order)
+        for sc in starchecks[::-1]:
+            sc_date = sc['mp_starcat_time']
+            # if this is in a schedule not-yet-in-timelines
+            # We'll have to hope that is the most useful entry if there are multiples
+            if sc_date > last_tl:
+                return (sc['dir'], 'planned', sc_date)
+            tl = get_timeline_at_date(sc_date, timelines_db=timelines_db)
+            if not len(tl):
+                raise ValueError("No timeline covering date {}".format(sc_date))
+            # If the approved products in timelines are from a different directory, no-go
+            if tl['mp_dir'] != sc['dir']:
+                continue
+            if sc_date < DateTime().date:
+                return (sc['dir'], 'ran', sc_date)
             else:
-                logger.debug("Obsid {} not found in timelines but should be there".format(obsid))
-                return (None, None, None)
-        return (possible_runs[-1]['dir'], 'planned', possible_runs[-1]['date'])
-    if poss['date'] < DateTime().date:
-        return (actual_run['dir'], 'ran', poss['date'])
-    else:
-        return (actual_run['dir'], 'approved', poss['date'])
+                return (sc['dir'], 'approved', sc_date)
+        raise ValueError("get_mp_dir should find something or nothing")
+
 
 def obsid(obsid, mp_dir=None, config=None):
     if mp_dir is None:
