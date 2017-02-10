@@ -10,6 +10,8 @@ from six.moves import zip
 from Chandra.Time import DateTime
 import Ska.Shell
 import Ska.DBI
+from kadi import events
+from astropy.table import Table
 
 from mica.starcheck.starcheck_parser import read_starcheck
 from mica.common import MICA_ARCHIVE
@@ -35,6 +37,74 @@ def get_timeline_at_date(date, timelines_db=None):
         "select * from timeline_loads where datestop >= '%s' "
         " and datestart <= '%s' and scs <= 130 order by datestart desc"
         % (date, date))
+
+
+def get_catalog_at_date(date, config=None, timelines_db=None):
+    """
+    For a given date, return a dictionary describing the starcheck catalog that should apply.
+    The content of that dictionary is from the database tables that parsed the starcheck report.
+    A catalog is defined as applying, in this function, to any time from the end of the
+    previous dwell through the end of the dwell in which the catalog was used.
+    """
+
+    if config is None:
+        config = DEFAULT_CONFIG
+    date = DateTime(date).date
+    if timelines_db is None:
+        timelines_db = Ska.DBI.DBI(dbi='sqlite',
+                                   server='/proj/sot/ska/data/cmd_states/cmd_states.db3')
+    last_tl = timelines_db.fetchone(
+        "select max(datestop) as datestop from timelines")['datestop']
+    first_tl = timelines_db.fetchone(
+        "select min(datestart) as datestart from timelines")['datestart']
+    db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
+    # if we're outside of timelines, just try from the starcheck database
+    if date > last_tl or date < first_tl:
+        # Get one entry that is the last one before the specified time, in the most
+        # recently ingested products directory
+        starcheck = db.fetchone(
+            """select * from starcheck_obs, starcheck_id
+               where mp_starcat_time <= '{}' and mp_starcat_time > '{}'
+               and starcheck_id.id = starcheck_obs.sc_id
+               order by sc_id desc, mp_starcat_time desc """.format(
+                date, (DateTime(date) - 1).date))
+        if starcheck:
+            cat_info = get_starcheck_catalog(starcheck['obsid'], mp_dir=starcheck['dir'])
+            if date < first_tl:
+                cat_info['status'] = 'ran before timelines'
+            if date > last_tl:
+                cat_info['status'] = 'planned'
+            return cat_info
+    # If timelines apply, try to use those to find a commanded catalog
+    # Use kadi to get the first dwell that *ends* after the given time
+    dwells = events.dwells.filter(stop__gte=date, subset=slice(None, 1))
+    dwell = dwells[0]
+    # Check the timelines that cover the range between the last dwell and the dwell
+    # for this catalog, that should cover NMM when the catalog is commanded
+    timelines = timelines_db.fetchall(
+        """select * from timeline_loads where scs < 131
+           and datestop > '{}' and datestart < '{}' order by datestart""".format(
+           dwell.get_previous().stop, dwell.start))
+    for timeline in timelines[::-1]:
+        starchecks = db.fetchall(
+            """select * from starcheck_obs, starcheck_id
+               where dir = '{}'
+               and mp_starcat_time >= '{}'
+               and mp_starcat_time <= '{}' and mp_starcat_time <= '{}'
+               and starcheck_id.id = starcheck_obs.sc_id
+               order by mp_starcat_time """.format(
+                timeline['mp_dir'],
+                timeline['datestart'],
+                timeline['datestop'], dwell.start))
+        # The last one should be the one before beginning of the dwell
+        if len(starchecks):
+            cat_info = get_starcheck_catalog(starchecks[-1]['obsid'], mp_dir=starchecks[-1]['dir'])
+            if cat_info['obs']['mp_starcat_time'] > DateTime().date:
+                cat_info['status'] = 'approved'
+            else:
+                cat_info['status'] = 'ran'
+            return cat_info
+    return None
 
 
 def get_mp_dir(obsid, config=None, timelines_db=None):
