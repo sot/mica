@@ -33,6 +33,10 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
+import warnings
+from astropy.units import UnitsWarning
+warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
+
 
 class InconsistentAspectIntervals(ValueError):
     pass
@@ -907,8 +911,7 @@ class AspectInterval(object):
         info = []
         hdulist = pyfits.open(os.path.join(datadir, gsfile))
         header = hdulist[1].header
-        proptable = Table.read(os.path.join(datadir, gsfile))
-        for gs in proptable:
+        for gs in prop:
             saveprop = dict(slot=gs['slot'],
                             id_status=gs['id_status'],
                             tstart=header['TSTART'],
@@ -972,10 +975,10 @@ class AspectInterval(object):
         self.asol_header = header
         self.asol = asol
 
+
         logger.debug('Reading aspect quality')
         self.aqual = Table.read(glob(
-                os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0])
-
+                os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0], hdu=1)
         #if opt['noacal']:
         #    aca_misalign = np.array([[1.0,0,0], [0,1,0],[0,0,1]])
         #else:
@@ -1096,10 +1099,7 @@ class AspectInterval(object):
                                   'ra_corr': ra,
                                   'dec_corr': dec})
 
-                self.gsprop.resize(len(self.gsprop) + 1)
-                self.gsprop[-1] = np.rec.fromrecords([[mock_prop[col]
-                                                       for col in self.gsprop.dtype.names]],
-                                                     dtype=self.gsprop.dtype)
+                self.gsprop.add_row(mock_prop)
                 self.gspr_info.append(dict(slot=slot,
                                            tstart=self.asol_header['TSTART'],
                                            tstop=self.asol_header['TSTOP'],
