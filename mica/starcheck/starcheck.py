@@ -22,7 +22,9 @@ logger.addHandler(logging.StreamHandler())
 
 DEFAULT_CONFIG = dict(dbi='sqlite',
                       server=os.path.join(MICA_ARCHIVE, 'starcheck', 'starcheck.db3'),
-                      mp_top_level='/data/mpcrit1/mplogs')
+                      mp_top_level='/data/mpcrit1/mplogs',
+                      timelines_db=dict(dbi='sqlite',
+                                        server=os.path.join(os.environ['SKA'], 'data', 'cmd_states', 'cmd_states.db3')))
 FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
              touch_file=os.path.join(MICA_ARCHIVE, 'starcheck', "starcheck_parser.touch"),
              sql_def='starcheck.sql')
@@ -31,8 +33,7 @@ FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
 def get_timeline_at_date(date, timelines_db=None):
     date = DateTime(date).date
     if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(dbi='sqlite',
-                         server='/proj/sot/ska/data/cmd_states/cmd_states.db3')
+        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
     return timelines_db.fetchone(
         "select * from timeline_loads where datestop >= '%s' "
         " and datestart <= '%s' and scs <= 130 order by datestart desc"
@@ -83,8 +84,7 @@ def get_catalog_at_date(date, config=None, timelines_db=None):
         config = DEFAULT_CONFIG
     date = DateTime(date).date
     if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(dbi='sqlite',
-                                   server='/proj/sot/ska/data/cmd_states/cmd_states.db3')
+        timelines_db = Ska.DBI.DBI(**config['timelines_db'])
     last_tl = timelines_db.fetchone(
         "select max(datestop) as datestop from timelines")['datestop']
     first_tl = timelines_db.fetchone(
@@ -148,8 +148,7 @@ def get_mp_dir(obsid, config=None, timelines_db=None):
     if config is None:
         config = DEFAULT_CONFIG
     if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(dbi='sqlite',
-                                   server='/proj/sot/ska/data/cmd_states/cmd_states.db3')
+        timelines_db = Ska.DBI.DBI(**config['timelines_db'])
     last_tl = timelines_db.fetchone(
         "select max(datestop) as datestop from timelines")['datestop']
     with Ska.DBI.DBI(dbi='sqlite', server=config['server']) as db:
