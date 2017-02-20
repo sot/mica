@@ -58,7 +58,7 @@ def get_flickpix_mons(start=None, config=None):
     for mon in mons:
         print mon
         try:
-            actual_catalog = get_catalog_at_date(mon['mp_starcat_time'])
+            actual_catalog = get_starcheck_catalog_at_date(mon['mp_starcat_time'])
             if (actual_catalog is not None and actual_catalog['obs']['obsid'] == mon['obsid']
                     and actual_catalog['mp_dir'] == mon['dir']):
                 statuses.append(actual_catalog['status'])
@@ -72,7 +72,7 @@ def get_flickpix_mons(start=None, config=None):
     return mons
 
 
-def get_catalog_at_date(date, config=None, timelines_db=None):
+def get_starcheck_catalog_at_date(date, config=None, timelines_db=None):
     """
     For a given date, return a dictionary describing the starcheck catalog that should apply.
     The content of that dictionary is from the database tables that parsed the starcheck report.
