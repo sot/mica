@@ -57,10 +57,10 @@ def get_flickpix_mons(start=None, config=None):
     # Check which ones actually ran or are likely to run
     for mon in mons:
         try:
-            actual_catalog = get_starcheck_catalog_at_date(mon['mp_starcat_time'])
-            if (actual_catalog is not None and actual_catalog['obs']['obsid'] == mon['obsid']
-                    and actual_catalog['mp_dir'] == mon['dir']):
-                statuses.append(actual_catalog['status'])
+            catalog = get_starcheck_catalog_at_date(mon['mp_starcat_time'])
+            if (catalog is not None and catalog['obs']['obsid'] == mon['obsid']
+                    and catalog['mp_dir'] == mon['dir']):
+                statuses.append(catalog['status'])
             else:
                 statuses.append('none')
         except LookupError:
