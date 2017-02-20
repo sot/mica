@@ -116,12 +116,18 @@ def get_starcheck_catalog_at_date(date, config=None, timelines_db=None):
     # Use kadi to get the first dwell that *ends* after the given time
     dwells = events.dwells.filter(stop__gte=date, subset=slice(None, 1))
     dwell = dwells[0]
-    # Check the timelines that cover the range between the last dwell and the dwell
-    # for this catalog, that should cover NMM when the catalog is commanded
+    # We want to search for legitimate commanding that would cover the time when a star
+    # catalog would have been commanded for this dwell.  This is generally the time range
+    # between the end of the previous dwell and the beginning of this dwell.  However, if
+    # there are multiple dwells from one maneuver, use the beginning of NMM from that one
+    # maneuver else, use the end of the last dwell.  Don't use nman_start time by default
+    # because that doesn't appear to work if the catalog was commanded in a nonstandard
+    # nmm sequence like dark cal.
+    start_cat_search = dwell.manvr.nman_start if dwell.manvr.n_dwell > 1 else dwell.get_previous().stop
     timelines = timelines_db.fetchall(
-        """select * from timeline_loads where scs < 131
+            """select * from timeline_loads where scs < 131
            and datestop > '{}' and datestart < '{}' order by datestart""".format(
-           dwell.get_previous().stop, dwell.start))
+            start_cat_search, dwell.start))
     for timeline in timelines[::-1]:
         starchecks = db.fetchall(
             """select * from starcheck_obs, starcheck_id
