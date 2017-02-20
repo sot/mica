@@ -296,9 +296,6 @@ def get_starcheck_catalog(obsid, mp_dir=None,
     """
     if config is None:
         config = DEFAULT_CONFIG
-    sc_dbi = config['dbi']
-    sc_server = config['server']
-    dbh = Ska.DBI.DBI(dbi=sc_dbi, server=sc_server)
     # tstart will override mp_dir
     if tstart is not None:
         # if this should be in timelines
@@ -310,48 +307,24 @@ def get_starcheck_catalog(obsid, mp_dir=None,
                         "mp_dir was specified but inconsistent with tstart")
             mp_dir = timeline['mp_dir']
     if mp_dir is None:
-        # in this mode, just get last NPNT interval
-        # not clear about what obi we'll get, but..
-        aca_db = Ska.DBI.DBI(dbi='sybase', server='sybase',
-                             user='aca_read')
-        cmd_state = aca_db.fetchone(
-            "select max(datestart) as datestart from cmd_states "
-            "where obsid = %d and pcad_mode = 'NPNT'"
-            % obsid)
-        if cmd_state['datestart'] is None:
-            # just the most recent starcheck if not in cmd_states
-            obs = dbh.fetchall("""select * from starcheck_obs
-                                  where obsid = %d""" % obsid)
-            sc_id = np.max(obs['sc_id'])
-            mp_dir = dbh.fetchone("select dir from starcheck_id "
-                                  "where id = %d" % sc_id)['dir']
-        else:
-            timeline = aca_db.fetchone(
-                "select * from timeline_loads where datestart in "
-                "(select max(datestart) from timeline_loads "
-                "where datestart <= '%s')" % cmd_state['datestart'])
-            mp_dir = timeline['mp_dir']
-    sc_id = dbh.fetchone("select id from starcheck_id "
+        mp_dir, status, obs_date = get_mp_dir(obsid, config=config)
+    sc_dbi = config['dbi']
+    sc_server = config['server']
+    db = Ska.DBI.DBI(dbi=sc_dbi, server=sc_server)
+    sc_id = db.fetchone("select id from starcheck_id "
                          "where dir = '%s'" % mp_dir)['id']
-    obs = dbh.fetchone("select * from starcheck_obs "
-                       "where sc_id = %d and obsid = %d" % (sc_id, obsid))
-    cat = dbh.fetchall("""select * from starcheck_catalog
-                      where sc_id = %d and obsid = %d
-                      order by idx""" % (sc_id, obsid))
-    manvr = dbh.fetchall("select * from starcheck_manvr "
-                         "where sc_id = %d and obsid = %d"
-                         % (sc_id, obsid))
-    temp = dbh.fetchone("select pred_ccd_temp from starcheck_pred_temp "
-                        "where sc_id = {} and obsid = {}".format(
+    sc = {'mp_dir': mp_dir}
+    for d in ['manvr', 'catalog', 'obs', 'warnings']:
+        sc[d] = db.fetchall(
+            "select * from starcheck_%s where obsid = %d and sc_id = %d"
+            % (d, obsid, sc_id))
+    sc['cat'] = sc['catalog']
+    pred_temp = db.fetchone("select pred_ccd_temp from starcheck_pred_temp "
+                            "where sc_id = {} and obsid = {}".format(
             sc_id, obsid))
-    pred_temp = None
-    if temp:
-        pred_temp = temp['pred_ccd_temp']
-    return {'obs': obs,
-            'cat': cat,
-            'manvr': manvr,
-            'mp_dir': mp_dir,
-            'pred_temp': pred_temp}
+    if pred_temp is not None and 'pred_ccd_temp' in pred_temp:
+        sc['pred_temp'] = pred_temp['pred_ccd_temp']
+    return sc
 
 
 def get_options():
