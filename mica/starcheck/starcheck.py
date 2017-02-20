@@ -77,6 +77,12 @@ def get_starcheck_catalog_at_date(date, config=None, timelines_db=None):
     The content of that dictionary is from the database tables that parsed the starcheck report.
     A catalog is defined as applying, in this function, to any time from the end of the
     previous dwell through the end of the dwell in which the catalog was used.
+
+    :param date: Chandra.Time compatible date
+    :param config: optional mica config which can override starcheck sqlite database, mp dir, or timelines db
+    :param timelines_db: optional handle to already-open timelines database
+    :returns: dictionary with starcheck content including catalog and maneuver
+
     """
 
     if config is None:
@@ -143,6 +149,12 @@ def get_mp_dir(obsid, config=None, timelines_db=None):
     Get the mission planning directory for an obsid and some status information.  If the obsid catalog was
     used more than once (multi-obi or rescheduled after being maneuvered-to but not science observed during
     an SCS107 vehicle interval), return the directory and details of the last one used on the spacecraft.
+
+    :param obsid: obsid
+    :param config: optional mica config which can override starcheck sqlite database, mp dir, or timelines db
+    :param timelines_db: optional handle to already-open timelines database
+    :returns: directory, status, date  (status may be 'ran_pretimelines', 'planned', 'approved', 'ran')
+
     """
     if config is None:
         config = DEFAULT_CONFIG
@@ -189,6 +201,9 @@ def get_mp_dir(obsid, config=None, timelines_db=None):
 
 
 def obsid(obsid, mp_dir=None, config=None):
+    """
+    This appears to be a convenience function used in mica.report.report
+    """
     if mp_dir is None:
         mp_dir, status, mp_date = get_mp_dir(obsid)
     if mp_dir is None:
@@ -262,6 +277,17 @@ def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
 
 def get_starcheck_catalog(obsid, mp_dir=None,
                           config=None, tstart=None):
+    """
+    For a given obsid, return a dictionary describing the starcheck catalog that should apply.
+    The content of that dictionary is from the database tables that parsed the starcheck report.
+
+    :param obsid: obsid
+    :param mp_dir: mission planning directory (in the form '/2017/FEB1317/oflsa/') to which to limit
+                   searches for the obsid.  If 'None', get_mp_dir() will be used to select appropriate directory.
+    :param config: optional mica config which can override starcheck sqlite database, mp dir, or timelines db
+    :param tstart: optional time to aide in search for obsid (useful for multi-obi)
+    :returns: dictionary with starcheck content including catalog and maneuver
+    """
     if config is None:
         config = DEFAULT_CONFIG
     sc_dbi = config['dbi']
