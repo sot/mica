@@ -43,31 +43,34 @@ def get_timeline_at_date(date, timelines_db=None):
 def get_flickpix_mons(start=None, config=None):
     if config is None:
         config = DEFAULT_CONFIG
-    db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
+
     # I'm ignoring the weird case of SIR obsids or whatever where the following ER keeps
     # the MON
-    mons = db.fetchall("""select obsid, mp_starcat_time, type, sz, yang, zang, dir
+    start_date = DateTime(start or '1999:001').date
+    with Ska.DBI.DBI(dbi='sqlite', server=config['server']) as db:
+        mons = db.fetchall("""select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
                           from starcheck_catalog, starcheck_id
                           where type = 'MON' and obsid > 40000
-                          and starcheck_id.id = starcheck_catalog.sc_id""")
-    mons = Table(mons)
-    if start is not None:
-        mons = mons[mons['mp_starcat_time'] >= DateTime(start).date]
-    statuses = []
-    # Check which ones actually ran or are likely to run
-    for mon in mons:
-        try:
-            catalog = get_starcheck_catalog_at_date(mon['mp_starcat_time'])
-            if (catalog is not None and catalog['obs']['obsid'] == mon['obsid']
-                    and catalog['mp_dir'] == mon['dir']):
-                statuses.append(catalog['status'])
-            else:
+                          and mp_starcat_date >= '{}'
+                          and starcheck_id.id = starcheck_catalog.sc_id""".format(start_date))
+        mons = Table(mons)
+    with Ska.DBI.DBI(**config['timelines_db']) as timelines_db:
+        statuses = []
+        # Check which ones actually ran or are likely to run
+        for mon in mons:
+            try:
+                catalog = get_starcheck_catalog_at_date(mon['mp_starcat_date'],
+                                                        timelines_db=timelines_db)
+                if (catalog is not None and catalog['obs']['obsid'] == mon['obsid']
+                        and catalog['mp_dir'] == mon['dir']):
+                    statuses.append(catalog['status'])
+                else:
+                    statuses.append('none')
+            except LookupError:
                 statuses.append('none')
-        except LookupError:
-            statuses.append('none')
-    # Add that status info to the table and filter on it
-    mons['status'] = statuses
-    mons = mons[mons['status'] != 'none']
+        # Add that status info to the table and filter on it
+        mons['status'] = statuses
+        mons = mons[mons['status'] != 'none']
     return mons
 
 
