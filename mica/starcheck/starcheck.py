@@ -317,7 +317,9 @@ def get_starcheck_catalog(obsid, mp_dir=None,
     sc_id = db.fetchone("select id from starcheck_id "
                          "where dir = '%s'" % mp_dir)['id']
     sc = {'mp_dir': mp_dir}
-    for d in ['manvr', 'catalog', 'obs', 'warnings']:
+    sc['obs'] = db.fetchone("select * from starcheck_obs where obsid = {} and sc_id = {}".format(
+            obsid, sc_id))
+    for d in ['manvr', 'catalog', 'warnings']:
         sc[d] = db.fetchall(
             "select * from starcheck_%s where obsid = %d and sc_id = %d"
             % (d, obsid, sc_id))
