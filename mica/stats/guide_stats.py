@@ -130,7 +130,7 @@ GUIDE_COLS = {
 
 SKA = os.environ['SKA']
 table_file = 'guide_stats.h5'
-
+skipped_file = 'skipped.dat'
 
 def get_options():
     parser = argparse.ArgumentParser(
@@ -517,10 +517,12 @@ def update(opt):
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, gui_stats, star_info, guide_catalog, temp = calc_stats(obsid)
-        except ValueError as e:
+        except Exception as e:
+            open(skipped_file, 'a').write("{}: {}\n".format(obsid, e))
             logger.info("Skipping obsid {}: {}".format(obsid, e))
             continue
         if not len(gui_stats):
+            open(skipped_file, 'a').write("{}: No stats\n".format(obsid))
             logger.info("Skipping obsid {}, no stats determined".format(obsid))
             continue
         t = table_gui_stats(obsid_info, gui_stats, star_info, guide_catalog, temp)
