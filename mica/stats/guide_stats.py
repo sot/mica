@@ -388,6 +388,11 @@ def calc_stats(obsid):
         raise ValueError("No manvr or dwell for {}".format(obsid))
     if not manvr.get_next():
         raise ValueError("No *next* manvr so can't calculate dwell".format(obsid))
+    if not manvr.guide_start:
+        raise ValueError("No guide transition for {}".format(obsid))
+    if not manvr.kalman_start:
+        raise ValueError("No Kalman transition for {}".format(obsid))
+
 
     logger.info("Found obsid manvr at {}".format(manvr.start))
     logger.info("Found dwell at {}".format(dwell.start))
