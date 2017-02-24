@@ -362,17 +362,23 @@ def calc_stats(obsid):
     try:
         manvrs = events.manvrs.filter(obsid=obsid, n_dwell__gt=0)
         dwells = events.dwells.filter(obsid=obsid)
-        if dwells.count() == 0:
+        if dwells.count() == 1 and manvrs.count() == 0:
+            # If there is more than one dwell for the manvr but they have
+            # different obsids (unusual) so don't throw an overlapping interval kadi error
+            # just get the maneuver to the attitude with this dwell
+            dwell = dwells[0]
+            manvr = dwell.manvr
+        elif dwells.count() == 0:
             # If there's just nothing, that doesn't need an error here
+            # and gets caught outside the try/except
             pass
-        elif manvrs.count() and dwells.count() == 1:
+        else:
+            # Else just take the first matches from each
             manvr = manvrs[0]
             dwell = dwells[0]
-        else:
-            raise ValueError("Non-overlapping multi-interval")
     except ValueError:
-        multi_manvr = events.manvrs.filter(start=obspar['tstart'] - 10000,
-                                           stop=obspar['tstart'] + 10000)
+        multi_manvr = events.manvrs.filter(start=obspar['tstart'] - 100000,
+                                           stop=obspar['tstart'] + 100000)
         multi = multi_manvr.select_overlapping(events.obsids(obsid=obsid))
         deltas = [np.abs(m.tstart - obspar['tstart']) for m in multi]
         manvr = multi[np.argmin(deltas)]
