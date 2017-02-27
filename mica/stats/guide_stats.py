@@ -275,10 +275,8 @@ def calc_gui_stats(start, stop, data, times, star_info):
         for ax in deltas:
             stats['{}_mean'.format(ax)] = np.mean(deltas[ax])
             stats['{}_std'.format(ax)] = np.std(deltas[ax])
-            # For the max and min, I think it makes more sense to have the dy and dz
-            # at the min and max dr.
-            stats['{}_max'.format(ax)] = deltas[ax][np.argmax(deltas['dr'])]
-            stats['{}_min'.format(ax)] = deltas[ax][np.argmin(deltas['dr'])]
+            stats['{}_max'.format(ax)] = np.max(deltas[ax])
+            stats['{}_min'.format(ax)] = np.min(deltas[ax])
         mag = trak['AOACMAG{}'.format(slot)]
         stats['aoacmag_min'] = np.min(mag)
         stats['aoacmag_mean'] = np.mean(mag)
