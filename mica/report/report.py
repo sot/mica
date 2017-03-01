@@ -79,7 +79,7 @@ def get_options():
 
 def get_starcheck(obsid):
     mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
-    sc = starcheck.obsid(obsid, mp_dir)
+    sc = starcheck.get_starcheck_catalog(obsid, mp_dir)
     return (sc, mp_dir, status)
 
 

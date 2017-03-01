@@ -209,30 +209,6 @@ def get_mp_dir(obsid, config=None, timelines_db=None):
         raise ValueError("get_mp_dir should find something or nothing")
 
 
-def obsid(obsid, mp_dir=None, config=None):
-    """
-    This appears to be a convenience function used in mica.report.report
-    """
-    if mp_dir is None:
-        mp_dir, status, mp_date = get_mp_dir(obsid)
-    if mp_dir is None:
-        raise LookupError("No starcheck catalog found for {}".format(obsid))
-    if config is None:
-        config = DEFAULT_CONFIG
-    db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
-    sc = db.fetchone(
-        "select id from starcheck_id where dir = '%s'" % mp_dir)
-    if sc is None:
-        raise LookupError("Catalog for {} missing.  Should already be in mica.starcheck db".format(obsid))
-    sc_id = sc['id']
-    sc = {}
-    for d in ['manvr', 'catalog', 'obs', 'warnings']:
-        sc[d] = db.fetchall(
-            "select * from starcheck_%s where obsid = %d and sc_id = %d"
-            % (d, obsid, sc_id))
-    return sc
-
-
 def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
     if existing is not None:
         existing_obs = [eobs for eobs in existing
