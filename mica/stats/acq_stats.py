@@ -7,7 +7,7 @@ from Ska.engarchive import fetch, fetch_sci
 from astropy.table import Table, Column
 from Chandra.Time import DateTime
 import mica.archive.obspar
-from mica.starcheck import get_starcheck_catalog
+from mica.starcheck import get_starcheck_catalog, get_starcheck_catalog_at_date
 import tables
 import numpy as np
 import Ska.quatutil
@@ -469,8 +469,7 @@ def calc_stats(obsid):
     acq_start = manvr.acq_start
     guide_start = manvr.guide_start
     try:
-        starcheck = get_starcheck_catalog(obsid,
-                                          tstart=manvr.start)
+        starcheck = get_starcheck_catalog_at_date(manvr.acq_start)
     except:
         # bad timelines for these observations, skip the tstart
         # input for get_starcheck_catalog
