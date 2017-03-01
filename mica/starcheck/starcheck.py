@@ -20,8 +20,8 @@ logger = logging.getLogger('starcheck ingest')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
-DEFAULT_CONFIG = dict(dbi='sqlite',
-                      server=os.path.join(MICA_ARCHIVE, 'starcheck', 'starcheck.db3'),
+DEFAULT_CONFIG = dict(starcheck_db=dict(dbi='sqlite',
+                                        server=os.path.join(MICA_ARCHIVE, 'starcheck', 'starcheck.db3')),
                       mp_top_level='/data/mpcrit1/mplogs',
                       timelines_db=dict(dbi='sqlite',
                                         server=os.path.join(os.environ['SKA'], 'data', 'cmd_states', 'cmd_states.db3')))
@@ -74,7 +74,7 @@ def get_flickpix_mons(start=None, config=None):
     return mons
 
 
-def get_starcheck_catalog_at_date(date, config=None, timelines_db=None):
+def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     """
     For a given date, return a dictionary describing the starcheck catalog that should apply.
     The content of that dictionary is from the database tables that parsed the starcheck report.
@@ -87,17 +87,16 @@ def get_starcheck_catalog_at_date(date, config=None, timelines_db=None):
     :returns: dictionary with starcheck content including catalog and maneuver
 
     """
-
-    if config is None:
-        config = DEFAULT_CONFIG
     date = DateTime(date).date
+    if starcheck_db is None:
+        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
+    db = starcheck_db
     if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(**config['timelines_db'])
+        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
     last_tl = timelines_db.fetchone(
         "select max(datestop) as datestop from timelines")['datestop']
     first_tl = timelines_db.fetchone(
         "select min(datestart) as datestart from timelines")['datestart']
-    db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
     # if we're outside of timelines, just try from the starcheck database
     if date > last_tl or date < first_tl:
         # Get one entry that is the last one before the specified time, in the most
@@ -153,7 +152,7 @@ def get_starcheck_catalog_at_date(date, config=None, timelines_db=None):
     return None
 
 
-def get_mp_dir(obsid, config=None, timelines_db=None):
+def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     """
     Get the mission planning directory for an obsid and some status information.  If the obsid catalog was
     used more than once (multi-obi or rescheduled after being maneuvered-to but not science observed during
@@ -165,48 +164,48 @@ def get_mp_dir(obsid, config=None, timelines_db=None):
     :returns: directory, status, date  (status may be 'ran_pretimelines', 'planned', 'approved', 'ran')
 
     """
-    if config is None:
-        config = DEFAULT_CONFIG
+    if starcheck_db is None:
+        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
+    db = starcheck_db
     if timelines_db is None:
         timelines_db = Ska.DBI.DBI(**config['timelines_db'])
     last_tl = timelines_db.fetchone(
         "select max(datestop) as datestop from timelines")['datestop']
-    with Ska.DBI.DBI(dbi='sqlite', server=config['server']) as db:
-        starchecks = db.fetchall(
-            """select * from starcheck_obs, starcheck_id
-               where obsid = %d and starcheck_id.id = starcheck_obs.sc_id
-               order by sc_id """ % obsid)
-        # If this predates timelines data just return the last record that matches
-        # and hope for the best
-        if len(starchecks) and (starchecks[-1]['mp_starcat_time'] < '2001:001:00:00:00.000'):
-            return (starchecks[-1]['dir'], 'ran_pretimelines', starchecks[-1]['mp_starcat_time'])
-        # And if there's nothing do, a quick check to see if it is in other database
-        # to throw an error if it is just missing in mica
-        if not len(starchecks):
-            tl_obsids = timelines_db.fetchall("select * from tl_obsids where obsid = {}".format(
-                    obsid))
-            if len(tl_obsids):
-                raise ValueError(
-                    "Obsid {} in parsed loads in tl_obsids but not in mica starcheck".format(obsid))
-            return (None, None, None)
-        # Go through the entries backwards (which are in ingest/date order)
-        for sc in starchecks[::-1]:
-            sc_date = sc['mp_starcat_time']
-            # if this is in a schedule not-yet-in-timelines
-            # We'll have to hope that is the most useful entry if there are multiples
-            if sc_date > last_tl:
-                return (sc['dir'], 'planned', sc_date)
-            tl = get_timeline_at_date(sc_date, timelines_db=timelines_db)
-            if not len(tl):
-                raise ValueError("No timeline covering date {}".format(sc_date))
-            # If the approved products in timelines are from a different directory, no-go
-            if tl['mp_dir'] != sc['dir']:
-                continue
-            if sc_date < DateTime().date:
-                return (sc['dir'], 'ran', sc_date)
-            else:
-                return (sc['dir'], 'approved', sc_date)
-        raise ValueError("get_mp_dir should find something or nothing")
+    starchecks = db.fetchall(
+        """select * from starcheck_obs, starcheck_id
+           where obsid = %d and starcheck_id.id = starcheck_obs.sc_id
+           order by sc_id """ % obsid)
+    # If this predates timelines data just return the last record that matches
+    # and hope for the best
+    if len(starchecks) and (starchecks[-1]['mp_starcat_time'] < '2001:001:00:00:00.000'):
+        return (starchecks[-1]['dir'], 'ran_pretimelines', starchecks[-1]['mp_starcat_time'])
+    # And if there's nothing do, a quick check to see if it is in other database
+    # to throw an error if it is just missing in mica
+    if not len(starchecks):
+        tl_obsids = timelines_db.fetchall("select * from tl_obsids where obsid = {}".format(
+                obsid))
+        if len(tl_obsids):
+            raise ValueError(
+                "Obsid {} in parsed loads in tl_obsids but not in mica starcheck".format(obsid))
+        return (None, None, None)
+    # Go through the entries backwards (which are in ingest/date order)
+    for sc in starchecks[::-1]:
+        sc_date = sc['mp_starcat_time']
+        # if this is in a schedule not-yet-in-timelines
+        # We'll have to hope that is the most useful entry if there are multiples
+        if sc_date > last_tl:
+            return (sc['dir'], 'planned', sc_date)
+        tl = get_timeline_at_date(sc_date, timelines_db=timelines_db)
+        if not len(tl):
+            raise ValueError("No timeline covering date {}".format(sc_date))
+        # If the approved products in timelines are from a different directory, no-go
+        if tl['mp_dir'] != sc['dir']:
+            continue
+        if sc_date < DateTime().date:
+            return (sc['dir'], 'ran', sc_date)
+        else:
+            return (sc['dir'], 'approved', sc_date)
+    raise ValueError("get_mp_dir should find something or nothing")
 
 
 def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
@@ -259,9 +258,7 @@ def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
     db.commit()
 
 
-
-def get_starcheck_catalog(obsid, mp_dir=None,
-                          config=None, tstart=None):
+def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=None):
     """
     For a given obsid, return a dictionary describing the starcheck catalog that should apply.
     The content of that dictionary is from the database tables that parsed the starcheck report.
