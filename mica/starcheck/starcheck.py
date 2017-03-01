@@ -266,29 +266,17 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     :param obsid: obsid
     :param mp_dir: mission planning directory (in the form '/2017/FEB1317/oflsa/') to which to limit
                    searches for the obsid.  If 'None', get_mp_dir() will be used to select appropriate directory.
-    :param config: optional mica config which can override starcheck sqlite database, mp dir, or timelines db
-    :param tstart: optional time to aide in search for obsid (useful for multi-obi)
     :returns: dictionary with starcheck content including catalog and maneuver
     """
-    if config is None:
-        config = DEFAULT_CONFIG
-    # tstart will override mp_dir
-    if tstart is not None:
-        # if this should be in timelines
-        if DateTime(tstart).date > '2002:007':
-            timeline = get_timeline_at_date(DateTime(tstart).date)
-            if mp_dir is not None:
-                if timeline['mp_dir'] != mp_dir:
-                    raise ValueError(
-                        "mp_dir was specified but inconsistent with tstart")
-            mp_dir = timeline['mp_dir']
+    if starcheck_db is None:
+        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
+    if timelines_db is None:
+        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
     if mp_dir is None:
-        mp_dir, status, obs_date = get_mp_dir(obsid, config=config)
-    sc_dbi = config['dbi']
-    sc_server = config['server']
-    db = Ska.DBI.DBI(dbi=sc_dbi, server=sc_server)
+        mp_dir, status, obs_date = get_mp_dir(obsid, starcheck_db=starcheck_db, timelines_db=timelines_db)
+    db = starcheck_db # shorthand for the rest of the routine
     sc_id = db.fetchone("select id from starcheck_id "
-                         "where dir = '%s'" % mp_dir)['id']
+                                  "where dir = '%s'" % mp_dir)['id']
     sc = {'mp_dir': mp_dir}
     sc['obs'] = db.fetchone("select * from starcheck_obs where obsid = {} and sc_id = {}".format(
             obsid, sc_id))
