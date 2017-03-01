@@ -47,7 +47,7 @@ def get_flickpix_mons(start=None, config=None):
     # I'm ignoring the weird case of SIR obsids or whatever where the following ER keeps
     # the MON
     start_date = DateTime(start or '1999:001').date
-    with Ska.DBI.DBI(dbi='sqlite', server=config['server']) as db:
+    with Ska.DBI.DBI(**config['starcheck_db']) as db:
         mons = db.fetchall("""select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
                           from starcheck_catalog, starcheck_id
                           where type = 'MON' and obsid > 40000
@@ -168,7 +168,7 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
         starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
     db = starcheck_db
     if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(**config['timelines_db'])
+        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
     last_tl = timelines_db.fetchone(
         "select max(datestop) as datestop from timelines")['datestop']
     starchecks = db.fetchall(
@@ -311,21 +311,21 @@ def get_options():
 def update(config=None):
     if config is None:
         config = DEFAULT_CONFIG
-    if config['dbi'] != 'sqlite':
+    if config['starcheck_db']['dbi'] != 'sqlite':
         raise ValueError("Only sqlite DBI implemented")
-    if (not os.path.exists(config['server'])
-            or os.stat(config['server']).st_size == 0):
-        if not os.path.exists(os.path.dirname(config['server'])):
-            os.makedirs(os.path.dirname(config['server']))
+    if (not os.path.exists(config['starcheck_db']['server'])
+            or os.stat(config['starcheck_db']['server']).st_size == 0):
+        if not os.path.exists(os.path.dirname(config['starcheck_db']['server'])):
+            os.makedirs(os.path.dirname(config['starcheck_db']['server']))
         db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', FILES['sql_def'])
         db_init_cmds = open(db_sql).read()
-        db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
+        db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
         db.execute(db_init_cmds)
         # make a touch file with a time before starchecks
         Ska.Shell.bash("touch -t 199801010000 %s" % (FILES['touch_file']),
                        env={'MAILCHECK': -1})
     else:
-        db = Ska.DBI.DBI(dbi='sqlite', server=config['server'])
+        db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
 
     starchecks = Ska.Shell.bash(
         "find %s" % config['mp_top_level']
