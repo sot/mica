@@ -54,7 +54,7 @@ def get_flickpix_mons(start=None, config=None):
                           where type = 'MON' and obsid > 40000
                           and mp_starcat_date >= '{}'
                           and starcheck_id.id = starcheck_catalog.sc_id""".format(start_date))
-        mons = Table(mons)
+    mons = Table(mons)
     with Ska.DBI.DBI(**config['timelines_db']) as timelines_db:
         statuses = []
         # Check which ones actually ran or are likely to run
