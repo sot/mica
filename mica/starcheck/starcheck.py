@@ -274,9 +274,15 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
         timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
     if mp_dir is None:
         mp_dir, status, obs_date = get_mp_dir(obsid, starcheck_db=starcheck_db, timelines_db=timelines_db)
+    # if it is still none, there's nothing to try here
+    if mp_dir is None:
+        return None
     db = starcheck_db # shorthand for the rest of the routine
     sc_id = db.fetchone("select id from starcheck_id "
-                                  "where dir = '%s'" % mp_dir)['id']
+                                  "where dir = '%s'" % mp_dir)
+    if sc_id is None:
+        return None
+    sc_id = sc_id['id']
     sc = {'mp_dir': mp_dir}
     sc['obs'] = db.fetchone("select * from starcheck_obs where obsid = {} and sc_id = {}".format(
             obsid, sc_id))
