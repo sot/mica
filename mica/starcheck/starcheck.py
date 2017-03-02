@@ -14,6 +14,7 @@ import Ska.DBI
 from kadi import events
 from astropy.table import Table
 
+from mica.utils import get_timeline_at_date
 from mica.starcheck.starcheck_parser import read_starcheck
 from mica.common import MICA_ARCHIVE
 
@@ -29,16 +30,6 @@ DEFAULT_CONFIG = dict(starcheck_db=dict(dbi='sqlite',
 FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
              touch_file=os.path.join(MICA_ARCHIVE, 'starcheck', "starcheck_parser.touch"),
              sql_def='starcheck.sql')
-
-# this doesn't belong in starcheck
-def get_timeline_at_date(date, timelines_db=None):
-    date = DateTime(date).date
-    if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
-    return timelines_db.fetchone(
-        "select * from timeline_loads where datestop >= '%s' "
-        " and datestart <= '%s' and scs <= 130 order by datestart desc"
-        % (date, date))
 
 
 def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
