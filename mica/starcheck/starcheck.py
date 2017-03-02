@@ -179,8 +179,8 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
 def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     """
     Get the mission planning directory for an obsid and some status information.  If the obsid catalog was
-    used more than once (multi-obi or rescheduled after being maneuvered-to but not science observed during
-    an SCS107 vehicle interval), return the directory and details of the last one used on the spacecraft.
+    used more than once (multi-obi or rescheduled after being used in a vehicle-only interval), return the
+    directory and details of the last one used on the spacecraft.
 
     :param obsid: obsid
     :param starcheck_db: optional handle to already-open starcheck database
