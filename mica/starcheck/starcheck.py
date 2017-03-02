@@ -41,19 +41,19 @@ def get_timeline_at_date(date, timelines_db=None):
         % (date, date))
 
 
-def get_flickpix_mons(start=None, config=None):
+def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     if config is None:
         config = DEFAULT_CONFIG
-
-    # I'm ignoring the weird case of SIR obsids or whatever where the following ER keeps
-    # the MON
     start_date = DateTime(start or '1999:001').date
+    stop_date = DateTime(stop).date
     with Ska.DBI.DBI(**config['starcheck_db']) as db:
         mons = db.fetchall("""select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
                           from starcheck_catalog, starcheck_id
-                          where type = 'MON' and obsid > 40000
+                          where type = 'MON' and obsid > {}
                           and mp_starcat_date >= '{}'
-                          and starcheck_id.id = starcheck_catalog.sc_id""".format(start_date))
+                          and mp_starcat_date <= '{}'
+                          and starcheck_id.id = starcheck_catalog.sc_id""".format(
+                min_obsid, start_date, stop_date))
     mons = Table(mons)
     with Ska.DBI.DBI(**config['timelines_db']) as timelines_db:
         statuses = []
