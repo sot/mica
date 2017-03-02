@@ -100,7 +100,7 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     :param date: Chandra.Time compatible date
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
-    :returns: dictionary with starcheck content including catalog and maneuver.  The 'status' key
+    :returns: dictionary with starcheck content including catalog ('cat') and maneuver.  The 'status' key
              has possible values 'ran before timelines' if the catalog ran before timelines,
              'planned' if the catalog is in a not-approved future schedule, 'approved' if the
              catalog is in an approved future schedule (ingested in timelines/cmd_states),
@@ -307,7 +307,7 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
                    searches for the obsid.  If 'None', get_mp_dir() will be used to select appropriate directory.
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
-    :returns: dictionary with starcheck content including catalog and maneuver
+    :returns: dictionary with starcheck content including catalog ('cat') and maneuver
     """
     if starcheck_db is None:
         starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
@@ -334,6 +334,7 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
             "select * from starcheck_%s where obsid = %d and sc_id = %d"
             % (d, obsid, sc_id))
     sc['cat'] = sc['catalog']
+    del sc['catalog']
     pred_temp = db.fetchone("select pred_ccd_temp from starcheck_pred_temp "
                             "where sc_id = {} and obsid = {}".format(
             sc_id, obsid))
