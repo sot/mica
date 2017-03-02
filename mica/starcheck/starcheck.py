@@ -42,6 +42,19 @@ def get_timeline_at_date(date, timelines_db=None):
 
 
 def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
+    """
+    Use the database of starcheck products to get a list of monitor windows
+    This list is filtered by timelines content to only include catalogs that should have or will run.
+
+    :param start: Optional start time for filtering windows as fetched from the database
+    :param stop: Optional stop time for filtering windows as fetched from the database
+    :param min_obsid: Minimum obsid value for filtering.  Default of 40000 is intended to fetch only ERs
+    :param config: config dictionary. If supplied must include 'starcheck_db' and 'timelines_db' keys
+                   with dictionaries of the required arguments to Ska.DBI to connect to those databases.
+    :returns: astropy Table of monitor windows.  See get_starcheck_catalog_at_date for description of the values
+              of the 'status' column.  The 'catalog' column contains the get_starcheck_catalog_at_date
+              returned dictionary.
+    """
     if config is None:
         config = DEFAULT_CONFIG
     start_date = DateTime(start or '1999:001').date
@@ -55,15 +68,17 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
                           and starcheck_id.id = starcheck_catalog.sc_id""".format(
                 min_obsid, start_date, stop_date))
     mons = Table(mons)
+    mons['catalog'] = None
     with Ska.DBI.DBI(**config['timelines_db']) as timelines_db:
         statuses = []
         # Check which ones actually ran or are likely to run
-        for mon in mons:
+        for i_mon, mon in enumerate(mons):
             try:
                 catalog = get_starcheck_catalog_at_date(mon['mp_starcat_date'],
                                                         timelines_db=timelines_db)
                 if (catalog is not None and catalog['obs']['obsid'] == mon['obsid']
                         and catalog['mp_dir'] == mon['dir']):
+                    mon['catalog'] = catalog
                     statuses.append(catalog['status'])
                 else:
                     statuses.append('none')
@@ -83,9 +98,13 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     previous dwell through the end of the dwell in which the catalog was used.
 
     :param date: Chandra.Time compatible date
-    :param config: optional mica config which can override starcheck sqlite database, mp dir, or timelines db
+    :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
-    :returns: dictionary with starcheck content including catalog and maneuver
+    :returns: dictionary with starcheck content including catalog and maneuver.  The 'status' key
+             has possible values 'ran before timelines' if the catalog ran before timelines,
+             'planned' if the catalog is in a not-approved future schedule, 'approved' if the
+             catalog is in an approved future schedule (ingested in timelines/cmd_states),
+             and 'ran' if the catalog was executed.
 
     """
     date = DateTime(date).date
@@ -173,9 +192,14 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     an SCS107 vehicle interval), return the directory and details of the last one used on the spacecraft.
 
     :param obsid: obsid
-    :param config: optional mica config which can override starcheck sqlite database, mp dir, or timelines db
+    :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
-    :returns: directory, status, date  (status may be 'ran_pretimelines', 'planned', 'approved', 'ran')
+    :returns: directory, status, date .   Status
+             has possible values 'ran before timelines' if the catalog ran before timelines,
+             'planned' if the catalog is in a not-approved future schedule, 'approved' if the
+             catalog is in an approved future schedule (ingested in timelines/cmd_states),
+             and 'ran' if the catalog was executed, and 'timelines_gap' if there was a problem
+             confirming placement in timelines.
 
     """
     if starcheck_db is None:
@@ -281,6 +305,8 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     :param obsid: obsid
     :param mp_dir: mission planning directory (in the form '/2017/FEB1317/oflsa/') to which to limit
                    searches for the obsid.  If 'None', get_mp_dir() will be used to select appropriate directory.
+    :param starcheck_db: optional handle to already-open starcheck database
+    :param timelines_db: optional handle to already-open timelines database
     :returns: dictionary with starcheck content including catalog and maneuver
     """
     if starcheck_db is None:
