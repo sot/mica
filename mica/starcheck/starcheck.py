@@ -210,8 +210,9 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
         if sc_date > last_tl:
             return (sc['dir'], 'planned', sc_date)
         tl = get_timeline_at_date(sc_date, timelines_db=timelines_db)
-        if not len(tl):
-            raise ValueError("No timeline covering date {}".format(sc_date))
+        # If there is a gap in timelines at this date, just return the most recent starcheck entry
+        if tl is None or not len(tl):
+            return (starchecks[-1]['dir'], 'timelines_gap', starchecks[-1]['mp_starcat_time'])
         # If the approved products in timelines are from a different directory, no-go
         if tl['mp_dir'] != sc['dir']:
             continue
