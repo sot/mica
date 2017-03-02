@@ -330,9 +330,9 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     sc['obs'] = db.fetchone("select * from starcheck_obs where obsid = {} and sc_id = {}".format(
             obsid, sc_id))
     for d in ['manvr', 'catalog', 'warnings']:
-        sc[d] = db.fetchall(
+        sc[d] = Table(db.fetchall(
             "select * from starcheck_%s where obsid = %d and sc_id = %d"
-            % (d, obsid, sc_id))
+            % (d, obsid, sc_id)))
     sc['cat'] = sc['catalog']
     del sc['catalog']
     pred_temp = db.fetchone("select pred_ccd_temp from starcheck_pred_temp "
