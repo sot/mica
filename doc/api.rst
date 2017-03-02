@@ -105,3 +105,28 @@ Functions
 .. autofunction:: get_vv_files
 .. autofunction:: get_rms_data
 .. autofunction:: get_arch_vv
+
+
+:mod:`mica.utils`
+=================
+
+..automodule: mica.utils
+
+Functions
+---------
+
+.. autofunction:: get_timeline_at_date
+
+
+:mod:`mica.starcheck`
+=====================
+
+.. automodule:: mica.starcheck
+
+Functions
+---------
+
+.. autofunction:: get_starcheck_catalog
+.. autofunction:: get_starcheck_catalog_at_date
+.. autofunction:: get_mp_dir
+.. autofunction:: get_monitor_windows
