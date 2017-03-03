@@ -94,6 +94,8 @@ def test_validate_catalogs_over_range():
                 trak_sc_slot = slot_match[0]
                 if trak_sc_slot['type'] == 'FID':
                     assert cat[slot]['type'] == 'FID'
-                assert np.abs(cat[slot]['yag'] - trak_sc_slot['yang']) < 20.0
-                assert np.abs(cat[slot]['zag'] - trak_sc_slot['zang']) < 20.0
-
+                    assert np.abs(cat[slot]['yag'] - trak_sc_slot['yang']) < 20.0
+                    assert np.abs(cat[slot]['zag'] - trak_sc_slot['zang']) < 20.0
+                else:
+                    assert np.abs(cat[slot]['yag'] - trak_sc_slot['yang']) < 5.0
+                    assert np.abs(cat[slot]['zag'] - trak_sc_slot['zang']) < 5.0
