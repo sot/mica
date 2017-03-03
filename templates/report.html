@@ -169,12 +169,12 @@ manvr['angle_deg'], manvr['duration_sec'], manvr['slew_err_arcsec']) -}}
 {% endfor %}
 </PRE>
 
-{% for cat in sc['obs'] %}
+{% if obs.mp_starcat_time is defined %}
 <PRE>
 {{- "MP_STARCAT at %s (VCDU count = %d)"|format(
-cat['mp_starcat_time'], cat['mp_starcat_vcdu_cnt']) -}}
+obs.mp_starcat_time, obs.mp_starcat_vcdu_cnt) -}}
 </PRE>
-{% endfor %}
+{% endif %}
 
 {% for warn in sc['warnings'] %}{% if warn['idx'] is not none %}<PRE>{{- "WARNING: [%2s] %s. %s"|format(
 warn['idx'], warn['warning_type'], warn['warning']) }}

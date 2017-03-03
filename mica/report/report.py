@@ -538,9 +538,9 @@ def main(obsid, config=None, report_root=None):
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         obs_sc, mp_dir, status = get_starcheck(obsid)
         logger.debug("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
-        if obs_sc['obs'][0]['point_ra'] is None:
+        if obs_sc['obs']['point_ra'] is None:
             raise LookupError("Observation has no pointing.")
-        if len(obs_sc['catalog']) == 0:
+        if len(obs_sc['cat']) == 0:
             raise LookupError("Observation has no catalog")
         fig, cat, obs = catalog.plot(obsid, mp_dir)
         sc = starcheck.get_starcheck_catalog(obsid, mp_dir)
@@ -589,7 +589,7 @@ def main(obsid, config=None, report_root=None):
         mp_label = "{}{}".format(dir_match.group(1),
                                  dir_match.group(2).upper())
         last_sched = 'in <A HREF="{}">{}</A> at {}'.format(
-            links['shortterm']['link'], mp_label, str(obs_sc['obs'][0]['mp_starcat_time']))
+            links['shortterm']['link'], mp_label, str(obs_sc['obs']['mp_starcat_time']))
 
 
     report_status['starcheck'] = mp_dir
@@ -599,7 +599,7 @@ def main(obsid, config=None, report_root=None):
     acqs = get_obs_acq_stats(obsid)
     trak = get_obs_trak_stats(obsid)
     temps = get_obs_temps(obsid, outdir)
-    pred_temp = sc['pred_temp']
+    pred_temp = sc.get('pred_temp')
     if acqs or trak:
         last_sched = "eng. data available"
 
@@ -609,7 +609,7 @@ def main(obsid, config=None, report_root=None):
                     'approved': 'approved for',
                     'ran_pretimelines': 'ran on',
                     'planned': 'planned for'}
-        er_status = "{} {}".format(stat_map[status], obs_sc['obs'][0]['mp_starcat_time'])
+        er_status = "{} {}".format(stat_map[status], obs_sc['obs']['mp_starcat_time'])
         run_obspar = None
         vv = None
         logger.info("Processing ER; no V&V available")
@@ -712,9 +712,9 @@ def main(obsid, config=None, report_root=None):
         f.write(vv_page)
         f.close()
 
-    cat_table = catalog_info(obs_sc['catalog'], acqs, trak, vv)
+    cat_table = catalog_info(obs_sc['cat'], acqs, trak, vv)
 
-    for row, cat_row in zip(obs_sc['catalog'], cat_table):
+    for row, cat_row in zip(obs_sc['cat'], cat_table):
         if row['type'] != 'FID':
             if row['id'] is not None:
                 s = star_info(row['id'])
