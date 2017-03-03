@@ -38,25 +38,30 @@ def get_trak_cat_from_telem(start, stop, cmd_quat):
         if np.any(fid & track):
             cat[slot] = {'type': 'FID',
                          'yag': telem['AOACYAN{}'.format(slot)].vals[fid & track][0],
-                         'zag': telem['AOACZAN{}'.format(slot)].vals[fid & track][0],}
+                         'zag': telem['AOACZAN{}'.format(slot)].vals[fid & track][0]}
         else:
-            if np.count_nonzero(track & star) < n:
+            n_samples = np.count_nonzero(track & star)
+            if n_samples < (n + 4):
                 continue
+            # If there is tracked data with a star, let's try to get our n samples from about
+            # the middle of the range
+            mid_point = int(n_samples / 2.)
             yags = []
             zags = []
-            for sample in range(0, n):
+            for sample in range(mid_point - int(n / 2.), mid_point + int(n / 2.)):
                 qref = Quat(normalize([att['AOATTQT{}'.format(i)].vals[track & star][sample]
                                        for i in [1, 2, 3, 4]]))
-                ra, dec = yagzag2radec(telem['AOACYAN{}'.format(slot)].vals[track & star][sample] / 3600.,
-                                       telem['AOACZAN{}'.format(slot)].vals[track & star][sample] / 3600.,
-                                       qref)
+                ra, dec = yagzag2radec(
+                    telem['AOACYAN{}'.format(slot)].vals[track & star][sample] / 3600.,
+                    telem['AOACZAN{}'.format(slot)].vals[track & star][sample] / 3600.,
+                    qref)
                 yag, zag = radec2yagzag(ra, dec, cmd_quat)
                 yags.append(yag)
                 zags.append(zag)
             # This doesn't detect MON just yet
             cat[slot] = {'type': 'STAR',
                          'yag': np.median(yags) * 3600.,
-                         'zag': np.median(zags) * 3600.,}
+                         'zag': np.median(zags) * 3600.}
     return cat, telem
 
 
@@ -66,7 +71,11 @@ def test_validate_catalogs_over_range():
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
         telem_quat = get_cmd_quat(dwell.start)
-        cat, telem = get_trak_cat_from_telem(dwell.start, telem_quat)
+        # try to get the tracked telemetry for 1ks at the beginning of the dwell,
+        # or if the dwell is shorter than that, just get the dwell
+        cat, telem = get_trak_cat_from_telem(dwell.start,
+                                             np.min([dwell.tstart + 1000, dwell.tstop]),
+                                             telem_quat)
         sc = starcheck.get_starcheck_catalog_at_date(dwell.start)
         sc_quat = Quat([sc['manvr'][-1]["target_Q{}".format(i)] for i in [1, 2, 3, 4]])
         dq = sc_quat.dq(telem_quat)
