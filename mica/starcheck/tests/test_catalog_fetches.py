@@ -19,17 +19,19 @@ def get_cmd_quat(date):
                                       cmd_q4]))
 
 
-def get_trak_cat_from_telem(date, cmd_quat):
-    date = DateTime(date)
+def get_trak_cat_from_telem(start, stop, cmd_quat):
+    start = DateTime(start)
+    stop = DateTime(stop)
     msids = ["{}{}".format(m, i) for m in ['AOACYAN', 'AOACZAN', 'AOACFID', 'AOIMAGE', 'AOACFCT']
              for i in range(0, 8)]
-    telem = fetch.MSIDset(['AOACASEQ', 'CORADMEN', 'AOPCADMD']
-                           + msids, date.secs, date.secs + 300)
-    att = fetch.MSIDset(['AOATTQT{}'.format(i) for i in [1, 2, 3, 4]], date.secs, date.secs + 300)
+    telem = fetch.MSIDset(['AOACASEQ', 'CORADMEN', 'AOPCADMD', 'AONSTARS', 'AOKALSTR']
+                           + msids, start, stop)
+    att = fetch.MSIDset(['AOATTQT{}'.format(i) for i in [1, 2, 3, 4]], start, stop)
     cat = {}
     for slot in range(0, 8):
         track = telem['AOACFCT{}'.format(slot)].vals == 'TRAK'
         fid = telem['AOACFID{}'.format(slot)].vals == 'FID '
+        star = telem['AOIMAGE{}'.format(slot)].vals == 'STAR'
         n = 30
         if np.count_nonzero(track) < n:
             continue
@@ -38,13 +40,15 @@ def get_trak_cat_from_telem(date, cmd_quat):
                          'yag': telem['AOACYAN{}'.format(slot)].vals[fid & track][0],
                          'zag': telem['AOACZAN{}'.format(slot)].vals[fid & track][0],}
         else:
+            if np.count_nonzero(track & star) < n:
+                continue
             yags = []
             zags = []
             for sample in range(0, n):
-                qref = Quat(normalize([att['AOATTQT{}'.format(i)].vals[track][sample]
+                qref = Quat(normalize([att['AOATTQT{}'.format(i)].vals[track & star][sample]
                                        for i in [1, 2, 3, 4]]))
-                ra, dec = yagzag2radec(telem['AOACYAN{}'.format(slot)].vals[track][sample] / 3600.,
-                                       telem['AOACZAN{}'.format(slot)].vals[track][sample] / 3600.,
+                ra, dec = yagzag2radec(telem['AOACYAN{}'.format(slot)].vals[track & star][sample] / 3600.,
+                                       telem['AOACZAN{}'.format(slot)].vals[track & star][sample] / 3600.,
                                        qref)
                 yag, zag = radec2yagzag(ra, dec, cmd_quat)
                 yags.append(yag)
