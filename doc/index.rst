@@ -486,10 +486,10 @@ and methods to retrieve content from that database.  The `mica.starcheck` databa
 inherits much of the structure of the original Sybase starcheck_database project which
 organized the per-obsid data into these tables:
 
-   starcheck_obs
-   starcheck_manvr
-   starcheck_warnings
-   starcheck_catalog
+   * starcheck_obs
+   * starcheck_manvr
+   * starcheck_warnings
+   * starcheck_catalog
 
 That Sybase database was updated for new obsids as they became available in the CXCDS
 archive and is intended to contain only records for observations in their final/observed

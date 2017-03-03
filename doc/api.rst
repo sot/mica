@@ -110,7 +110,7 @@ Functions
 :mod:`mica.utils`
 =================
 
-..automodule: mica.utils
+.. automodule:: mica.utils
 
 Functions
 ---------
