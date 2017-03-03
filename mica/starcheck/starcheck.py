@@ -363,9 +363,10 @@ def update(config=None):
         db_init_cmds = open(db_sql).read()
         db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
         db.execute(db_init_cmds)
-        # make a touch file with a time before starchecks
-        Ska.Shell.bash("touch -t 199801010000 %s" % (FILES['touch_file']),
-                       env={'MAILCHECK': -1})
+        if not os.path.exists(FILES['touch_file']):
+            # make a touch file with a time before starchecks
+            Ska.Shell.bash("touch -t 199801010000 %s" % (FILES['touch_file']),
+                           env={'MAILCHECK': -1})
     else:
         db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
 
