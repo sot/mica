@@ -92,7 +92,7 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
     :returns: dictionary with starcheck content including catalog ('cat') and maneuver.  The 'status' key
-             has possible values 'ran before timelines' if the catalog ran before timelines,
+             has possible values 'ran_pretimelines' if the catalog ran before timelines,
              'planned' if the catalog is in a not-approved future schedule, 'approved' if the
              catalog is in an approved future schedule (ingested in timelines/cmd_states),
              and 'ran' if the catalog was executed.
@@ -123,7 +123,7 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
         if starcheck:
             cat_info = get_starcheck_catalog(starcheck['obsid'], mp_dir=starcheck['dir'])
             if date < first_tl:
-                cat_info['status'] = 'ran before timelines'
+                cat_info['status'] = 'ran_pretimelines'
             if date > last_tl:
                 cat_info['status'] = 'planned'
             return cat_info
@@ -186,7 +186,7 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
     :returns: directory, status, date .   Status
-             has possible values 'ran before timelines' if the catalog ran before timelines,
+             has possible values 'ran_pretimelines' if the catalog ran before timelines,
              'planned' if the catalog is in a not-approved future schedule, 'approved' if the
              catalog is in an approved future schedule (ingested in timelines/cmd_states),
              and 'ran' if the catalog was executed, and 'timelines_gap' if there was a problem
