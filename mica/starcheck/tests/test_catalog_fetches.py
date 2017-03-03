@@ -4,19 +4,22 @@ from Chandra.Time import DateTime
 from kadi import events
 from Ska.engarchive import fetch
 from Ska.quatutil import radec2yagzag, yagzag2radec
+import pytest
 
 from .. import starcheck
 
+
 def get_cmd_quat(date):
     date = DateTime(date)
-    cmd_quats = fetch.MSIDset(['AOCMDQT{}'.format(i) for i in [1, 2, 3]], date.secs, date.secs + 120)
+    cmd_quats = fetch.MSIDset(['AOCMDQT{}'.format(i) for i in [1, 2, 3]],
+                              date.secs, date.secs + 120)
     cmd_q4 = np.sqrt(np.abs(1 - cmd_quats['AOCMDQT1'].vals[0]**2
                             - cmd_quats['AOCMDQT2'].vals[0]**2
                             - cmd_quats['AOCMDQT3'].vals[0]**2))
     return Quat(normalize([cmd_quats['AOCMDQT1'].vals[0],
-                                      cmd_quats['AOCMDQT2'].vals[0],
-                                      cmd_quats['AOCMDQT3'].vals[0],
-                                      cmd_q4]))
+                           cmd_quats['AOCMDQT2'].vals[0],
+                           cmd_quats['AOCMDQT3'].vals[0],
+                           cmd_q4]))
 
 
 def get_trak_cat_from_telem(start, stop, cmd_quat):
@@ -25,7 +28,7 @@ def get_trak_cat_from_telem(start, stop, cmd_quat):
     msids = ["{}{}".format(m, i) for m in ['AOACYAN', 'AOACZAN', 'AOACFID', 'AOIMAGE', 'AOACFCT']
              for i in range(0, 8)]
     telem = fetch.MSIDset(['AOACASEQ', 'CORADMEN', 'AOPCADMD', 'AONSTARS', 'AOKALSTR']
-                           + msids, start, stop)
+                          + msids, start, stop)
     att = fetch.MSIDset(['AOATTQT{}'.format(i) for i in [1, 2, 3, 4]], start, stop)
     cat = {}
     for slot in range(0, 8):
@@ -89,6 +92,8 @@ def test_validate_catalogs_over_range():
         for slot in range(0, 8):
             if slot in cat:
                 slot_match = trak_sc[trak_sc['slot'] == slot]
+                # the if statement may see false positives if fewer than a total of 8 BOT/GUI/MON
+                # slots were commanded
                 if not len(slot_match):
                     raise ValueError("missing slot in catalog")
                 trak_sc_slot = slot_match[0]
