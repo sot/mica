@@ -70,7 +70,7 @@ def get_trak_cat_from_telem(start, stop, cmd_quat):
 
 def test_validate_catalogs_over_range():
     start = '2017:001'
-    stop = '2017:005'
+    stop = '2017:004'
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
         telem_quat = get_cmd_quat(dwell.start)
