@@ -88,7 +88,7 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     A catalog is defined as applying, in this function, to any time from the end of the
     previous dwell through the end of the dwell in which the catalog was used.
 
-    Star catalog dictionary with keys::
+    Star catalog dictionary with keys:
 
     - cat: catalog rows as astropy.table
     - manvr: list of maneuvers to this attitude
@@ -98,7 +98,7 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     - mp_dir: directory with products that are the source of this catalog data
     - status: string describing status of that observation, described below.
 
-    Status::
+    Status:
 
     - ran: observation was observed
     - planned: observation in a not-approved future schedule
@@ -198,7 +198,7 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     directory and details of the last one used on the spacecraft.
 
     The returned directory describes the directory that was used for the products with this star catalog.
-    The returned status has possible values::
+    The returned status has possible values:
 
     - ran: observation was observed
     - planned: observation in a not-approved future schedule
@@ -307,7 +307,7 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     """
     For a given obsid, return a dictionary describing the starcheck catalog that should apply.
     The content of that dictionary is from the database tables of that parsed the starcheck report
-    and has keys::
+    and has keys:
 
     - cat: catalog rows as astropy.table
     - manvr: list of maneuvers to this attitude
@@ -317,7 +317,7 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     - mp_dir: directory with products that are the source of this catalog data
     - status: string describing status of that observation, described below.
 
-    Status::
+    Status:
 
     - ran: observation was observed
     - planned: observation in a not-approved future schedule
