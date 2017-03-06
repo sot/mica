@@ -63,7 +63,7 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     with Ska.DBI.DBI(**config['timelines_db']) as timelines_db:
         statuses = []
         # Check which ones actually ran or are likely to run
-        for i_mon, mon in enumerate(mons):
+        for mon in mons:
             try:
                 catalog = get_starcheck_catalog_at_date(mon['mp_starcat_date'],
                                                         timelines_db=timelines_db)
