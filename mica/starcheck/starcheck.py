@@ -208,8 +208,7 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     # and hope for the best
     if len(starchecks) and (starchecks[-1]['mp_starcat_time'] < '2001:001:00:00:00.000'):
         return (starchecks[-1]['dir'], 'ran_pretimelines', starchecks[-1]['mp_starcat_time'])
-    # And if there's nothing do, a quick check to see if it is in other database
-    # to throw an error if it is just missing in mica
+    # And if there are no entries, just return None for dir, status, time
     if not len(starchecks):
         return (None, None, None)
     # Go through the entries backwards (which are in ingest/date order)
