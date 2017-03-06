@@ -211,11 +211,6 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     # And if there's nothing do, a quick check to see if it is in other database
     # to throw an error if it is just missing in mica
     if not len(starchecks):
-        tl_obsids = timelines_db.fetchall("select * from tl_obsids where obsid = {}".format(
-                obsid))
-        if len(tl_obsids):
-            raise ValueError(
-                "Obsid {} in parsed loads in tl_obsids but not in mica starcheck".format(obsid))
         return (None, None, None)
     # Go through the entries backwards (which are in ingest/date order)
     for sc in starchecks[::-1]:
