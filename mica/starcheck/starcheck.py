@@ -88,14 +88,19 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     A catalog is defined as applying, in this function, to any time from the end of the
     previous dwell through the end of the dwell in which the catalog was used.
 
+    The returned dictionary has starcheck content including catalog ('cat') and maneuver.
+    The 'status' key has possible values 'ran_pretimelines' if the catalog ran before timelines,
+    'planned' if the catalog is in a not-approved future schedule, 'approved' if the
+    catalog is in an approved future schedule (ingested in timelines/cmd_states),
+    and 'ran' if the catalog was executed.
+
     :param date: Chandra.Time compatible date
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
-    :returns: dictionary with starcheck content including catalog ('cat') and maneuver.  The 'status' key
-             has possible values 'ran_pretimelines' if the catalog ran before timelines,
-             'planned' if the catalog is in a not-approved future schedule, 'approved' if the
-             catalog is in an approved future schedule (ingested in timelines/cmd_states),
-             and 'ran' if the catalog was executed.
+    :returns: dictionary with starcheck content including catalog ('cat'), maneuver ('manvr'),
+              predicted ACA temperature ('pred_temp'), 'warnings',
+              observation target and pointing ('obs'), 'mp_dir', and status.
+              status is defined above.
 
     """
     date = DateTime(date).date
@@ -182,15 +187,17 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     used more than once (multi-obi or rescheduled after being used in a vehicle-only interval), return the
     directory and details of the last one used on the spacecraft.
 
+    The returned directory is describes the directory that was used for the products with this star catalog.
+    The return 'status' has possible values 'ran_pretimelines' if the catalog ran before timelines,
+    'planned' if the catalog is in a not-approved future schedule, 'approved' if the
+    catalog is in an approved future schedule (ingested in timelines/cmd_states),
+    and 'ran' if the catalog was executed, and 'timelines_gap' if there was a problem
+    confirming placement in timelines.  The return 'date' is the date/time of the `MP_STARCAT` time.
+
     :param obsid: obsid
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
-    :returns: directory, status, date .   Status
-             has possible values 'ran_pretimelines' if the catalog ran before timelines,
-             'planned' if the catalog is in a not-approved future schedule, 'approved' if the
-             catalog is in an approved future schedule (ingested in timelines/cmd_states),
-             and 'ran' if the catalog was executed, and 'timelines_gap' if there was a problem
-             confirming placement in timelines.
+    :returns: directory, status, date .   Described above.
 
     """
     if starcheck_db is None:
@@ -285,14 +292,24 @@ def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
 def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=None):
     """
     For a given obsid, return a dictionary describing the starcheck catalog that should apply.
-    The content of that dictionary is from the database tables that parsed the starcheck report.
+    The content of that dictionary is from the database tables of that parsed the starcheck report
+    and includes catalog and maneuver.
+
+    The 'status' key in the dictionary has possible values 'ran_pretimelines' if the catalog ran before timelines,
+    'planned' if the catalog is in a not-approved future schedule, 'approved' if the
+    catalog is in an approved future schedule (ingested in timelines/cmd_states),
+    and 'ran' if the catalog was executed.
 
     :param obsid: obsid
     :param mp_dir: mission planning directory (in the form '/2017/FEB1317/oflsa/') to which to limit
                    searches for the obsid.  If 'None', get_mp_dir() will be used to select appropriate directory.
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
-    :returns: dictionary with starcheck content including catalog ('cat') and maneuver
+    :returns: dictionary with starcheck content including catalog ('cat'), maneuver ('manvr'),
+              predicted ACA temperature ('pred_temp'), 'warnings',
+              observation target and pointing ('obs'), 'mp_dir', and status.
+              status is defined above.
+
     """
     if starcheck_db is None:
         starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
