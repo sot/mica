@@ -104,3 +104,27 @@ def test_validate_catalogs_over_range():
                 else:
                     assert np.abs(cat[slot]['yag'] - trak_sc_slot['yang']) < 5.0
                     assert np.abs(cat[slot]['zag'] - trak_sc_slot['zang']) < 5.0
+
+
+def test_obsid_catalog_fetch():
+    tests = [{'obsid': 19990,
+              'mp_dir': '/2017/FEB2017/oflsa/',
+              'n_cat_entries': 11},
+             {'obsid': 17210,
+              'mp_dir': '/2016/JAN2516/oflsa/',
+              'n_cat_entries': 11},
+             {'obsid': 62668}]
+    # 62668 should be an undercover with no catalog
+    for t in tests:
+        sc = starcheck.get_starcheck_catalog(t['obsid'])
+        if 'mp_dir' in t:
+            assert t['mp_dir'] == sc['mp_dir']
+        if 'n_cat_entries' in t:
+            assert len(sc['cat']) == t['n_cat_entries']
+        if t['obsid'] == 62668:
+            assert sc is None
+
+
+def test_monitor_fetch():
+    mons = starcheck.get_monitor_windows(start='2009:001', stop='2010:001')
+    assert len(mons) == 53
