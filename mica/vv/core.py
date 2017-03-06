@@ -1055,10 +1055,7 @@ class AspectInterval(object):
                                  mag_i_max=0,
                                  p_lsi=np.array([0,0,0]),
                                  )
-                self.fidprop.resize(len(self.fidprop) + 1)
-                self.fidprop[-1] = np.rec.fromrecords([[mock_prop[col]
-                                                       for col in self.fidprop.dtype.names]],
-                                                     dtype=self.fidprop.dtype)
+                self.fidprop.add_row(mock_prop)
                 self.fidpr_info.append(dict(slot=slot,
                                             tstart=self.asol_header['TSTART'],
                                             tstop=self.asol_header['TSTOP'],
