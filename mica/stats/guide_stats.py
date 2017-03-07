@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 import time
 import sys
@@ -52,24 +53,14 @@ GUIDE_COLS = {
         ('mag', 'float')],
     'stat': [
         ('n_samples', 'int'),
-        ('not_tracking', 'int'),
+        ('n_track', 'int'),
+        ('n_kalman', 'int'),
+        ('no_track', 'float'),
         ('within_0.3', 'int'),
         ('within_1', 'int'),
         ('within_3', 'int'),
         ('within_5', 'int'),
-        ('within_0.3_ok', 'int'),
-        ('within_1_ok', 'int'),
-        ('within_3_ok', 'int'),
-        ('within_5_ok', 'int'),
-        ('within_0.3_modok', 'int'),
-        ('within_1_modok', 'int'),
-        ('within_3_modok', 'int'),
-        ('within_5_modok', 'int'),
         ('outside_5', 'int'),
-        ('outside_5_ok', 'int'),
-        ('outside_5_modok', 'int'),
-        ('obc_bad_status', 'int'),
-        ('mod_obc_bad_status', 'int'),
         ('common_col', 'int'),
         ('quad_bound', 'int'),
         ('sat_pix', 'int'),
@@ -258,11 +249,18 @@ def calc_gui_stats(start, stop, data, times, star_info):
         stats = {}
         aoacfct = data['AOACFCT{}'.format(slot)]
         stats['n_samples'] = len(aoacfct)
-        stats['not_tracking'] = np.count_nonzero(aoacfct != 'TRAK')
+        stats['n_track'] = np.count_nonzero(aoacfct == 'TRAK')
         if np.all(aoacfct != 'TRAK'):
             gui_stats[slot] = stats
             continue
         trak = data[aoacfct == 'TRAK']
+        ok_flags = ((trak['AOACIIR{}'.format(slot)] == 'OK ')
+                    & (trak['AOACISP{}'.format(slot)] == 'OK '))
+        stats['n_kalman'] = np.count_nonzero(ok_flags)
+        stats['no_track'] = (stats['n_samples'] - stats['n_track']) / stats['n_samples']
+        # reduce this to just the samples that don't have IR or SP set
+        trak = trak[ok_flags]
+
         dy = trak['dy{}'.format(slot)]
         dz = trak['dz{}'.format(slot)]
         # cheating here and ignoring spherical trig
@@ -286,31 +284,9 @@ def calc_gui_stats(start, stop, data, times, star_info):
         stats['aoacyan_mean'] = np.mean(trak['AOACYAN{}'.format(slot)])
         stats['aoaczan_mean'] = np.mean(trak['AOACZAN{}'.format(slot)])
 
-
-        ok_flags = (trak['AOACIIR{}'.format(slot)] == 'OK ') & (trak['AOACISP{}'.format(slot)] == 'OK ')
-        if DateTime(start).date < '2013:297':
-            ok_flags = ok_flags & (trak['AOACIDP{}'.format(slot)] == 'OK ')
-        if DateTime(start).date < '2015:251':
-            ok_flags = ok_flags & (trak['AOACIMS{}'.format(slot)] == 'OK ')
-        if DateTime(start).date < '2016:126' and DateTime(start).date >= '2015:251':
-            mss = fetch.Msid('AOACIMSS', start, stop)
-            if np.any(mss.vals == 'ENAB'):
-                ok_flags = ok_flags & (trak['AOACIMS{}'.format(slot)] == 'OK ')
-        stats['obc_bad_status'] = np.count_nonzero(~ok_flags)
-
-        mod_ok_flags = ((trak['AOACIIR{}'.format(slot)] == 'OK ')
-                        & (trak['AOACISP{}'.format(slot)] == 'OK '))
-        stats['mod_obc_bad_status'] = np.count_nonzero(~mod_ok_flags)
-
         for dist in ['0.3', '1', '3', '5']:
             stats['within_{}'.format(dist)] = np.count_nonzero(dr < float(dist))
-            stats['within_{}_ok'.format(dist)] = np.count_nonzero((dr < float(dist))
-                                                              & ok_flags)
-            stats['within_{}_modok'.format(dist)] = np.count_nonzero((dr < float(dist))
-                                                                      & mod_ok_flags)
         stats['outside_5'] = np.count_nonzero(dr > 5)
-        stats['outside_5_ok'] = np.count_nonzero((dr > 5) & ok_flags)
-        stats['outside_5_modok'] = np.count_nonzero((dr > 5) & mod_ok_flags)
 
         stats['common_col'] = np.count_nonzero(trak['AOACICC{}'.format(slot)] == 'ERR')
         stats['sat_pix'] = np.count_nonzero(trak['AOACISP{}'.format(slot)] == 'ERR')
