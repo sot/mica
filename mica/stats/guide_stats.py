@@ -56,11 +56,12 @@ GUIDE_COLS = {
         ('n_track', 'int'),
         ('n_kalman', 'int'),
         ('no_track', 'float'),
-        ('within_0.3', 'int'),
-        ('within_1', 'int'),
-        ('within_3', 'int'),
-        ('within_5', 'int'),
-        ('outside_5', 'int'),
+        ('within_0.3', 'float'),
+        ('within_1', 'float'),
+        ('within_3', 'float'),
+        ('within_5', 'float'),
+        ('outside_5', 'float'),
+        ('obc_bad_frac', 'float'),
         ('common_col', 'int'),
         ('quad_bound', 'int'),
         ('sat_pix', 'int'),
@@ -249,20 +250,35 @@ def calc_gui_stats(start, stop, data, times, star_info):
         stats = {}
         aoacfct = data['AOACFCT{}'.format(slot)]
         stats['n_samples'] = len(aoacfct)
+        if len(aoacfct) == 0:
+            gui_stats[slot] = stats
+            continue
         stats['n_track'] = np.count_nonzero(aoacfct == 'TRAK')
         if np.all(aoacfct != 'TRAK'):
             gui_stats[slot] = stats
             continue
+
         trak = data[aoacfct == 'TRAK']
         ok_flags = ((trak['AOACIIR{}'.format(slot)] == 'OK ')
                     & (trak['AOACISP{}'.format(slot)] == 'OK '))
         stats['n_kalman'] = np.count_nonzero(ok_flags)
         stats['no_track'] = (stats['n_samples'] - stats['n_track']) / stats['n_samples']
-        # reduce this to just the samples that don't have IR or SP set
-        trak = trak[ok_flags]
+        stats['obc_bad'] = (stats['n_track'] - stats['n_kalman']) / stats['n_track']
+        stats['common_col'] = np.count_nonzero(trak['AOACICC{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['sat_pix'] = np.count_nonzero(trak['AOACISP{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['def_pix'] = np.count_nonzero(trak['AOACIDP{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['ion_rad'] = np.count_nonzero(trak['AOACIIR{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['mult_star'] = np.count_nonzero(trak['AOACIMS{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['quad_bound'] = np.count_nonzero(trak['AOACIQB{}'.format(slot)] == 'ERR') / stats['n_track']
 
-        dy = trak['dy{}'.format(slot)]
-        dz = trak['dz{}'.format(slot)]
+        stats['n_trak_interv'] = len(consecutive(np.flatnonzero(
+                    data['AOACFCT{}'.format(slot)] == 'TRAK')))
+
+        # reduce this to just the samples that don't have IR or SP set
+        kal = trak[ok_flags]
+
+        dy = kal['dy{}'.format(slot)]
+        dz = kal['dz{}'.format(slot)]
         # cheating here and ignoring spherical trig
         dr = (dy ** 2 + dz ** 2) ** .5
         stats['star_tracked'] = np.any(dr < 5.0)
@@ -275,27 +291,19 @@ def calc_gui_stats(start, stop, data, times, star_info):
             stats['{}_std'.format(ax)] = np.std(deltas[ax])
             stats['{}_max'.format(ax)] = np.max(deltas[ax])
             stats['{}_min'.format(ax)] = np.min(deltas[ax])
-        mag = trak['AOACMAG{}'.format(slot)]
+        mag = kal['AOACMAG{}'.format(slot)]
         stats['aoacmag_min'] = np.min(mag)
         stats['aoacmag_mean'] = np.mean(mag)
         stats['aoacmag_max'] = np.max(mag)
         stats['aoacmag_std'] = np.std(mag)
 
-        stats['aoacyan_mean'] = np.mean(trak['AOACYAN{}'.format(slot)])
-        stats['aoaczan_mean'] = np.mean(trak['AOACZAN{}'.format(slot)])
+        stats['aoacyan_mean'] = np.mean(kal['AOACYAN{}'.format(slot)])
+        stats['aoaczan_mean'] = np.mean(kal['AOACZAN{}'.format(slot)])
 
         for dist in ['0.3', '1', '3', '5']:
-            stats['within_{}'.format(dist)] = np.count_nonzero(dr < float(dist))
-        stats['outside_5'] = np.count_nonzero(dr > 5)
+            stats['within_{}'.format(dist)] = np.count_nonzero(dr < float(dist)) / stats['n_kalman']
+        stats['outside_5'] = np.count_nonzero(dr > 5) / stats['n_kalman']
 
-        stats['common_col'] = np.count_nonzero(trak['AOACICC{}'.format(slot)] == 'ERR')
-        stats['sat_pix'] = np.count_nonzero(trak['AOACISP{}'.format(slot)] == 'ERR')
-        stats['def_pix'] = np.count_nonzero(trak['AOACIDP{}'.format(slot)] == 'ERR')
-        stats['ion_rad'] = np.count_nonzero(trak['AOACIIR{}'.format(slot)] == 'ERR')
-        stats['mult_star'] = np.count_nonzero(trak['AOACIMS{}'.format(slot)] == 'ERR')
-        stats['quad_bound'] = np.count_nonzero(trak['AOACIQB{}'.format(slot)] == 'ERR')
-        stats['n_trak_interv'] = len(consecutive(np.flatnonzero(
-                    data['AOACFCT{}'.format(slot)] == 'TRAK')))
         gui_stats[slot] = stats
 
     return gui_stats
