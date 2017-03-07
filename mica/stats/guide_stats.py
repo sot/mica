@@ -91,7 +91,7 @@ GUIDE_COLS = {
         ('n_trak_interv', 'int')],
     'agasc': [
         ('agasc_id', 'int'),
-        ('color1', 'float'),
+        ('color', 'float'),
         ('ra', 'float'),
         ('dec', 'float'),
         ('epoch', 'float'),
@@ -434,7 +434,12 @@ def table_gui_stats(obsid_info, gui_stats, star_info, catalog, temp):
                 row[col] = gui_stats[slot][col]
         if slot not in star_info:
             continue
+        row['color'] = star_info[slot]['COLOR1']
+        row['ra'] = star_info[slot]['RA_PMCORR']
+        row['dec'] = star_info[slot]['DEC_PMCORR']
         for col in np.dtype(GUIDE_COLS['agasc']).names:
+            if col in ['color', 'ra', 'dec']:
+                continue
             row[col] = star_info[slot][col.upper()]
         row['tccd_mean'] = temp['tccd_mean']
         row['tccd_max'] = temp['tccd_max']
