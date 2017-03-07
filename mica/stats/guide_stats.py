@@ -38,8 +38,8 @@ GUIDE_COLS = {
     'obs': [
         ('obsid', 'int'),
         ('obi', 'int'),
-        ('guide_datestart', 'S21'),
-        ('guide_tstart', 'float'),
+        ('kalman_tstart', 'float'),
+        ('kalman_datestart', 'S21'),
         ('kalman_datestop', 'S21'),
         ('revision', 'S15')],
     'cat': [
@@ -408,17 +408,17 @@ def calc_stats(obsid):
         logger.warn("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
     vals, times, star_info = get_data(start=manvr.stop, stop=manvr.get_next().start,
                                       obsid=obsid, starcheck=starcheck)
-    gui_stats = calc_gui_stats(manvr.stop, manvr.get_next().start, vals, times, star_info)
+    gui_stats = calc_gui_stats(manvr.kalman_start, manvr.get_next().start, vals, times, star_info)
     obsid_info = {'obsid': obsid,
                   'obi': obspar['obi_num'],
-                  'guide_datestart':  guide_start,
-                  'guide_tstart': DateTime(guide_start).secs,
+                  'kalman_datestart': manvr.kalman_start,
+                  'kalman_tstart': DateTime(manvr.kalman_start).secs,
                   'kalman_datestop': manvr.get_next().start,
                   'revision': STAT_VERSION}
     catalog = Table(starcheck['cat'])
     catalog.sort('idx')
     guide_catalog = catalog[(catalog['type'] == 'GUI') | (catalog['type'] == 'BOT')]
-    aacccdpt = fetch_sci.MSID('AACCCDPT', manvr.stop, manvr.get_next().start)
+    aacccdpt = fetch_sci.MSID('AACCCDPT', manvr.kalman_start, manvr.get_next().start)
     warm_threshold = 100.0
     tccd_mean = np.mean(aacccdpt.vals)
     tccd_max = np.max(aacccdpt.vals)
