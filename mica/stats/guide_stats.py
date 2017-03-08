@@ -54,20 +54,24 @@ GUIDE_COLS = {
     'stat': [
         ('n_samples', 'int'),
         ('n_track', 'int'),
+        ('f_track', 'float'),
+        ('f_racq', 'float'),
+        ('f_srch', 'float'),
+        ('f_none', 'float'),
         ('n_kalman', 'int'),
         ('no_track', 'float'),
-        ('within_0.3', 'float'),
-        ('within_1', 'float'),
-        ('within_3', 'float'),
-        ('within_5', 'float'),
-        ('outside_5', 'float'),
-        ('obc_bad_frac', 'float'),
-        ('common_col', 'int'),
-        ('quad_bound', 'int'),
-        ('sat_pix', 'int'),
-        ('def_pix', 'int'),
-        ('ion_rad', 'int'),
-        ('mult_star', 'int'),
+        ('f_within_0.3', 'float'),
+        ('f_within_1', 'float'),
+        ('f_within_3', 'float'),
+        ('f_within_5', 'float'),
+        ('f_outside_5', 'float'),
+        ('f_obc_bad', 'float'),
+        ('f_common_col', 'float'),
+        ('f_quad_bound', 'float'),
+        ('f_sat_pix', 'float'),
+        ('f_def_pix', 'float'),
+        ('f_ion_rad', 'float'),
+        ('f_mult_star', 'float'),
         ('aoacmag_min', 'float'),
         ('aoacmag_mean', 'float'),
         ('aoacmag_max', 'float'),
@@ -88,7 +92,12 @@ GUIDE_COLS = {
         ('dr_5th', 'float'),
         ('dr_95th', 'float'),
         ('dr_max', 'float'),
-        ('n_trak_interv', 'int')],
+        ('n_track_interv', 'int'),
+        ('n_long_track_interv', 'int'),
+        ('n_long_no_track_interv', 'int'),
+        ('n_racq_interv', 'int'),
+        ('n_srch_interv', 'int'),
+        ],
     'agasc': [
         ('agasc_id', 'int'),
         ('color', 'float'),
@@ -254,6 +263,10 @@ def calc_gui_stats(start, stop, data, times, star_info):
             gui_stats[slot] = stats
             continue
         stats['n_track'] = np.count_nonzero(aoacfct == 'TRAK')
+        stats['f_track'] = stats['n_track'] / stats['n_samples']
+        stats['f_racq'] = np.count_nonzero(aoacfct == 'RACQ') / stats['n_samples']
+        stats['f_srch'] = np.count_nonzero(aoacfct == 'SRCH') / stats['n_samples']
+        stats['f_none'] = np.count_nonzero(aoacfct == 'NONE') / stats['n_samples']
         if np.all(aoacfct != 'TRAK'):
             gui_stats[slot] = stats
             continue
@@ -263,16 +276,32 @@ def calc_gui_stats(start, stop, data, times, star_info):
                     & (trak['AOACISP{}'.format(slot)] == 'OK '))
         stats['n_kalman'] = np.count_nonzero(ok_flags)
         stats['no_track'] = (stats['n_samples'] - stats['n_track']) / stats['n_samples']
-        stats['obc_bad'] = (stats['n_track'] - stats['n_kalman']) / stats['n_track']
-        stats['common_col'] = np.count_nonzero(trak['AOACICC{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['sat_pix'] = np.count_nonzero(trak['AOACISP{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['def_pix'] = np.count_nonzero(trak['AOACIDP{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['ion_rad'] = np.count_nonzero(trak['AOACIIR{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['mult_star'] = np.count_nonzero(trak['AOACIMS{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['quad_bound'] = np.count_nonzero(trak['AOACIQB{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['f_obc_bad'] = (stats['n_track'] - stats['n_kalman']) / stats['n_track']
+        stats['f_common_col'] = np.count_nonzero(trak['AOACICC{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['f_sat_pix'] = np.count_nonzero(trak['AOACISP{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['f_def_pix'] = np.count_nonzero(trak['AOACIDP{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['f_ion_rad'] = np.count_nonzero(trak['AOACIIR{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['f_mult_star'] = np.count_nonzero(trak['AOACIMS{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['f_quad_bound'] = np.count_nonzero(trak['AOACIQB{}'.format(slot)] == 'ERR') / stats['n_track']
 
-        stats['n_trak_interv'] = len(consecutive(np.flatnonzero(
+        track_interv = consecutive(np.flatnonzero(
+                data['AOACFCT{}'.format(slot)] == 'TRAK'))
+        stats['n_track_interv'] = len(track_interv)
+        track_interv_durations = np.array([len(interv) for interv in track_interv])
+        stats['n_long_track_interv'] = np.count_nonzero(track_interv_durations > 60)
+
+        not_track_interv = consecutive(np.flatnonzero(
+                data['AOACFCT{}'.format(slot)] != 'TRAK'))
+        not_track_interv_durations = np.array([len(interv) for interv in not_track_interv])
+        stats['n_long_no_track_interv'] = np.count_nonzero(not_track_interv_durations > 60)
+
+        stats['n_racq_interv'] = len(consecutive(np.flatnonzero(
+                    data['AOACFCT{}'.format(slot)] == 'RACQ')))
+        stats['n_srch_interv'] = len(consecutive(np.flatnonzero(
+                    data['AOACFCT{}'.format(slot)] == 'SRCH')))
+        stats['n_track_interv'] = len(consecutive(np.flatnonzero(
                     data['AOACFCT{}'.format(slot)] == 'TRAK')))
+
 
         # reduce this to just the samples that don't have IR or SP set
         kal = trak[ok_flags]
@@ -301,8 +330,8 @@ def calc_gui_stats(start, stop, data, times, star_info):
         stats['aoaczan_mean'] = np.mean(kal['AOACZAN{}'.format(slot)])
 
         for dist in ['0.3', '1', '3', '5']:
-            stats['within_{}'.format(dist)] = np.count_nonzero(dr < float(dist)) / stats['n_kalman']
-        stats['outside_5'] = np.count_nonzero(dr > 5) / stats['n_kalman']
+            stats['f_within_{}'.format(dist)] = np.count_nonzero(dr < float(dist)) / stats['n_track']
+        stats['f_outside_5'] = np.count_nonzero(dr > 5) / stats['n_track']
 
         gui_stats[slot] = stats
 
@@ -325,7 +354,7 @@ def _get_obsids_to_update(check_missing=False):
         try:
             h5 = tables.openFile(table_file, 'r')
             tbl = h5.getNode('/', 'data')
-            last_tstart = tbl.cols.guide_tstart[tbl.colindexes['guide_tstart'][-1]]
+            last_tstart = tbl.cols.kalman_tstart[tbl.colindexes['kalman_tstart'][-1]]
             h5.close()
         except:
             last_tstart = '2002:012'
