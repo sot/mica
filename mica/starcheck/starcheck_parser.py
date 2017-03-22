@@ -63,7 +63,7 @@ HDRS = [
 
 # Expected type for each of the columns in the catalog table
 OKTYPE = dict(idx=int, slot=int, idnote=str, id=int, type=str, sz=str,
-              minmag=float, mag=float, maxmag=float,
+              minmag=float, mag=float, maxmag=float, p_acq=float,
               yang=int, zang=int,
               dim=int, res=int, halfw=int, notes=str)
 OKTYPE['pass'] = str
