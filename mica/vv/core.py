@@ -462,6 +462,8 @@ class Obi(object):
     def _agg_slot_data(self):
         all_slot = self.all_slot_data
         for slot_id in range(0, 8):
+            if str(slot_id) not in self.slot_report:
+                continue
             slot_report = self.slot_report[str(slot_id)]
             # get status info from guide or fid props
             # just use the first aspect interval and assume the rest are the
