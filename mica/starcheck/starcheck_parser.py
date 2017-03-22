@@ -1,15 +1,9 @@
 #!/usr/bin/env
 
 import os
-import sys
 import re
-import subprocess
-import json
 from itertools import count
-import numpy as np
-import asciitable
-import Ska.Shell
-import Ska.DBI
+from astropy.table import Table
 from six.moves import zip
 
 
@@ -205,7 +199,7 @@ def get_catalog(obs_text):
     # get the lines that start with an [
     catlines = [t for t in obs_text.split("\n")
                 if re.compile("^\[.*").match(t)]
-    rawcat = asciitable.read(catlines, Reader=asciitable.FixedWidthNoHeader,
+    rawcat = Table.read(catlines, format='ascii.fixed_width_no_header',
                              col_starts=hdrformat['col_starts'],
                              col_ends=hdrformat['col_ends'],
                              names=hdrformat['hdrs'])
