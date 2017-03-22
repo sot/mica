@@ -264,7 +264,7 @@ def get_obspar_file(obsid, version='default'):
     return None
 
 
-# borrowed from telem_archive
+# borrowed from telem_archive and also duplicated in mica.vv.core
 import csv
 import gzip
 
@@ -276,7 +276,7 @@ def parse_obspar(file):
                'r': float,
                's': str}
     try:
-        lines = gzip.open(file).readlines()
+        lines = gzip.open(file, 'rt').readlines()
     except IOError:
         lines = open(file).readlines()
     obs_read = csv.DictReader(lines,
