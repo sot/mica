@@ -176,9 +176,11 @@ obs.mp_starcat_time, obs.mp_starcat_vcdu_cnt) -}}
 </PRE>
 {% endif %}
 
-{% for warn in sc['warnings'] %}{% if warn['idx'] is not none %}<PRE>{{- "WARNING: [%2s] %s. %s"|format(
-warn['idx'], warn['warning_type'], warn['warning']) }}
-{% else %}{{- "WARNING: %s"|format(warn['warning']) }}{% endif %}</PRE>{% endfor %}
+<PRE>{% for warn in sc['warnings'] %}
+{% if warn['idx'] is not none %}{{- "WARNING: [%2s] %s. %s"|format(warn['idx'], warn['warning_type'], warn['warning'])}}{% else -%}
+{{- "WARNING: %s"|format(warn['warning']) -}}{% endif -%}
+{% endfor %}
+</PRE>
 
 {% if pred_temp is not none and temps is not none %}
 <PRE>
