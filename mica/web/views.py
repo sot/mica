@@ -67,8 +67,6 @@ class StarHistView(BaseView, TemplateView):
                 context['star_info'] = []
                 pass
             acq_table, gui_table = mica.web.star_hist.get_star_stats(agasc_id, start, stop)
-            if len(acq_table) or len(gui_table):
-                context['has_hist'] = 1
             if len(acq_table):
                 context['acq_table'] = acq_table
             if len(gui_table):

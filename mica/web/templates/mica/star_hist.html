@@ -57,7 +57,6 @@ table.pcad {border-spacing: 5px;}
       </div>
 </form>
 
-{% if has_hist %}
 {% if acq_table %}
 <H3>Acquisition History</H3>
 <TABLE class='pcad' border=1>
@@ -118,6 +117,7 @@ table.pcad {border-spacing: 5px;}
 </tr>
 {% endfor %}
 </TABLE>
+{% endif %}
 {% if acq_table %}
 Notes: In the acquisition history table, "dy (corr)" and "dz (corr)" are the offset from
 the expected/commanded position in arcsecs based on the star positions after correction
@@ -125,9 +125,7 @@ the expected/commanded position in arcsecs based on the star positions after cor
 the AGASC magnitude.
 {% endif %}
 
-{% endif %}
-
-
+{% if star_info %}
 <div class="border">
 <H1>AGASC info</H1>
 <TABLE border=1>
@@ -155,13 +153,10 @@ the AGASC magnitude.
 </TD></TR>
 </TABLE>
 </div>
-
-
-
-{% else %}
-{% if agasc_id != '' %}
-<H3>No acq or guide history for star :{{ agasc_id }}:</H3>
 {% endif %}
+
+{% if star_info|length == 0 %}
+<H3>No AGASC 1.6 entry for star :{{ agasc_id }}:</H3>
 {% endif %}
 
 {% endblock %}
