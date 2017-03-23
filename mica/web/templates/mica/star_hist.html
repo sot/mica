@@ -76,7 +76,9 @@ table.pcad {border-spacing: 5px;}
 {% for acq in acq_table %}
 <tr>
 <td>{{ acq.date }}</td>
-<td>{{ acq.obsid }}</td>
+<td><a href="https://icxc.harvard.edu/aspect/mica_reports/
+{{ acq.obsid|stringformat:'05d'|slice:'0:2' }}/{{ acq.obsid|stringformat:'05d' }}
+/"> {{ acq.obsid }}</a></td>
 <td>{{ acq.obi }}</td>
 <td>{{ acq.type }}</td>
 <td>{{ acq.slot }}</td>
@@ -107,7 +109,9 @@ table.pcad {border-spacing: 5px;}
 {% for gui in gui_table %}
 <tr>
 <td>{{ gui.date }}</td>
-<td>{{ gui.obsid }}</td>
+<td><a href="https://icxc.harvard.edu/aspect/mica_reports/
+{{ gui.obsid|stringformat:'05d'|slice:'0:2' }}/{{ gui.obsid|stringformat:'05d' }}
+/"> {{ gui.obsid }}</a></td>
 <td>{{ gui.obi }}</td>
 <td>{{ gui.type }}</td>
 <td>{{ gui.slot }}</td>
