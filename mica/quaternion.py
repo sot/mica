@@ -443,6 +443,10 @@ class Quat(object):
         """
         return self * quat2.inv()
 
+
+    __truediv__ = __div__
+
+
     def __mul__(self, quat2):
         """
         Multiply quaternion by another.
