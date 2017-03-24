@@ -13,7 +13,7 @@ import numpy as np
 import Ska.quatutil
 import Ska.astro
 from mica.quaternion import Quat
-import mica.archive.aca_dark.dark_model
+from chandra_aca import dark_model
 import logging
 
 import warnings
