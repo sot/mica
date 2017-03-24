@@ -107,7 +107,7 @@ def prune_dirs(dirs, regex):
 def get_new_starcheck_files(rootdir, mtime=0):
     """
     Look for starcheck.txt files in a a given top-level SOT MP directory
-    and return those with modification times after the optional supplied 'mtime'.
+    and return those with modification times at or after the optional supplied 'mtime'.
     """
     logger.info("Getting new starcheck.txt files from {}".format(rootdir))
     starchecks = []
@@ -127,7 +127,7 @@ def get_new_starcheck_files(rootdir, mtime=0):
             while dirs:
                 dirs.pop()
     starchecks_with_times = [{'file': st, 'mtime': os.path.getmtime(st)}
-                             for st in starchecks if os.path.getmtime(st) > mtime]
+                             for st in starchecks if os.path.getmtime(st) >= mtime]
     starchecks_with_times = sorted(starchecks_with_times, key=itemgetter('mtime'))
     return starchecks_with_times
 
