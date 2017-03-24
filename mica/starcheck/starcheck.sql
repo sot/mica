@@ -1,6 +1,7 @@
 create table starcheck_id
 (id             int             not null,
 dir             varchar(20)     not null,
+mtime           float           not null,
 primary key (id)
 );
 
@@ -100,7 +101,7 @@ pred_ccd_temp float,
 CONSTRAINT fk_spt_id FOREIGN KEY (sc_id) REFERENCES starcheck_id (id)
 );
 
-
+CREATE INDEX mtime_idx on starcheck_id(mtime);
 CREATE INDEX cat_id_idx on starcheck_catalog(sc_id);
 CREATE INDEX cat_time_idx on starcheck_catalog(mp_starcat_time);
 CREATE INDEX id_dir_idx on starcheck_id(dir);

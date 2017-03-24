@@ -25,7 +25,6 @@ DEFAULT_CONFIG = dict(starcheck_db=dict(dbi='sqlite',
                       timelines_db=dict(dbi='sqlite',
                                         server=os.path.join(os.environ['SKA'], 'data', 'cmd_states', 'cmd_states.db3')))
 FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
-             touch_file=os.path.join(MICA_ARCHIVE, 'starcheck', "starcheck_parser.touch"),
              sql_def='starcheck.sql')
 
 
@@ -95,36 +94,68 @@ def get_options():
     return opt
 
 
+def prune_dirs(dirs, regex):
+    """
+    Prune directories (in-place) that do not match ``regex``.
+    (borrowed from kadi)
+    """
+    prunes = [x for x in dirs if not re.match(regex, x)]
+    for prune in prunes:
+        dirs.remove(prune)
+
+
+def get_new_starcheck_files(rootdir, mtime=0):
+    """
+    Look for starcheck.txt files in a a given top-level SOT MP directory
+    and return those with modification times after the optional supplied 'mtime'.
+    """
+    logger.info("Getting new starcheck.txt files from {}".format(rootdir))
+    starchecks = []
+    for root, dirs, files in os.walk(rootdir):
+        root = root.rstrip('/')
+        depth = len(root.split('/')) - 1
+        if depth == 3:
+            prune_dirs(dirs, r'\d{4}$')
+        elif depth == 4:
+            prune_dirs(dirs, r'[A-Z]{3}\d{4}$')
+        elif depth == 5:
+            prune_dirs(dirs, r'ofls[a-z]$')
+        elif depth > 5:
+            files = [x for x in files if re.match(r'starcheck\.txt$', x)]
+            if len(files):
+                starchecks.append(os.path.join(root, files[0]))
+            while dirs:
+                dirs.pop()
+    starchecks_with_times = [{'file': st, 'mtime': os.path.getmtime(st)}
+                             for st in starchecks if os.path.getmtime(st) > mtime]
+    starchecks_with_times = sorted(starchecks_with_times, key=itemgetter('mtime'))
+    return starchecks_with_times
+
+
 def update(config=None):
     if config is None:
         config = DEFAULT_CONFIG
     if config['starcheck_db']['dbi'] != 'sqlite':
         raise ValueError("Only sqlite DBI implemented")
+    last_starcheck_mtime = 0
     if (not os.path.exists(config['starcheck_db']['server'])
             or os.stat(config['starcheck_db']['server']).st_size == 0):
         if not os.path.exists(os.path.dirname(config['starcheck_db']['server'])):
             os.makedirs(os.path.dirname(config['starcheck_db']['server']))
-        db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', FILES['sql_def'])
+        db_sql = os.path.join('mica', 'starcheck', FILES['sql_def'])
         db_init_cmds = open(db_sql).read()
         db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
         db.execute(db_init_cmds)
-        if not os.path.exists(FILES['touch_file']):
-            # make a touch file with a time before starchecks
-            Ska.Shell.bash("touch -t 199801010000 %s" % (FILES['touch_file']),
-                           env={'MAILCHECK': -1})
     else:
         db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
+        max_mtime = db.fetchone("select max(mtime) as mtime from starcheck_id")
+        if max_mtime is not None:
+            last_starcheck_mtime = max_mtime['mtime']
 
-    starchecks = Ska.Shell.bash(
-        "find %s" % config['mp_top_level']
-        + "/[12]???/[A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9]/ofls?/ "
-        + " -maxdepth 1 -wholename '*/ofls?/starcheck.txt' "
-        + "-newer %s" % FILES['touch_file'],
-        env={'MAILCHECK': -1})
+    starchecks_with_times = get_new_starcheck_files(config['mp_top_level'],
+                                                    mtime=last_starcheck_mtime)
 
-    starchecks_with_times = [dict(file=st, mtime=os.path.getmtime(st))
-                             for st in starchecks]
-    for st_with_time in sorted(starchecks_with_times, key=itemgetter('mtime')):
+    for st_with_time in starchecks_with_times:
         st = st_with_time['file']
         logger.info("Attempting ingest of %s" % st)
         # get an existing id or insert a new one
@@ -141,15 +172,12 @@ def update(config=None):
         else:
             sc_id = db.fetchone(
                 "select max(id) + 1 as id from starcheck_id")['id'] or 0
-            db.insert(dict(id=sc_id, dir=mp_dir), 'starcheck_id')
+            db.insert(dict(id=sc_id, dir=mp_dir, mtime=st_with_time['mtime']), 'starcheck_id')
             db.commit()
 
         starcheck = read_starcheck(st)
         for (obs, obs_idx) in zip(starcheck, count(0)):
             ingest_obs(obs, obs_idx, sc_id, st, db, existing=existing)
-        logger.info("Done with %s; updating touch file" % st)
-        Ska.Shell.bash("touch -r %s %s" % (st, FILES['touch_file']),
-                       env={'MAILCHECK': -1})
 
 
 def main():
