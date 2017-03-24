@@ -119,7 +119,7 @@ def update(config=None):
         "find %s" % config['mp_top_level']
         + "/[12]???/[A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9]/ofls?/ "
         + " -maxdepth 1 -wholename '*/ofls?/starcheck.txt' "
-        + "-cnewer %s" % FILES['touch_file'],
+        + "-newer %s" % FILES['touch_file'],
         env={'MAILCHECK': -1})
 
     starchecks_with_times = [dict(file=st, mtime=os.path.getmtime(st))
