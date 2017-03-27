@@ -42,6 +42,7 @@ target_Q3       float,
 target_Q4       float,
 mp_targquat_time	varchar(25),
 mp_targquat_vcdu_cnt int,
+end_date varchar(25),
 CONSTRAINT fk_sm_id FOREIGN KEY (sc_id) REFERENCES starcheck_id (id)
 );
 
