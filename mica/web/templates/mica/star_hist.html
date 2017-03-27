@@ -57,7 +57,6 @@ table.pcad {border-spacing: 5px;}
       </div>
 </form>
 
-{% if has_hist %}
 {% if acq_table %}
 <H3>Acquisition History</H3>
 <TABLE class='pcad' border=1>
@@ -77,7 +76,9 @@ table.pcad {border-spacing: 5px;}
 {% for acq in acq_table %}
 <tr>
 <td>{{ acq.date }}</td>
-<td>{{ acq.obsid }}</td>
+<td><a href="https://icxc.harvard.edu/aspect/mica_reports/
+{{ acq.obsid|stringformat:'05d'|slice:'0:2' }}/{{ acq.obsid|stringformat:'05d' }}
+/"> {{ acq.obsid }}</a></td>
 <td>{{ acq.obi }}</td>
 <td>{{ acq.type }}</td>
 <td>{{ acq.slot }}</td>
@@ -108,7 +109,9 @@ table.pcad {border-spacing: 5px;}
 {% for gui in gui_table %}
 <tr>
 <td>{{ gui.date }}</td>
-<td>{{ gui.obsid }}</td>
+<td><a href="https://icxc.harvard.edu/aspect/mica_reports/
+{{ gui.obsid|stringformat:'05d'|slice:'0:2' }}/{{ gui.obsid|stringformat:'05d' }}
+/"> {{ gui.obsid }}</a></td>
 <td>{{ gui.obi }}</td>
 <td>{{ gui.type }}</td>
 <td>{{ gui.slot }}</td>
@@ -118,6 +121,7 @@ table.pcad {border-spacing: 5px;}
 </tr>
 {% endfor %}
 </TABLE>
+{% endif %}
 {% if acq_table %}
 Notes: In the acquisition history table, "dy (corr)" and "dz (corr)" are the offset from
 the expected/commanded position in arcsecs based on the star positions after correction
@@ -125,11 +129,9 @@ the expected/commanded position in arcsecs based on the star positions after cor
 the AGASC magnitude.
 {% endif %}
 
-{% endif %}
-
-
+{% if star_info %}
 <div class="border">
-<H1>AGASC info</H1>
+<H3>AGASC info</H3>
 <TABLE border=1>
 <TR><TD WIDTH="30%" VALIGN="TOP">
 <TABLE>
@@ -155,13 +157,10 @@ the AGASC magnitude.
 </TD></TR>
 </TABLE>
 </div>
-
-
-
-{% else %}
-{% if agasc_id != '' %}
-<H3>No acq or guide history for star :{{ agasc_id }}:</H3>
 {% endif %}
+
+{% if star_info|length == 0 %}
+<H3>No AGASC 1.6 entry for star :{{ agasc_id }}:</H3>
 {% endif %}
 
 {% endblock %}
