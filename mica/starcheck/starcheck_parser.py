@@ -174,20 +174,18 @@ def get_manvrs(obs_text):
                                        target_Q3=float(quat_re.group(3)),
                                        target_Q4=float(quat_re.group(4))))
             angle_re = re.match(
-                "\s+MANVR: Angle=\s+(\d+\.\d+)\sdeg\s+Duration=\s+(\d+)\ssec\s+Slew\serr=\s+(\d+\.\d)\sarcsec",
+                "\s+MANVR: Angle=\s+(\d+\.\d+)\sdeg\s+Duration=\s+(\d+)\ssec\s+Slew\serr=\s+(\d+\.\d)\sarcsec(\s+End=\s+(\S+))?",
                 mline)
             if angle_re:
                 curr_manvr.update(dict(angle_deg=float(angle_re.group(1)),
                                        duration_sec=int(angle_re.group(2)),
                                        slew_err_arcsec=float(angle_re.group(3)),
-                                       instance=len(manvrs)))
+                                       end_date=angle_re.group(5)))
                 if 'target_Q1' not in curr_manvr:
                     raise ValueError("No Q1,Q2,Q3,Q4 line found when parsing starcheck.txt")
-            end_time_re = re.match("\s+MANVR: Ends=\s+(\S+)", mline)
-            if end_time_re:
-                curr_manvr.update({'end_date': end_time_re.group(1)})
         manvrs.append(curr_manvr)
-
+    for idx, manvr in enumerate(manvrs):
+        manvr['instance'] = idx
     return manvrs
 
 
