@@ -151,7 +151,7 @@ def update(config=None):
     else:
         db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
         max_mtime = db.fetchone("select max(mtime) as mtime from starcheck_id")
-        if max_mtime is not None and 'start' not in config:
+        if max_mtime is not None:
             last_starcheck_mtime = max_mtime['mtime']
     # if a start time is explicitly requested, override 0 or last database value
     if 'start' in config:
