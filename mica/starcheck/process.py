@@ -90,6 +90,8 @@ def get_options():
                         help="server or file for database")
     parser.add_argument("--mp-top-level",
                         help="top level SOT MP dir")
+    parser.add_argument("--start",
+                        help="update database with starcheck files after this strt time")
     opt = parser.parse_args()
     return opt
 
@@ -149,9 +151,11 @@ def update(config=None):
     else:
         db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
         max_mtime = db.fetchone("select max(mtime) as mtime from starcheck_id")
-        if max_mtime is not None:
+        if max_mtime is not None and 'start' not in config:
             last_starcheck_mtime = max_mtime['mtime']
-
+    # if a start time is explicitly requested, override 0 or last database value
+    if 'start' in config:
+        last_starcheck_mtime = DateTime(config['start']).unix
     starchecks_with_times = get_new_starcheck_files(config['mp_top_level'],
                                                     mtime=last_starcheck_mtime)
 
