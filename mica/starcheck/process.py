@@ -91,7 +91,7 @@ def get_options():
     parser.add_argument("--mp-top-level",
                         help="top level SOT MP dir")
     parser.add_argument("--start",
-                        help="update database with starcheck files after this strt time")
+                        help="update database with starcheck files after this start time")
     opt = parser.parse_args()
     return opt
 
