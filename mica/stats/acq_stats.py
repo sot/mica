@@ -442,7 +442,7 @@ def _get_obsids_to_update(check_missing=False):
 
 
 def calc_stats(obsid):
-    obspar = mica.archive.obspar.get_obspar(obsid)
+    obspar = mica.archive.obspar.get_obspar(obsid, version='last')
     if not obspar:
         raise ValueError("No obspar for {}".format(obsid))
     manvr = None
