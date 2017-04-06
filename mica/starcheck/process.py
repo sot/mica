@@ -154,7 +154,7 @@ def update(config=None):
         if max_mtime is not None:
             last_starcheck_mtime = max_mtime['mtime']
     # If a start time is explicitly requested, override 0 or last database value
-    if 'start' in config:
+    if 'start' in config and config['start'] is not None:
         last_starcheck_mtime = DateTime(config['start']).unix
     starchecks_with_times = get_new_starcheck_files(config['mp_top_level'],
                                                     mtime=last_starcheck_mtime)
