@@ -442,7 +442,7 @@ def _get_obsids_to_update(check_missing=False):
 
 
 def calc_stats(obsid):
-    obspar = mica.archive.obspar.get_obspar(obsid)
+    obspar = mica.archive.obspar.get_obspar(obsid, version='last')
     if not obspar:
         raise ValueError("No obspar for {}".format(obsid))
     manvr = None
@@ -516,7 +516,7 @@ def calc_stats(obsid):
                                               mp_dir='/2007/MAY2807/oflsb/')
         else:
             raise ValueError("Problem looking up starcheck for {}".format(obsid))
-    if 'cat' not in starcheck or not len(starcheck['cat']):
+    if starcheck is None or 'cat' not in starcheck or not len(starcheck['cat']):
         raise ValueError('No starcheck catalog found for {}'.format(
                 manvr.get_obsid()))
     starcat_time = DateTime(starcheck['cat']['mp_starcat_time'][0]).secs
