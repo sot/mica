@@ -545,8 +545,7 @@ def calc_stats(obsid):
                                       time-250,
                                       time+250).vals)
     warm_threshold = 100.0
-    warm_frac = mica.archive.aca_dark.dark_model.get_warm_fracs(
-        warm_threshold, time, ccd_temp)
+    warm_frac = dark_model.get_warm_fracs(warm_threshold, time, ccd_temp)
     temps = {'ccd_temp': ccd_temp, 'n100_warm_frac': warm_frac}
     return obsid_info, acq_stats, star_info, catalog, temps
 
