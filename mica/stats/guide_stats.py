@@ -490,7 +490,7 @@ def _save_gui_stats(t):
         tbl = h5.createTable('/', 'data', desc, filters=filters,
                              expectedrows=1e6)
         tbl.cols.obsid.createIndex()
-        tbl.cols.guide_tstart.createCSIndex()
+        tbl.cols.kalman_tstart.createCSIndex()
         tbl.cols.agasc_id.createIndex()
         h5.close()
         del h5
