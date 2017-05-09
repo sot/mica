@@ -8,6 +8,9 @@ import Ska.quatutil
 import mica.starcheck
 import agasc
 
+R2A = 206264.81
+
+
 msids = ['AOACASEQ', 'AOACQSUC', 'AOFREACQ', 'AOFWAIT', 'AOREPEAT',
          'AOACSTAT', 'AOACHIBK', 'AOFSTAR', 'AOFATTMD', 'AOACPRGS',
          'AOATUPST', 'AONSTARS', 'AOPCADMD', 'AORFSTR1', 'AORFSTR2',
@@ -29,27 +32,19 @@ def deltas_vs_obc_quat(vals, times, catalog):
                            vals['AOATTQT3'],
                            vals['AOATTQT4']]).transpose())
     Ts = q_att.transform
-    acqs = catalog[(catalog['type'] == 'BOT') | (catalog['type'] == 'ACQ')]
-
-    # Compute the multiplicative factor to convert from the AGASC proper motion
-    # field to degrees.  The AGASC PM is specified in milliarcsecs / year, so this
-    # is dyear * (degrees / milliarcsec)
-    agasc_equinox = DateTime('2000:001:00:00:00.000')
-    dyear = (DateTime(times[0]) - agasc_equinox) / 365.25
-    pm_to_degrees = dyear / (3600. * 1000.)
-    R2A = 206264.81
 
     dy = {}
     dz = {}
     for slot in range(0, 8):
-        agasc_id = acqs[acqs['slot'] == slot][0]['id']
-        star = agasc.get_star(agasc_id)
-        ra = star['RA']
-        dec = star['DEC']
-        if star['PM_RA'] != -9999:
-            ra = star['RA'] + star['PM_RA'] * pm_to_degrees
-        if star['PM_DEC'] != -9999:
-            dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
+        if np.any(catalog['slot'] == slot):
+            agasc_id = catalog[catalog['slot'] == slot][0]['id']
+        else:
+            continue
+        if agasc_id < 20:
+            continue
+        star = agasc.get_star(agasc_id, date=times[0])
+        ra = star['RA_PMCORR']
+        dec = star['DEC_PMCORR']
         star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
         d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)), star_pos_eci).transpose()
         yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
@@ -61,29 +56,41 @@ def deltas_vs_obc_quat(vals, times, catalog):
 
 def get_acq_table(obsid):
 
-    manvrs = events.manvrs.filter(obsid=obsid)
-    if not len(manvrs):
-        return None
-    manvr = manvrs[0]
+    obsid = int(obsid)
 
-    start_time = DateTime(manvr.acq_start).secs
-    stop_time = start_time + (60 * 5)
+    acq_start = None
+
+    try:
+        manvrs = events.manvrs.filter(obsid=obsid)
+        acq_start = manvrs[0].acq_start
+    except:
+        try:
+            sc = mica.starcheck.get_starcheck_catalog(obsid)
+            acq_start = sc['manvr'][-1]['end_date']
+            fetch.data_source.set('maude')
+        except:
+            raise
+
+    start_time = DateTime(acq_start).secs
+    stop_time = start_time + (60 * 8)
+    print(start_time)
+    print(stop_time)
     acq_data = fetch.MSIDset(msids + slot_msids, start_time, stop_time)
-
-    vals = Table([acq_data[col].vals for col in msids], names=msids)
-    for field in slot_msids:
-        vals.add_column(Column(name=field, data=acq_data[field].vals))
-        times = Table([acq_data['AOACASEQ'].times], names=['time'])
+    acq_data.interpolate(1.025)
+    vals = Table([acq_data[col].vals for col in msids + slot_msids],
+                 names=msids + slot_msids)
+    times = {'time': acq_data['AOACASEQ'].times}
 
     def compress_data(data, dtime):
-        return data[data['AOREPEAT'] == '0 '], dtime[data['AOREPEAT'] == '0 ']
+        non_repeat = (data['AOREPEAT'] == '0 ') | (data['AOREPEAT'] == '0')
+        return data[non_repeat], dtime[non_repeat]
 
-    vals, times = compress_data(vals, times)
+    vals, times['time'] = compress_data(vals, times['time'])
 
     # Get the catalog for the stars
     # This is used both to map ACQID to the right slot and
     # to get the star positions to estimate deltas later
-    timeline_at_acq = mica.starcheck.starcheck.get_timeline_at_date(manvr.start)
+    timeline_at_acq = mica.starcheck.starcheck.get_timeline_at_date(acq_start)
     mp_dir = None if (timeline_at_acq is None) else timeline_at_acq['mp_dir']
     starcheck = mica.starcheck.get_starcheck_catalog(int(obsid), mp_dir=mp_dir)
     if 'cat' not in starcheck:
@@ -91,31 +98,47 @@ def get_acq_table(obsid):
     catalog = Table(starcheck['cat'])
     catalog.sort('idx')
     # Filter the catalog to be just acquisition stars
-    catalog = catalog[(catalog['type'] == 'ACQ') | (catalog['type'] == 'BOT')]
-    slot_for_pos = [cat_row['slot'] for cat_row in catalog]
+    acq_catalog = catalog[(catalog['type'] == 'ACQ') | (catalog['type'] == 'BOT')]
+    slot_for_pos = [cat_row['slot'] for cat_row in acq_catalog]
     pos_for_slot = dict([(slot, idx) for idx, slot in enumerate(slot_for_pos)])
     # Also, save out the starcheck index for each slot for later
-    index_for_slot = dict([(cat_row['slot'], cat_row['idx']) for cat_row in catalog])
+    index_for_slot = dict([(cat_row['slot'], cat_row['idx']) for cat_row in acq_catalog])
 
     # Estimate the offsets from the expected catalog positions
-    dy, dz = deltas_vs_obc_quat(vals, times['time'], catalog)
+    dy, dz = deltas_vs_obc_quat(vals, times['time'], acq_catalog)
     for slot in range(0, 8):
-        vals.add_column(Column(name='dy{}'.format(slot), data=dy[slot].data))
-        vals.add_column(Column(name='dz{}'.format(slot), data=dz[slot].data))
-        cat_entry = catalog[catalog['slot'] == slot][0]
-        dmag = vals['AOACMAG{}'.format(slot)] - cat_entry['mag']
-        vals.add_column(Column(name='dmag{}'.format(slot), data=dmag.data))
+        if slot in dy:
+            vals['acq_dy{}'.format(slot)] = dy[slot].data
+            vals['acq_dz{}'.format(slot)] = dz[slot].data
+            cat_entry = catalog[catalog['slot'] == slot][0]
+            dmag = vals['AOACMAG{}'.format(slot)] - cat_entry['mag']
+            vals['acq_dmag{}'.format(slot)] = dmag.data
+
+    # Filter the catalog to be just tracked things
+    gui_catalog = catalog[(catalog['type'] != 'ACQ')]
+    # Estimate the offsets from the expected guide catalog positions
+    gui_dy, gui_dz = deltas_vs_obc_quat(vals, times['time'], gui_catalog)
+    for slot in range(0, 8):
+        if slot in gui_dy:
+            vals['gui_dy{}'.format(slot)] = gui_dy[slot].data
+            vals['gui_dz{}'.format(slot)] = gui_dz[slot].data
+            cat_entry = catalog[catalog['slot'] == slot][0]
+            dmag = vals['AOACMAG{}'.format(slot)] - cat_entry['mag']
+            vals['gui_dmag{}'.format(slot)] = dmag.data
 
     # make a list of dicts of the table
     simple_data = []
     kalm_start = None
-    for drow, trow in zip(vals, times):
-        if (kalm_start is None) and (drow['AOACASEQ'] == 'KALM'):
-            kalm_start = trow['time']
-        if (kalm_start is not None) and (trow['time'] > kalm_start + 5):
-            continue
+    found_acq = None
+    for drow, trow in zip(vals, times['time']):
+#        if (drow['AOACASEQ'] == 'AQXN'):
+#            found_acq = True
+#        if (found_acq is not None) and (kalm_start is None) and (drow['AOACASEQ'] == 'KALM'):
+#            kalm_start = trow
+#        if (kalm_start is not None) and (trow > kalm_start + 5):
+#            continue
         slot_data = {'slots': [],
-                     'time': trow['time'],
+                     'time': trow,
                      'aorfstr1_slot': slot_for_pos[int(drow['AORFSTR1'])],
                      'aorfstr2_slot': slot_for_pos[int(drow['AORFSTR2'])],
                      }
@@ -125,11 +148,16 @@ def get_acq_table(obsid):
             row_dict = {'slot': slot,
                         'catpos': pos_for_slot[slot],
                         'index': index_for_slot[slot]}
-            for col in per_slot:
+            for col in per_slot + ['acq_dy', 'acq_dz', 'acq_dmag', 'gui_dy', 'gui_dz', 'gui_dmag']:
                 if col not in ['AOACQID']:
-                    row_dict[col] = drow['{}{}'.format(col, slot)]
+                    col_key = '{}{}'.format(col, slot)
+                    if col_key in drow.colnames:
+                        row_dict[col] = drow[col_key]
+            prefix = 'acq_' if drow['AOACASEQ'] == 'AQXN' else 'gui_'
             for col in ['dy', 'dz', 'dmag']:
-                row_dict[col] = drow['{}{}'.format(col, slot)]
+                res_key = '{}{}{}'.format(prefix, col, slot)
+                if res_key in drow.colnames:
+                    row_dict[col] = drow[res_key]
             row_dict['POS_ACQID'] = drow['AOACQID{}'.format(pos_for_slot[slot])]
             slot_data['slots'].append(row_dict)
         simple_data.append(slot_data)

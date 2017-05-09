@@ -111,7 +111,7 @@ style="background-color: lightblue;"
 <tr><td style="text-align:right">{{ slot.AOACMAG|floatformat:2 }}</td></tr>
 <tr><td style="text-align:right">{{ slot.AOACYAN|floatformat:2 }}</td></tr>
 <tr><td style="text-align:right">{{ slot.AOACZAN|floatformat:2 }}</td></tr>
-{% if slot.AOACFCT == 'TRAK' %}
+{% if slot.AOACFCT == 'TRAK' and slot.dy %}
 <tr><td style="text-align:right">{{ slot.dy|floatformat:2 }}</td></tr>
 <tr><td style="text-align:right">{{ slot.dz|floatformat:2 }}</td></tr>
 <tr><td style="text-align:right">{{ slot.dmag|floatformat:2 }}</td></tr>
