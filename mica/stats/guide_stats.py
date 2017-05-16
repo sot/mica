@@ -527,7 +527,7 @@ def update(opt):
     for obsid in obsids:
         t = time.localtime()
         # Don't run during kadi update
-        if t.tm_hour == 7:
+        if t.tm_hour in [9, 10, 11]:
             logger.info("Sleeping")
             time.sleep(3720)
         logger.info("Processing obsid {}".format(obsid))
