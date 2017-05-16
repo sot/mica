@@ -130,8 +130,10 @@ GUIDE_COLS = {
 
 
 SKA = os.environ['SKA']
-table_file = 'guide_stats.h5'
-skipped_file = 'skipped.dat'
+DATA = os.path.join(SKA, 'data', 'guide_stats')
+TABLE_FILE = os.path.join(DATA, 'guide_stats.h5')
+SKIPPED_FILE = os.path.join(DATA, 'skipped.dat')
+
 
 def get_options():
     parser = argparse.ArgumentParser(
@@ -343,7 +345,7 @@ def _get_obsids_to_update(check_missing=False):
         last_tstart = '2007:271'
         kadi_obsids = events.obsids.filter(start=last_tstart)
         try:
-            h5 = tables.openFile(table_file, 'r')
+            h5 = tables.openFile(TABLE_FILE, 'r')
             tbl = h5.root.data[:]
             h5.close()
         except:
@@ -352,7 +354,7 @@ def _get_obsids_to_update(check_missing=False):
         obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl['obsid']]
     else:
         try:
-            h5 = tables.openFile(table_file, 'r')
+            h5 = tables.openFile(TABLE_FILE, 'r')
             tbl = h5.getNode('/', 'data')
             last_tstart = tbl.cols.kalman_tstart[tbl.colindexes['kalman_tstart'][-1]]
             h5.close()
@@ -481,12 +483,12 @@ def table_gui_stats(obsid_info, gui_stats, star_info, catalog, temp):
 
 
 def _save_gui_stats(t):
-    if not os.path.exists(table_file):
+    if not os.path.exists(TABLE_FILE):
         cols = (GUIDE_COLS['obs'] + GUIDE_COLS['cat'] + GUIDE_COLS['stat']
                 + GUIDE_COLS['agasc'] + GUIDE_COLS['temp'] + GUIDE_COLS['bad'])
         desc, byteorder = tables.descr_from_dtype(np.dtype(cols))
         filters = tables.Filters(complevel=5, complib='zlib')
-        h5 = tables.openFile(table_file, 'a')
+        h5 = tables.openFile(TABLE_FILE, 'a')
         tbl = h5.createTable('/', 'data', desc, filters=filters,
                              expectedrows=1e6)
         tbl.cols.obsid.createIndex()
@@ -494,7 +496,7 @@ def _save_gui_stats(t):
         tbl.cols.agasc_id.createIndex()
         h5.close()
         del h5
-    h5 = tables.openFile(table_file, 'a')
+    h5 = tables.openFile(TABLE_FILE, 'a')
     tbl = h5.getNode('/', 'data')
     have_obsid_coord = tbl.getWhereList(
         '(obsid == {}) & (obi == {})'.format(
@@ -534,11 +536,11 @@ def update(opt):
         try:
             obsid_info, gui_stats, star_info, guide_catalog, temp = calc_stats(obsid)
         except Exception as e:
-            open(skipped_file, 'a').write("{}: {}\n".format(obsid, e))
+            open(SKIPPED_FILE, 'a').write("{}: {}\n".format(obsid, e))
             logger.info("Skipping obsid {}: {}".format(obsid, e))
             continue
         if not len(gui_stats):
-            open(skipped_file, 'a').write("{}: No stats\n".format(obsid))
+            open(SKIPPED_FILE, 'a').write("{}: No stats\n".format(obsid))
             logger.info("Skipping obsid {}, no stats determined".format(obsid))
             continue
         t = table_gui_stats(obsid_info, gui_stats, star_info, guide_catalog, temp)
@@ -553,7 +555,7 @@ def get_stats(filter=True):
     :returns gui_stats: numpy.ndarray
     """
 
-    h5 = tables.openFile(table_file, 'r')
+    h5 = tables.openFile(TABLE_FILE, 'r')
     stats = h5.root.data[:]
     h5.close()
     if filter:
