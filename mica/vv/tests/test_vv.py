@@ -40,3 +40,7 @@ def test_run_vv_multi_interval():
 
 def test_run_vv_omitted_fid():
     process.get_arch_vv(18978, version='last')
+
+def test_run_vv_7_track_slots():
+    # Run on an obsid with only 7 slots *commanded* during Kalman
+    process.get_arch_vv(19847, version='last')
