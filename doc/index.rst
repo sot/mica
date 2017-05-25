@@ -124,6 +124,16 @@ See:
    acquisition_data
 
 
+Guide star statistics database
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+See:
+
+.. toctree::
+   :maxdepth: 1
+
+   guide_stats_data
+
 
 ACA diagnostic telemetry
 -------------------------
@@ -385,11 +395,12 @@ And a method is provided to fetch obsids that have obspars:
 Mica.stats
 =============
 
-The :mod:`mica.stats.acq_stats` module includes code to gather acquisition statistics
-data for each observation and return those data to the user.
+The :mod:`mica.stats.acq_stats` module and the :mod:`mica.stats.guide_stats` module
+includes code to gather acquisition and guide statistics data for each observation and
+return those data to the user.
 
-Access stats data
------------------
+Access Acquisition stats data
+-----------------------------
 
 To get the whole acquisition table data:
 
@@ -400,6 +411,25 @@ To get the whole acquisition table data:
 
 The hdf5 in-kernel searches may be faster working with the table directly for some
 operations.
+
+
+The :mod:`mica.stats.guide_stats` module includes code to gather guide star statistics
+data for each observation and return those data to the user.
+
+Access Guide stats data
+-----------------------
+
+To get the whole guide stats data table:
+
+   >>> from mica.stats.guide_stats import get_stats
+   >>> stats = get_stats()
+   >>> stats[(stats['obsid'] == 5438) & (stats['slot'] == 3)][0]['dy_std']
+   0.18406899294435713
+
+The hdf5 in-kernel searches may be faster working with the table directly for some
+operations.
+
+
 
 .. _vv-label:
 

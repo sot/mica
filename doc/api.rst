@@ -130,3 +130,26 @@ Functions
 .. autofunction:: get_starcheck_catalog_at_date
 .. autofunction:: get_mp_dir
 .. autofunction:: get_monitor_windows
+
+
+:mod:`mica.stats.acq_stats`
+===========================
+
+.. automodule:: mica.stats.acq_stats
+
+Functions
+---------
+
+.. autofunction:: get_stats
+
+
+:mod:`mica.stats.guide_stats`
+===========================
+
+.. automodule:: mica.stats.guide_stats
+
+Functions
+---------
+
+.. autofunction:: get_stats
+
