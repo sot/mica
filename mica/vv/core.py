@@ -1038,6 +1038,9 @@ class AspectInterval(object):
             #    logger.warn("No image data to identify missing slot {}".format(slot))
             #    logger.warn("Skipping slot")
             #missing_types.append(stype)
+            if slot not in ocat_stars['slot']:
+                logger.info("Missing slot not in OCAT.  Skipping...")
+                continue
             ocat_info = ocat_stars[ocat_stars['slot'] == slot][0]
             if ocat_info['type'] == 3:
                 logger.info("Missing slot is MONITOR.  Skipping...")
