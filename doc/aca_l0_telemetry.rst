@@ -82,7 +82,7 @@ plot of each readout.
    ...            aspect='equal')
    ...     savefig("slot_2_{0:02d}.png".format(idx))
 
-ImageMagick can be used to knit those plots together into a spiffy gif::
+ImageMagick can be used to knit those plots together into an animated gif::
 
    convert -delay 20 -loop 0 slot*.png slot_2.gif
 
