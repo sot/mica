@@ -116,13 +116,11 @@ Notes on residuals:
 Processing
 ^^^^^^^^^^
 
-For each observation, after the observation has run and telemetry is available:
+For each observation, after the observation has run and telemetry is available, the guide
+stats process does the following:
 
-The guide stats process
-
-* fetches the AGASC information for each star in the catalog
-* fetches the PCAD data for the Kalman interval
-
-and for each guide star in the Kalman interval star calculates statistics on metrics for
-that star over the interval.
+* Fetches the AGASC information for each star in the catalog
+* Fetches the PCAD data for the Kalman interval
+* For each guide star in the Kalman interval star calculates statistics on metrics for
+  that star over the interval.
 

@@ -92,17 +92,15 @@ corrected by the one-shot quaternion update used during the acquisition sequence
 Processing
 ^^^^^^^^^^
 
-For each observation, after the observation has run and telemetry is available:
+For each observation, after the observation has run and telemetry is available, the
+acquisition and guide stats process does the following:
 
-The acquisition and guide stats process
+* Fetches the AGASC information for each star in the catalog
+* Fetches the PCAD data at the end of the acquisition interval
+* For each acquisition star determines:
 
-* fetches the AGASC information for each star in the catalog
-* fetches the PCAD data at the end of the acquisition interval
-
-and for each acquisition star determines
-
-* if that star was "successfully" acquired
-* what the observed magnitude and position of the star were in the last PCAD telemetry
-  readout before the guide transition.
+  * If that star was "successfully" acquired
+  * What the observed magnitude and position of the star were in the last PCAD telemetry
+    readout before the guide transition.
 
 
