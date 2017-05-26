@@ -1,29 +1,23 @@
-Guide Stats Data
-================
+Guide star statistics
+---------------------
 
-Processing
-------------------------------------
+The :mod:`mica.stats.guide_stats` module
+includes code to gather acquisition and guide statistics data for each observation and
+return those data to the user.
 
-For each observation, after the observation has run and telemetry is available:
+To get the whole guide stats data table:
 
-The guide stats process
+   >>> from mica.stats.guide_stats import get_stats
+   >>> stats = get_stats()
+   >>> stats[(stats['obsid'] == 5438) & (stats['slot'] == 3)][0]['dy_std']
+   0.18406899294435713
 
-* fetches the AGASC information for each star in the catalog
-* fetches the PCAD data for the Kalman interval
+The hdf5 in-kernel searches may be faster working with the table directly for some
+operations.
 
-and for each guide star in the Kalman interval star calculates statistics on metrics for
-that star over the interval.
-
-Guide stats data products
--------------------------
-
-The guide stats database table may be retrieved with::
-
-  from mica.stats.guide_stats import get_stats
-  guide_data = get_stats()
-
-Alternatively, the raw hdf5 may be read directly.  It includes the following columns:
-
+Data table fields
+^^^^^^^^^^^^^^^^^^
+The guide statistics data table contains the following columns:
 
 ======================= ====================================================================
  Column                 Description
@@ -111,11 +105,24 @@ known_bad               ignore this star in standard processing (boolean)
 bad_comment             reason to ignore a "known_bad" star
 ======================= ====================================================================
 
-Notes on residuals: The dy, dz, dr values are residuals calculated by subtracting the
-expected star position from the telemetered star position (AOACYAN AOACZAN).  The expected
-star position has been calculated using the onboard estimated attitude (AOATTQT*) and the
-AGASC RA/Dec for the commanded star.  dr is just defined as sqrt(dy**2 + dz**2) (and is
-not spherical).
+Notes on residuals:
 
+* The dy, dz, dr values are residuals calculated by subtracting the
+  expected star position from the telemetered star position (AOACYAN AOACZAN).
+* The expected star position has been calculated using the onboard estimated attitude (AOATTQT*) and the
+  AGASC RA/Dec for the commanded star.
+* ``dr`` is defined as ``sqrt(dy**2 + dz**2)``
 
+Processing
+^^^^^^^^^^
+
+For each observation, after the observation has run and telemetry is available:
+
+The guide stats process
+
+* fetches the AGASC information for each star in the catalog
+* fetches the PCAD data for the Kalman interval
+
+and for each guide star in the Kalman interval star calculates statistics on metrics for
+that star over the interval.
 

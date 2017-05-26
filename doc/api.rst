@@ -144,7 +144,7 @@ Functions
 
 
 :mod:`mica.stats.guide_stats`
-===========================
+=============================
 
 .. automodule:: mica.stats.guide_stats
 

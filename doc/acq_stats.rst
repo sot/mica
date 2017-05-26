@@ -1,32 +1,23 @@
-Acquisition Data
-================
+Acquisition star statistics
+---------------------------
+The :mod:`mica.stats.acq_stats` module
+includes code to gather acquisition star statistics data for each observation and
+return those data to the user.
 
-Processing
-------------------------------------
+To get the whole acquisition table data:
 
-For each observation, after the observation has run and telemetry is available:
+   >>> from mica.stats.acq_stats import get_stats
+   >>> stats = get_stats()
+   >>> stats[(stats['obsid'] == 5438) & (stats['slot'] == 1)][0]['dy']
+   8.4296239297976854
 
-The acquisition and guide stats process
+The hdf5 in-kernel searches may be faster working with the table directly for some
+operations.
 
-* fetches the AGASC information for each star in the catalog
-* fetches the PCAD data at the end of the acquisition interval
 
-and for each acquisition star determines
-
-* if that star was "successfully" acquired
-* what the observed magnitude and position of the star were in the last PCAD telemetry
-  readout before the guide transition.
-
-Acquisition data products
--------------------------
-
-The acquisition database table may be retrieved with::
-
-  from mica.stats.acq_stats import get_stats
-  acq_data = get_stats()
-
-Alternatively, the raw hdf5 may be read directly.  It includes the following columns:
-
+Data table fields
+^^^^^^^^^^^^^^^^^
+The acquisition statistics data table contains the following columns:
 
 =============== ====================================================================
  Column         Description
@@ -97,5 +88,21 @@ bad_comment     reason to ignore a "known_bad" star
 
 For the columns that reference "corrected" y-angle and z-angle, these have been
 corrected by the one-shot quaternion update used during the acquisition sequence.
+
+Processing
+^^^^^^^^^^
+
+For each observation, after the observation has run and telemetry is available:
+
+The acquisition and guide stats process
+
+* fetches the AGASC information for each star in the catalog
+* fetches the PCAD data at the end of the acquisition interval
+
+and for each acquisition star determines
+
+* if that star was "successfully" acquired
+* what the observed magnitude and position of the star were in the last PCAD telemetry
+  readout before the guide transition.
 
 
