@@ -220,9 +220,14 @@ class ObsArchive:
             db_query += 'AND isdefault = 1 '
         else:
             if revision == 'last':
-                db_query += """AND revision in
+                if obsid is not None:
+                    db_query += """AND revision in
                                (SELECT max(revision) from archfiles
                                 WHERE obsid = %d)""" % obsid
+                else:
+                    # The no-obsid case is handled below.  The has-obsid case
+                    # could probably be pushed down there too, but the db filter is OK.
+                    pass
             elif revision == 'all':
                 pass
             else:
@@ -230,6 +235,15 @@ class ObsArchive:
         db_query += "order by tstart"
         with Ska.DBI.DBI(**self._archfiles_db) as db:
             files = db.fetchall(db_query)
+        # For the special case of "revision = last" without obsid, filter the results one a per-file
+        # basis by obsid (could be multiple obsids in the date range)
+        if revision == 'last' and obsid is None:
+            max_rev = {}
+            for obsid in np.unique(files['obsid']):
+                ok = files['obsid'] == obsid
+                max_rev[obsid] = np.max(files[ok]['revision'])
+            rev_ok = [f['revision'] == max_rev[f['obsid']] for f in files]
+            files = files[np.array(rev_ok)]
         return files
 
     def get_dir(self, obsid):
