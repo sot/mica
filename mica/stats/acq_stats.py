@@ -15,6 +15,8 @@ import Ska.astro
 from mica.quaternion import Quat
 from chandra_aca import dark_model
 import logging
+import smtplib
+from email.mime.text import MIMEText
 
 import warnings
 # Ignore known numexpr.necompiler and table.conditions warning
@@ -104,7 +106,7 @@ ACQ_COLS = {
 
 SKA = os.environ['SKA']
 table_file = os.path.join(SKA, 'data', 'acq_stats', 'acq_stats.h5')
-
+DEFAULT_EMAIL = ['aca_alert@cfa.harvard.edu']
 
 def get_options():
     parser = argparse.ArgumentParser(
@@ -114,6 +116,10 @@ def get_options():
                         help="check for missing observations in table and reprocess")
     parser.add_argument("--obsid",
                         help="specific obsid to process.  Not required in regular update mode")
+    parser.add_argument('--email',
+                        action="append",
+                        help="email warning recipient, specify multiple times "
+                        + "for multiple recipients")
     opt = parser.parse_args()
     return opt
 
@@ -441,6 +447,50 @@ def _get_obsids_to_update(check_missing=False):
     return obsids
 
 
+def warn_on_acq_anom(acqs, emails):
+    """
+    Log and email warning about any acquisition stars with observed positions outside the
+    expected search box (plus a pad).  For acquisition stars with tracked positions in the wrong
+    search box, note the box (classic acquisition anomaly).
+
+    :param acqs: astropy table of acquisition stats, includes expected and observed position,
+                 obsid, slot, and halfw used in this method.
+    :param emails: list of addresses to receive email warning if any are generated
+    """
+    # Find tracked objects in the acq stats table outside the intended search box plus padding
+    # img_func == NONE means nothing was tracked
+    box_pad = 16  # arcsecs
+    anom_match = ((acqs['img_func'] != 'NONE') &
+                  ((np.abs(acqs['yang_obs'] - acqs['yang']) >= (acqs['halfw'] + box_pad))
+                   | (np.abs(acqs['zang_obs'] - acqs['zang']) >= (acqs['halfw'] + box_pad))))
+    for anom in acqs[anom_match]:
+        # Check to see if the star is actually found in another box.
+        other_box_match =  ((np.abs(anom['yang_obs'] - acqs['yang']) <= (acqs['halfw'] + box_pad))
+                            & (np.abs(anom['zang_obs'] - acqs['zang']) <= (acqs['halfw'] + box_pad)))
+        if np.any(other_box_match):
+            text = "Acquisition Anomaly.  Star for slot {} actually in box {} \n".format(
+                anom['slot'], acqs[other_box_match][0]['slot'])
+        else:
+            text = "Does not appear to be classic star-in-wrong-box anomaly\n"
+        # Make a dictionary of the anom record for use in string formatting
+        output_dict = {col: anom[col] for col in anom.colnames}
+        output_dict['dy'] = anom['yang_obs'] - anom['yang']
+        output_dict['dz'] = anom['zang_obs'] - anom['zang']
+        text += """Large Deviation from Expected ACQ Star Position in {obsid}
+      Slot {slot} Expected (Y-Pos, Z-Pos) = ({yang:.1f}, {zang:.1f})
+      Slot {slot} Observed (Y-Pos, Z-Pos) = ({yang_obs:.1f}, {zang_obs:.1f})
+      Halfwidth {halfw:03d}        (dy, dz) = ({dy:.1f}, {dz:.1f})""".format(
+            **output_dict)
+        # Log and Send message for slot.  Obsid can have more than one email
+        logger.warn(text)
+        msg = MIMEText(text)
+        msg['From'] = 'aca@head.cfa.harvard.edu'
+        msg['Subject'] = "Acq Anomaly: Obsid {} (mica processing)".format(anom['obsid'])
+        msg['To'] = ",".join(emails)
+        s = smtplib.SMTP('head.cfa.harvard.edu')
+        s.sendmail('aca@head.cfa.harvard.edu', emails, msg.as_string())
+        s.quit()
+
 def calc_stats(obsid):
     obspar = mica.archive.obspar.get_obspar(obsid, version='last')
     if not obspar:
@@ -643,7 +693,10 @@ def update(opt):
         if not len(acq_stats):
             logger.info("Skipping obsid {}, no stats determined".format(obsid))
             continue
+
         t = table_acq_stats(obsid_info, acq_stats, star_info, catalog, temp)
+        # Check for acquisition anomalies
+        warn_on_acq_anom(t, opt.email)
         _save_acq_stats(t)
 
 
@@ -665,6 +718,8 @@ def get_stats(filter=True):
 
 def main():
     opt = get_options()
+    if opt.email is None:
+        opt.email = DEFAULT_EMAIL
     update(opt)
 
 
