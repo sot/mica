@@ -26,6 +26,7 @@ from astropy.table import Table
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
 import six
+import functools
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -42,9 +43,21 @@ class InconsistentAspectIntervals(ValueError):
     pass
 
 # integer code version for lightweight database tracking
-VV_VERSION = 3
+VV_VERSION = 4
 
 logger = logging.getLogger('vv')
+
+vv_style = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vv.mplstyle')
+
+
+def style_decorator(style=vv_style):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            with plt.style.context(style):
+                return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def parse_obspar(file):
@@ -598,7 +611,7 @@ class Obi(object):
                         raise InconsistentAspectIntervals(
                             "differing %s cel_loc_flag across aspect intervals" % t)
 
-
+    @style_decorator()
     def plot_slot(self, slot_num, plotdir=None, save=False, close=False, singles=False):
         if plotdir is None and save:
             plotdir = self.tempdir
