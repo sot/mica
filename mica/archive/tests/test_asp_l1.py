@@ -65,3 +65,11 @@ def test_get_atts_time():
         assert (times[ok][-1] - times[ok][0]) > dwell.dur * .90
         # also assert that the number of ~.25sec samples works out
         assert (len(times[ok]) * .25625) > dwell.dur * .90
+
+
+def test_get_atts_filter():
+    # Obsid 19039 has a momentum dump that shows up in asp_sol_status
+    atts, times, recs = asp_l1.get_atts(obsid=19039)
+    uf_atts, uf_times, uf_recs = asp_l1.get_atts(obsid=19039, filter=False)
+    # Confirm that approximately 212 seconds are filtered
+    assert np.abs((len(uf_atts) - len(atts)) * .25625 - 212.2) < 5

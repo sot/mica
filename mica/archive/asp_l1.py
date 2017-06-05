@@ -150,7 +150,7 @@ def get_files(obsid=None, start=None, stop=None,
                              revision=revision, content=content)
 
 
-def get_atts(obsid=None, start=None, stop=None, revision=None):
+def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
     """
     Get the ground aspect solution quaternions and times covering obsid or start to stop,
     in the ACA frame.
@@ -169,18 +169,28 @@ def get_atts(obsid=None, start=None, stop=None, revision=None):
                            revision=revision, content=['ASPSOL'])
     acal_files = get_files(obsid=obsid, start=start, stop=stop,
                            revision=revision, content=['ACACAL'])
+    aqual_files = get_files(obsid=obsid, start=start, stop=stop,
+                            revision=revision, content=['ASPQUAL'])
     # There should be one asol and one acal file for each aspect interval in the range
     att_chunks = []
     time_chunks = []
     records = []
-    for asol_f, acal_f in zip(asol_files, acal_files):
+    for asol_f, acal_f, aqual_f in zip(asol_files, acal_files, aqual_files):
         asol = Table.read(asol_f)
         acal = Table.read(acal_f)
+        aqual = Table.read(aqual_f)
         # Check that the time ranges match from the fits headers (meta in the table)
         if not np.allclose(np.array([asol.meta['TSTART'], asol.meta['TSTOP']]),
                            np.array([acal.meta['TSTART'], acal.meta['TSTOP']]),
                            atol=10):
             raise ValueError("ACAL and ASOL have mismatched time ranges")
+        if filter and np.any(aqual['asp_sol_status'] != 0):
+            # For each sample with bad status find the overlapping time range in asol
+            # and remove from set
+            for idx in np.flatnonzero(aqual['asp_sol_status']):
+                nok = ((asol['time'] >= (aqual['time'][idx] - 1.025))
+                       & (asol['time'] <= (aqual['time'][idx] + 1.025)))
+                asol = asol[~nok]
         # Make a Nx4 list of the inv misalign quats
         q_mis_inv = np.repeat(Quat(acal['aca_misalign'][0]).inv().q,
                               len(asol)).reshape((4, len(asol))).transpose()
