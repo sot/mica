@@ -34,7 +34,7 @@ CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'asp1'),
               full='asp1',
               filecheck=False,
               cols=ARCHFILES_HDR_COLS,
-              content_types=['ASPQUAL', 'ASPSOL', 'ACADATA', 'GSPROPS',
+              content_types=['OBCSOL', 'ASPQUAL', 'ASPSOL', 'ACADATA', 'GSPROPS',
                              'GYRODATA', 'KALMAN', 'ACACAL', 'ACACENT',
                              'FIDPROPS', 'GYROCAL', 'ACA_BADPIX'])
 
