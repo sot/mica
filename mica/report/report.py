@@ -907,45 +907,6 @@ def process_obsids(obsids, update=True, retry=False):
             # Save the bad state in the database
             save_state_in_db(obsid, notes)
 
-def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
-
-    global ACA_DB
-    if ACA_DB is None:
-        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-
-    obs = ACA_DB.fetchall("select * from observations_all order by kalman_idstart desc")
-    for ob in obs:
-        obsid = ob['obsid']
-        print(ob['date'])
-        strobs = "%05d" % obsid
-        chunk_dir = strobs[0:2]
-        topdir = os.path.join(report_root, chunk_dir)
-        outdir = os.path.join(topdir, strobs)
-        if os.path.exists(outdir):
-            logger.info("Skipping {}, output dir exist.".format(obsid))
-        if os.path.exists("{}.ERR".format(outdir)):
-            logger.info("Skipping {}, output.ERR dir exist.".format(obsid))
-        if not os.path.exists(outdir):
-            try:
-                os.makedirs("{}".format(outdir))
-                main(obsid, config=None, report_root=report_root)
-            except:
-                os.makedirs("{}.ERR".format(outdir))
-                etype, emess, traceback = sys.exc_info()
-                notes = {'report_version': REPORT_VERSION,
-                         'obsid': obsid,
-                         'checked_date': DateTime().date,
-                         'last_sched': "{} {}".format(etype, emess),
-                         'vv_version': None,
-                         'vv_revision': None,
-                         'aspect_1_id': None,
-                         'ocat_status': None,
-                         'long_term': None,
-                         'short_term': None,
-                         'starcheck': None}
-                save_state_in_db(obsid, notes, config=None)
-
-    ACA_DB.conn.close()
 
 if __name__ == '__main__':
     opt = get_options()
