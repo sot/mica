@@ -16,6 +16,7 @@ from glob import glob
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+import tables
 from astropy.table import Table
 from six.moves import zip
 
@@ -26,6 +27,7 @@ from Chandra.Time import DateTime
 from Ska.engarchive import fetch_sci
 from kadi import events
 
+from Chandra.cmd_states import fetch_states
 from mica.archive import obspar
 from mica.catalog import catalog
 from mica.starcheck import starcheck
@@ -34,6 +36,7 @@ import mica.vv
 from mica.vv import get_vv, get_vv_files
 from mica.version import version
 from mica.common import MICA_ARCHIVE
+from mica.stats import acq_stats, guide_stats
 
 # Ignore known numexpr.necompiler and table.conditions warning
 warnings.filterwarnings(
@@ -111,9 +114,11 @@ def rec_to_dict_list(recarray):
 
 
 def get_star_acq_stats(id):
-    acqs = ACA_DB.fetchall("""select * from acq_stats_data
-                              where agasc_id = %d
-                              order by tstart""" % int(id))
+    hdu = tables.openFile(mica.stats.acq_stats.table_file)
+    tbl = hdu.root.data
+    acqs = tbl.readWhere("agasc_id = {}".format(id))
+    tbl.close()
+    hdu.close()
     if not len(acqs):
         return None, {'n_acqs': 0, 'n_acq_noid': 0, 'avg_mag': None}
     n_acqs = len(acqs)
@@ -129,13 +134,14 @@ def get_star_acq_stats(id):
 
 
 def get_star_trak_stats(id):
-    traks = ACA_DB.fetchall("""select * from trak_stats_data
-                               where id = %d
-                               order by kalman_tstart""" % int(id))
+    hdu = tables.openFile(mica.stats.guide_stats.TABLE_FILE)
+    tbl = hdu.root.data
+    traks = tbl.readWhere("agasc_id = {}".format(id))
+    tbl.close()
+    hdu.close()
     if not len(traks):
         return None, {'n_guis': 0, 'n_bad': 0, 'n_fail': 0,
                       'n_obc_bad': 0, 'avg_mag': None}
-
     n_guis = len(traks)
     n_bad = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) > 0.05))
     n_fail = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) == 1))
@@ -176,16 +182,23 @@ def get_star_trak_stats(id):
 
 
 def get_obs_acq_stats(obsid):
-    acqs = ACA_DB.fetchall("select * from acq_stats_data where obsid = %d" % obsid)
+    hdu = tables.openFile(mica.stats.acq_stats.table_file)
+    tbl = hdu.root.data
+    acqs = tbl.readWhere("obsid = {}".format(obsid))
+    tbl.close()
+    hdu.close()
     if len(acqs):
         return Table(acqs)
 
-
 def get_obs_trak_stats(obsid):
-    guis = ACA_DB.fetchall("select * from trak_stats_data where obsid = %d" % obsid)
-
+    hdu = tables.openFile(mica.stats.guide_stats.TABLE_FILE)
+    tbl = hdu.root.data
+    guis = tbl.readWhere("obsid = {}".format(obsid))
+    tbl.close()
+    hdu.close()
     if len(guis):
         return Table(guis)
+
 
 def get_obs_temps(obsid, outdir):
     try:
@@ -203,17 +216,15 @@ def get_obs_temps(obsid, outdir):
 
 
 def target_summary(obsid):
-    ocat_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat')
-    ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
+
+    with Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
+        ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
                                     and target.obsid = {}""".format(obsid))
-    # If this target didn't have a proposal, just get whatever is there
-    if ocat_info is None:
-        ocat_info = ocat_db.fetchone("""select * from target where
+        # If this target didn't have a proposal, just get whatever is there
+        if ocat_info is None:
+            ocat_info = ocat_db.fetchone("""select * from target where
                                     target.obsid = {}""".format(obsid))
-
-    ocat_db.conn.close()
-    del ocat_db
     return ocat_info
 
 
@@ -445,6 +456,7 @@ def star_info(id):
             'agg_trak': agg_trak}
 
 def get_aiprops(obsid):
+    ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
     aiprops = ACA_DB.fetchall(
         "select * from aiprops where obsid = {} order by tstart".format(
             obsid))
