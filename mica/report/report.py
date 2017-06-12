@@ -52,17 +52,15 @@ logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
-ACA_DB = None
-DEFAULT_REPORT_ROOT = "/proj/web-icxc/htdocs/aspect/mica_reports"
+
 DAILY_PLOT_ROOT = "http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
 
+# In the flight version webreports is a link to /proj/web-icxc/htdocs/aspect/mica_reports
+REPORT_ROOT = os.path.join(MICA_ARCHIVE, 'report', 'webreports')
+
+REPORT_SERVER = os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3')
+
 FILES = {'sql_def': 'report_processing.sql'}
-DEFAULT_CONFIG = {
-    'dbi': 'sqlite',
-    'report_root': '/proj/web-icxc/htdocs/aspect/mica_reports',
-    'server': os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3'),
-    'update_mode': True,
-    'retry_failure': False}
 
 
 def get_options():
@@ -71,8 +69,6 @@ def get_options():
     parser.add_argument("obsid",
                         help="obsid",
                         type=int)
-    parser.add_argument("--report-root",
-                        default=DEFAULT_REPORT_ROOT)
     opt = parser.parse_args()
     return opt
 
@@ -454,18 +450,9 @@ def get_aiprops(obsid):
             obsid))
     return aiprops
 
-def main(obsid, config=None, report_root=None):
 
-    if config is None:
-         config = DEFAULT_CONFIG
-    if report_root is None:
-        report_root=config['report_root']
-
-    global ACA_DB
-    if ACA_DB is None or not ACA_DB.conn._is_connected:
-        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-
-
+def main(obsid):
+    report_root = REPORT_ROOT
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
     topdir = os.path.join(report_root, chunk_dir)
@@ -581,7 +568,7 @@ def main(obsid, config=None, report_root=None):
                            sort_keys=True,
                            indent=4))
         f.close()
-        save_state_in_db(obsid, notes, config)
+        save_state_in_db(obsid, notes)
         return
 
     if not er and 'shortterm' in links:
@@ -799,24 +786,21 @@ def main(obsid, config=None, report_root=None):
                        sort_keys=True,
                        indent=4))
     f.close()
-    save_state_in_db(obsid, notes, config)
+    save_state_in_db(obsid, notes)
 
 
-def save_state_in_db(obsid, notes, config=None):
+def save_state_in_db(obsid, notes):
 
-    if config is None:
-         config = DEFAULT_CONFIG
-
-    if (not os.path.exists(config['server'])
-        or os.stat(config['server']).st_size == 0):
-        if not os.path.exists(os.path.dirname(config['server'])):
-            os.makedirs(os.path.dirname(config['server']))
+    if (not os.path.exists(REPORT_SERVER)
+        or os.stat(REPORT_SERVER).st_size == 0):
+        if not os.path.exists(os.path.dirname(REPORT_SERVER)):
+            os.makedirs(os.path.dirname(REPORT_SERVER))
         db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', FILES['sql_def'])
         db_init_cmds = open(db_sql).read()
-        db = Ska.DBI.DBI(config['dbi'], config['server'])
+        db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
         db.execute(db_init_cmds)
     else:
-        db = Ska.DBI.DBI(dbi=config['dbi'], server=config['server'])
+        db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
 
     notes['report_status'] = notes['last_sched']
     del notes['last_sched']
@@ -846,35 +830,26 @@ def save_state_in_db(obsid, notes, config=None):
     db.conn.close()
 
 
-def update(report_root=DEFAULT_REPORT_ROOT):
+def update():
 
-    global ACA_DB
-    if ACA_DB is None or not ACA_DB.conn._is_connected:
-        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-
-    recent_obs = ACA_DB.fetchall("select distinct obsid from cmd_states "
-                             "where datestart > '{}'".format(DateTime(-7).date))
+    recent_obs = np.unique(fetch_states(start=DateTime(-7), vals=['obsid'])['obsid'])
     for obs in recent_obs:
-        process_obsids([obs['obsid']], report_root=report_root)
-
-    ACA_DB.conn.close()
+        process_obsids([obs['obsid']])
 
 
-def process_obsids(obsids, config=None, report_root=None):
-    if config is None:
-         config = DEFAULT_CONFIG
-    if report_root is None:
-        report_root=config['report_root']
+
+def process_obsids(obsids, update=True, retry=False):
+    report_root = REPORT_ROOT
 
     for obsid in obsids:
         strobs = "%05d" % obsid
         chunk_dir = strobs[0:2]
         topdir = os.path.join(report_root, chunk_dir)
         outdir = os.path.join(topdir, strobs)
-        if os.path.exists(outdir) and not config['update_mode']:
+        if os.path.exists(outdir) and not update:
             logger.info("Skipping {}, output dir exists.".format(obsid))
             continue
-        if not config['retry_failure'] and os.path.exists(os.path.join(outdir, "proc_err")):
+        if not retry and os.path.exists(os.path.join(outdir, "proc_err")):
             logger.warn("Skipping {}, previous processing error.".format(obsid))
             continue
         if not os.path.exists(outdir):
@@ -884,7 +859,7 @@ def process_obsids(obsids, config=None, report_root=None):
             if os.path.exists(os.path.join(outdir, failfile)):
                 os.unlink(os.path.join(outdir, failfile))
         try:
-            main(obsid, config=config, report_root=report_root)
+            main(obsid)
         except:
             import traceback
             etype, emess, trace = sys.exc_info()
@@ -930,8 +905,7 @@ def process_obsids(obsids, config=None, report_root=None):
             f.write(page)
             f.close()
             # Save the bad state in the database
-            save_state_in_db(obsid, notes, config=None)
-
+            save_state_in_db(obsid, notes)
 
 def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
 
@@ -975,4 +949,4 @@ def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
 
 if __name__ == '__main__':
     opt = get_options()
-    main(opt.obsid, config=None, report_root=opt.report_root)
+    main(opt.obsid)
