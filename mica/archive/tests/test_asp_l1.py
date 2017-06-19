@@ -58,7 +58,7 @@ def test_get_atts_time():
     compare_obc_and_asol(atts, times, recs, rtol=51)
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
-        if dwell.get_obsid() > 40000:
+        if dwell.get_obsid() > 38000:
             continue
         # check that more than 90% of the kalman interval is in times fetched from get_atts
         ok = (times < dwell.tstop) & (times > dwell.tstart)
