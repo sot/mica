@@ -10,6 +10,9 @@ to the aspect L1 products.
 """
 import os
 import logging
+import numpy as np
+from astropy.table import Table
+from mica.quaternion import Quat
 
 from mica.archive import obsid_archive
 from mica.archive import asp_l1_proc
@@ -145,6 +148,59 @@ def get_files(obsid=None, start=None, stop=None,
     """
     return archive.get_files(obsid=obsid, start=start, stop=stop,
                              revision=revision, content=content)
+
+
+def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
+    """
+    Get the ground aspect solution quaternions and times covering obsid or start to stop,
+    in the ACA frame.
+
+    :obsid: obsid
+    :start: start time (DateTime compat)
+    :stop: stop time (DateTime compat)
+    :revision: aspect pipeline processing revision (integer version, None, or 'last')
+
+    :returns: Nx4 np.array of quaternions, np.array of N times, list of dict with header from each asol file.
+    """
+    if revision == 'all':
+        raise ValueError("revision 'all' doesn't really make sense for this function")
+    # These are in time order by default from get_files
+    asol_files = get_files(obsid=obsid, start=start, stop=stop,
+                           revision=revision, content=['ASPSOL'])
+    acal_files = get_files(obsid=obsid, start=start, stop=stop,
+                           revision=revision, content=['ACACAL'])
+    aqual_files = get_files(obsid=obsid, start=start, stop=stop,
+                            revision=revision, content=['ASPQUAL'])
+    # There should be one asol and one acal file for each aspect interval in the range
+    att_chunks = []
+    time_chunks = []
+    records = []
+    for asol_f, acal_f, aqual_f in zip(asol_files, acal_files, aqual_files):
+        asol = Table.read(asol_f)
+        acal = Table.read(acal_f)
+        aqual = Table.read(aqual_f)
+        # Check that the time ranges match from the fits headers (meta in the table)
+        if not np.allclose(np.array([asol.meta['TSTART'], asol.meta['TSTOP']]),
+                           np.array([acal.meta['TSTART'], acal.meta['TSTOP']]),
+                           atol=10):
+            raise ValueError("ACAL and ASOL have mismatched time ranges")
+        if filter and np.any(aqual['asp_sol_status'] != 0):
+            # For each sample with bad status find the overlapping time range in asol
+            # and remove from set
+            for idx in np.flatnonzero(aqual['asp_sol_status']):
+                nok = ((asol['time'] >= (aqual['time'][idx] - 1.025))
+                       & (asol['time'] <= (aqual['time'][idx] + 1.025)))
+                asol = asol[~nok]
+        # Make a Nx4 list of the inv misalign quats
+        q_mis_inv = np.repeat(Quat(acal['aca_misalign'][0]).inv().q,
+                              len(asol)).reshape((4, len(asol))).transpose()
+        # Quaternion multiply the asol quats with that inv misalign and save
+        # I could also do this with the transform matrix and then only need
+        # one accessory quat function.
+        att_chunks.append((Quat(asol['q_att']) * Quat(q_mis_inv)).q)
+        time_chunks.append(np.array(asol['time']))
+        records.append(asol.meta)
+    return np.vstack(att_chunks), np.hstack(time_chunks), records
 
 
 def main():
