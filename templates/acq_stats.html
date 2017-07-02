@@ -40,7 +40,7 @@ obs.dither_y_period, obs.dither_z_period) -}}
 ('agasc_id', '%11s'),
 ('mag', '%7.3f'), ('yang', '%6d'), ('zang', '%6d'),
 ('mag_obs', '%7.3f'), ('yang_obs', '%6d'), ('zang_obs', '%6d'),
-('obc_id', '%4s'),
+('obc_id', '%r'),
 ] %}
 <TD align='right'>{{ form|format(row[field]) }}</TD>
 {% endfor %}

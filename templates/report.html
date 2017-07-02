@@ -219,7 +219,7 @@ CCD temps: {{ "mean %3.2f C, max %3.2f C"|format(temps['mean'], temps['max']) -}
 
 {% for row in cat_table %}
 <TR>{% for field in ['idx', 'slot', 'idlink', 'type', 'sz', 'mag', 'yang',
-'zang', 'pass_notes', 'obc_id', 'mag_obs', 'trak_frac', 'obc_bad_frac',  'id_status', 'cel_loc_flag', 'dr_rms',
+'zang', 'pass_notes', 'obc_id', 'mag_obs', 'trak_percent', 'obc_bad_percent',  'id_status', 'cel_loc_flag', 'dr_rms',
 'dy_rms', 'dz_rms', 'dy_mean', 'dz_mean'] %}
 <TD align='right'>{{ row[field] }}</TD>{% endfor %}</TR>
 {% endfor %}

@@ -52,7 +52,7 @@
 </TR>
 {% for row in acqs %}
 {% for field, form in [('sc_link', '%s'), ('tstart', '%12.1f'),
-('mag', '%7.3f'), ('mag_obs', '%7.3f'), ('obc_id', '%4s'),
+('mag', '%7.3f'), ('mag_obs', '%7.3f'), ('obc_id', '%r'),
 ] %}
 <TD align='right'>{{ form|format(row[field]) }}</TD>
 {% endfor %}
@@ -67,7 +67,7 @@
 <H1>Guide History</H1>
 <TABLE border=1 style="font-size:12px">
 <TR>
-{% for field in ['obsid', 'tstart', 'mag_obs', 'mag_obs_rms',
+{% for field in ['obsid', 'tstart', 'mag_obs', 'mag_obs_std',
 'trak_frac %', 'obc_bad %', 'def_pix %',
 'ion_rad %', 'sat_pix %', 'mult_star %',
 'quad_bound %', 'common_col %'] %}
@@ -75,8 +75,8 @@
 {% endfor %}
 </TR>
 {% for row in traks %}
-{% for field in ['sc_link', 'tstart', 'mag_obs', 'mag_obs_rms',
-'trak_frac', 'obc_bad_status', 'def_pix',
+{% for field in ['sc_link', 'tstart', 'mag_obs', 'mag_obs_std',
+'trak_percent', 'obc_bad_percent', 'def_pix',
 'ion_rad', 'sat_pix', 'mult_star',
 'quad_bound', 'common_col'] %}
 <TD align='right'>{{ row[field] }}</TD>

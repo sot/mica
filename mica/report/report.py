@@ -117,13 +117,16 @@ def rec_to_dict_list(recarray):
 def get_star_acq_stats(id):
     hdu = tables.open_file(acq_stats.table_file)
     tbl = hdu.root.data
-    acqs = tbl.read_where("agasc_id = {}".format(id))
+    acqs = tbl.read_where("agasc_id == {}".format(id))
     tbl.close()
     hdu.close()
+    acqs = Table(acqs)
     if not len(acqs):
         return None, {'n_acqs': 0, 'n_acq_noid': 0, 'avg_mag': None}
+    acqs['obc_id'] = acqs['acqid']
+    acqs['tstart'] = acqs['guide_tstart']
     n_acqs = len(acqs)
-    n_acq_noid = len(np.flatnonzero(acqs['obc_id'] == 'NOID'))
+    n_acq_noid = len(np.flatnonzero(acqs['acqid'] == False))
     avg_mag = np.mean(acqs[acqs['mag_obs'] < 13.94]['mag_obs'])
     # make a list of dictionaries to make it easy to add values to the rows
     acqs = rec_to_dict_list(acqs)
@@ -137,21 +140,21 @@ def get_star_acq_stats(id):
 def get_star_trak_stats(id):
     hdu = tables.open_file(guide_stats.TABLE_FILE)
     tbl = hdu.root.data
-    traks = tbl.read_where("agasc_id = {}".format(id))
+    traks = tbl.read_where("agasc_id == {}".format(id))
     tbl.close()
     hdu.close()
     if not len(traks):
         return None, {'n_guis': 0, 'n_bad': 0, 'n_fail': 0,
                       'n_obc_bad': 0, 'avg_mag': None}
+    traks = Table(traks)
     n_guis = len(traks)
-    n_bad = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) > 0.05))
-    n_fail = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) == 1))
-    n_obc_bad = len(np.flatnonzero((traks['obc_bad_status_samples'] / traks['n_samples']) > 0.05))
+    n_bad = np.count_nonzero(traks['f_track'] < 0.95)
+    n_fail = np.count_nonzero(traks['f_track'] == 1.00)
+    n_obc_bad = np.count_nonzero(traks['f_obc_bad'] > 0.05)
     # substitute in 13.94 for any that are already 'None'
     no_mag = np.equal(traks['aoacmag_mean'], None)
     traks['aoacmag_mean'][no_mag] = 13.94
-    traks['aoacmag_median'][no_mag] = 13.94
-    traks['aoacmag_rms'][no_mag] = 0.0
+    traks['aoacmag_std'][no_mag] = 0.0
     avg_mag = np.mean(traks['aoacmag_mean'])
 
     # make a list of dictionaries to make it easy to add values to the rows
@@ -161,18 +164,14 @@ def get_star_trak_stats(id):
         star = {
             'obsid': trak['obsid'],
             'tstart': "{:11.1f}".format(trak['kalman_tstart']),
-            'mag_obs': "{:6.3f}".format(trak['aoacmag_median']),
-            'mag_obs_rms': "{:.3f}".format(trak['aoacmag_rms']),
-            'trak_frac': "{:.1f}".format(
-                (100 * ((trak['n_samples']
-                         - trak['not_tracking_samples'])
-                        ) / trak['n_samples']))}
-        for stat in ['obc_bad_status',
+            'mag_obs': "{:6.3f}".format(trak['aoacmag_mean']),
+            'mag_obs_std': "{:.3f}".format(trak['aoacmag_std']),
+            'trak_percent': "{:.1f}".format(100 * trak['f_track'])}
+        for stat in ['obc_bad',
                      'def_pix', 'ion_rad', 'sat_pix',
                      'mult_star', 'quad_bound', 'common_col']:
-            star[stat] = "{:.3f}".format(
-                ((100 * trak["{}_samples".format(stat)])
-                 / trak['n_samples']))
+            star[stat] = "{:.3f}".format(100 * trak["f_{}".format(stat)])
+        star['obc_bad_percent'] = star['obc_bad']
         star['sc_link'] = '<A HREF="{link}">{obsid}</A>'.format(
             link=starcheck_link(trak['obsid']),
             obsid=trak['obsid'])
@@ -185,16 +184,17 @@ def get_star_trak_stats(id):
 def get_obs_acq_stats(obsid):
     hdu = tables.open_file(acq_stats.table_file)
     tbl = hdu.root.data
-    acqs = tbl.read_where("obsid = {}".format(obsid))
+    acqs = tbl.read_where("obsid == {}".format(obsid))
     tbl.close()
     hdu.close()
     if len(acqs):
         return Table(acqs)
 
+
 def get_obs_trak_stats(obsid):
     hdu = tables.open_file(guide_stats.TABLE_FILE)
     tbl = hdu.root.data
-    guis = tbl.read_where("obsid = {}".format(obsid))
+    guis = tbl.read_where("obsid == {}".format(obsid))
     tbl.close()
     hdu.close()
     if len(guis):
@@ -370,19 +370,16 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
                     and ((sc_row['type'] == 'ACQ')
                          or (sc_row['type'] == 'BOT'))):
                     sc_row['mag_obs'] = row['mag_obs']
-                    sc_row['obc_id'] = row['obc_id']
+                    sc_row['obc_id'] = row['acqid']
                     sc_row['mag_source'] = 'acq'
     if trak is not None and len(trak):
         for row in trak:
             for sc_row in table:
                 if ((sc_row['slot'] == row['slot'])
                     and (sc_row['type'] != 'ACQ')):
-                    sc_row['mag_obs'] = row['aoacmag_median']
-                    sc_row['trak_frac'] = (100 * ((row['n_samples']
-                                                  - row['not_tracking_samples'])
-                                                  ) / row['n_samples'])
-                    sc_row['obc_bad_frac'] = (100 * ((row['obc_bad_status_samples']
-                                                      / row['n_samples'])))
+                    sc_row['mag_obs'] = row['aoacmag_mean']
+                    sc_row['trak_percent'] = 100 * row['f_track']
+                    sc_row['obc_bad_percent'] = 100 * row['f_obc_bad']
                     sc_row['mag_source'] = 'trak'
     if vv is not None:
         for sc_row in table:
@@ -412,8 +409,8 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
         'pass_notes': "&nbsp;{}",
         'obc_id': "{}",
         'mag_obs': "{:6.3f}",
-        'trak_frac': "{:.0f}",
-        'obc_bad_frac': "{:.0f}",
+        'trak_percent': "{:.1f}",
+        'obc_bad_percent': "{:.0f}",
         'mag_source': "{}",
         'id_status': "{}",
         'cel_loc_flag': "{}",
@@ -424,7 +421,7 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
         'dz_mean': "{:6.3f}",
         }
 
-    opt_elem = ['mag_obs', 'obc_id', 'trak_frac', 'obc_bad_frac', 'mag_source',
+    opt_elem = ['mag_obs', 'obc_id', 'trak_percent', 'obc_bad_percent', 'mag_source',
                 'dr_rms', 'dz_rms', 'dy_rms', 'dy_mean', 'dz_mean',
                 'pass_notes', 'id_status', 'cel_loc_flag']
     sc.extend(opt_elem)
