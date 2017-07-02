@@ -673,8 +673,8 @@ class Obi(object):
             ayz = fig.add_axes([.05, .7, .20, .20], aspect='equal')
             plot_dict['all'] = fig
         axes['yz'] = ayz
-        ayz.plot(dy[ok], dz[ok], 'g.')
-        ayz.plot(dy[bad], dz[bad], 'r.')
+        ayz.plot(dy[ok], dz[ok], 'g.', markersize=1)
+        ayz.plot(dy[bad], dz[bad], 'r.', markersize=1)
         ayz.grid()
         plt.setp(ayz.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayz.get_xticklabels(), fontsize=labelfontsize)
@@ -705,8 +705,8 @@ class Obi(object):
         else:
             ayzf = fig.add_axes([.05, .25, .20, .20], aspect='equal')
         axes['yz_fixed'] = ayzf
-        ayzf.plot(dy[ok], dz[ok], 'g.')
-        ayzf.plot(dy[bad], dz[bad], 'r.')
+        ayzf.plot(dy[ok], dz[ok], 'g.', markersize=1)
+        ayzf.plot(dy[bad], dz[bad], 'r.', markersize=1)
         ayzf.grid()
         plt.setp(ayzf.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayzf.get_xticklabels(), fontsize=labelfontsize)
