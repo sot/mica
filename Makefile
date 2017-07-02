@@ -19,18 +19,11 @@ DATA = task_schedule.cfg \
 	mica/archive/processing_asp_l1_def.sql \
 	mica/starcheck/starcheck.sql mica/report/report_processing.sql
 
-TEMPLATES = templates/report.html templates/aiprops.html \
-	templates/props.html templates/vv.html \
-	templates/vv_slots_single.html \
-	templates/star.html templates/proc_error.html
-
 install: install_doc
 	mkdir -p $(INSTALL_SHARE)
 	mkdir -p $(INSTALL_DATA)
-	mkdir -p $(INSTALL_DATA)/templates/
 	rsync --times --cvs-exclude $(DATA) $(INSTALL_DATA)/
 	rsync --times --cvs-exclude $(SHARE) $(INSTALL_SHARE)/
-	rsync --times --cvs-exclude $(TEMPLATES) $(INSTALL_DATA)/templates/
 
 install_doc:
 	mkdir -p $(INSTALL_DOC)

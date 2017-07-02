@@ -472,8 +472,7 @@ def main(obsid):
         os.makedirs(outdir)
 
     jinja_env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(
-            os.path.join(os.environ['SKA'], 'data', 'mica', 'templates')))
+        loader=jinja2.PackageLoader('mica.report'))
     jinja_env.line_comment_prefix = '##'
     jinja_env.line_statement_prefix = '#'
 
@@ -901,8 +900,7 @@ def process_obsids(obsids, update=True, retry=False):
             # Make a stub html page
             proc_date = DateTime().date
             jinja_env = jinja2.Environment(
-                loader=jinja2.FileSystemLoader(
-                    os.path.join(os.environ['SKA'], 'data', 'mica', 'templates')))
+                loader=jinja2.PackageLoader('mica.report'))
             jinja_env.line_comment_prefix = '##'
             jinja_env.line_statement_prefix = '#'
             template = jinja_env.get_template('proc_error.html')
