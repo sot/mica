@@ -5,6 +5,7 @@ import sys
 import argparse
 import numpy as np
 import tables
+import tables3_api
 from scipy.stats import scoreatpercentile
 from astropy.table import Table
 import logging
@@ -345,7 +346,7 @@ def _get_obsids_to_update(check_missing=False):
         last_tstart = '2007:271'
         kadi_obsids = events.obsids.filter(start=last_tstart)
         try:
-            h5 = tables.openFile(TABLE_FILE, 'r')
+            h5 = tables.open_file(TABLE_FILE, 'r')
             tbl = h5.root.data[:]
             h5.close()
         except:
@@ -354,8 +355,8 @@ def _get_obsids_to_update(check_missing=False):
         obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl['obsid']]
     else:
         try:
-            h5 = tables.openFile(TABLE_FILE, 'r')
-            tbl = h5.getNode('/', 'data')
+            h5 = tables.open_file(TABLE_FILE, 'r')
+            tbl = h5.get_node('/', 'data')
             last_tstart = tbl.cols.kalman_tstart[tbl.colindexes['kalman_tstart'][-1]]
             h5.close()
         except:
@@ -488,21 +489,21 @@ def _save_gui_stats(t):
                 + GUIDE_COLS['agasc'] + GUIDE_COLS['temp'] + GUIDE_COLS['bad'])
         desc, byteorder = tables.descr_from_dtype(np.dtype(cols))
         filters = tables.Filters(complevel=5, complib='zlib')
-        h5 = tables.openFile(TABLE_FILE, 'a')
-        tbl = h5.createTable('/', 'data', desc, filters=filters,
+        h5 = tables.open_file(TABLE_FILE, 'a')
+        tbl = h5.create_table('/', 'data', desc, filters=filters,
                              expectedrows=1e6)
-        tbl.cols.obsid.createIndex()
-        tbl.cols.kalman_tstart.createCSIndex()
-        tbl.cols.agasc_id.createIndex()
+        tbl.cols.obsid.create_index()
+        tbl.cols.kalman_tstart.create_csindex()
+        tbl.cols.agasc_id.create_index()
         h5.close()
         del h5
-    h5 = tables.openFile(TABLE_FILE, 'a')
-    tbl = h5.getNode('/', 'data')
-    have_obsid_coord = tbl.getWhereList(
+    h5 = tables.open_file(TABLE_FILE, 'a')
+    tbl = h5.get_node('/', 'data')
+    have_obsid_coord = tbl.get_where_list(
         '(obsid == {}) & (obi == {})'.format(
             t[0]['obsid'], t[0]['obi']), sort=True)
     if len(have_obsid_coord):
-        obsid_rec = tbl.readCoordinates(have_obsid_coord)
+        obsid_rec = tbl.read_coordinates(have_obsid_coord)
         if len(obsid_rec) != len(t):
             raise ValueError(
                 "Could not update {}; different number of slots".format(
@@ -512,7 +513,7 @@ def _save_gui_stats(t):
             slot = row['slot']
             t['known_bad'][t['slot'] == slot] = row['known_bad']
             t['bad_comment'][t['slot'] == slot] = row['bad_comment']
-        tbl.modifyCoordinates(have_obsid_coord, t.as_array())
+        tbl.modify_coordinates(have_obsid_coord, t.as_array())
     else:
         tbl.append(t.as_array())
     logger.info("saving stats to h5 table")
@@ -549,13 +550,13 @@ def update(opt):
 
 def get_stats(filter=True):
     """
-    Retrieve numpy array of acq stats
+    Retrieve numpy array of guide stats
 
     :param filter: True filters out 'known_bad' rows from the table
     :returns gui_stats: numpy.ndarray
     """
 
-    h5 = tables.openFile(TABLE_FILE, 'r')
+    h5 = tables.open_file(TABLE_FILE, 'r')
     stats = h5.root.data[:]
     h5.close()
     if filter:

@@ -9,6 +9,7 @@ from Chandra.Time import DateTime
 import mica.archive.obspar
 from mica.starcheck import get_starcheck_catalog, get_starcheck_catalog_at_date
 import tables
+import tables3_api
 import numpy as np
 import Ska.quatutil
 import Ska.astro
@@ -420,7 +421,7 @@ def _get_obsids_to_update(check_missing=False):
         last_tstart = '2007:271'
         kadi_obsids = events.obsids.filter(start=last_tstart)
         try:
-            h5 = tables.openFile(table_file, 'r')
+            h5 = tables.open_file(table_file, 'r')
             tbl = h5.root.data[:]
             h5.close()
         except:
@@ -429,8 +430,8 @@ def _get_obsids_to_update(check_missing=False):
         obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl['obsid']]
     else:
         try:
-            h5 = tables.openFile(table_file, 'r')
-            tbl = h5.getNode('/', 'data')
+            h5 = tables.open_file(table_file, 'r')
+            tbl = h5.get_node('/', 'data')
             last_tstart = tbl.cols.guide_tstart[tbl.colindexes['guide_tstart'][-1]]
             h5.close()
         except:
@@ -589,21 +590,21 @@ def _save_acq_stats(t):
                 + ACQ_COLS['agasc'] + ACQ_COLS['temp'] + ACQ_COLS['bad'])
         desc, byteorder = tables.descr_from_dtype(np.dtype(cols))
         filters = tables.Filters(complevel=5, complib='zlib')
-        h5 = tables.openFile(table_file, 'a')
-        tbl = h5.createTable('/', 'data', desc, filters=filters,
+        h5 = tables.open_file(table_file, 'a')
+        tbl = h5.create_table('/', 'data', desc, filters=filters,
                              expectedrows=1e6)
-        tbl.cols.obsid.createIndex()
-        tbl.cols.guide_tstart.createCSIndex()
-        tbl.cols.agasc_id.createIndex()
+        tbl.cols.obsid.create_index()
+        tbl.cols.guide_tstart.create_csindex()
+        tbl.cols.agasc_id.create_index()
         h5.close()
         del h5
-    h5 = tables.openFile(table_file, 'a')
-    tbl = h5.getNode('/', 'data')
-    have_obsid_coord = tbl.getWhereList(
+    h5 = tables.open_file(table_file, 'a')
+    tbl = h5.get_node('/', 'data')
+    have_obsid_coord = tbl.get_where_list(
         '(obsid == {}) & (obi == {})'.format(
             t[0]['obsid'], t[0]['obi']), sort=True)
     if len(have_obsid_coord):
-        obsid_rec = tbl.readCoordinates(have_obsid_coord)
+        obsid_rec = tbl.read_coordinates(have_obsid_coord)
         if len(obsid_rec) != len(t):
             raise ValueError(
                 "Could not update {}; different number of slots".format(
@@ -613,7 +614,7 @@ def _save_acq_stats(t):
             slot = row['slot']
             t['known_bad'][t['slot'] == slot] = row['known_bad']
             t['bad_comment'][t['slot'] == slot] = row['bad_comment']
-        tbl.modifyCoordinates(have_obsid_coord, t.as_array())
+        tbl.modify_coordinates(have_obsid_coord, t.as_array())
     else:
         tbl.append(t.as_array())
     logger.info("saving stats to h5 table")
@@ -655,7 +656,7 @@ def get_stats(filter=True):
     :returns acq_stats: numpy.ndarray
     """
 
-    h5 = tables.openFile(table_file, 'r')
+    h5 = tables.open_file(table_file, 'r')
     stats = h5.root.data[:]
     h5.close()
     if filter:
