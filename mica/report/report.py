@@ -47,7 +47,7 @@ warnings.filterwarnings(
 
 
 WANT_VV_VERSION = 2
-REPORT_VERSION = 2
+REPORT_VERSION = 3
 
 plt.rcParams['lines.markeredgewidth'] = 0
 
