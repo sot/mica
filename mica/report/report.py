@@ -17,6 +17,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import tables
+import tables3_api
 from astropy.table import Table
 from six.moves import zip
 
@@ -114,9 +115,9 @@ def rec_to_dict_list(recarray):
 
 
 def get_star_acq_stats(id):
-    hdu = tables.openFile(mica.stats.acq_stats.table_file)
+    hdu = tables.open_file(acq_stats.table_file)
     tbl = hdu.root.data
-    acqs = tbl.readWhere("agasc_id = {}".format(id))
+    acqs = tbl.read_where("agasc_id = {}".format(id))
     tbl.close()
     hdu.close()
     if not len(acqs):
@@ -134,9 +135,9 @@ def get_star_acq_stats(id):
 
 
 def get_star_trak_stats(id):
-    hdu = tables.openFile(mica.stats.guide_stats.TABLE_FILE)
+    hdu = tables.open_file(guide_stats.TABLE_FILE)
     tbl = hdu.root.data
-    traks = tbl.readWhere("agasc_id = {}".format(id))
+    traks = tbl.read_where("agasc_id = {}".format(id))
     tbl.close()
     hdu.close()
     if not len(traks):
@@ -182,18 +183,18 @@ def get_star_trak_stats(id):
 
 
 def get_obs_acq_stats(obsid):
-    hdu = tables.openFile(mica.stats.acq_stats.table_file)
+    hdu = tables.open_file(acq_stats.table_file)
     tbl = hdu.root.data
-    acqs = tbl.readWhere("obsid = {}".format(obsid))
+    acqs = tbl.read_where("obsid = {}".format(obsid))
     tbl.close()
     hdu.close()
     if len(acqs):
         return Table(acqs)
 
 def get_obs_trak_stats(obsid):
-    hdu = tables.openFile(mica.stats.guide_stats.TABLE_FILE)
+    hdu = tables.open_file(guide_stats.TABLE_FILE)
     tbl = hdu.root.data
-    guis = tbl.readWhere("obsid = {}".format(obsid))
+    guis = tbl.read_where("obsid = {}".format(obsid))
     tbl.close()
     hdu.close()
     if len(guis):
