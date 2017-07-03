@@ -451,9 +451,9 @@ def calc_stats(obsid):
     try:
         manvrs = events.manvrs.filter(obsid=obsid, n_dwell__gt=0)
         dwells = events.dwells.filter(obsid=obsid)
-        if manvrs.count() and dwells.count() == 1:
-            manvr = manvrs[0]
-            dwell = dwells[0]
+        # Use the last manvr and the first dwell
+        manvr = manvrs[manvrs.count() - 1]
+        dwell = dwells[0]
     except ValueError:
         multi_manvr = events.manvrs.filter(start=obspar['tstart'] - 10000,
                                            stop=obspar['tstart'] + 10000)

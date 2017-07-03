@@ -6,6 +6,9 @@ from .. import acq_stats
 
 def test_calc_stats():
     acq_stats.calc_stats(17210)
+    acq_stats.calc_stats(15175)
+    acq_stats.calc_stats(4911)
+    acq_stats.calc_stats(19386)
 
 
 def test_make_acq_stats():
