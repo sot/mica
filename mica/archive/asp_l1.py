@@ -159,6 +159,7 @@ def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
     :start: start time (DateTime compat)
     :stop: stop time (DateTime compat)
     :revision: aspect pipeline processing revision (integer version, None, or 'last')
+    :filter: boolean, true means returned values will not include quaternions during times when asp_sol_status is non-zero
 
     :returns: Nx4 np.array of quaternions, np.array of N times, list of dict with header from each asol file.
     """
@@ -171,6 +172,22 @@ def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
                            revision=revision, content=['ACACAL'])
     aqual_files = get_files(obsid=obsid, start=start, stop=stop,
                             revision=revision, content=['ASPQUAL'])
+    return get_atts_from_files(asol_files, acal_files, aqual_files, filter=filter)
+
+
+def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
+    """
+    From ASP1 source files (asol, acal, aqual) get the ground aspect solution quaternions and times covering
+    the range of asol_files in the ACA frame.  The asol, acl, and aqual files are assumed to have one-to-one correspondence
+    (though the asol to acal times are checked).
+
+    :asol_files: list of aspect asol1 files
+    :acal_files: list of acal1 files associated with asol_files
+    :aqual_files: list of aqual files associated with asol_files
+    :filter: boolean, true means returned values will not include quaternions during times when asp_sol_status is non-zero
+
+    :returns: Nx4 np.array of quaternions, np.array of N times, list of dict with header from each asol file.
+    """
     # There should be one asol and one acal file for each aspect interval in the range
     att_chunks = []
     time_chunks = []
