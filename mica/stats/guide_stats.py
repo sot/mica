@@ -209,23 +209,18 @@ def get_data(start, stop, obsid=None, starcheck=None):
 
     start_time = DateTime(start).secs
     stop_time = DateTime(stop)
-    # This are all from the same kinds of telemetry, so I think
-    # the times just work out OK without interpolation
-    raw_eng_data = fetch.MSIDset(msids + slot_msids,
-                                 start_time,
-                                 stop_time,
-                                 filter_bad=False)
-    if not len(raw_eng_data['AOACASEQ']):
+
+    dat = fetch.MSIDset(msids + slot_msids,
+                        start_time,
+                        stop_time)
+    if len(dat['AOACASEQ']) == 0:
         raise ValueError("No telemetry for obsid {}".format(obsid))
-    eng_data = Table([raw_eng_data[col].vals for col in msids + slot_msids],
-                     names=msids + slot_msids)
-    bads = np.column_stack([raw_eng_data[col].bads for col in msids + slot_msids])
-    eng_data['times'] = raw_eng_data['AOACASEQ'].times
-    eng_data['bad'] = np.any(bads == True, axis=1)
-    # limit the data to just good quality across all msids and double-check the times
-    eng_data = eng_data[~eng_data['bad']]
-    eng_data = eng_data[((eng_data['times'] > DateTime(start).secs)
-                         & (eng_data['times'] < DateTime(stop).secs + 1))]
+    # Interpolate the MSIDset onto the original time grid (which shouldn't do much)
+    # but also remove all rows where any one msid has a bad value
+    dat.interpolate(times=dat['AOACASEQ'].times, bad_union=True)
+    eng_data = Table([col.vals for col in dat.values()], names=dat.keys())
+    eng_data['times'] = dat.times
+
     times = eng_data['times']
     if starcheck is None:
         return eng_data, times, None
