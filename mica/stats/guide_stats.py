@@ -306,9 +306,9 @@ def calc_gui_stats(start, stop, data, times, star_info):
                     data['AOACFCT{}'.format(slot)] == 'TRAK')))
 
 
-        # reduce this to just the samples that don't have IR or SP set
-        kal = trak[ok_flags]
-
+        # reduce this to just the samples that don't have IR or SP set and are in Kalman on guide stars
+        kal = trak[ok_flags & (trak['AOACASEQ'] == 'KALM') & (trak['AOPCADMD'] == 'NPNT')
+                   & (trak['AOFSTAR'] == 'GUID')]
         dy = kal['dy{}'.format(slot)]
         dz = kal['dz{}'.format(slot)]
         # cheating here and ignoring spherical trig
