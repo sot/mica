@@ -462,8 +462,8 @@ def warn_on_acq_anom(acqs, emails):
     # img_func == NONE means nothing was tracked
     box_pad = 16  # arcsecs
     anom_match = ((acqs['img_func'] != 'NONE') &
-                  ((np.abs(acqs['yang_obs'] - acqs['yang']) >= (acqs['halfw'] + box_pad))
-                   | (np.abs(acqs['zang_obs'] - acqs['zang']) >= (acqs['halfw'] + box_pad))))
+                  ((np.abs(acqs['dy']) >= (acqs['halfw'] + box_pad))
+                   | (np.abs(acqs['dz']) >= (acqs['halfw'] + box_pad))))
     for anom in acqs[anom_match]:
         # Check to see if the star is actually found in another box.
         other_box_match =  ((np.abs(anom['yang_obs'] - acqs['yang']) <= (acqs['halfw'] + box_pad))
@@ -475,12 +475,15 @@ def warn_on_acq_anom(acqs, emails):
             text = "Does not appear to be classic star-in-wrong-box anomaly\n"
         # Make a dictionary of the anom record for use in string formatting
         output_dict = {col: anom[col] for col in anom.colnames}
-        output_dict['dy'] = anom['yang_obs'] - anom['yang']
-        output_dict['dz'] = anom['zang_obs'] - anom['zang']
+        output_dict['dy'] = anom['dy']
+        output_dict['dz'] = anom['dz']
         text += """Large Deviation from Expected ACQ Star Position in {obsid}
-      Slot {slot} Expected (Y-Pos, Z-Pos) = ({yang:.1f}, {zang:.1f})
+      Slot {slot} Expected* (Y-Pos, Z-Pos) = ({yang:.1f}, {zang:.1f})
       Slot {slot} Observed (Y-Pos, Z-Pos) = ({yang_obs:.1f}, {zang_obs:.1f})
-      Halfwidth {halfw:03d}        (dy, dz) = ({dy:.1f}, {dz:.1f})""".format(
+      Halfwidth {halfw:03d}        (dy, dz) = ({dy:.1f}, {dz:.1f})
+
+      *Expected here is catalog Y-Pos/Z-pos.  dy, dz calculation corrects these for estimated attitude.
+""".format(
             **output_dict)
         # Log and Send message for slot.  Obsid can have more than one email
         logger.warn(text)
