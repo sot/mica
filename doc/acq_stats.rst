@@ -50,10 +50,10 @@ min_trak_cdz    min "corrected" delta-z during acquisition (arcsec)
 max_trak_mag    max observed magnitude during acquisition
 mean_trak_mag   mean observed magnitude during acquisition
 min_trak_mag    min observed magnitude during acquisition
-cdy             "corrected" delta-y at guide transition (arcsec)
+cdy             "corrected" delta-y at guide transition. (arcsec)
 cdy             "corrected" delta-z at guide transition (arcsec)
-dy              delta-y at guide transition (arcsec)
-dz              delta-z at guide transition (arcsec)
+dy              delta-y at guide transition. expected position determined using onboard est. attitude (arcsec)
+dz              delta-z at guide transition. expected position determined using onboard est. attitude (arcsec)
 ion_rad         ionizing radiation flag set at transition (boolean)
 def_pixel       defective pixel flag set at transition (boolean)
 mult_star       multiple star flag set at transition (boolean)
