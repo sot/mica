@@ -16,6 +16,8 @@ from glob import glob
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+import tables
+import tables3_api
 from astropy.table import Table
 from six.moves import zip
 
@@ -26,6 +28,7 @@ from Chandra.Time import DateTime
 from Ska.engarchive import fetch_sci
 from kadi import events
 
+from Chandra.cmd_states import fetch_states
 from mica.archive import obspar
 from mica.catalog import catalog
 from mica.starcheck import starcheck
@@ -34,6 +37,7 @@ import mica.vv
 from mica.vv import get_vv, get_vv_files
 from mica.version import version
 from mica.common import MICA_ARCHIVE
+from mica.stats import acq_stats, guide_stats
 
 # Ignore known numexpr.necompiler and table.conditions warning
 warnings.filterwarnings(
@@ -43,7 +47,7 @@ warnings.filterwarnings(
 
 
 WANT_VV_VERSION = 2
-REPORT_VERSION = 2
+REPORT_VERSION = 3
 
 plt.rcParams['lines.markeredgewidth'] = 0
 
@@ -52,17 +56,15 @@ logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
-ACA_DB = None
-DEFAULT_REPORT_ROOT = "/proj/web-icxc/htdocs/aspect/mica_reports"
+
 DAILY_PLOT_ROOT = "http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
 
+# In the flight version webreports is a link to /proj/web-icxc/htdocs/aspect/mica_reports
+REPORT_ROOT = os.path.join(MICA_ARCHIVE, 'report', 'webreports')
+
+REPORT_SERVER = os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3')
+
 FILES = {'sql_def': 'report_processing.sql'}
-DEFAULT_CONFIG = {
-    'dbi': 'sqlite',
-    'report_root': '/proj/web-icxc/htdocs/aspect/mica_reports',
-    'server': os.path.join(MICA_ARCHIVE, 'report', 'report_processing.db3'),
-    'update_mode': True,
-    'retry_failure': False}
 
 
 def get_options():
@@ -71,8 +73,6 @@ def get_options():
     parser.add_argument("obsid",
                         help="obsid",
                         type=int)
-    parser.add_argument("--report-root",
-                        default=DEFAULT_REPORT_ROOT)
     opt = parser.parse_args()
     return opt
 
@@ -115,13 +115,18 @@ def rec_to_dict_list(recarray):
 
 
 def get_star_acq_stats(id):
-    acqs = ACA_DB.fetchall("""select * from acq_stats_data
-                              where agasc_id = %d
-                              order by tstart""" % int(id))
+    hdu = tables.open_file(acq_stats.table_file)
+    tbl = hdu.root.data
+    acqs = tbl.read_where("agasc_id == {}".format(id))
+    tbl.close()
+    hdu.close()
+    acqs = Table(acqs)
     if not len(acqs):
         return None, {'n_acqs': 0, 'n_acq_noid': 0, 'avg_mag': None}
+    acqs['obc_id'] = acqs['acqid']
+    acqs['tstart'] = acqs['guide_tstart']
     n_acqs = len(acqs)
-    n_acq_noid = len(np.flatnonzero(acqs['obc_id'] == 'NOID'))
+    n_acq_noid = len(np.flatnonzero(acqs['acqid'] == False))
     avg_mag = np.mean(acqs[acqs['mag_obs'] < 13.94]['mag_obs'])
     # make a list of dictionaries to make it easy to add values to the rows
     acqs = rec_to_dict_list(acqs)
@@ -133,22 +138,23 @@ def get_star_acq_stats(id):
 
 
 def get_star_trak_stats(id):
-    traks = ACA_DB.fetchall("""select * from trak_stats_data
-                               where id = %d
-                               order by kalman_tstart""" % int(id))
+    hdu = tables.open_file(guide_stats.TABLE_FILE)
+    tbl = hdu.root.data
+    traks = tbl.read_where("agasc_id == {}".format(id))
+    tbl.close()
+    hdu.close()
     if not len(traks):
         return None, {'n_guis': 0, 'n_bad': 0, 'n_fail': 0,
                       'n_obc_bad': 0, 'avg_mag': None}
-
+    traks = Table(traks)
     n_guis = len(traks)
-    n_bad = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) > 0.05))
-    n_fail = len(np.flatnonzero((traks['not_tracking_samples'] / traks['n_samples']) == 1))
-    n_obc_bad = len(np.flatnonzero((traks['obc_bad_status_samples'] / traks['n_samples']) > 0.05))
+    n_bad = np.count_nonzero(traks['f_track'] < 0.95)
+    n_fail = np.count_nonzero(traks['f_track'] == 1.00)
+    n_obc_bad = np.count_nonzero(traks['f_obc_bad'] > 0.05)
     # substitute in 13.94 for any that are already 'None'
     no_mag = np.equal(traks['aoacmag_mean'], None)
     traks['aoacmag_mean'][no_mag] = 13.94
-    traks['aoacmag_median'][no_mag] = 13.94
-    traks['aoacmag_rms'][no_mag] = 0.0
+    traks['aoacmag_std'][no_mag] = 0.0
     avg_mag = np.mean(traks['aoacmag_mean'])
 
     # make a list of dictionaries to make it easy to add values to the rows
@@ -158,18 +164,14 @@ def get_star_trak_stats(id):
         star = {
             'obsid': trak['obsid'],
             'tstart': "{:11.1f}".format(trak['kalman_tstart']),
-            'mag_obs': "{:6.3f}".format(trak['aoacmag_median']),
-            'mag_obs_rms': "{:.3f}".format(trak['aoacmag_rms']),
-            'trak_frac': "{:.1f}".format(
-                (100 * ((trak['n_samples']
-                         - trak['not_tracking_samples'])
-                        ) / trak['n_samples']))}
-        for stat in ['obc_bad_status',
+            'mag_obs': "{:6.3f}".format(trak['aoacmag_mean']),
+            'mag_obs_std': "{:.3f}".format(trak['aoacmag_std']),
+            'trak_percent': "{:.1f}".format(100 * trak['f_track'])}
+        for stat in ['obc_bad',
                      'def_pix', 'ion_rad', 'sat_pix',
                      'mult_star', 'quad_bound', 'common_col']:
-            star[stat] = "{:.3f}".format(
-                ((100 * trak["{}_samples".format(stat)])
-                 / trak['n_samples']))
+            star[stat] = "{:.3f}".format(100 * trak["f_{}".format(stat)])
+        star['obc_bad_percent'] = star['obc_bad']
         star['sc_link'] = '<A HREF="{link}">{obsid}</A>'.format(
             link=starcheck_link(trak['obsid']),
             obsid=trak['obsid'])
@@ -180,16 +182,24 @@ def get_star_trak_stats(id):
 
 
 def get_obs_acq_stats(obsid):
-    acqs = ACA_DB.fetchall("select * from acq_stats_data where obsid = %d" % obsid)
+    hdu = tables.open_file(acq_stats.table_file)
+    tbl = hdu.root.data
+    acqs = tbl.read_where("obsid == {}".format(obsid))
+    tbl.close()
+    hdu.close()
     if len(acqs):
         return Table(acqs)
 
 
 def get_obs_trak_stats(obsid):
-    guis = ACA_DB.fetchall("select * from trak_stats_data where obsid = %d" % obsid)
-
+    hdu = tables.open_file(guide_stats.TABLE_FILE)
+    tbl = hdu.root.data
+    guis = tbl.read_where("obsid == {}".format(obsid))
+    tbl.close()
+    hdu.close()
     if len(guis):
         return Table(guis)
+
 
 def get_obs_temps(obsid, outdir):
     try:
@@ -207,17 +217,15 @@ def get_obs_temps(obsid, outdir):
 
 
 def target_summary(obsid):
-    ocat_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat')
-    ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
+
+    with Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
+        ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
                                     and target.obsid = {}""".format(obsid))
-    # If this target didn't have a proposal, just get whatever is there
-    if ocat_info is None:
-        ocat_info = ocat_db.fetchone("""select * from target where
+        # If this target didn't have a proposal, just get whatever is there
+        if ocat_info is None:
+            ocat_info = ocat_db.fetchone("""select * from target where
                                     target.obsid = {}""".format(obsid))
-
-    ocat_db.conn.close()
-    del ocat_db
     return ocat_info
 
 
@@ -362,19 +370,16 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
                     and ((sc_row['type'] == 'ACQ')
                          or (sc_row['type'] == 'BOT'))):
                     sc_row['mag_obs'] = row['mag_obs']
-                    sc_row['obc_id'] = row['obc_id']
+                    sc_row['obc_id'] = row['acqid']
                     sc_row['mag_source'] = 'acq'
     if trak is not None and len(trak):
         for row in trak:
             for sc_row in table:
                 if ((sc_row['slot'] == row['slot'])
                     and (sc_row['type'] != 'ACQ')):
-                    sc_row['mag_obs'] = row['aoacmag_median']
-                    sc_row['trak_frac'] = (100 * ((row['n_samples']
-                                                  - row['not_tracking_samples'])
-                                                  ) / row['n_samples'])
-                    sc_row['obc_bad_frac'] = (100 * ((row['obc_bad_status_samples']
-                                                      / row['n_samples'])))
+                    sc_row['mag_obs'] = row['aoacmag_mean']
+                    sc_row['trak_percent'] = 100 * row['f_track']
+                    sc_row['obc_bad_percent'] = 100 * row['f_obc_bad']
                     sc_row['mag_source'] = 'trak'
     if vv is not None:
         for sc_row in table:
@@ -404,8 +409,8 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
         'pass_notes': "&nbsp;{}",
         'obc_id': "{}",
         'mag_obs': "{:6.3f}",
-        'trak_frac': "{:.0f}",
-        'obc_bad_frac': "{:.0f}",
+        'trak_percent': "{:.1f}",
+        'obc_bad_percent': "{:.0f}",
         'mag_source': "{}",
         'id_status': "{}",
         'cel_loc_flag': "{}",
@@ -416,7 +421,7 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
         'dz_mean': "{:6.3f}",
         }
 
-    opt_elem = ['mag_obs', 'obc_id', 'trak_frac', 'obc_bad_frac', 'mag_source',
+    opt_elem = ['mag_obs', 'obc_id', 'trak_percent', 'obc_bad_percent', 'mag_source',
                 'dr_rms', 'dz_rms', 'dy_rms', 'dy_mean', 'dz_mean',
                 'pass_notes', 'id_status', 'cel_loc_flag']
     sc.extend(opt_elem)
@@ -449,23 +454,15 @@ def star_info(id):
             'agg_trak': agg_trak}
 
 def get_aiprops(obsid):
+    ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
     aiprops = ACA_DB.fetchall(
         "select * from aiprops where obsid = {} order by tstart".format(
             obsid))
     return aiprops
 
-def main(obsid, config=None, report_root=None):
 
-    if config is None:
-         config = DEFAULT_CONFIG
-    if report_root is None:
-        report_root=config['report_root']
-
-    global ACA_DB
-    if ACA_DB is None or not ACA_DB.conn._is_connected:
-        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-
-
+def main(obsid):
+    report_root = REPORT_ROOT
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
     topdir = os.path.join(report_root, chunk_dir)
@@ -475,8 +472,7 @@ def main(obsid, config=None, report_root=None):
         os.makedirs(outdir)
 
     jinja_env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(
-            os.path.join(os.environ['SKA'], 'data', 'mica', 'templates')))
+        loader=jinja2.PackageLoader('mica.report'))
     jinja_env.line_comment_prefix = '##'
     jinja_env.line_statement_prefix = '#'
 
@@ -581,7 +577,7 @@ def main(obsid, config=None, report_root=None):
                            sort_keys=True,
                            indent=4))
         f.close()
-        save_state_in_db(obsid, notes, config)
+        save_state_in_db(obsid, notes)
         return
 
     if not er and 'shortterm' in links:
@@ -799,24 +795,21 @@ def main(obsid, config=None, report_root=None):
                        sort_keys=True,
                        indent=4))
     f.close()
-    save_state_in_db(obsid, notes, config)
+    save_state_in_db(obsid, notes)
 
 
-def save_state_in_db(obsid, notes, config=None):
+def save_state_in_db(obsid, notes):
 
-    if config is None:
-         config = DEFAULT_CONFIG
-
-    if (not os.path.exists(config['server'])
-        or os.stat(config['server']).st_size == 0):
-        if not os.path.exists(os.path.dirname(config['server'])):
-            os.makedirs(os.path.dirname(config['server']))
+    if (not os.path.exists(REPORT_SERVER)
+        or os.stat(REPORT_SERVER).st_size == 0):
+        if not os.path.exists(os.path.dirname(REPORT_SERVER)):
+            os.makedirs(os.path.dirname(REPORT_SERVER))
         db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', FILES['sql_def'])
         db_init_cmds = open(db_sql).read()
-        db = Ska.DBI.DBI(config['dbi'], config['server'])
+        db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
         db.execute(db_init_cmds)
     else:
-        db = Ska.DBI.DBI(dbi=config['dbi'], server=config['server'])
+        db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
 
     notes['report_status'] = notes['last_sched']
     del notes['last_sched']
@@ -846,35 +839,26 @@ def save_state_in_db(obsid, notes, config=None):
     db.conn.close()
 
 
-def update(report_root=DEFAULT_REPORT_ROOT):
+def update():
 
-    global ACA_DB
-    if ACA_DB is None or not ACA_DB.conn._is_connected:
-        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-
-    recent_obs = ACA_DB.fetchall("select distinct obsid from cmd_states "
-                             "where datestart > '{}'".format(DateTime(-7).date))
+    recent_obs = np.unique(fetch_states(start=DateTime(-7), vals=['obsid'])['obsid'])
     for obs in recent_obs:
-        process_obsids([obs['obsid']], report_root=report_root)
-
-    ACA_DB.conn.close()
+        process_obsids([obs['obsid']])
 
 
-def process_obsids(obsids, config=None, report_root=None):
-    if config is None:
-         config = DEFAULT_CONFIG
-    if report_root is None:
-        report_root=config['report_root']
+
+def process_obsids(obsids, update=True, retry=False):
+    report_root = REPORT_ROOT
 
     for obsid in obsids:
         strobs = "%05d" % obsid
         chunk_dir = strobs[0:2]
         topdir = os.path.join(report_root, chunk_dir)
         outdir = os.path.join(topdir, strobs)
-        if os.path.exists(outdir) and not config['update_mode']:
+        if os.path.exists(outdir) and not update:
             logger.info("Skipping {}, output dir exists.".format(obsid))
             continue
-        if not config['retry_failure'] and os.path.exists(os.path.join(outdir, "proc_err")):
+        if not retry and os.path.exists(os.path.join(outdir, "proc_err")):
             logger.warn("Skipping {}, previous processing error.".format(obsid))
             continue
         if not os.path.exists(outdir):
@@ -884,7 +868,7 @@ def process_obsids(obsids, config=None, report_root=None):
             if os.path.exists(os.path.join(outdir, failfile)):
                 os.unlink(os.path.join(outdir, failfile))
         try:
-            main(obsid, config=config, report_root=report_root)
+            main(obsid)
         except:
             import traceback
             etype, emess, trace = sys.exc_info()
@@ -916,8 +900,7 @@ def process_obsids(obsids, config=None, report_root=None):
             # Make a stub html page
             proc_date = DateTime().date
             jinja_env = jinja2.Environment(
-                loader=jinja2.FileSystemLoader(
-                    os.path.join(os.environ['SKA'], 'data', 'mica', 'templates')))
+                loader=jinja2.PackageLoader('mica.report'))
             jinja_env.line_comment_prefix = '##'
             jinja_env.line_statement_prefix = '#'
             template = jinja_env.get_template('proc_error.html')
@@ -930,49 +913,9 @@ def process_obsids(obsids, config=None, report_root=None):
             f.write(page)
             f.close()
             # Save the bad state in the database
-            save_state_in_db(obsid, notes, config=None)
+            save_state_in_db(obsid, notes)
 
-
-def fill_first_time(report_root=DEFAULT_REPORT_ROOT):
-
-    global ACA_DB
-    if ACA_DB is None:
-        ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
-
-    obs = ACA_DB.fetchall("select * from observations_all order by kalman_idstart desc")
-    for ob in obs:
-        obsid = ob['obsid']
-        print(ob['date'])
-        strobs = "%05d" % obsid
-        chunk_dir = strobs[0:2]
-        topdir = os.path.join(report_root, chunk_dir)
-        outdir = os.path.join(topdir, strobs)
-        if os.path.exists(outdir):
-            logger.info("Skipping {}, output dir exist.".format(obsid))
-        if os.path.exists("{}.ERR".format(outdir)):
-            logger.info("Skipping {}, output.ERR dir exist.".format(obsid))
-        if not os.path.exists(outdir):
-            try:
-                os.makedirs("{}".format(outdir))
-                main(obsid, config=None, report_root=report_root)
-            except:
-                os.makedirs("{}.ERR".format(outdir))
-                etype, emess, traceback = sys.exc_info()
-                notes = {'report_version': REPORT_VERSION,
-                         'obsid': obsid,
-                         'checked_date': DateTime().date,
-                         'last_sched': "{} {}".format(etype, emess),
-                         'vv_version': None,
-                         'vv_revision': None,
-                         'aspect_1_id': None,
-                         'ocat_status': None,
-                         'long_term': None,
-                         'short_term': None,
-                         'starcheck': None}
-                save_state_in_db(obsid, notes, config=None)
-
-    ACA_DB.conn.close()
 
 if __name__ == '__main__':
     opt = get_options()
-    main(opt.obsid, config=None, report_root=opt.report_root)
+    main(opt.obsid)
