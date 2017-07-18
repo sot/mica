@@ -94,6 +94,7 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     - approved: observation in an approved future schedule (ingested in timelines/cmd_states)
     - ran_pretimelines: ran, but before timelines database starts
     - timelines_gap: after timelines database start but missing data
+    - no starcat: in the database but has no star catalog
 
     :param date: Chandra.Time compatible date
     :param starcheck_db: optional handle to already-open starcheck database
@@ -194,6 +195,7 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     - approved: observation in an approved future schedule (ingested in timelines/cmd_states)
     - ran_pretimelines: ran, but before timelines database starts
     - timelines_gap: after timelines database start but missing data
+    - no starcat: in the database but has no star catalog
 
     The return 'date' is the date/time of the `MP_STARCAT` time.
 
@@ -214,9 +216,10 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
         """select * from starcheck_obs, starcheck_id
            where obsid = %d and starcheck_id.id = starcheck_obs.sc_id
            order by sc_id """ % obsid)
-    # If this predates timelines data just return the last record that matches
+    # If this has a star catalog that predates timelines data just return the last record that matches
     # and hope for the best
-    if len(starchecks) and (starchecks[-1]['mp_starcat_time'] < '2001:001:00:00:00.000'):
+    if (len(starchecks) and (starchecks[-1]['mp_starcat_time'] is not None) and
+        (starchecks[-1]['mp_starcat_time'] < '2001:001:00:00:00.000')):
         return (starchecks[-1]['dir'], 'ran_pretimelines', starchecks[-1]['mp_starcat_time'])
     # And if there are no entries, just return None for dir, status, time
     if not len(starchecks):
@@ -224,8 +227,11 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     # Go through the entries backwards (which are in ingest/date order)
     for sc in starchecks[::-1]:
         sc_date = sc['mp_starcat_time']
-        # if this is in a schedule not-yet-in-timelines
-        # We'll have to hope that is the most useful entry if there are multiples
+        # If it has no star catalog, there's not much to do
+        if sc_date is None:
+            return (sc['dir'], 'no starcat', sc_date)
+        # If this is in a schedule not-yet-in-timelines or has no star catalog,
+        # we'll have to hope that is the most useful entry if there are multiples
         if sc_date > last_tl:
             return (sc['dir'], 'planned', sc_date)
         tl = get_timeline_at_date(sc_date, timelines_db=timelines_db)
