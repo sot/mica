@@ -66,6 +66,8 @@ Functions
 .. autofunction:: get_files
 .. autofunction:: get_dir
 .. autofunction:: get_obs_dirs
+.. autofunction:: get_atts
+.. autofunction:: get_atts_from_files
 
 
 :mod:`mica.archive.obsid_archive`
