@@ -123,6 +123,11 @@ def test_obsid_catalog_fetch():
             assert len(sc['cat']) == t['n_cat_entries']
         if t['obsid'] == 62668:
             assert sc is None
+    # review a dark current replica obsid
+    dcdir, dcstatus, dcdate = starcheck.get_mp_dir(49961)
+    assert dcdir == '/2017/JUL0317/oflsb/'
+    assert dcstatus == 'no starcat'
+    assert dcdate is None
 
 
 def test_monitor_fetch():
