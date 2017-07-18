@@ -843,7 +843,7 @@ def update():
 
     recent_obs = np.unique(fetch_states(start=DateTime(-7), vals=['obsid'])['obsid'])
     for obs in recent_obs:
-        process_obsids([obs['obsid']])
+        process_obsids([obs])
 
 
 
