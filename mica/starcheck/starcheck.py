@@ -153,7 +153,13 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
         # If we have a dwell from kadi, use it to search for commanding
         dwell = dwells[0]
         dwell_start = dwell.start
-        start_cat_search = dwell.manvr.nman_start if dwell.manvr.n_dwell > 1 else dwell.get_previous().stop
+        # Try to use the beginning of the previous nman period to define when the catalog
+        # should have been commanded.  If there are multiple dwells for attitude, try to
+        # use nman_start if available.
+        if dwell.manvr.n_dwell > 1 and dwell.manvr.nman_start is not None:
+            start_cat_search = dwell.manvr.nman_start
+        else:
+            start_cat_search = dwell.get_previous().stop
 
     timelines = timelines_db.fetchall(
             """select * from timeline_loads where scs < 131
