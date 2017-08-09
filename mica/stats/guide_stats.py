@@ -34,7 +34,7 @@ logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
-STAT_VERSION = 0.2
+STAT_VERSION = 0.3
 
 GUIDE_COLS = {
     'obs': [
@@ -248,7 +248,7 @@ def consecutive(data, stepsize=1):
         return np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
 
 
-def calc_gui_stats(start, stop, data, times, star_info):
+def calc_gui_stats(data, times, star_info):
     logger.info("calculating statistics")
     gui_stats = {}
     for slot in range(0, 8):
@@ -417,9 +417,9 @@ def calc_stats(obsid):
         raise ValueError("Starcheck cat time delta is {}".format(starcat_dtime))
     if abs(starcat_dtime) > 30:
         logger.warn("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
-    vals, times, star_info = get_data(start=manvr.stop, stop=manvr.get_next().start,
+    vals, times, star_info = get_data(start=manvr.kalman_start, stop=manvr.get_next().start,
                                       obsid=obsid, starcheck=starcheck)
-    gui_stats = calc_gui_stats(manvr.kalman_start, manvr.get_next().start, vals, times, star_info)
+    gui_stats = calc_gui_stats(vals, times, star_info)
     obsid_info = {'obsid': obsid,
                   'obi': obspar['obi_num'],
                   'kalman_datestart': manvr.kalman_start,
