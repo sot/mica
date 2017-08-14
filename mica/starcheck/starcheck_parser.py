@@ -149,7 +149,7 @@ def get_starcat_header(obs_text):
 
 
 def get_manvrs(obs_text):
-    man_search = re.search("(MP_TARGQUAT((.*)\n){2,}\n)MP_STARCAT", obs_text)
+    man_search = re.search("(MP_TARGQUAT((.*)\n){2,}\n)", obs_text)
     if not man_search:
         return {}
     manvr_block = man_search.group(1)
