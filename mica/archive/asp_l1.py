@@ -195,7 +195,7 @@ def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
     for asol_f, acal_f, aqual_f in zip(asol_files, acal_files, aqual_files):
         asol = Table.read(asol_f)
         acal = Table.read(acal_f)
-        aqual = Table.read(aqual_f)
+        aqual = Table.read(aqual_f, hdu=1)
         # Check that the time ranges match from the fits headers (meta in the table)
         if not np.allclose(np.array([asol.meta['TSTART'], asol.meta['TSTOP']]),
                            np.array([acal.meta['TSTART'], acal.meta['TSTOP']]),

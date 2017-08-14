@@ -3,8 +3,6 @@ from __future__ import division, print_function
 import os
 import sys
 import warnings
-# Import this before kadi events skips the deprecation warning
-import compiler
 
 import re
 import logging
