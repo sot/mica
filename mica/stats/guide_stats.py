@@ -41,8 +41,9 @@ GUIDE_COLS = {
         ('obsid', 'int'),
         ('obi', 'int'),
         ('kalman_tstart', 'float'),
+        ('npnt_tstop', 'S21'),
         ('kalman_datestart', 'S21'),
-        ('kalman_datestop', 'S21'),
+        ('npnt_datestop', 'S21'),
         ('revision', 'S15')],
     'cat': [
         ('slot', 'int'),
@@ -241,14 +242,15 @@ def get_data(start, stop, obsid=None, starcheck=None):
         cat_entry = catalog[catalog['slot'] == slot][0]
         dmag = eng_data['AOACMAG{}'.format(slot)] - cat_entry['mag']
         eng_data['dmag'] = dmag.data
-    return eng_data, times, star_info
+    eng_data['time'] = times
+    return eng_data, star_info
 
 
 def consecutive(data, stepsize=1):
         return np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
 
 
-def calc_gui_stats(data, times, star_info):
+def calc_gui_stats(data, star_info):
     logger.info("calculating statistics")
     gui_stats = {}
     for slot in range(0, 8):
@@ -418,14 +420,18 @@ def calc_stats(obsid):
         raise ValueError("Starcheck cat time delta is {}".format(starcat_dtime))
     if abs(starcat_dtime) > 30:
         logger.warn("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
-    vals, times, star_info = get_data(start=manvr.kalman_start, stop=manvr.get_next().start,
-                                      obsid=obsid, starcheck=starcheck)
-    gui_stats = calc_gui_stats(vals, times, star_info)
+    # The NPNT dwell should end when the next maneuver starts, but explicitly confirm via pcadmd
+    pcadmd = fetch.Msid('AOPCADMD', manvr.kalman_start, manvr.get_next().tstart + 20)
+    next_nman_start = pcadmd.times[pcadmd.vals != 'NPNT'][0]
+    vals, star_info = get_data(start=manvr.kalman_start, stop=next_nman_start,
+                               obsid=obsid, starcheck=starcheck)
+    gui_stats = calc_gui_stats(vals, star_info)
     obsid_info = {'obsid': obsid,
                   'obi': obspar['obi_num'],
                   'kalman_datestart': manvr.kalman_start,
                   'kalman_tstart': DateTime(manvr.kalman_start).secs,
-                  'kalman_datestop': manvr.get_next().start,
+                  'npnt_tstop': DateTime(next_nman_start).secs,
+                  'npnt_datestop': DateTime(next_nman_start).date,
                   'revision': STAT_VERSION}
     catalog = Table(starcheck['cat'])
     catalog.sort('idx')
