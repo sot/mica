@@ -302,8 +302,9 @@ def calc_gui_stats(data, times, star_info):
 
 
         # reduce this to just the samples that don't have IR or SP set and are in Kalman on guide stars
+        # and are after the first 60 seconds
         kal = trak[ok_flags & (trak['AOACASEQ'] == 'KALM') & (trak['AOPCADMD'] == 'NPNT')
-                   & (trak['AOFSTAR'] == 'GUID')]
+                   & (trak['AOFSTAR'] == 'GUID') & (trak['time'] > (data['time'][0] + 60))]
         dy = kal['dy{}'.format(slot)]
         dz = kal['dz{}'.format(slot)]
         # cheating here and ignoring spherical trig
