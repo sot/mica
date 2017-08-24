@@ -26,7 +26,8 @@ obsid                   obsid
 obi                     observation interval number
 kalman_tstart           Kalman transition tstart from kadi event
 kalman_datestart        Kalman transition datestart from kadi event
-kalman_datestop         Kalman transition datestop from kadi event
+npnt_tstop              tstop for end of NPNT dwell for this observation
+npnt_datestop           datestop for end of NPNT dwell for this observation
 revision                revision string representing the software version
 slot                    ACA readout slot id
 idx                     starcheck star catalog index id
