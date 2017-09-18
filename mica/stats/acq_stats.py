@@ -337,15 +337,15 @@ def get_modern_data(manvr, dwell, starcheck):
 def calc_acq_stats(manvr, vals, times):
     logger.info("calculating statistics")
     acq_stats = {}
+    guide_times = (times >= DateTime(manvr.guide_start).secs - 1)
+    acq_times = ((times > DateTime(manvr.acq_start).secs)
+                 & (times < DateTime(manvr.guide_start).secs + 1))
+    acq_data = vals[acq_times]
     for slot in range(0, 8):
         if 'dy{}'.format(slot) not in vals.colnames:
             continue
         stats = {}
-        guide_times = (times >= DateTime(manvr.guide_start).secs - 1)
         stats['acqid'] = vals['POS_ACQID{}'.format(slot)][guide_times][0] == 'ID  '
-        acq_times = ((times > DateTime(manvr.acq_start).secs)
-                     & (times < DateTime(manvr.guide_start).secs + 1))
-        acq_data = vals[acq_times]
         aoacfct = acq_data['AOACFCT{}'.format(slot)]
         # Does it look like the desired star was tracked?
         stats['star_tracked'] = False
