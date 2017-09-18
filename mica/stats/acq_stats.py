@@ -148,27 +148,13 @@ def _deltas_vs_obc_quat(vals, times, catalog):
             logger.info("No agasc id for slot {}, skipping".format(slot))
             continue
         try:
-            star = agasc.get_star(agasc_id)
+            star = agasc.get_star(agasc_id, date=times[0])
         except:
             logger.info("agasc error on slot {}:{}".format(
                     slot, sys.exc_info()[0]))
             continue
-        ra = star['RA']
-        dec = star['DEC']
-        if (star['PM_RA'] != -9999 or star['PM_DEC'] != -9999):
-            # Compute the multiplicative factor to convert from
-            # the AGASC proper motion field to degrees.  The AGASC PM
-            # is specified in milliarcsecs / year, so this is
-            # dyear * (degrees / milliarcsec)
-            dyear = ((DateTime(times[0]).secs
-                     - DateTime("{}:001".format(int(star['EPOCH']))).secs)
-                     / (86400 * 365.25))
-            pm_to_degrees = dyear / (3600. * 1000.)
-            if star['PM_RA'] != -9999:
-                ra_scale = np.cos(np.radians(dec))
-                ra = star['RA'] + star['PM_RA'] * pm_to_degrees / ra_scale
-            if star['PM_DEC'] != -9999:
-                dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
+        ra = star['RA_PMCORR']
+        dec = star['DEC_PMCORR']
         star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
         d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
                        star_pos_eci).transpose()
