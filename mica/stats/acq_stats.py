@@ -461,7 +461,7 @@ def warn_on_acq_anom(acqs, emails):
     # Find tracked objects in the acq stats table outside the intended search box plus padding
     # img_func == NONE means nothing was tracked
     box_pad = 16  # arcsecs
-    anom_match = ((acqs['img_func'] != 'NONE') &
+    anom_match = ((acqs['img_func'] != 'NONE') & (acqs['img_func'] != 'SRCH') &
                   ((np.abs(acqs['dy']) >= (acqs['halfw'] + box_pad))
                    | (np.abs(acqs['dz']) >= (acqs['halfw'] + box_pad))))
     for anom in acqs[anom_match]:
