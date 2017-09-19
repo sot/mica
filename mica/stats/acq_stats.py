@@ -445,7 +445,15 @@ def warn_on_acq_anom(acqs, emails):
     :param emails: list of addresses to receive email warning if any are generated
     """
     # Find tracked objects in the acq stats table outside the intended search box plus padding
-    # img_func == NONE means nothing was tracked
+
+    # Note that dy/dz are observed yag/zag (t_guide) - predicted yag/zag (t_guide) using AOATTQT
+    # (estimated attitude). Observed yag/zag are from AOAC{Y,Z}AN, and t_guide is the time of the
+    # first sample with AOACASEQ = 'GUID'. t_guide is the same as manvrs.guide_start in kadi.
+    # The one-shot attitude update occurs in telemetry on the sample after the GUID transition,
+    # so the estimated attitude for dy/dz gives a reasonable approximation of the OBC estimated
+    # attitude at the time of commanding the search boxes. (It would be more accurate to use the
+    # time of transition to acquisition, but this approximation is at least closer than using
+    # catalog yag/zag.)
     box_pad = 16  # arcsecs
     anom_match = ((acqs['img_func'] != 'NONE') & (acqs['img_func'] != 'SRCH') &
                   ((np.abs(acqs['dy']) >= (acqs['halfw'] + box_pad))

@@ -50,10 +50,10 @@ min_trak_cdz    min "corrected" delta-z during acquisition (arcsec)
 max_trak_mag    max observed magnitude during acquisition
 mean_trak_mag   mean observed magnitude during acquisition
 min_trak_mag    min observed magnitude during acquisition
-cdy             "corrected" delta-y at guide transition. (arcsec)
-cdy             "corrected" delta-z at guide transition (arcsec)
-dy              delta-y at guide transition. expected position determined using onboard est. attitude (arcsec)
-dz              delta-z at guide transition. expected position determined using onboard est. attitude (arcsec)
+cdy             "corrected" (see below) delta-y at guide transition. (arcsec)
+cdy             "corrected" (see below) delta-z at guide transition (arcsec)
+dy              delta-y at guide transition. expected position (see below) determined using onboard est. attitude (arcsec)
+dz              delta-z at guide transition. expected position (see below) determined using onboard est. attitude (arcsec)
 ion_rad         ionizing radiation flag set at transition (boolean)
 def_pixel       defective pixel flag set at transition (boolean)
 mult_star       multiple star flag set at transition (boolean)
@@ -86,8 +86,20 @@ known_bad       ignore this star in standard processing (boolean)
 bad_comment     reason to ignore a "known_bad" star
 =============== ====================================================================
 
-For the columns that reference "corrected" y-angle and z-angle, these have been
-corrected by the one-shot quaternion update used during the acquisition sequence.
+Note that dy/dz are observed yag/zag (t_guide) - predicted yag/zag (t_guide) using AOATTQT
+(estimated attitude). Observed yag/zag are from AOAC{Y,Z}AN, and t_guide is the time of
+the first sample with AOACASEQ = 'GUID'. t_guide is the same as manvrs.guide_start in
+kadi. The one-shot attitude update occurs in telemetry on the sample after the GUID
+transition.  In particular, dy/dz are used in the check for wrong box acquisition anomaly
+as the the estimated attitude for dy/dz gives a reasonable approximation of the
+OBC estimated attitude at the time of commanding the search boxes. (though the estimated attitude at
+t_acq would be even better for that)
+
+For the columns that reference "corrected" y-angle and z-angle, cdy/cdz, these are the
+observed yag/zag (t_guide) - predicted yag/zag (t_guide) using the estimated attitude at
+that time transformed/corrected by the one-shot quaternion (which is actually calculated from the
+*next* one or two samples).
+
 
 Processing
 ^^^^^^^^^^
