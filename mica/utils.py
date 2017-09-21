@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
 from Chandra.Time import DateTime
 import Ska.DBI

@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 import numpy as np
 from Quaternion import Quat, normalize
 from Ska.engarchive import fetch

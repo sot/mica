@@ -1,6 +1,7 @@
 # script to update obspar and asp_l1 tables with "isdefault" column values
 # assumes that the archfiles.db3 files have already been copied to archfiles_redo.db3
 # files in the same directories
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 import Ska.DBI
 import os

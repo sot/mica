@@ -1,4 +1,5 @@
 ## {{{ http://code.activestate.com/recipes/498245/ (r6) }}}
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 import collections
 import functools
 from heapq import nsmallest
