@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
 Generalized module for fetching and archiving obsid-organized
 telemetry such as asp_l1 and obspar products.

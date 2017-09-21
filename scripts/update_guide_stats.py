@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 import mica.stats.guide_stats
 mica.stats.guide_stats.main()

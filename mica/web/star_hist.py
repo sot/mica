@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 from astropy.table import Table
 from Ska.DBI import DBI
 from Chandra.Time import DateTime

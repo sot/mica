@@ -1,5 +1,6 @@
 # script to grab aspect_1_ids for asp1 products in the database and
 # make a table to assist in cron job V&V processing
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 import os
 import re

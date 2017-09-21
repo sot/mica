@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
 Version numbering. The `major`, `minor`, and `bugfix`
 variables hold the respective parts of the version number (bugfix is '0' if

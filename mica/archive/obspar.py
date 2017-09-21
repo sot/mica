@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
 Script to update Ska file archive obspars.  Module
 also provides methods to retrieve the directory (or directories)

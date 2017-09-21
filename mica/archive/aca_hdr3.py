@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
 Experimental/alpha code to work with ACA L0 Header 3 data
 """

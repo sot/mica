@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 from kadi import events
 import numpy as np
 from Chandra.Time import DateTime
