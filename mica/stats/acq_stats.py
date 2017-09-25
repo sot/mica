@@ -472,11 +472,11 @@ def warn_on_acq_anom(acqs, emails):
         output_dict['dy'] = anom['dy']
         output_dict['dz'] = anom['dz']
         text += """Large Deviation from Expected ACQ Star Position in {obsid}
-      Slot {slot} Expected* (Y-Pos, Z-Pos) = ({yang:.1f}, {zang:.1f})
+      Slot {slot} Expected (Y-Pos, Z-Pos) = ({yang:.1f}, {zang:.1f})
       Slot {slot} Observed (Y-Pos, Z-Pos) = ({yang_obs:.1f}, {zang_obs:.1f})
       Halfwidth {halfw:03d}        (dy, dz) = ({dy:.1f}, {dz:.1f})
 
-      *Expected here is catalog Y-Pos/Z-pos.  dy, dz calculation corrects these for estimated attitude.
+      Expected here is catalog Y-Pos/Z-pos.  dy, dz calculation corrects these for estimated attitude.
 """.format(
             **output_dict)
         # Log and Send message for slot.  Obsid can have more than one email
