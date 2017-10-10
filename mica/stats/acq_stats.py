@@ -149,27 +149,13 @@ def _deltas_vs_obc_quat(vals, times, catalog):
             logger.info("No agasc id for slot {}, skipping".format(slot))
             continue
         try:
-            star = agasc.get_star(agasc_id)
+            star = agasc.get_star(agasc_id, date=times[0])
         except:
             logger.info("agasc error on slot {}:{}".format(
                     slot, sys.exc_info()[0]))
             continue
-        ra = star['RA']
-        dec = star['DEC']
-        if (star['PM_RA'] != -9999 or star['PM_DEC'] != -9999):
-            # Compute the multiplicative factor to convert from
-            # the AGASC proper motion field to degrees.  The AGASC PM
-            # is specified in milliarcsecs / year, so this is
-            # dyear * (degrees / milliarcsec)
-            dyear = ((DateTime(times[0]).secs
-                     - DateTime("{}:001".format(int(star['EPOCH']))).secs)
-                     / (86400 * 365.25))
-            pm_to_degrees = dyear / (3600. * 1000.)
-            if star['PM_RA'] != -9999:
-                ra_scale = np.cos(np.radians(dec))
-                ra = star['RA'] + star['PM_RA'] * pm_to_degrees / ra_scale
-            if star['PM_DEC'] != -9999:
-                dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
+        ra = star['RA_PMCORR']
+        dec = star['DEC_PMCORR']
         star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
         d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
                        star_pos_eci).transpose()
@@ -352,15 +338,15 @@ def get_modern_data(manvr, dwell, starcheck):
 def calc_acq_stats(manvr, vals, times):
     logger.info("calculating statistics")
     acq_stats = {}
+    guide_times = (times >= DateTime(manvr.guide_start).secs - 1)
+    acq_times = ((times > DateTime(manvr.acq_start).secs)
+                 & (times < DateTime(manvr.guide_start).secs + 1))
+    acq_data = vals[acq_times]
     for slot in range(0, 8):
         if 'dy{}'.format(slot) not in vals.colnames:
             continue
         stats = {}
-        guide_times = (times >= DateTime(manvr.guide_start).secs - 1)
         stats['acqid'] = vals['POS_ACQID{}'.format(slot)][guide_times][0] == 'ID  '
-        acq_times = ((times > DateTime(manvr.acq_start).secs)
-                     & (times < DateTime(manvr.guide_start).secs + 1))
-        acq_data = vals[acq_times]
         aoacfct = acq_data['AOACFCT{}'.format(slot)]
         # Does it look like the desired star was tracked?
         stats['star_tracked'] = False
@@ -460,11 +446,19 @@ def warn_on_acq_anom(acqs, emails):
     :param emails: list of addresses to receive email warning if any are generated
     """
     # Find tracked objects in the acq stats table outside the intended search box plus padding
-    # img_func == NONE means nothing was tracked
+
+    # Note that dy/dz are observed yag/zag (t_guide) - predicted yag/zag (t_guide) using AOATTQT
+    # (estimated attitude). Observed yag/zag are from AOAC{Y,Z}AN, and t_guide is the time of the
+    # first sample with AOACASEQ = 'GUID'. t_guide is the same as manvrs.guide_start in kadi.
+    # The one-shot attitude update occurs in telemetry on the sample after the GUID transition,
+    # so the estimated attitude for dy/dz gives a reasonable approximation of the OBC estimated
+    # attitude at the time of commanding the search boxes. (It would be more accurate to use the
+    # time of transition to acquisition, but this approximation is at least closer than using
+    # catalog yag/zag.)
     box_pad = 16  # arcsecs
-    anom_match = ((acqs['img_func'] != 'NONE') &
-                  ((np.abs(acqs['yang_obs'] - acqs['yang']) >= (acqs['halfw'] + box_pad))
-                   | (np.abs(acqs['zang_obs'] - acqs['zang']) >= (acqs['halfw'] + box_pad))))
+    anom_match = ((acqs['img_func'] != 'NONE') & (acqs['img_func'] != 'SRCH') &
+                  ((np.abs(acqs['dy']) >= (acqs['halfw'] + box_pad))
+                   | (np.abs(acqs['dz']) >= (acqs['halfw'] + box_pad))))
     for anom in acqs[anom_match]:
         # Check to see if the star is actually found in another box.
         other_box_match =  ((np.abs(anom['yang_obs'] - acqs['yang']) <= (acqs['halfw'] + box_pad))
@@ -476,12 +470,15 @@ def warn_on_acq_anom(acqs, emails):
             text = "Does not appear to be classic star-in-wrong-box anomaly\n"
         # Make a dictionary of the anom record for use in string formatting
         output_dict = {col: anom[col] for col in anom.colnames}
-        output_dict['dy'] = anom['yang_obs'] - anom['yang']
-        output_dict['dz'] = anom['zang_obs'] - anom['zang']
+        output_dict['dy'] = anom['dy']
+        output_dict['dz'] = anom['dz']
         text += """Large Deviation from Expected ACQ Star Position in {obsid}
       Slot {slot} Expected (Y-Pos, Z-Pos) = ({yang:.1f}, {zang:.1f})
       Slot {slot} Observed (Y-Pos, Z-Pos) = ({yang_obs:.1f}, {zang_obs:.1f})
-      Halfwidth {halfw:03d}        (dy, dz) = ({dy:.1f}, {dz:.1f})""".format(
+      Halfwidth {halfw:03d}        (dy, dz) = ({dy:.1f}, {dz:.1f})
+
+      Expected here is catalog Y-Pos/Z-pos.  dy, dz calculation corrects these for estimated attitude.
+""".format(
             **output_dict)
         # Log and Send message for slot.  Obsid can have more than one email
         logger.warn(text)
