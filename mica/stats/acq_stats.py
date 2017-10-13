@@ -498,6 +498,8 @@ def calc_stats(obsid):
     dwell = None
     try:
         manvrs = events.manvrs.filter(obsid=obsid, n_dwell__gt=0)
+        if len(manvrs) == 0:
+            raise ValueError
         dwells = events.dwells.filter(obsid=obsid)
         # Use the last manvr and the first dwell
         manvr = manvrs[manvrs.count() - 1]
