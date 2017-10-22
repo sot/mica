@@ -184,7 +184,9 @@ def get_manvrs(obs_text):
                                        end_date=angle_re.group(5)))
                 if 'target_Q1' not in curr_manvr:
                     raise ValueError("No Q1,Q2,Q3,Q4 line found when parsing starcheck.txt")
-        manvrs.append(curr_manvr)
+        # If there is a real manvr, append to list
+        if ('mp_targquat_time' in curr_manvr) and ('target_Q1' in curr_manvr):
+            manvrs.append(curr_manvr)
     for idx, manvr in enumerate(manvrs):
         manvr['instance'] = idx
     return manvrs
