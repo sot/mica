@@ -194,8 +194,8 @@ def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
     time_chunks = []
     records = []
     for asol_f, acal_f, aqual_f in zip(asol_files, acal_files, aqual_files):
-        asol = Table.read(asol_f)
-        acal = Table.read(acal_f)
+        asol = Table.read(asol_f, hdu=1)
+        acal = Table.read(acal_f, hdu=1)
         aqual = Table.read(aqual_f, hdu=1)
         # Check that the time ranges match from the fits headers (meta in the table)
         if not np.allclose(np.array([asol.meta['TSTART'], asol.meta['TSTOP']]),
