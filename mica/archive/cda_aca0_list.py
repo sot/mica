@@ -106,7 +106,9 @@ def update_cda_table(data_root=None,
     table_file = os.path.join(data_root, cda_table)
     if not os.path.exists(table_file):
         make_table_from_scratch(table_file, cda_fetch_url)
+        return
 
+    # Do an update
     h5f = tables.openFile(table_file, 'a')
     try:
         tbl = h5f.getNode('/', 'data')
