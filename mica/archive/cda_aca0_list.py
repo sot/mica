@@ -86,7 +86,7 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
                           filters=tables.Filters(complevel=5, complib='zlib'))
     desc, bo = tables.table.descr_from_dtype(files[0].dtype)
     tbl = h5f.createTable('/', 'data', desc)
-    tbl.append(files)
+    tbl.append(files.as_array())
     tbl.flush()
     h5f.close()
 
