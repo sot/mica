@@ -19,7 +19,7 @@ MICA_ARCHIVE so that none are missed.
 import os
 import re
 import tables
-from astropy.table import Table, Column
+from astropy.table import Table
 import numpy as np
 from six.moves import urllib, zip
 
