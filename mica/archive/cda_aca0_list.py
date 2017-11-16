@@ -145,15 +145,17 @@ def update_cda_table(data_root=None,
                 row['filetime'] = file['filetime']
                 row.append()
             tbl.flush()
+    # Just fetching errors instead of quitting with bad status
+    except urllib.error.URLError as err:
+        logger.info(err)
+    # Otherwise print the new lines if available to log and reraise
     except Exception as err:
         if new_lines is not None:
             logger.info("Text of attempted table")
             logger.info("".join(new_lines))
-            raise(err)
+        raise(err)
     finally:
         h5f.close()
-
-
 
 def main():
     opt = get_options()
