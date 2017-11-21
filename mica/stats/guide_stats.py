@@ -42,7 +42,7 @@ GUIDE_COLS = {
         ('obsid', 'int'),
         ('obi', 'int'),
         ('kalman_tstart', 'float'),
-        ('npnt_tstop', 'S21'),
+        ('npnt_tstop', 'float'),
         ('kalman_datestart', 'S21'),
         ('npnt_datestop', 'S21'),
         ('revision', 'S15')],
