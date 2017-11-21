@@ -2,9 +2,19 @@
 import tempfile
 import os
 import shutil
+import pytest
 
 from .. import report
 
+try:
+    import Ska.DBI
+    with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user='aca_ops', database='axafocat') as db:
+        assert db.conn._is_connected == 1
+        HAS_SYBASE_ACCESS = True
+except:
+    HAS_SYBASE_ACCESS = False
+
+@pytest.mark.skipif('not HAS_SYBASE_ACCESS', reason='Report test requires Sybase/OCAT access')
 def test_write_reports():
     """
     Make a report and database
