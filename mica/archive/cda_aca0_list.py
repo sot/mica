@@ -1,14 +1,30 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+"""
+Maintain a table with a list of of aca level 0 files in the Chandra Data Archive.
+
+This module calls the CGI available from:
+
+https://icxc.harvard.edu/dbtm/CDA/aspect_fetch.html
+
+fetches the list of aca0 files, and updates a full list of files in 'MICA_ARCHIVE/aca0/cda_aca0.h5'.
+That list should be of all available aca level 0 files in the Chandra Data Archive.  When called
+from the update_aca_l0.py update script in the mica cron job, this module attempts to use the end
+of the complete data in cda_aca0.h5 to form the query for new files, so only recent file names
+are fetched.
+
+The list of files in cda_aca0.h5 is compared against the list of files that have been archived in
+MICA_ARCHIVE so that none are missed.
+"""
+
 import os
 import re
 import tables
-import asciitable
+from astropy.table import Table
 import numpy as np
 from six.moves import urllib, zip
 
 import time
 from Chandra.Time import DateTime
-import Ska.Numpy
 import logging
 import argparse
 
@@ -37,8 +53,8 @@ def get_options():
 
 
 def make_data_table(lines):
-    files = asciitable.read(lines,
-                            names=['filename', 'status', 'ingest_time'])
+    files = Table.read(lines, format='ascii.csv', guess=False,
+                       names=['filename', 'status', 'ingest_time'])
     # replace variable spaces with single spaces and then strptime
     ingest_dates = [time.strftime(
             "%Y:%j:%H:%M:%S.000",
@@ -47,15 +63,12 @@ def make_data_table(lines):
                     for t in
                     [' '.join(f.split())
                      for f in files['ingest_time']]]
+    files['ingest_date'] = ingest_dates
     file_re = re.compile(r'acaf(\d{9,})N(\d{3})_(\d)_img0.fits(\.gz)?')
-    filetimes = [int(file_re.search(f).group(1)) for f in files['filename']]
-    versions = [int(file_re.search(f).group(2)) for f in files['filename']]
-    now_dates = np.repeat(DateTime().date, len(ingest_dates))
-    files = Ska.Numpy.add_column(files, 'ingest_date', ingest_dates)
-    files = Ska.Numpy.add_column(files, 'aca_ingest', now_dates)
-    files = Ska.Numpy.add_column(files, 'filetime', filetimes)
-    files = Ska.Numpy.add_column(files, 'version', versions)
-    files.sort(order=['aca_ingest', 'ingest_date', 'filename'])
+    files['aca_ingest'] = np.repeat(DateTime().date, len(ingest_dates))
+    files['filetime'] = [int(file_re.search(f).group(1)) for f in files['filename']]
+    files['version'] = [int(file_re.search(f).group(2)) for f in files['filename']]
+    files.sort(['aca_ingest', 'ingest_date', 'filename'])
     return files
 
 
@@ -65,6 +78,7 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
     query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
             ct_start.mon, ct_start.day, ct_start.year))
     url = cda_fetch_url + query
+    logger.info("URL for fetch {}".format(url))
     new_lines = urllib.request.urlopen(url).readlines()
     files = make_data_table(new_lines)
     logger.info("Creating new table at %s" % table_file)
@@ -72,7 +86,7 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
                           filters=tables.Filters(complevel=5, complib='zlib'))
     desc, bo = tables.table.descr_from_dtype(files[0].dtype)
     tbl = h5f.createTable('/', 'data', desc)
-    tbl.append(files)
+    tbl.append(files.as_array())
     tbl.flush()
     h5f.close()
 
@@ -92,45 +106,56 @@ def update_cda_table(data_root=None,
     table_file = os.path.join(data_root, cda_table)
     if not os.path.exists(table_file):
         make_table_from_scratch(table_file, cda_fetch_url)
+        return
 
+    # Do an update
     h5f = tables.openFile(table_file, 'a')
-    tbl = h5f.getNode('/', 'data')
-    cda_files = tbl[:]
-    lastdate = DateTime(cda_files[-1]['ingest_date'])
+    try:
+        tbl = h5f.getNode('/', 'data')
+        cda_files = tbl[:]
+        lastdate = DateTime(cda_files[-1]['ingest_date'])
+        logger.info("Fetching new CDA list from %s" % lastdate.date)
+        query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
+                lastdate.mon, lastdate.day, lastdate.year))
+        url = cda_fetch_url + query
+        logger.info("URL for fetch {}".format(url))
+        new_lines = urllib.request.urlopen(url).readlines()
+        files = make_data_table(new_lines)
+        match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
+        if len(match) == 0:
+            raise ValueError("no overlap")
+        match_last_idx = match[-1]
+        i_diff = 0
+        for have_entry, new_entry in zip(cda_files[match_last_idx:], files):
+            if have_entry['filename'] != new_entry['filename']:
+                break
+            i_diff += 1
 
-    logger.info("Fetching new CDA list from %s" % lastdate.date)
-    query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
-            lastdate.mon, lastdate.day, lastdate.year))
-    url = cda_fetch_url + query
-    new_lines = urllib.request.urlopen(url).readlines()
-    files = make_data_table(new_lines)
-    match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
-    if len(match) == 0:
-        raise ValueError("no overlap")
-    match_last_idx = match[-1]
-
-    i_diff = 0
-    for have_entry, new_entry in zip(cda_files[match_last_idx:], files):
-        if have_entry['filename'] != new_entry['filename']:
-            break
-        i_diff += 1
-
-    if i_diff < len(files):
-        logger.info("Updating %s with %d new rows"
-                    % (table_file, len(files[i_diff:])))
-        for file in files[i_diff:]:
-            logger.debug(file)
-            row = tbl.row
-            row['filename'] = file['filename']
-            row['status'] = file['status']
-            row['ingest_time'] = file['ingest_time']
-            row['ingest_date'] = file['ingest_date']
-            row['aca_ingest'] = file['aca_ingest']
-            row['filetime'] = file['filetime']
-            row.append()
-        tbl.flush()
-    h5f.close()
-
+        if i_diff < len(files):
+            logger.info("Updating %s with %d new rows"
+                        % (table_file, len(files[i_diff:])))
+            for file in files[i_diff:]:
+                logger.debug(file)
+                row = tbl.row
+                row['filename'] = file['filename']
+                row['status'] = file['status']
+                row['ingest_time'] = file['ingest_time']
+                row['ingest_date'] = file['ingest_date']
+                row['aca_ingest'] = file['aca_ingest']
+                row['filetime'] = file['filetime']
+                row.append()
+            tbl.flush()
+    # Just fetching errors instead of quitting with bad status
+    except urllib.error.URLError as err:
+        logger.info(err)
+    # Otherwise print the new lines if available to log and reraise
+    except Exception as err:
+        if new_lines is not None:
+            logger.info("Text of attempted table")
+            logger.info("".join(new_lines))
+        raise(err)
+    finally:
+        h5f.close()
 
 def main():
     opt = get_options()
