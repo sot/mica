@@ -35,7 +35,7 @@ logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
-STAT_VERSION = 0.4
+STAT_VERSION = 0.5
 
 GUIDE_COLS = {
     'obs': [
@@ -132,8 +132,9 @@ GUIDE_COLS = {
     }
 
 
-SKA = os.environ['SKA']
-DATA = os.path.join(SKA, 'data', 'guide_stats')
+#SKA = os.environ['SKA']
+#DATA = os.path.join(SKA, 'data', 'guide_stats')
+DATA = "."
 TABLE_FILE = os.path.join(DATA, 'guide_stats.h5')
 SKIPPED_FILE = os.path.join(DATA, 'skipped.dat')
 
@@ -532,10 +533,7 @@ def update(opt):
         obsids = _get_obsids_to_update(check_missing=opt.check_missing)
     for obsid in obsids:
         t = time.localtime()
-        # Don't run during kadi update
-        if t.tm_hour in [9, 10, 11]:
-            logger.info("Sleeping")
-            time.sleep(3720)
+
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, gui_stats, star_info, guide_catalog, temp = calc_stats(obsid)
