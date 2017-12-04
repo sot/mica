@@ -42,9 +42,12 @@ def get_dither(obsid):
     Get the planned dither for an obsid.  Uses mica.starcheck database.  Note that this
     does not have dither values for ERs and for some early mission observations.
 
+    Observations with dither dither disabled will have yaw and pitch amplitude set
+    to 0 and period of -999.
+
     :param obsid: obsid
     :returns: dictionary of planned dither parameters: 'yaw_ampl', 'pitch_ampl',
-    'yaw_period', and 'pitch_period'.
+    'yaw_period', and 'pitch_period'.  amplitudes in arcseconds, periods in seconds.
     """
     if obsid not in OBS_CACHE:
         OBS_CACHE[obsid] = get_starcheck_catalog(obsid)
@@ -55,8 +58,8 @@ def get_dither(obsid):
     # avoid divide-by-None and divide-by-0 errors.  It is moot for 0 amplitude anyway.
     return {'yaw_ampl': obs['dither_y_amp'],
             'pitch_ampl': obs['dither_z_amp'],
-            'yaw_period': obs['dither_y_period'] if obs['dither_y_amp'] != 0 else 1.0,
-            'pitch_period': obs['dither_z_period'] if obs['dither_z_amp'] != 0 else 1.0}
+            'yaw_period': obs['dither_y_period'] if obs['dither_y_amp'] != 0 else -999.0,
+            'pitch_period': obs['dither_z_period'] if obs['dither_z_amp'] != 0 else -999.0}
 
 
 def get_att(obsid):
