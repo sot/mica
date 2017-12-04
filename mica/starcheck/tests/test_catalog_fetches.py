@@ -175,4 +175,10 @@ def test_get_starcheck_methods():
                       'yaw_period': 1000.0}
     att = starcheck.get_att(obsid)
     assert att == [209.04218, 47.227524, 357.020117]
+    obsid = 2000
+    dither = starcheck.get_dither(obsid)
+    assert dither == {'pitch_ampl': 0.0,
+                      'pitch_period': -999.0,
+                      'yaw_ampl': 0.0,
+                      'yaw_period': -999.0}
 
