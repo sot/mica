@@ -80,7 +80,7 @@ class ObsArchive:
     The configuration dictionary ``config`` may have these key/values:
 
     * data_root: directory for products
-                (example /data/aca/archive/asp1)
+                (example /proj/sot/ska/data/mica/archive/asp1)
     * temp_root: directory for temporary storage of fetched
                 telemetry
     * bad_obsids: file containing list of obsids that should be
