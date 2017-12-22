@@ -5,8 +5,8 @@ import pytest
 
 from .. import acq_stats
 
-HAS_OBSPAR_ARCHIVE = os.path.exists(os.path.abspath(
-        acq_stats.mica.archive.obspar.CONFIG['data_root']))
+HAS_OBSPAR_ARCHIVE = os.path.exists(
+        acq_stats.mica.archive.obspar.CONFIG['data_root'])
 
 @pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
 def test_calc_stats():

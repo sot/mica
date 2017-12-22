@@ -8,7 +8,7 @@ import numpy as np
 
 from .. import aca_hdr3
 
-HAS_L0_ARCHIVE = os.path.exists(os.path.abspath(aca_hdr3.aca_l0.CONFIG['data_root']))
+HAS_L0_ARCHIVE = os.path.exists(aca_hdr3.aca_l0.CONFIG['data_root'])
 
 @pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
 def test_MSIDset():

@@ -8,7 +8,7 @@ import pytest
 
 from .. import asp_l1
 
-HAS_L1_ARCHIVE = os.path.exists(os.path.abspath(asp_l1.CONFIG['data_root']))
+HAS_L1_ARCHIVE = os.path.exists(asp_l1.CONFIG['data_root'])
 
 def compare_obc_and_asol(atts, times, recs, ptol=2, ytol=2, rtol=50):
     """

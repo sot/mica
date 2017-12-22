@@ -6,10 +6,10 @@ from .. import vv
 from .. import process
 from ... import common
 
-HAS_L1_ARCHIVE = os.path.exists(os.path.abspath(process.asp_l1_arch.CONFIG['data_root']))
-HAS_VV_ARCHIVE = (os.path.exists(os.path.abspath(vv.FILES['data_root']))
-                  & os.path.exists(os.path.abspath(vv.FILES['asp1_proc_table']))
-                  & os.path.exists(os.path.abspath(vv.FILES['h5_file'])))
+HAS_L1_ARCHIVE = os.path.exists(process.asp_l1_arch.CONFIG['data_root'])
+HAS_VV_ARCHIVE = (os.path.exists(vv.FILES['data_root'])
+                  & os.path.exists(vv.FILES['asp1_proc_table'])
+                  & os.path.exists(vv.FILES['h5_file']))
 
 @pytest.mark.skipif('not HAS_VV_ARCHIVE', reason='Test requires vv archive')
 def test_get_vv_dir():

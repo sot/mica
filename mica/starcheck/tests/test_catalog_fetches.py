@@ -10,7 +10,7 @@ import pytest
 
 from .. import starcheck
 
-HAS_SC_ARCHIVE = os.path.exists(os.path.abspath(starcheck.FILES['data_root']))
+HAS_SC_ARCHIVE = os.path.exists(starcheck.FILES['data_root'])
 
 def get_cmd_quat(date):
     date = DateTime(date)

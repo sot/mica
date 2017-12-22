@@ -7,7 +7,7 @@ import numpy as np
 from mica.archive import aca_l0, asp_l1
 from Ska.Numpy import interpolate
 
-HAS_L0_ARCHIVE = os.path.exists(os.path.abspath(aca_l0.CONFIG['data_root']))
+HAS_L0_ARCHIVE = os.path.exists(aca_l0.CONFIG['data_root'])
 
 @pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
 def test_get_l0_images():

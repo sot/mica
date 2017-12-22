@@ -6,7 +6,7 @@ import pytest
 
 from .. import guide_stats
 
-HAS_GS_TABLE = os.path.exists(os.path.abspath(guide_stats.TABLE_FILE))
+HAS_GS_TABLE = os.path.exists(guide_stats.TABLE_FILE)
 
 @pytest.mark.skipif('not HAS_GS_TABLE', reason='Test requires guide stats table')
 def test_read_stats():
@@ -15,8 +15,8 @@ def test_read_stats():
     np.isclose(slot['dy_std'], 0.16008819321078668)
     np.isclose(slot['dz_std'], 0.23807435722775061)
 
-HAS_OBSPAR_ARCHIVE = os.path.exists(os.path.abspath(
-        guide_stats.mica.archive.obspar.CONFIG['data_root']))
+HAS_OBSPAR_ARCHIVE = os.path.exists(
+        guide_stats.mica.archive.obspar.CONFIG['data_root'])
 
 @pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
 def test_calc_stats():
