@@ -74,14 +74,15 @@ def get_trak_cat_from_telem(start, stop, cmd_quat):
 @pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
 def test_validate_catalogs_over_range():
     start = '2017:001'
-    stop = '2017:004'
+    stop = '2017:002'
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
+        print(dwell)
         telem_quat = get_cmd_quat(dwell.start)
         # try to get the tracked telemetry for 1ks at the beginning of the dwell,
         # or if the dwell is shorter than that, just get the dwell
         cat, telem = get_trak_cat_from_telem(dwell.start,
-                                             np.min([dwell.tstart + 1000, dwell.tstop]),
+                                             np.min([dwell.tstart + 100, dwell.tstop]),
                                              telem_quat)
         sc = starcheck.get_starcheck_catalog_at_date(dwell.start)
         sc_quat = Quat([sc['manvr'][-1]["target_Q{}".format(i)] for i in [1, 2, 3, 4]])
@@ -136,5 +137,5 @@ def test_obsid_catalog_fetch():
 
 @pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
 def test_monitor_fetch():
-    mons = starcheck.get_monitor_windows(start='2009:001', stop='2010:001')
-    assert len(mons) == 53
+    mons = starcheck.get_monitor_windows(start='2009:002', stop='2009:007')
+    assert len(mons) == 10
