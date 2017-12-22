@@ -132,9 +132,8 @@ GUIDE_COLS = {
     }
 
 
-#SKA = os.environ['SKA']
-#DATA = os.path.join(SKA, 'data', 'guide_stats')
-DATA = "."
+SKA = os.environ['SKA']
+DATA = os.path.join(SKA, 'data', 'guide_stats')
 TABLE_FILE = os.path.join(DATA, 'guide_stats.h5')
 SKIPPED_FILE = os.path.join(DATA, 'skipped.dat')
 
