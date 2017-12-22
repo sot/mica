@@ -1,6 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+import os
+import pytest
 from .. import obspar
 
+HAS_OBSPAR_ARCHIVE = os.path.exists(os.path.abspath(obspar.CONFIG['data_root']))
+
+@pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires obspar archive')
 def test_get_obsids():
     """
     Test that archive.obspar.get_obsids gets a reasonable set of obsids.

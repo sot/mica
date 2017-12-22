@@ -2,12 +2,15 @@
 """
 Basic functionality and regression tests for ACA hdr3 (diagnostic) telemetry.
 """
-
+import os
+import pytest
 import numpy as np
 
 from .. import aca_hdr3
 
+HAS_L0_ARCHIVE = os.path.exists(os.path.abspath(aca_hdr3.aca_l0.CONFIG['data_root']))
 
+@pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
 def test_MSIDset():
     """
     Read all available MSIDs into a single MSIDset.  Use the empirically determined
