@@ -14,7 +14,12 @@ try:
 except:
     HAS_SYBASE_ACCESS = False
 
+
+HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES['data_root'])
+
+
 @pytest.mark.skipif('not HAS_SYBASE_ACCESS', reason='Report test requires Sybase/OCAT access')
+@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Report test requires mica starcheck archive')
 def test_write_reports():
     """
     Make a report and database
