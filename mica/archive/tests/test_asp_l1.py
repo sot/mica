@@ -1,4 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+import os
 import numpy as np
 from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
@@ -7,6 +8,7 @@ import pytest
 
 from .. import asp_l1
 
+HAS_L1_ARCHIVE = os.path.exists(asp_l1.CONFIG['data_root'])
 
 def compare_obc_and_asol(atts, times, recs, ptol=2, ytol=2, rtol=50):
     """
@@ -45,12 +47,13 @@ def compare_obc_and_asol(atts, times, recs, ptol=2, ytol=2, rtol=50):
         assert np.all(np.abs(drs) < rtol)
 
 
+@pytest.mark.skipif('not HAS_L1_ARCHIVE', reason='Test requires L1 archive')
 @pytest.mark.parametrize("obsid", [14333, 15175, 5438, 2121])
 def test_get_atts_obsid(obsid):
     atts, times, recs = asp_l1.get_atts(obsid=obsid)
     compare_obc_and_asol(atts, times, recs)
 
-
+@pytest.mark.skipif('not HAS_L1_ARCHIVE', reason='Test requires L1 archive')
 def test_get_atts_time():
     start = '2014:001:00:00:00.000'
     stop = '2014:005:00:00:00.000'
@@ -67,7 +70,7 @@ def test_get_atts_time():
         # also assert that the number of ~.25sec samples works out
         assert (len(times[ok]) * .25625) > dwell.dur * .90
 
-
+@pytest.mark.skipif('not HAS_L1_ARCHIVE', reason='Test requires L1 archive')
 def test_get_atts_filter():
     # Obsid 19039 has a momentum dump that shows up in asp_sol_status
     atts, times, recs = asp_l1.get_atts(obsid=19039)

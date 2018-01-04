@@ -1,12 +1,15 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import division
-
+import os
+import pytest
 from astropy.table import Table
 import numpy as np
 from mica.archive import aca_l0, asp_l1
 from Ska.Numpy import interpolate
 
+HAS_L0_ARCHIVE = os.path.exists(aca_l0.CONFIG['data_root'])
 
+@pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
 def test_get_l0_images():
     """
     Do a validation test of get_l0_images:
