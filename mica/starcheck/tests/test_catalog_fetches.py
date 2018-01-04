@@ -139,3 +139,46 @@ def test_obsid_catalog_fetch():
 def test_monitor_fetch():
     mons = starcheck.get_monitor_windows(start='2009:002', stop='2009:007')
     assert len(mons) == 10
+
+
+@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
+def test_get_starcheck_methods():
+    """
+    Check that the get_starcat, get_dither, and get_att Spacecraft methods
+    return reasonable values.
+    """
+    # Get the catalog for any obsid to add something to the cache
+    starcheck.get_starcat(2121)
+    # Get an check the values for the utility methods for obsid 19372
+    obsid = 19372
+    cat = starcheck.get_starcat(obsid)
+    # IDX and ID of the entries of this obsid catalog
+    regress = {1: 1,
+               2: 5,
+               3: 6,
+               4: 454035528,
+               5: 454035856,
+               6: 454428648,
+               7: 454432416,
+               8: 454433448,
+               9: 454036528,
+               10: 454039632,
+               11: 454036472,
+               12: 454038056}
+    assert len(regress) == len(cat)
+    for row in cat:
+        assert regress[row['idx']] == row['id']
+    dither = starcheck.get_dither(obsid)
+    assert dither == {'pitch_ampl': 8.0,
+                      'pitch_period': 707.1,
+                      'yaw_ampl': 8.0,
+                      'yaw_period': 1000.0}
+    att = starcheck.get_att(obsid)
+    assert att == [209.04218, 47.227524, 357.020117]
+    obsid = 2000
+    dither = starcheck.get_dither(obsid)
+    assert dither == {'pitch_ampl': 0.0,
+                      'pitch_period': -999.0,
+                      'yaw_ampl': 0.0,
+                      'yaw_period': -999.0}
+
