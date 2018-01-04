@@ -10,6 +10,8 @@ HAS_L1_ARCHIVE = os.path.exists(process.asp_l1_arch.CONFIG['data_root'])
 HAS_VV_ARCHIVE = (os.path.exists(vv.FILES['data_root'])
                   & os.path.exists(vv.FILES['asp1_proc_table'])
                   & os.path.exists(vv.FILES['h5_file']))
+HAS_VV_TABLE = os.path.exists(vv.FILES['h5_file'])
+
 
 @pytest.mark.skipif('not HAS_VV_ARCHIVE', reason='Test requires vv archive')
 def test_get_vv_dir():
@@ -22,6 +24,7 @@ def test_get_vv_files():
     assert sorted(obsfiles)[-1] == os.path.abspath(os.path.join(common.MICA_ARCHIVE,
                                                                 'vv/16/16504_v01/vv_report.pkl'))
 
+@pytest.mark.skipif('not HAS_VV_TABLE', reason='Test requires vv h5 table')
 def test_get_rms_data():
     data = vv.get_rms_data()
     dz_rms = data[(data['obsid'] == 16505) & (data['slot'] == 4) & (data['isdefault'] == 1)]['dz_rms'][0]
