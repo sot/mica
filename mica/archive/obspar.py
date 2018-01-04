@@ -211,7 +211,7 @@ def get_dir(obsid):
 
       >>> from mica.archive import obspar
       >>> obspar.get_dir(2121)
-      '/data/aca/archive/obspar/02/02121'
+      '/proj/sot/ska/data/mica/archive/obspar/02/02121'
 
     :param obsid: obsid
     :returns: directory
@@ -229,10 +229,10 @@ def get_obs_dirs(obsid):
 
     obsdirs will look something like::
 
-      {'default': '/data/aca/archive/obspar/06/06000',
-      2: '/data/aca/archive/obspar/06/06000_v02',
-      3: '/data/aca/archive/obspar/06/06000_v03',
-      'last': '/data/aca/archive/obspar/06/06000',
+      {'default': '/proj/sot/ska/data/mica/archive/obspar/06/06000',
+      2: '/proj/sot/ska/data/mica/archive/obspar/06/06000_v02',
+      3: '/proj/sot/ska/data/mica/archive/obspar/06/06000_v03',
+      'last': '/proj/sot/ska/data/mica/archive/obspar/06/06000',
       'revisions': [2, 3]}
 
     :param obsid: obsid
@@ -248,9 +248,9 @@ def get_obspar_file(obsid, version='default'):
 
       >>> from mica.archive import obspar
       >>> obspar.get_obspar_file(7000)
-      '/data/aca/archive/obspar/07/07000/axaff07000_000N002_obs0a.par.gz'
+      '/proj/sot/ska/data/mica/archive/obspar/07/07000/axaff07000_000N002_obs0a.par.gz'
       >>> obspar.get_obspar_file(14262, version=1)
-      '/data/aca/archive/obspar/14/14262_v01/axaff14262_001N001_obs0a.par.gz'
+      '/proj/sot/ska/data/mica/archive/obspar/14/14262_v01/axaff14262_001N001_obs0a.par.gz'
 
     :param obsid: obsid
     :param version: processing version/revision

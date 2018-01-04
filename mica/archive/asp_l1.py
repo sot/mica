@@ -95,7 +95,7 @@ def get_dir(obsid):
 
       >>> from mica.archive import asp_l1
       >>> asp_l1.get_dir(2121)
-      '/data/aca/archive/asp1/02/02121'
+      '/proj/sot/ska/data/mica/archive/asp1/02/02121'
 
     :param obsid: obsid
     :returns: directory
@@ -113,10 +113,10 @@ def get_obs_dirs(obsid):
 
     obsdirs will look something like::
 
-      {'default': '/data/aca/archive/asp1/06/06000',
-      2: '/data/aca/archive/asp1/06/06000_v02',
-      3: '/data/aca/archive/asp1/06/06000_v03',
-      'last': '/data/aca/archive/asp1/06/06000',
+      {'default': '/proj/sot/ska/data/mica/archive/asp1/06/06000',
+      2: '/proj/sot/ska/data/mica/archive/asp1/06/06000_v02',
+      3: '/proj/sot/ska/data/mica/archive/asp1/06/06000_v03',
+      'last': '/proj/sot/ska/data/mica/archive/asp1/06/06000',
       'revisions': [2, 3]}
 
     :param obsid: obsid
