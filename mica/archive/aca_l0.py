@@ -185,7 +185,7 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
       >>> imgs = aca_l0.get_l0_images('2005:001', '2005:002', slot=6, imgsize=[8])
 
     The default columns are:
-    ['TIME', 'IMGROW0', 'IMGCOL0', 'BGDAVG', 'IMGSTAT', 'IMGFUNC1', 'IMGSIZE', 'INTEG']
+    ['TIME', 'IMGROW0', 'IMGCOL0', 'BGDAVG', 'IMGSTAT', 'IMGFUNC1', 'IMGSIZE', 'IMGSCALE', 'INTEG']
 
     The image pixel values are given in units of DN.  One can convert to e-/sec
     by multiplying by (5 / INTEG).
@@ -199,7 +199,7 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     :returns: list of ACAImage objects
     """
     if columns is None:
-        columns = ['TIME', 'BGDAVG', 'IMGSTAT', 'IMGFUNC1', 'IMGSIZE', 'INTEG']
+        columns = ['TIME', 'BGDAVG', 'IMGSTAT', 'IMGFUNC1', 'IMGSIZE', 'IMGSCALE', 'INTEG']
     if 'IMGROW0' not in columns:
         columns.append('IMGROW0')
     if 'IMGCOL0' not in columns:

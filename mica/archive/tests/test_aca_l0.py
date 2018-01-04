@@ -9,6 +9,24 @@ from Ska.Numpy import interpolate
 
 HAS_L0_ARCHIVE = os.path.exists(aca_l0.CONFIG['data_root'])
 
+
+@pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
+def test_l0_images_meta():
+    """
+    Confirm meta values match reference/regress values
+    """
+    imgs = aca_l0.get_l0_images(467055635, 467055639, slot=7)
+    assert imgs[0].meta == {'BGDAVG': 253,
+                            'IMGCOL0': 7,
+                            'IMGFUNC1': 2,
+                            'IMGROW0': -12,
+                            'IMGSIZE': 8,
+                            'IMGSTAT': 0,
+                            'IMGSCALE': 1025,
+                            'INTEG': np.float32(1.696),
+                            'TIME': np.float64(467055637.49031752)}
+
+
 @pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
 def test_get_l0_images():
     """
