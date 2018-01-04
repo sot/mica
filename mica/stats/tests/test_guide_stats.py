@@ -29,7 +29,9 @@ def test_calc_stats_with_bright_trans():
     # even in this obsid that had a transition to BRIT
     assert s[1][7]['dr_std'] < 1
 
+
 @pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
+@pytest.mark.filterwarnings('ignore: object name')
 def test_make_gui_stats():
     """
     Save the guide stats for one obsid into a newly-created table
