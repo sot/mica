@@ -82,8 +82,8 @@ n_racq_interv           number of intervals during Kalman when RACQ was set for 
 n_srch_interv           number of intervals during Kalman when SRCH was set
 agasc_id                AGASC (catalog) id
 color1                  AGASC COLOR1, estimated B-V color
-ra                      AGASC right ascension (degrees)
-dec                     AGASC declination (degrees)
+ra                      Right Ascension, corrected for proper motion at obs time (degrees)
+dec                     Declination, corrected for proper motion at obs time (degrees)
 epoch                   AGASC EPOCH
 pm_ra                   AGASC PM_RA, proper motion in ra (milli-arcsec/year)
 pm_dec                  AGASC PM_DEC, proper motion in dec (milli-arsec/year)
