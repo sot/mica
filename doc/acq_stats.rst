@@ -39,7 +39,7 @@ mag             catalog MAG_ACA of acquisition star
 acqid           acquisition success indicator (boolean)
 star_tracked    something tracked within 5 arcsecs during acq interval (boolean)
 spoiler_tracked something tracked outside 5 arcsecs during acq interval (boolean)
-img_func        image status at transition: can be None, star, spoiler, RACQ, SRCH
+img_func        image status at transition: can be 'NONE', 'star', 'spoiler', 'RACQ', 'SRCH'
 n_trak_interv   number of intervals during acq when something was tracked
 max_trak_cdy    max "corrected" delta-y during acquisition (arcsec)
 mean_trak_cdy   mean "corrected" delta-y during acquisition (arcsec)
