@@ -90,7 +90,7 @@ pm_dec                  AGASC PM_DEC, proper motion in dec (milli-arsec/year)
 var                     AGASC VAR, known or suspected variable star
 pos_err                 AGASC POS_ERR, position error (milli-arcsec)
 mag_aca                 AGASC MAG_ACA, ACA mag
-mag_err                 AGASC MAG_ERR, (to be fixed, this should have been MAG_ACA_ERR)
+mag_aca_err             AGASC MAG_ACA_ERR, units of 0.01 mag
 mag_band                AGASC MAG_BAND, integer code for spectral band
 pos_catid               AGASC POS_CATID, integer code for position catalog
 aspq1                   AGASC ASPQ1, integer spoiler code

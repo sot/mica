@@ -112,7 +112,7 @@ GUIDE_COLS = {
         ('var', 'int'),
         ('pos_err', 'int'),
         ('mag_aca', 'float'),
-        ('mag_err', 'int'),
+        ('mag_aca_err', 'int'),
         ('mag_band', 'int'),
         ('pos_catid', 'int'),
         ('aspq1', 'int'),
