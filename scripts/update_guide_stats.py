@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import mica.stats.guide_stats
-mica.stats.guide_stats.main()
+from mica.stats import update_guide_stats
+update_guide_stats.main()
 
 import os
 table_file = mica.stats.guide_stats.TABLE_FILE
