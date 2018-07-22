@@ -310,7 +310,7 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     raise ValueError("get_mp_dir should find something or nothing")
 
 
-def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=None):
+def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=None, mp_top_level=None):
     """
     For a given obsid, return a dictionary describing the starcheck catalog that should apply.
     The content of that dictionary is from the database tables of that parsed the starcheck report
@@ -343,6 +343,16 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
         starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
     if timelines_db is None:
         timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
+    if mp_top_level is None:
+        mp_top_level = DEFAULT_CONFIG['mp_top_level']
+    # If the full directory was passed to mp_dir, just trim the top level
+    if mp_dir is not None and mp_dir.startswith(mp_top_level):
+        mp_dir = "/" + mp_dir.lstrip(mp_top_level)
+    # If mp_dir doesn't have starting and trailing / add one
+    if mp_dir is not None and not mp_dir.endswith("/"):
+        mp_dir = mp_dir + "/"
+    if mp_dir is not None and not mp_dir.startswith("/"):
+        mp_dir = "/" + mp_dir
     status = None
     if mp_dir is None:
         mp_dir, status, obs_date = get_mp_dir(obsid, starcheck_db=starcheck_db, timelines_db=timelines_db)
