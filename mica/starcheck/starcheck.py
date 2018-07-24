@@ -346,9 +346,20 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     status = None
     if mp_dir is None:
         mp_dir, status, obs_date = get_mp_dir(obsid, starcheck_db=starcheck_db, timelines_db=timelines_db)
+
     # if it is still none, there's nothing to try here
     if mp_dir is None:
         return None
+
+    # mp_dir is in the standard short-form "MAY3018A".  Translate to
+    # '/2018/MAY3018/oflsa/'
+    if re.match(r'[A-Z]{3}\d{4}[A-Z]$', mp_dir):
+        load_version = mp_dir[7].lower()
+        load_year = '20' + mp_dir[5:7]
+        load_name = mp_dir[:7]
+        mp_dir = '/{}/{}/ofls{}/'.format(load_year, load_name, load_version)
+        print(mp_dir)
+
     db = starcheck_db # shorthand for the rest of the routine
     sc_id = db.fetchone("select id from starcheck_id "
                                   "where dir = '%s'" % mp_dir)
