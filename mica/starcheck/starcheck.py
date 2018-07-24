@@ -336,6 +336,9 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     :param timelines_db: optional handle to already-open timelines database
     :returns: dictionary with starcheck content described above
     """
+    # Keep the original kwarg from user for the caching key later
+    mp_dir_kwarg = mp_dir
+
     if (obsid, mp_dir) in OBS_CACHE:
         return OBS_CACHE[obsid, mp_dir]
 
@@ -358,7 +361,6 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
         load_year = '20' + mp_dir[5:7]
         load_name = mp_dir[:7]
         mp_dir = '/{}/{}/ofls{}/'.format(load_year, load_name, load_version)
-        print(mp_dir)
 
     db = starcheck_db # shorthand for the rest of the routine
     sc_id = db.fetchone("select id from starcheck_id "
@@ -383,7 +385,8 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     if pred_temp is not None and 'pred_ccd_temp' in pred_temp:
         sc['pred_temp'] = pred_temp['pred_ccd_temp']
 
-    # Cache result for later re-use
-    OBS_CACHE[obsid, mp_dir] = sc
+    # Cache result for later re-use (use whatever user supplied as mp_dir kwarg)
+    # since mp_dir gets munged in the meantime.
+    OBS_CACHE[obsid, mp_dir_kwarg] = sc
 
     return sc

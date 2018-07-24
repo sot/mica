@@ -152,11 +152,18 @@ def test_get_starcheck_methods():
     Check that the get_starcat, get_dither, and get_att Spacecraft methods
     return reasonable values.
     """
+    # Clear the cache for testing
+    starcheck.OBS_CACHE.clear()
+
     # Get the catalog for any obsid to add something to the cache
     starcheck.get_starcat(2121)
+    assert len(starcheck.OBS_CACHE) == 1
+
     # Get an check the values for the utility methods for obsid 19372
     obsid = 19372
     cat = starcheck.get_starcat(obsid)
+    assert len(starcheck.OBS_CACHE) == 2
+
     # IDX and ID of the entries of this obsid catalog
     regress = {1: 1,
                2: 5,
@@ -173,13 +180,16 @@ def test_get_starcheck_methods():
     assert len(regress) == len(cat)
     for row in cat:
         assert regress[row['idx']] == row['id']
+
     dither = starcheck.get_dither(obsid)
     assert dither == {'pitch_ampl': 8.0,
                       'pitch_period': 707.1,
                       'yaw_ampl': 8.0,
                       'yaw_period': 1000.0}
+
     att = starcheck.get_att(obsid)
     assert att == [209.04218, 47.227524, 357.020117]
+
     obsid = 2000
     dither = starcheck.get_dither(obsid)
     assert dither == {'pitch_ampl': 0.0,
@@ -187,3 +197,23 @@ def test_get_starcheck_methods():
                       'yaw_ampl': 0.0,
                       'yaw_period': -999.0}
 
+
+@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
+def test_get_starcheck_with_mp_dir():
+    """Obsid 21082 was scheduled in APR2318A and B, but not C, which was actually
+    run. So 21082 never actually happened in the mission.  Use this to test the
+    functionality of explicitly specifying load name."""
+
+    starcheck.OBS_CACHE.clear()
+
+    # Not in default as-run schedule.
+    with pytest.raises(ValueError):
+        starcheck.get_starcheck_catalog(21082)
+
+    sc = starcheck.get_starcheck_catalog(21082, '/2018/APR2318/oflsa/')
+    assert len(sc['cat']) == 12
+    assert (21082, '/2018/APR2318/oflsa/') in starcheck.OBS_CACHE
+
+    sc = starcheck.get_starcheck_catalog(21082, 'APR2318A')
+    assert len(sc['cat']) == 12
+    assert (21082, 'APR2318A') in starcheck.OBS_CACHE
