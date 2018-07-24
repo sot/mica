@@ -78,12 +78,17 @@ def test_validate_catalogs_over_range():
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
         print(dwell)
-        telem_quat = get_cmd_quat(dwell.start)
-        # try to get the tracked telemetry for 1ks at the beginning of the dwell,
-        # or if the dwell is shorter than that, just get the dwell
-        cat, telem = get_trak_cat_from_telem(dwell.start,
-                                             np.min([dwell.tstart + 100, dwell.tstop]),
-                                             telem_quat)
+        try:
+            telem_quat = get_cmd_quat(dwell.start)
+            # try to get the tracked telemetry for 1ks at the beginning of the dwell,
+            # or if the dwell is shorter than that, just get the dwell
+            cat, telem = get_trak_cat_from_telem(dwell.start,
+                                                 np.min([dwell.tstart + 100, dwell.tstop]),
+                                                 telem_quat)
+        except ValueError as err:
+            if 'MSID' in str(err):
+                pytest.skip('Eng archive MSID missing {}'.format(err))
+
         sc = starcheck.get_starcheck_catalog_at_date(dwell.start)
         sc_quat = Quat([sc['manvr'][-1]["target_Q{}".format(i)] for i in [1, 2, 3, 4]])
         dq = sc_quat.dq(telem_quat)
