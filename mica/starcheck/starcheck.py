@@ -30,7 +30,7 @@ def get_starcat(obsid, mp_dir=None):
     Get the planned star catalog for an obsid.  Uses mica.starcheck database.
 
     :param obsid: obsid
-    :param mp_dir: optional load specifier in the form '/2017/FEB1317/oflsa/'
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'
     :returns: astropy.Table of star catalog
     """
     return get_starcheck_catalog(obsid, mp_dir)['cat']
@@ -45,7 +45,7 @@ def get_dither(obsid, mp_dir=None):
     to 0 and period of -999.
 
     :param obsid: obsid
-    :param mp_dir: optional load specifier in the form '/2017/FEB1317/oflsa/'
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'
     :returns: dictionary of planned dither parameters: 'yaw_ampl', 'pitch_ampl',
     'yaw_period', and 'pitch_period'.  amplitudes in arcseconds, periods in seconds.
     """
@@ -65,7 +65,7 @@ def get_att(obsid, mp_dir=None):
     Get the planned ACA attitude from the starcheck database.
 
     :param obsid: obsid
-    :param mp_dir: optional load specifier in the form '/2017/FEB1317/oflsa/'
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'
     :returns: list of RA, Dec, Roll
     """
     obs = get_starcheck_catalog(obsid, mp_dir)['obs']
@@ -330,7 +330,7 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     - timelines_gap: after timelines database start but missing data
 
     :param obsid: obsid
-    :param mp_dir: optional load specifier in the form '/2017/FEB1317/oflsa/'.
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'.
                    By default the as-run loads (via ``get_mp_dir()``) are used.
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
