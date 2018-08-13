@@ -8,7 +8,7 @@ import os
 class MissingDataError(Exception):
     pass
 
-FLIGHT_MICA_ARCHIVE = '/proj/sot/ska/data/mica/archive'
+FLIGHT_MICA_ARCHIVE = os.path.join(os.environ['SKA'], 'data', 'mica', 'archive')
 
 # The MICA_ARCHIVE env. var can be a colon-delimited path, which allows
 # packages using pyyaks context files to see files within multiple trees.
