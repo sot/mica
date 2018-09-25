@@ -25,19 +25,18 @@ FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
 OBS_CACHE = {}
 
 
-def get_starcat(obsid):
+def get_starcat(obsid, mp_dir=None):
     """
     Get the planned star catalog for an obsid.  Uses mica.starcheck database.
 
     :param obsid: obsid
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'
     :returns: astropy.Table of star catalog
     """
-    if obsid not in OBS_CACHE:
-        OBS_CACHE[obsid] = get_starcheck_catalog(obsid)
-    return OBS_CACHE[obsid]['cat']
+    return get_starcheck_catalog(obsid, mp_dir)['cat']
 
 
-def get_dither(obsid):
+def get_dither(obsid, mp_dir=None):
     """
     Get the planned dither for an obsid.  Uses mica.starcheck database.  Note that this
     does not have dither values for ERs and for some early mission observations.
@@ -46,12 +45,11 @@ def get_dither(obsid):
     to 0 and period of -999.
 
     :param obsid: obsid
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'
     :returns: dictionary of planned dither parameters: 'yaw_ampl', 'pitch_ampl',
     'yaw_period', and 'pitch_period'.  amplitudes in arcseconds, periods in seconds.
     """
-    if obsid not in OBS_CACHE:
-        OBS_CACHE[obsid] = get_starcheck_catalog(obsid)
-    obs = OBS_CACHE[obsid]['obs']
+    obs = get_starcheck_catalog(obsid, mp_dir)['obs']
     if obs['dither_state'] is None:
         raise ValueError("Dither parameters not in starcheck database for obsid {}".format(obsid))
     # For observations with no dither, period may be None, so just set to 1.0 to
@@ -62,16 +60,15 @@ def get_dither(obsid):
             'pitch_period': obs['dither_z_period'] if obs['dither_z_amp'] != 0 else -999.0}
 
 
-def get_att(obsid):
+def get_att(obsid, mp_dir=None):
     """
     Get the planned ACA attitude from the starcheck database.
 
     :param obsid: obsid
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'
     :returns: list of RA, Dec, Roll
     """
-    if obsid not in OBS_CACHE:
-        OBS_CACHE[obsid] = get_starcheck_catalog(obsid)
-    obs = OBS_CACHE[obsid]['obs']
+    obs = get_starcheck_catalog(obsid, mp_dir)['obs']
     return [obs['point_ra'],
             obs['point_dec'],
             obs['point_roll']]
@@ -333,12 +330,18 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     - timelines_gap: after timelines database start but missing data
 
     :param obsid: obsid
-    :param mp_dir: mission planning directory (in the form '/2017/FEB1317/oflsa/') to which to limit
-                   searches for the obsid.  If 'None', get_mp_dir() will be used to select appropriate directory.
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'.
+                   By default the as-run loads (via ``get_mp_dir()``) are used.
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
     :returns: dictionary with starcheck content described above
     """
+    # Keep the original kwarg from user for the caching key later
+    mp_dir_kwarg = mp_dir
+
+    if (obsid, mp_dir) in OBS_CACHE:
+        return OBS_CACHE[obsid, mp_dir]
+
     if starcheck_db is None:
         starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
     if timelines_db is None:
@@ -346,9 +349,19 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
     status = None
     if mp_dir is None:
         mp_dir, status, obs_date = get_mp_dir(obsid, starcheck_db=starcheck_db, timelines_db=timelines_db)
+
     # if it is still none, there's nothing to try here
     if mp_dir is None:
         return None
+
+    # mp_dir is in the standard short-form "MAY3018A".  Translate to
+    # '/2018/MAY3018/oflsa/'
+    if re.match(r'[A-Z]{3}\d{4}[A-Z]$', mp_dir):
+        load_version = mp_dir[7].lower()
+        load_year = '20' + mp_dir[5:7]
+        load_name = mp_dir[:7]
+        mp_dir = '/{}/{}/ofls{}/'.format(load_year, load_name, load_version)
+
     db = starcheck_db # shorthand for the rest of the routine
     sc_id = db.fetchone("select id from starcheck_id "
                                   "where dir = '%s'" % mp_dir)
@@ -371,5 +384,9 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
             sc_id, obsid))
     if pred_temp is not None and 'pred_ccd_temp' in pred_temp:
         sc['pred_temp'] = pred_temp['pred_ccd_temp']
-    return sc
 
+    # Cache result for later re-use (use whatever user supplied as mp_dir kwarg)
+    # since mp_dir gets munged in the meantime.
+    OBS_CACHE[obsid, mp_dir_kwarg] = sc
+
+    return sc
