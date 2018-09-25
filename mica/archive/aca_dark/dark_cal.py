@@ -123,7 +123,7 @@ def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=F
     """
     DARK_CAL['id'] = get_dark_cal_id(date, select)
 
-    hdus = fits.open(MICA_FILES['dark_image.fits'].abs)
+    hdus = fits.open(MICA_FILES['dark_image.fits'].abs, memmap=False)
     dark = hdus[0].data
     hdus.close()
 
