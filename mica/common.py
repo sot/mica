@@ -18,4 +18,4 @@ MICA_ARCHIVE_PATH = os.environ.get('MICA_ARCHIVE', FLIGHT_MICA_ARCHIVE)
 
 # Most of the existing subpackages just expect a single path, which should
 # be the test path (first one) if defined that way.
-MICA_ARCHIVE = MICA_ARCHIVE_PATH.split(':')[-1]
+MICA_ARCHIVE = MICA_ARCHIVE_PATH.split(os.pathsep)[-1]
