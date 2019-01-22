@@ -107,7 +107,7 @@ def get_dither(obs_text):
         raise ValueError("No OBSID found for this catalog")
     for oline in targ_search.group(1).split("\n"):
         dither_re = re.match(
-            "Dither:\s(\S+)\s+Y_amp=\s*(\S+)\s+Z_amp=\s*(\S+)\s+Y_period=\s*(\S+)\s+Z_period=\s*(\S+)\s*",
+            "Dither:\s+(\S+)\s+Y_amp=\s*(\S+)\s+Z_amp=\s*(\S+)\s+Y_period=\s*(\S+)\s+Z_period=\s*(\S+)\s*",
             oline)
         if dither_re:
             return dict(dither_state=dither_re.group(1),
@@ -116,7 +116,7 @@ def get_dither(obs_text):
                         dither_y_period=float(dither_re.group(4)),
                         dither_z_period=float(dither_re.group(5)))
         dis_dither_re = re.match(
-            "Dither:\sOFF\s*",
+            "Dither:\s+OFF\s*",
             oline)
         if dis_dither_re:
             return dict(dither_state='OFF',
