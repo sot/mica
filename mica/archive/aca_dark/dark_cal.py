@@ -109,7 +109,8 @@ def get_dark_cal_id(date, select='before'):
 
 
 @DARK_CAL.cache
-def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=False):
+def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=False,
+                              allow_negative=False):
     """
     Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding
     dark_props file.
@@ -118,6 +119,7 @@ def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=F
     :param select: method to select dark cal (before|nearest|after)
     :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
     :param aca_image: return an AcaImage instance
+    :param allow_negative: allow negative values in raw dark map (default=False)
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s, props dict
     """
@@ -146,13 +148,17 @@ def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=F
         t_ccd = props['ccd_temp']
         dark *= dark_temp_scale(t_ccd, t_ccd_ref)
 
+    if not allow_negative:
+        np.clip(dark, a_min=0, a_max=None, out=dark)
+
     if aca_image:
         dark = ACAImage(dark, row0=-512, col0=-512)
 
     return dark, props
 
 
-def get_dark_cal_image(date, select='before', t_ccd_ref=None, aca_image=False):
+def get_dark_cal_image(date, select='before', t_ccd_ref=None, aca_image=False,
+                       allow_negative=False):
     """
     Return the dark calibration image (e-/s) nearest to ``date``.
 
@@ -163,16 +169,18 @@ def get_dark_cal_image(date, select='before', t_ccd_ref=None, aca_image=False):
     :param select: method to select dark cal (before|nearest|after)
     :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
     :param aca_image: return an ACAImage instance instead of ndarray
+    :param allow_negative: allow negative values in raw dark map (default=False)
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s
     """
     dark, props = _get_dark_cal_image_props(date, select=select, t_ccd_ref=t_ccd_ref,
-                                            aca_image=aca_image)
+                                            aca_image=aca_image,
+                                            allow_negative=allow_negative)
     return dark
 
 
 def get_dark_cal_props(date, select='before', include_image=False, t_ccd_ref=None,
-                       aca_image=False):
+                       aca_image=False, allow_negative=False):
     """
     Return a dark calibration properties structure for ``date``
 
@@ -187,11 +195,13 @@ def get_dark_cal_props(date, select='before', include_image=False, t_ccd_ref=Non
     :param include_image: include the dark cal images in output (default=False)
     :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
     :param aca_image: return an ACAImage instance instead of ndarray
+    :param allow_negative: allow negative values in raw dark map (default=False)
 
     :returns: dict of dark calibration properties
     """
     dark, props = _get_dark_cal_image_props(date, select=select, t_ccd_ref=None,
-                                            aca_image=aca_image)
+                                            aca_image=aca_image,
+                                            allow_negative=allow_negative)
 
     if include_image:
         props['image'] = dark
