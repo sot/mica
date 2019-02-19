@@ -1,7 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from setuptools import setup
 
-from mica.version import version
+from mica import __version__
 
 try:
     from testr.setup_helper import cmdclass
@@ -20,7 +20,7 @@ except ImportError:
 
 setup(name='mica',
       description='Mica aspects archive',
-      version=version,
+      version=__version__,
       author='Jean Connelly',
       author_email='jconnelly@cfa.harvard.edu',
       license=license,
