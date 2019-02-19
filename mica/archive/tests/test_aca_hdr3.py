@@ -8,9 +8,10 @@ import numpy as np
 
 from .. import aca_hdr3
 
-HAS_L0_ARCHIVE = os.path.exists(aca_hdr3.aca_l0.CONFIG['data_root'])
+has_l0_2010_archive = os.path.exists(os.path.join(aca_hdr3.aca_l0.CONFIG['data_root'], '2010'))
 
-@pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
+
+@pytest.mark.skipif('not has_l0_2010_archive', reason='Test requires 2010 L0 archive')
 def test_MSIDset():
     """
     Read all available MSIDs into a single MSIDset.  Use the empirically determined
