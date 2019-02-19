@@ -17,7 +17,8 @@ import Ska.DBI
 from Chandra.Time import DateTime
 import Ska.File
 from astropy.table import Table
-import mica.version as mica_version
+import mica
+
 
 # borrowed from telem_archive
 import csv

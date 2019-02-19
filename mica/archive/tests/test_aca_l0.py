@@ -7,10 +7,10 @@ import numpy as np
 from mica.archive import aca_l0, asp_l1
 from Ska.Numpy import interpolate
 
-HAS_L0_ARCHIVE = os.path.exists(aca_l0.CONFIG['data_root'])
+has_l0_2012_archive = os.path.exists(os.path.join(aca_l0.CONFIG['data_root'], '2012'))
 
 
-@pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
+@pytest.mark.skipif('not has_l0_2012_archive', reason='Test requires 2012 L0 archive')
 def test_l0_images_meta():
     """
     Confirm meta values match reference/regress values
@@ -26,8 +26,10 @@ def test_l0_images_meta():
                             'INTEG': np.float32(1.696),
                             'TIME': np.float64(467055637.49031752)}
 
+has_l0_2007_archive = os.path.exists(os.path.join(aca_l0.CONFIG['data_root'], '2007'))
 
-@pytest.mark.skipif('not HAS_L0_ARCHIVE', reason='Test requires L0 archive')
+
+@pytest.mark.skipif('not has_l0_2007_archive', reason='Test requires 2007 L0 archive')
 def test_get_l0_images():
     """
     Do a validation test of get_l0_images:

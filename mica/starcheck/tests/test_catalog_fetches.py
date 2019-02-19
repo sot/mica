@@ -201,14 +201,9 @@ def test_get_starcheck_methods():
 @pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
 def test_get_starcheck_with_mp_dir():
     """Obsid 21082 was scheduled in APR2318A and B, but not C, which was actually
-    run. So 21082 never actually happened in the mission.  Use this to test the
-    functionality of explicitly specifying load name."""
+    run. Use this to test the functionality of explicitly specifying load name."""
 
     starcheck.OBS_CACHE.clear()
-
-    # Not in default as-run schedule.
-    with pytest.raises(ValueError):
-        starcheck.get_starcheck_catalog(21082)
 
     sc = starcheck.get_starcheck_catalog(21082, '/2018/APR2318/oflsa/')
     assert len(sc['cat']) == 12
