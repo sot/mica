@@ -28,15 +28,17 @@ from Ska.engarchive import fetch_sci
 from kadi import events
 
 from Chandra.cmd_states import fetch_states
+import mica
 from mica.archive import obspar
 from mica.catalog import catalog
 from mica.starcheck import starcheck
 from mica.archive import asp_l1
 import mica.vv
 from mica.vv import get_vv, get_vv_files
-from mica.version import version
 from mica.common import MICA_ARCHIVE
 from mica.stats import acq_stats, guide_stats
+
+version = mica.__version__
 
 # Ignore known numexpr.necompiler and table.conditions warning
 warnings.filterwarnings(

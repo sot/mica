@@ -22,7 +22,6 @@ import Ska.File
 from chandra_aca.aca_image import ACAImage
 # import kadi later in obsid_times
 
-import mica.version as mica_version
 from mica.common import MICA_ARCHIVE, MissingDataError
 
 logger = logging.getLogger('aca0 fetch')
@@ -753,10 +752,6 @@ class Updater(object):
         return fetched_files, ingest_dates
 
     def _insert_files(self, files):
-        if (self.data_root.startswith('/data/archive')
-                and not mica_version.release):
-            raise ValueError(
-                "non-release code attempted to write to official archive")
         count_inserted = 0
         with Ska.DBI.DBI(**self.db) as db:
             for i, f in enumerate(files):
