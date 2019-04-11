@@ -121,6 +121,9 @@ Links: <br>
 {% if vv is not none %}
 <LI><A target="_blank" HREF="vv.html">MICA VV</A>
 {% endif %}
+{% if links['cen_dash'] is not none %}
+<LI><A target="_blank" HREF="{{ links['cen_dash']['link'] }}">{{links['cen_dash']['label']}}</A>
+{% endif %}
 {% if links['fot_daily'] is not none %}
 <LI><A target="_blank" HREF="{{ links['fot_daily']['link']}}">{{links['fot_daily']['label']}}</A></LI>
 {% endif %}
