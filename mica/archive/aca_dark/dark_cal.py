@@ -8,8 +8,8 @@ import six
 from six.moves import zip
 
 import numpy as np
-from astropy.io import fits
-from astropy.table import Table, Column
+from astropy.io import fits, ascii
+from astropy.table import Column
 import pyyaks.context
 from Chandra.Time import DateTime
 from chandra_aca.aca_image import ACAImage
@@ -236,9 +236,22 @@ def get_dark_cal_props_table(start=None, stop=None, include_image=False, as_tabl
     props = [get_dark_cal_props(dark_id, include_image=include_image) for dark_id in dark_dirs]
 
     if as_table:
+        # Get rid of a non-scalar data structures and collect col names
+        names = []
         for prop in props:
-            del prop['replicas']
-        table_props = Table(props)
+            for key, val in prop.copy().items():
+                if isinstance(val, (list, tuple, dict)):
+                    del prop[key]
+                elif key not in names:
+                    names.append(key)
+
+        lines = []
+        lines.append(','.join(names))
+        for prop in props:
+            vals = [str(prop.get(name, '')) for name in names]
+            lines.append(','.join(vals))
+        table_props = ascii.read(lines, format='csv')
+
         if include_image:
             x = np.vstack([prop['image'][np.newaxis, :] for prop in props])
             images = Column(x)
