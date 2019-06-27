@@ -13,7 +13,7 @@ from Chandra.cmd_states import get_cmd_states
 import Ska.Shell
 import Ska.DBI
 
-from mica.starcheck.starcheck_parser import read_starcheck
+from starcheck.parser import read_starcheck
 from mica.common import MICA_ARCHIVE
 
 logger = logging.getLogger('starcheck ingest')
