@@ -78,3 +78,29 @@ def test_get_dark_cal_props(aca_image, allow_negative):
 def test_get_dark_cal_props_table():
     props = dark_cal.get_dark_cal_props_table('2007:001', '2008:001')
     assert np.allclose(props['eb'], [24.6, 25.89, 51.13, 1.9])
+    assert props.colnames == ['ccd_temp', 'date', 'dec', 'dur', 'eb', 'el', 'id', 'l_l0',
+                              'ra', 'start', 'stop', 'sun_el', 'zodib']
+
+
+@pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+def test_get_dark_cal_props_table_acdc():
+    """Just acdc dark cals, giving a non-masked result
+    """
+    props = dark_cal.get_dark_cal_props_table('2019:150', '2019:160')
+    assert not hasattr(props['t_ccd'], 'mask')
+    assert props.colnames == ['date', 't_ccd', 'n_ccd_img', 'ccd_temp', 'datestart',
+                              'datestop', 'filename']
+
+
+@pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+def test_get_dark_cal_props_table_mixed():
+    """Mix of "classic" dark cals and acdc dark cals, giving a masked table
+    """
+    props = dark_cal.get_dark_cal_props_table('2019:001', '2019:160')
+    assert np.allclose(props['eb'], [1.82, -49.53, -100])
+    assert np.all(props['eb'].mask == [False, False, True])
+    assert np.allclose(props['t_ccd'], [-100, -100, -11.086])
+    assert np.all(props['t_ccd'].mask == [True, True, False])
+    assert props.colnames == ['ccd_temp', 'date', 'dec', 'dur', 'eb', 'el', 'id', 'l_l0',
+                              'ra', 'start', 'stop', 'sun_el', 'zodib', 't_ccd',
+                              'n_ccd_img', 'datestart', 'datestop', 'filename']
