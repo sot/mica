@@ -21,15 +21,6 @@
 .. automodule:: mica.archive.aca_dark.dark_model
     :members:
 
-.. _api_update_aca_dark:
-
-:mod:`mica.archive.aca_dark.update_aca_dark`
---------------------------------------------
-
-.. automodule:: mica.archive.aca_dark.update_aca_dark
-    :members:
-
-
 :mod:`mica.archive.aca_hdr3`
 ============================
 
