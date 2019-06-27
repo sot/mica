@@ -5,11 +5,13 @@ Basic functionality and regression tests for ACA dark cal module.
 import os
 import numpy as np
 import pytest
+import six
 
 from ..aca_dark import dark_cal
 from chandra_aca.aca_image import ACAImage
 
 HAS_DARK_ARCHIVE = os.path.exists(dark_cal.MICA_FILES['dark_cals_dir'].abs)
+IS_PY3 = six.PY3
 
 
 @pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
@@ -75,6 +77,7 @@ def test_get_dark_cal_props(aca_image, allow_negative):
 
 
 @pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+@pytest.mark.skipif('not IS_PY3', reason='Test built and tested only PY3')
 def test_get_dark_cal_props_table():
     props = dark_cal.get_dark_cal_props_table('2007:001', '2008:001')
     assert np.allclose(props['eb'], [24.6, 25.89, 51.13, 1.9])
@@ -83,6 +86,7 @@ def test_get_dark_cal_props_table():
 
 
 @pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+@pytest.mark.skipif('not IS_PY3', reason='Test built and tested only PY3')
 def test_get_dark_cal_props_table_acdc():
     """Just acdc dark cals, giving a non-masked result
     """
@@ -93,6 +97,7 @@ def test_get_dark_cal_props_table_acdc():
 
 
 @pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+@pytest.mark.skipif('not IS_PY3', reason='Test built and tested only PY3')
 def test_get_dark_cal_props_table_mixed():
     """Mix of "classic" dark cals and acdc dark cals, giving a masked table
     """
