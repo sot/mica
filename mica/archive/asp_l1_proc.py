@@ -9,6 +9,7 @@ from astropy.io import fits
 import Ska.DBI
 from glob import glob
 import gzip
+from pathlib import Path
 
 from mica.common import MICA_ARCHIVE
 
@@ -37,8 +38,8 @@ def update(obsids, config=None):
             os.makedirs(config['data_root'])
         logger.info("creating aspect_1_proc db from {}".format(
             config['sql_def']))
-        db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', config['sql_def'])
-        db_init_cmds = file(db_sql).read()
+        db_sql = Path(__file__).parent / config['sql_def']
+        db_init_cmds = open(db_sql).read()
         proc_db = dict(dbi='sqlite', server=proc_db_file)
         proc_db.execute(db_init_cmds)
     else:

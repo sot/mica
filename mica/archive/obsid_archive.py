@@ -11,6 +11,7 @@ import logging
 import shutil
 import numpy as np
 import astropy.io.fits as pyfits
+from pathlib import Path
 
 import Ska.arc5gl
 import Ska.DBI
@@ -140,9 +141,8 @@ class ObsArchive:
                 os.makedirs(config['data_root'])
             self.logger.info("creating archfiles db from %s"
                              % config['sql_def'])
-            db_sql = os.path.join(os.environ['SKA_DATA'],
-                                  'mica', config['sql_def'])
-            db_init_cmds = file(db_sql).read()
+            db_sql = Path(__file__).parent / config['sql_def']
+            db_init_cmds = open(db_sql).read()
             with Ska.DBI.DBI(dbi='sqlite', server=db_file,
                              autocommit=False) as db:
                 db.execute(db_init_cmds, commit=True)
