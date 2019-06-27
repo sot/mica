@@ -11,7 +11,7 @@ DOC = doc/_build/html
 
 SHARE = scripts/update_aca_l0.py scripts/update_asp_l1.py \
 	scripts/update_obspar.py scripts/update_vv.py scripts/update_starchecks.py \
-	scripts/update_reports.py scripts/update_aca_dark.py \
+	scripts/update_reports.py \
 	scripts/update_acq_stats.py scripts/update_guide_stats.py
 DATA = task_schedule.cfg \
 	mica/archive/obspar_def.sql mica/archive/archfiles_asp_l1_def.sql \
