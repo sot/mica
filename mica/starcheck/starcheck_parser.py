@@ -237,12 +237,13 @@ def get_catalog(obs_text):
 
 
 def get_warnings(obs_text):
+    warn_types = "(CRITICAL|WARNING|CAUTION|INFO)"
     warnlines = [t for t in obs_text.split("\n")
-                 if re.compile("^\>\>\s+(WARNING|INFO).*").match(t)]
+                 if re.compile("^\>\>\s+{}.*".format(warn_types)).match(t)]
     warn = []
     for wline in warnlines:
         form0 = re.match(
-            '^\>\>\s+(WARNING|INFO)\s*:\s+(.+)\.\s+(\[\s?(\d+)\]\-\[\s?(\d+)\]).?\s*(.*)',
+            '^\>\>\s+{}\s*:\s+(.+)\.\s+(\[\s?(\d+)\]\-\[\s?(\d+)\]).?\s*(.*)'.format(warn_types),
             wline)
         if form0:
             # append two warnings for this format
@@ -253,7 +254,7 @@ def get_warnings(obs_text):
                              idx=form0.group(5),
                              warning="%s -> %s" % (form0.group(3), form0.group(6))))
             continue
-        form1 = re.match('.*(WARNING|INFO).*\[\s?(\d+)\]([\w\s]+)\.(.*)$',
+        form1 = re.match('.*{}.*\[\s?(\d+)\]([\w\s]+)\.(.*)$'.format(warn_types),
                          wline)
         if form1:
             warn.append(dict(warning_type=form1.group(3),
@@ -261,7 +262,7 @@ def get_warnings(obs_text):
                              warning=form1.group(4)))
             continue
         form2 = re.match(
-            '^\>\>\s+(WARNING|INFO)\s*:\s+(.+)\.\s+(?:\[ |\[)(\d+)\].?\s*(.*)',
+            '^\>\>\s+{}\s*:\s+(.+)\.\s+(?:\[ |\[)(\d+)\].?\s*(.*)'.format(warn_types),
             wline)
         if form2:
             warn.append(dict(warning_type=form2.group(2),
@@ -269,7 +270,7 @@ def get_warnings(obs_text):
                              warning=form2.group(4)))
             continue
         form3 = re.match(
-            '^\>\>\s+(WARNING|INFO)\s*:\s+(.+)',
+            '^\>\>\s+{}\s*:\s+(.+)'.format(warn_types),
             wline)
         if form3:
             warn.append(dict(warning_type=None,
