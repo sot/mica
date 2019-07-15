@@ -5,6 +5,8 @@ import logging
 import argparse
 from itertools import count
 from operator import itemgetter
+from pathlib import Path
+
 import numpy as np
 
 from six.moves import zip
@@ -13,7 +15,7 @@ from Chandra.cmd_states import get_cmd_states
 import Ska.Shell
 import Ska.DBI
 
-from mica.starcheck.starcheck_parser import read_starcheck
+from starcheck.parser import read_starcheck
 from mica.common import MICA_ARCHIVE
 
 logger = logging.getLogger('starcheck ingest')
@@ -145,7 +147,7 @@ def update(config=None):
             or os.stat(config['starcheck_db']['server']).st_size == 0):
         if not os.path.exists(os.path.dirname(config['starcheck_db']['server'])):
             os.makedirs(os.path.dirname(config['starcheck_db']['server']))
-        db_sql = os.path.join('mica', 'starcheck', FILES['sql_def'])
+        db_sql = Path(__file__).parent / FILES['sql_def']
         db_init_cmds = open(db_sql).read()
         db = Ska.DBI.DBI(dbi='sqlite', server=config['starcheck_db']['server'])
         db.execute(db_init_cmds)

@@ -19,6 +19,7 @@ import tables
 import tables3_api
 from astropy.table import Table
 from six.moves import zip
+from pathlib import Path
 
 from Ska.Shell import bash
 import agasc
@@ -816,7 +817,7 @@ def save_state_in_db(obsid, notes):
         or os.stat(REPORT_SERVER).st_size == 0):
         if not os.path.exists(os.path.dirname(REPORT_SERVER)):
             os.makedirs(os.path.dirname(REPORT_SERVER))
-        db_sql = os.path.join(os.environ['SKA_DATA'], 'mica', FILES['sql_def'])
+        db_sql = Path(__file__).parent / FILES['sql_def']
         db_init_cmds = open(db_sql).read()
         db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
         db.execute(db_init_cmds)

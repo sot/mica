@@ -12,6 +12,7 @@ import argparse
 import collections
 import tables
 from itertools import count
+from pathlib import Path
 
 import six
 from six.moves import zip
@@ -779,9 +780,8 @@ class Updater(object):
         if not os.path.exists(archdb) or os.stat(archdb).st_size == 0:
             logger.info("creating archfiles db from %s"
                         % self.sql_def)
-            db_sql = os.path.join(os.environ['SKA_DATA'],
-                                  'mica', self.sql_def)
-            db_init_cmds = file(db_sql).read()
+            db_sql = Path(__file__).parent / self.sql_def
+            db_init_cmds = open(db_sql).read()
             with Ska.DBI.DBI(**self.db) as db:
                 db.execute(db_init_cmds, commit=True)
         if self.start:

@@ -1,5 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+import sys
+import os
 from setuptools import setup
+from pathlib import Path
 
 from mica import __version__
 
@@ -18,6 +21,15 @@ try:
 except ImportError:
     cmdclass = {}
 
+# Borrowed from acis_taco setup.py.  This will install all of the following
+# into sys.prefix/share/mica/ via the data_files directive.
+if "--user" not in sys.argv:
+    share_path = os.path.join(sys.prefix, "share", "mica")
+    scripts = [str(script) for script in Path('scripts').glob('update_*.py')]
+    data_files = [(share_path, scripts + ['task_schedule.cfg'])]
+else:
+    data_files = None
+
 setup(name='mica',
       description='Mica aspects archive',
       version=__version__,
@@ -25,12 +37,17 @@ setup(name='mica',
       author_email='jconnelly@cfa.harvard.edu',
       license=license,
       zip_safe=False,
+      include_package_data=True,
+      data_files=data_files,
       packages=['mica', 'mica.archive', 'mica.archive.tests', 'mica.archive.aca_dark',
                 'mica.vv', 'mica.vv.tests',
                 'mica.starcheck', 'mica.starcheck.tests', 'mica.catalog', 'mica.report', 'mica.report.tests', 'mica.web',
                 'mica.stats', 'mica.stats.tests'],
       package_data={'mica.web': ['templates/*/*.html', 'templates/*.html'],
-                    'mica.report': ['templates/*.html']},
+                    'mica.report': ['templates/*.html', '*.sql'],
+                    'mica.archive': ['*.sql'],
+                    'mica.starcheck': ['*.sql']},
+
       tests_require=['pytest'],
       cmdclass=cmdclass,
       )

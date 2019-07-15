@@ -22,9 +22,9 @@ for t in ['obspar', 'asp1']:
         if lmatch:
             default_ver = int(lmatch.group(2))
         else:
-            print "could not find default for %d" % obsid
+            print("could not find default for %d" % obsid)
             continue
-        print "updating %d default %d" % (obsid, default_ver)
+        print("updating %d default %d" % (obsid, default_ver))
         db.execute("""UPDATE archfiles SET isdefault = 1                           
                   WHERE obsid = %d and revision = %d"""                        
                    % (obsid, default_ver))                                         
