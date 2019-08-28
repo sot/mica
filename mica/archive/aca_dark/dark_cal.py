@@ -21,11 +21,8 @@ from . import file_defs
 
 DARK_CAL = pyyaks.context.ContextDict('dark_cal')
 
-SKA_FILES = pyyaks.context.ContextDict('ska_files', basedir='/proj/sot/ska')
-SKA_FILES.update(file_defs.SKA_FILES)
-
 MICA_FILES = pyyaks.context.ContextDict('update_mica_files',
-                                        basedir=os.path.join(MICA_ARCHIVE_PATH))
+                                        basedir=MICA_ARCHIVE_PATH)
 MICA_FILES.update(file_defs.MICA_FILES)
 
 
