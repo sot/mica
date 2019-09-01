@@ -9,6 +9,8 @@ and star catalog checking.
 Currently this script only has the capability to add a bad star to the
 bad star table.  It might end up including functionality to automatically
 update another table with effective mags based on acq / guide history.
+
+For process instructions see: https://github.com/sot/mica/wiki/AGASC-supplement
 """
 import os
 import argparse
@@ -55,13 +57,7 @@ def main(args=None):
     logger = pyyaks.logger.get_logger(name='mica_update_agasc_supplement', level=loglevel,
                                       format="%(message)s")
 
-    # If --data-root is supplied then set the fetch msid_files basedir via ENG_ARCHIVE
-    # prior to importing fetch.  This ensures that ``content`` is consistent with
-    # the destination archive.
-    if opt.data_root is None:
-        data_root = SKA / 'data' / 'agasc'
-    else:
-        data_root = Path(opt.data_root)
+    data_root = Path(opt.data_root)
     suppl_file = data_root / 'agasc_supplement.h5'
     if suppl_file.exists():
         logger.info(f'Updating agasc_supplement at {suppl_file}')
