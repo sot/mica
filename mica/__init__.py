@@ -1,5 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-__version__ = '4.18'
+__version__ = '4.19'
 
 
 def test(*args, **kwargs):
