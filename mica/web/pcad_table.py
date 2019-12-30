@@ -1,5 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from kadi import events
+
+import kadi.events.query as events
+# This import style (instead of "from kadi import events") is required due to a
+# conflict with how the django app is initialized and standalone usage since
+# django 2+. Basically `events/__init__.py` in a django app does not get the
+# auto-generated query references because DJANGO_SETTINGS_MODULE is set.
+
 import numpy as np
 from Chandra.Time import DateTime
 from Ska.engarchive import fetch
