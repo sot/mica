@@ -4,8 +4,6 @@ import os
 from setuptools import setup
 from pathlib import Path
 
-from mica import __version__
-
 try:
     from testr.setup_helper import cmdclass
 except ImportError:
@@ -32,7 +30,8 @@ else:
 
 setup(name='mica',
       description='Mica aspects archive',
-      version=__version__,
+      use_scm_version=True,
+      setup_requires=['setuptools_scm', 'setuptools_scm_git_archive'],
       author='Jean Connelly',
       author_email='jconnelly@cfa.harvard.edu',
       license=license,
