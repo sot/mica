@@ -3,4 +3,4 @@
 doc/_build
 *.pyc
 *~
-
+*.egg-info

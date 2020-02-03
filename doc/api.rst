@@ -13,14 +13,6 @@
 .. automodule:: mica.archive.aca_dark.dark_cal
     :members:
 
-.. _api_dark_model:
-
-:mod:`mica.archive.aca_dark.dark_model`
-----------------------------------------
-
-.. automodule:: mica.archive.aca_dark.dark_model
-    :members:
-
 :mod:`mica.archive.aca_hdr3`
 ============================
 
