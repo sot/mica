@@ -1,4 +1,6 @@
 /archive
 /build
 doc/_build
+*.pyc
+*~
 

@@ -5,8 +5,10 @@ import numpy as np
 import pytest
 
 from .. import guide_stats
+from .. import update_guide_stats
 
-HAS_GS_TABLE = os.path.exists(guide_stats.TABLE_FILE)
+HAS_GS_TABLE = os.path.exists(update_guide_stats.TABLE_FILE)
+
 
 @pytest.mark.skipif('not HAS_GS_TABLE', reason='Test requires guide stats table')
 def test_read_stats():
@@ -16,15 +18,17 @@ def test_read_stats():
     np.isclose(slot['dz_std'], 0.23807435722775061)
 
 HAS_OBSPAR_ARCHIVE = os.path.exists(
-        guide_stats.mica.archive.obspar.CONFIG['data_root'])
+        update_guide_stats.mica.archive.obspar.CONFIG['data_root'])
+
 
 @pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
 def test_calc_stats():
-    guide_stats.calc_stats(17210)
+    update_guide_stats.calc_stats(17210)
+
 
 @pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
 def test_calc_stats_with_bright_trans():
-    s = guide_stats.calc_stats(17472)
+    s = update_guide_stats.calc_stats(17472)
     # Assert that the std on the slot 7 residuals are reasonable
     # even in this obsid that had a transition to BRIT
     assert s[1][7]['dr_std'] < 1
@@ -40,9 +44,9 @@ def test_make_gui_stats():
     # make a new table if the supplied file doesn't exist
     fh, fn = tempfile.mkstemp(suffix='.h5')
     os.unlink(fn)
-    guide_stats.TABLE_FILE = fn
+    update_guide_stats.TABLE_FILE = fn
     obsid = 20001
-    obsid_info, gui, star_info, catalog, temp = guide_stats.calc_stats(obsid)
-    t = guide_stats.table_gui_stats(obsid_info, gui, star_info, catalog, temp)
-    guide_stats._save_gui_stats(t)
+    obsid_info, gui, star_info, catalog, temp = update_guide_stats.calc_stats(obsid)
+    t = update_guide_stats.table_gui_stats(obsid_info, gui, star_info, catalog, temp)
+    update_guide_stats._save_gui_stats(t)
     os.unlink(fn)
