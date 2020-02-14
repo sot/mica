@@ -52,14 +52,16 @@ def parse_obspar(file):
     """
     Parse obspar.
     """
-# borrowed from telem_archive
+    # borrowed from telem_archive
     convert = {'i': int,
                'r': float,
                's': str}
     try:
-        lines = gzip.open(file, 'rt').readlines()
+        lines = gzip.open(file, 'rb').readlines()
     except IOError:
         lines = open(file).readlines()
+    # Filter any really weird characters (version 1 obsid 17575 and a few others)
+    lines = [line.decode('utf8', 'ignore') for line in lines]
     obs_read = csv.DictReader(lines,
                               fieldnames=('name', 'type', 'hidden', 'value',
                                           'def1', 'def2', 'descr'),
@@ -146,7 +148,7 @@ class Obi(object):
 
     def save_plots_and_resid(self):
         self._save_info_json()
-        self._save_info_pkl()
+        #self._save_info_pkl()
         #for slot in self.all_slot_data:
         #    self.plot_slot(slot, save=True, close=True)
         for slot in self.all_slot_data:
@@ -354,21 +356,21 @@ class Obi(object):
              for slot_str in save['slots'] if 'n_pts' in save['slots'][slot_str]],
             dtype=self.table.dtype)
 
-        have_obsid_coord = self.table.getWhereList('(obsid == %d)'
+        have_obsid_coord = self.table.get_where_list('(obsid == %d)'
                                                    % (save['obsid']),
                                                    sort=True)
         # if there are previous records for this obsid
         if len(have_obsid_coord):
             logger.info("obsid %d is in table" % save['obsid'])
-            obsid_rec = self.table.readCoordinates(have_obsid_coord)
+            obsid_rec = self.table.read_coordinates(have_obsid_coord)
             # if the current entry is default, mark other entries as
             # not-default
             if self.isdefault:
                 obsid_rec['isdefault'] = 0
-                self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
+                self.table.modify_coordinates(have_obsid_coord, obsid_rec)
             # if we already have the revision, update in place
             if np.any(obsid_rec['revision'] == save['revision']):
-                rev_coord = self.table.getWhereList(
+                rev_coord = self.table.get_where_list(
                     '(obsid == %d) & (revision == %d)'
                     % (save['obsid'], save['revision']),
                     sort=True)
@@ -377,7 +379,7 @@ class Obi(object):
                         "Could not update; different number of slots")
                 logger.info("updating obsid %d rev %d in place"
                        % (save['obsid'], save['revision']))
-                self.table.modifyCoordinates(rev_coord, save_rec)
+                self.table.modify_coordinates(rev_coord, save_rec)
             else:
                 self.table.append(save_rec)
         else:
