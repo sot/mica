@@ -913,6 +913,8 @@ class AspectInterval(object):
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
         # don't filter for only good stars at this point
         prop = Table.read(gsfile)
+        for col in prop.colnames:
+            prop.rename_column(col, col.lower())
         info = []
         hdulist = pyfits.open(os.path.join(datadir, gsfile))
         header = hdulist[1].header
@@ -970,6 +972,18 @@ class AspectInterval(object):
         asol_file = glob(
             os.path.join(datadir, "%s_asol1.fits*" % aiid))[0]
         asol = Table.read(asol_file)
+        # Add logic to handle column names in DS 10.8.3 aspect solutions
+        if 'ady' in asol.colnames:
+            colmap = {'ady': 'dy',
+                      'adz': 'dz',
+                      'adtheta': 'dtheta',
+                      'ra_raw': 'ra',
+                      'dec_raw': 'dec',
+                      'roll_raw': 'roll',
+                      'q_att_raw': 'q_att'}
+            for col in colmap:
+                asol.remove_column(colmap[col])
+                asol.rename_column(col, colmap[col])
         # Add code to handle first processing of 16091 with
         # non-confirming asol file
         if ('dtheta' not in asol.dtype.names
