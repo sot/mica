@@ -59,7 +59,7 @@ def parse_obspar(file):
     try:
         lines = gzip.open(file, 'rb').readlines()
     except IOError:
-        lines = open(file).readlines()
+        lines = open(file, 'rb').readlines()
     # Filter any really weird characters (version 1 obsid 17575 and a few others)
     lines = [line.decode('utf8', 'ignore') for line in lines]
     obs_read = csv.DictReader(lines,
@@ -286,7 +286,7 @@ class Obi(object):
     def _save_info_pkl(self, file=None):
         if file is None:
             file = os.path.join(self.tempdir, 'vv_report.pkl')
-        pfile = open(file, 'w')
+        pfile = open(file, 'wb')
         pickle.dump(self.info(), pfile)
         pfile.close()
 
