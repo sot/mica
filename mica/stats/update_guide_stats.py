@@ -451,7 +451,14 @@ def table_gui_stats(obsid_info, gui_stats, star_info, catalog, temp):
     logger.info("arranging stats into tabular data")
     cols = (GUIDE_COLS['obs'] + GUIDE_COLS['cat'] + GUIDE_COLS['stat']
             + GUIDE_COLS['agasc'] + GUIDE_COLS['temp'] + GUIDE_COLS['bad'])
+
+    # Initialize all values to zero
     table = Table(np.zeros((1, 8), dtype=cols).flatten())
+    # Set all columns with mag info to 99.0 initial value instead of zero
+    for col in table.dtype.names:
+        if 'mag' in col:
+            table[col] = 99.0
+
     for col in np.dtype(GUIDE_COLS['obs']).names:
         if col in obsid_info:
             table[col][:] = obsid_info[col]
