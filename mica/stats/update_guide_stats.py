@@ -6,8 +6,6 @@ import sys
 import argparse
 import numpy as np
 import tables
-import tables3_api
-from scipy.stats import scoreatpercentile
 from astropy.table import Table
 import logging
 import warnings
@@ -78,6 +76,11 @@ GUIDE_COLS = {
         ('aoacmag_min', 'float'),
         ('aoacmag_mean', 'float'),
         ('aoacmag_max', 'float'),
+        ('aoacmag_5th', 'float'),
+        ('aoacmag_16th', 'float'),
+        ('aoacmag_50th', 'float'),
+        ('aoacmag_84th', 'float'),
+        ('aoacmag_95th', 'float'),
         ('aoacmag_std', 'float'),
         ('aoacyan_mean', 'float'),
         ('aoaczan_mean', 'float'),
@@ -315,8 +318,8 @@ def calc_gui_stats(data, star_info):
         stats['star_tracked'] = np.any(dr < 5.0)
         stats['spoiler_tracked'] = np.any(dr > 5.0)
         deltas = {'dy': dy, 'dz': dz, 'dr': dr}
-        stats['dr_5th'] = scoreatpercentile(deltas['dr'], 5)
-        stats['dr_95th'] = scoreatpercentile(deltas['dr'], 95)
+        stats['dr_5th'] = np.percentile(deltas['dr'], 5)
+        stats['dr_95th'] = np.percentile(deltas['dr'], 95)
         for ax in deltas:
             stats['{}_mean'.format(ax)] = np.mean(deltas[ax])
             stats['{}_std'.format(ax)] = np.std(deltas[ax])
@@ -327,7 +330,8 @@ def calc_gui_stats(data, star_info):
         stats['aoacmag_mean'] = np.mean(mag)
         stats['aoacmag_max'] = np.max(mag)
         stats['aoacmag_std'] = np.std(mag)
-
+        for perc in [5, 16, 50, 84, 95]:
+            stats[f'aoacmag_{perc}th'] = np.percentile(mag, perc)
         stats['aoacyan_mean'] = np.mean(kal['AOACYAN{}'.format(slot)])
         stats['aoaczan_mean'] = np.mean(kal['AOACZAN{}'.format(slot)])
 
@@ -456,7 +460,7 @@ def table_gui_stats(obsid_info, gui_stats, star_info, catalog, temp):
     table = Table(np.zeros((1, 8), dtype=cols).flatten())
     # Set all columns with mag info to 99.0 initial value instead of zero
     for col in table.dtype.names:
-        if 'mag' in col:
+        if 'aoacmag' in col:
             table[col] = 99.0
 
     for col in np.dtype(GUIDE_COLS['obs']).names:
