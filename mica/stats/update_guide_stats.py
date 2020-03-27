@@ -135,12 +135,6 @@ GUIDE_COLS = {
     }
 
 
-SKA = os.environ['SKA']
-DATA = os.path.join(SKA, 'data', 'guide_stats')
-TABLE_FILE = os.path.join(DATA, 'guide_stats.h5')
-SKIPPED_FILE = os.path.join(DATA, 'skipped.dat')
-
-
 def get_options():
     parser = argparse.ArgumentParser(
         description="Update guide stats table")
@@ -149,6 +143,12 @@ def get_options():
                         help="check for missing observations in table and reprocess")
     parser.add_argument("--obsid",
                         help="specific obsid to process.  Not required in regular update mode")
+    parser.add_argument("--start",
+                        help="start time for processing")
+    parser.add_argument("--stop",
+                        help="stop time for processing")
+    parser.add_argument("--datafile",
+                        default="gs.h5")
     opt = parser.parse_args()
     return opt
 
@@ -344,12 +344,12 @@ def calc_gui_stats(data, star_info):
     return gui_stats
 
 
-def _get_obsids_to_update(check_missing=False):
+def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop=None):
     if check_missing:
-        last_tstart = '2007:271'
+        last_tstart = start if start is not None else '2007:271'
         kadi_obsids = events.obsids.filter(start=last_tstart)
         try:
-            h5 = tables.open_file(TABLE_FILE, 'r')
+            h5 = tables.open_file(table_file, 'r')
             tbl = h5.root.data[:]
             h5.close()
         except:
@@ -358,13 +358,13 @@ def _get_obsids_to_update(check_missing=False):
         obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl['obsid']]
     else:
         try:
-            h5 = tables.open_file(TABLE_FILE, 'r')
+            h5 = tables.open_file(table_file, 'r')
             tbl = h5.get_node('/', 'data')
             last_tstart = tbl.cols.kalman_tstart[tbl.colindexes['kalman_tstart'][-1]]
             h5.close()
         except:
-            last_tstart = '2002:012'
-        kadi_obsids = events.obsids.filter(start=last_tstart)
+            last_tstart = start if start is not None else  '2002:012'
+        kadi_obsids = events.obsids.filter(start=last_tstart, stop=stop)
         # Skip the first obsid (as we already have it in the table)
         obsids = [o.obsid for o in kadi_obsids][1:]
     return obsids
@@ -404,7 +404,7 @@ def calc_stats(obsid):
     if not manvr or not dwell:
         raise ValueError("No manvr or dwell for {}".format(obsid))
     if not manvr.get_next():
-        raise ValueError("No *next* manvr so can't calculate dwell".format(obsid))
+        raise ValueError("No *next* manvr so can't calculate dwell")
     if not manvr.guide_start:
         raise ValueError("No guide transition for {}".format(obsid))
     if not manvr.kalman_start:
@@ -413,7 +413,6 @@ def calc_stats(obsid):
 
     logger.info("Found obsid manvr at {}".format(manvr.start))
     logger.info("Found dwell at {}".format(dwell.start))
-    guide_start = manvr.guide_start
     starcheck = get_starcheck_catalog_at_date(manvr.guide_start)
     if starcheck is None or 'cat' not in starcheck or not len(starcheck['cat']):
         raise ValueError('No starcheck catalog found for {}'.format(
@@ -497,13 +496,15 @@ def table_gui_stats(obsid_info, gui_stats, star_info, catalog, temp):
     return table
 
 
-def _save_gui_stats(t):
-    if not os.path.exists(TABLE_FILE):
+def _save_gui_stats(t, table_file=None):
+    if table_file is None:
+        return
+    if not os.path.exists(table_file):
         cols = (GUIDE_COLS['obs'] + GUIDE_COLS['cat'] + GUIDE_COLS['stat']
                 + GUIDE_COLS['agasc'] + GUIDE_COLS['temp'] + GUIDE_COLS['bad'])
         desc, byteorder = tables.descr_from_dtype(np.dtype(cols))
         filters = tables.Filters(complevel=5, complib='zlib')
-        h5 = tables.open_file(TABLE_FILE, 'a')
+        h5 = tables.open_file(table_file, 'a')
         tbl = h5.create_table('/', 'data', desc, filters=filters,
                              expectedrows=1e6)
         tbl.cols.obsid.create_index()
@@ -511,7 +512,7 @@ def _save_gui_stats(t):
         tbl.cols.agasc_id.create_index()
         h5.close()
         del h5
-    h5 = tables.open_file(TABLE_FILE, 'a')
+    h5 = tables.open_file(table_file, 'a')
     tbl = h5.get_node('/', 'data')
     have_obsid_coord = tbl.get_where_list(
         '(obsid == {}) & (obi == {})'.format(
@@ -540,23 +541,25 @@ def update(opt):
     if opt.obsid:
         obsids = [int(opt.obsid)]
     else:
-        obsids = _get_obsids_to_update(check_missing=opt.check_missing)
+        obsids = _get_obsids_to_update(table_file=opt.datafile, check_missing=opt.check_missing,
+                                        start=opt.start, stop=opt.stop)
     for obsid in obsids:
-        t = time.localtime()
 
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, gui_stats, star_info, guide_catalog, temp = calc_stats(obsid)
         except Exception as e:
-            open(SKIPPED_FILE, 'a').write("{}: {}\n".format(obsid, e))
+            open(os.path.splitext(opt.datafile)[0] + '_skipped.dat', 'a').write(
+                "{}: {}\n".format(obsid, e))
             logger.info("Skipping obsid {}: {}".format(obsid, e))
             continue
         if not len(gui_stats):
-            open(SKIPPED_FILE, 'a').write("{}: No stats\n".format(obsid))
+            open(os.path.splitext(opt.datafile)[0] + '_skipped.dat', 'a').write(
+                "{}: No stats\n".format(obsid))
             logger.info("Skipping obsid {}, no stats determined".format(obsid))
             continue
         t = table_gui_stats(obsid_info, gui_stats, star_info, guide_catalog, temp)
-        _save_gui_stats(t)
+        _save_gui_stats(t, opt.datafile)
 
 
 def main():
