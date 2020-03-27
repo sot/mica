@@ -33,7 +33,7 @@ logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
-STAT_VERSION = 0.5
+STAT_VERSION = 0.6
 
 GUIDE_COLS = {
     'obs': [
