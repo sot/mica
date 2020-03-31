@@ -60,13 +60,6 @@ for the invidivual dark replicas (typically 5).  These in turn use ACA hdr3 diag
 telemetry for high-resolution temperature readouts which are available before and after
 (but not during) each replica.
 
-Dark current modeling
-^^^^^^^^^^^^^^^^^^^^^^^
-
-This module will contain functions related to analytical models of the dark current
-as well as derived predictions of ACA guide and acquisition performance based on
-correlations with the warm pixel fraction.  This is still in work, see :ref:`api_dark_model`.
-
 Processing
 ^^^^^^^^^^^^^^
 
