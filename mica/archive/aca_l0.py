@@ -460,12 +460,14 @@ class Updater(object):
 
     def _get_missing_archive_files(self, start, only_new=False):
         ingested_files = self._get_arc_ingested_files()
+        ingest_dates = [file['ingest_date'].decode() for file in
+                        ingested_files]
         startdate = DateTime(start).date
         logger.info("Checking for missing files from %s" %
                     startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
-        for idate, backcnt in zip(ingested_files[::-1]['ingest_date'],
+        for idate, backcnt in zip(ingest_dates[::-1],
                                    count(1)):
             if idate < startdate:
                 break
@@ -476,7 +478,7 @@ class Updater(object):
         # file or a later version
         with Ska.DBI.DBI(**self.db) as db:
             for file, idx in zip(ingested_files[-backcnt:], count(0)):
-                filename = file['filename']
+                filename = file['filename'].decode()
                 db_match = db.fetchall(
                     "select * from archfiles where "
                     + "filename = '%s' or filename = '%s.gz'"
@@ -513,16 +515,16 @@ class Updater(object):
                 # the time of the previous file ingest
                 if last_ok_date is None:
                     last_ok_date = \
-                        ingested_files[-backcnt:][idx - 1]['ingest_date']
+                        ingest_dates[-backcnt:][idx - 1]
 
         if last_ok_date is None:
-            last_ok_date = ingested_files[-1]['ingest_date']
+            last_ok_date = ingest_dates[-1]
         return missing, last_ok_date
 
     def _get_arc_ingested_files(self):
         table_file = os.path.join(self.data_root, self.cda_table)
-        h5f = tables.openFile(table_file)
-        tbl = h5f.getNode('/', 'data')
+        h5f = tables.open_file(table_file)
+        tbl = h5f.get_node('/', 'data')
         arc_files = tbl[:]
         h5f.close()
         return arc_files
@@ -726,7 +728,7 @@ class Updater(object):
         # get the files, store in file archive, and record in database
         for file in files:
             # Retrieve CXC archive files in a temp directory with arc5gl
-            missed_file = file['filename']
+            missed_file = file['filename'].decode()
             arc5.sendline('dataset=flight')
             arc5.sendline('detector=pcad')
             arc5.sendline('subdetector=aca')
@@ -738,7 +740,7 @@ class Updater(object):
             have_files = sorted(glob(self.filetype['fileglob']))
             if not len(have_files):
                 raise ValueError
-            filename = have_files[0]
+            filename = have_files[0].decode()
             # if it isn't gzipped, just gzip it
             if re.match('.*\.fits$', filename):
                 import gzip
