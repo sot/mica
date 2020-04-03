@@ -40,7 +40,7 @@ def update(obsids, config=None):
             config['sql_def']))
         db_sql = Path(__file__).parent / config['sql_def']
         db_init_cmds = open(db_sql).read()
-        proc_db = dict(dbi='sqlite', server=proc_db_file)
+        proc_db = Ska.DBI.DBI(dbi='sqlite', server=proc_db_file)
         proc_db.execute(db_init_cmds)
     else:
         proc_db = Ska.DBI.DBI(dbi='sqlite', server=proc_db_file)
