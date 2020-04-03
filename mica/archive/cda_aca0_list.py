@@ -82,7 +82,7 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
     new_lines = urllib.request.urlopen(url).readlines()
     files = make_data_table(new_lines)
     logger.info("Creating new table at %s" % table_file)
-    h5f = tables.openFile(table_file, 'a',
+    h5f = tables.open_file(table_file, 'a',
                           filters=tables.Filters(complevel=5, complib='zlib'))
     desc, bo = tables.table.descr_from_dtype(files[0].dtype)
     tbl = h5f.createTable('/', 'data', desc)
@@ -109,19 +109,21 @@ def update_cda_table(data_root=None,
         return
 
     # Do an update
-    h5f = tables.openFile(table_file, 'a')
+    h5f = tables.open_file(table_file, 'a')
     try:
-        tbl = h5f.getNode('/', 'data')
+        tbl = h5f.get_node('/', 'data')
         cda_files = tbl[:]
-        lastdate = DateTime(cda_files[-1]['ingest_date'])
+        lastdate = DateTime(cda_files[-1]['ingest_date'].decode())
         logger.info("Fetching new CDA list from %s" % lastdate.date)
         query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
                 lastdate.mon, lastdate.day, lastdate.year))
         url = cda_fetch_url + query
         logger.info("URL for fetch {}".format(url))
         new_lines = urllib.request.urlopen(url).readlines()
+        new_lines = [line.decode() for line in new_lines]
         files = make_data_table(new_lines)
-        match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
+        cda_file_names = np.array([filename.decode() for filename in cda_files['filename']])
+        match = np.flatnonzero(cda_file_names == files[0]['filename'])
         if len(match) == 0:
             raise ValueError("no overlap")
         match_last_idx = match[-1]
