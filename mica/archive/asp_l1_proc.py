@@ -53,8 +53,12 @@ def update(obsids, config=None):
         for sol in asols:
             logger.info("\tprocessing {}".format(sol))
             procdir = os.path.dirname(sol)
-            logfile = glob(os.path.join(procdir, "*log*"))[0]
-            aspect_log = gzip.open(logfile).read()
+
+            # As of DS 10.8.3, there are both "com" logs and per-ai logs.
+            # This glob should get the per-ai logs.
+            logfile = glob(os.path.join(procdir, "asp_l1_f*log*"))[0]
+            aspect_log = gzip.open(logfile, 'rt').read()
+
             # read the obspar version with a regex from the log
             obspar_version = int(
                 re.search("axaff\d{5}_\d{3}N(\d{3})_obs0a\.par",
