@@ -402,9 +402,13 @@ class Obi(object):
         obsdir = self.obsdir
         asol_files = sorted(glob(os.path.join(obsdir, 'pcad*asol*')))
         self.aiids = []
+
+        # Infer an aspect interval from each aspect solution, but
+        # exclude the combined aspect solution by CONTENT type.
         if len(asol_files):
             for file in asol_files:
-                self.aiids.append(self._aiid_from_asol(file, obsdir))
+                if pyfits.open(file)[1].header['CONTENT'] != 'ASPSOLOBI':
+                    self.aiids.append(self._aiid_from_asol(file, obsdir))
         ASP_dirs = sorted(glob(os.path.join(obsdir, 'ASP_L1_*')))
         if len(ASP_dirs):
             for dir in ASP_dirs:
