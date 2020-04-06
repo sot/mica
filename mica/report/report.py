@@ -25,6 +25,7 @@ from Ska.Shell import bash
 import agasc
 import Ska.DBI
 from Chandra.Time import DateTime
+from astropy.time import Time
 from Ska.engarchive import fetch_sci
 from kadi import events
 
@@ -319,9 +320,8 @@ def obs_links(obsid, sequence=None, plan=None):
     # if this is a science observation, only try to get a star catalog if it has a home
     # in the schedule either in the past or the near future
     if plan is not None:
-        plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:02d}.000".format(
-                plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
-        if plan_date.secs < (DateTime() + 21).secs:
+        plan_date = Time(plan)
+        if plan_date.cxcsec < (DateTime() + 21).secs:
             mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     else:
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
@@ -512,7 +512,7 @@ def main(obsid):
         if summary is None:
             raise ValueError("Obsid not found in target table")
         report_status['ocat'] = summary['status']
-        links = obs_links(obsid, summary['seq_nbr'], summary['lts_lt_plan'])
+        links = obs_links(obsid, summary['seq_nbr'], str(summary['lts_lt_plan']))
 
     if not er and (summary['status'] in
                    ['canceled', 'unobserved', 'untriggered']):
@@ -522,9 +522,9 @@ def main(obsid):
 
     if summary is not None:
         if summary['lts_lt_plan'] is not None:
-            report_status['long_term'] = summary['lts_lt_plan']
+            report_status['long_term'] = str(summary['lts_lt_plan'])
         if summary['soe_st_sched_date']:
-            report_status['short_term'] =  summary['soe_st_sched_date']
+            report_status['short_term'] =  str(summary['soe_st_sched_date'])
 
     last_sched = ''
     if not er:
@@ -539,10 +539,8 @@ def main(obsid):
     logger.debug("Fetching starcheck catalog")
     try:
         if summary is not None and summary['lts_lt_plan'] is not None:
-            plan = summary['lts_lt_plan']
-            plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:02d}.000".format(
-                    plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
-            if plan_date.secs > (DateTime() + 21).secs:
+            plan_date = Time(summary['lts_lt_plan'])
+            if plan_date.cxcsec > (DateTime() + 21).secs:
                 raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         obs_sc, mp_dir, status = get_starcheck(obsid)
