@@ -7,7 +7,7 @@ import pytest
 from .. import guide_stats
 from .. import update_guide_stats
 
-HAS_GS_TABLE = os.path.exists(update_guide_stats.TABLE_FILE)
+HAS_GS_TABLE = os.path.exists(guide_stats.TABLE_FILE)
 
 
 @pytest.mark.skipif('not HAS_GS_TABLE', reason='Test requires guide stats table')
