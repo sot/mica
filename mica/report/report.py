@@ -658,7 +658,7 @@ def main(obsid):
                 logger.debug("linking {} into {}".format(file, outdir))
                 bash("ln -s {} {}".format(file, outdir))
         asp_dir = asp_l1.get_obs_dirs(obsid)['last']
-        asp_logs = sorted(glob(os.path.join(asp_dir, "asp*log*gz")))
+        asp_logs = sorted(glob(os.path.join(asp_dir, "asp_l1_f*log*gz")))
         for log, interval in zip(asp_logs, vv['intervals']):
             logmatch = re.search('(.*log)\.gz', os.path.basename(log))
             if logmatch:
@@ -666,7 +666,7 @@ def main(obsid):
                 newlog = os.path.join(outdir, newlogname)
                 if not os.path.exists(newlog):
                     logger.debug("copying/gunzipping asp log {}".format(newlog))
-                    logtext = gzip.open(log).readlines()
+                    logtext = gzip.open(log, 'rt').readlines()
                     f = open(newlog, 'w')
                     f.writelines(logtext)
                     f.close()
