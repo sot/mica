@@ -118,7 +118,7 @@ def rec_to_dict_list(recarray):
 
 
 def get_star_acq_stats(id):
-    hdu = tables.open_file(acq_stats.table_file)
+    hdu = tables.open_file(acq_stats.TABLE_FILE)
     tbl = hdu.root.data
     acqs = tbl.read_where("agasc_id == {}".format(id))
     tbl.close()
@@ -185,7 +185,7 @@ def get_star_trak_stats(id):
 
 
 def get_obs_acq_stats(obsid):
-    hdu = tables.open_file(acq_stats.table_file)
+    hdu = tables.open_file(acq_stats.TABLE_FILE)
     tbl = hdu.root.data
     acqs = tbl.read_where("obsid == {}".format(obsid))
     tbl.close()
