@@ -5,6 +5,7 @@ import re
 import logging
 import shutil
 import time
+from astropy.table import Table
 import astropy.io.fits as pyfits
 import numpy as np
 import numpy.ma as ma
@@ -13,9 +14,9 @@ import collections
 import tables
 from itertools import count
 from pathlib import Path
-
 import six
 from six.moves import zip
+
 import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
@@ -35,11 +36,11 @@ ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'startmjf', 'startmnf',
                       'tlmver', 'ascdsver', 'revision', 'date',
                       'imgsize')
 
-
-FDTYPE = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
-         ('arc5gl_query', '|S27'), ('fileglob', '|S9')]
-FILETYPE = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
-                              dtype=FDTYPE)[0]
+FILETYPE = {'level': 'L0',
+            'instrum': 'PCAD',
+            'content': 'ACADATA',
+            'arc5gl_query': 'ACA0',
+            'fileglob': '*fits.gz'}
 
 ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('MNF', '>i4'),
@@ -460,14 +461,12 @@ class Updater(object):
 
     def _get_missing_archive_files(self, start, only_new=False):
         ingested_files = self._get_arc_ingested_files()
-        ingest_dates = [file['ingest_date'].decode() for file in
-                        ingested_files]
         startdate = DateTime(start).date
         logger.info("Checking for missing files from %s" %
                     startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
-        for idate, backcnt in zip(ingest_dates[::-1],
+        for idate, backcnt in zip(ingested_files['ingest_date'][::-1],
                                    count(1)):
             if idate < startdate:
                 break
@@ -478,7 +477,7 @@ class Updater(object):
         # file or a later version
         with Ska.DBI.DBI(**self.db) as db:
             for file, idx in zip(ingested_files[-backcnt:], count(0)):
-                filename = file['filename'].decode()
+                filename = file['filename']
                 db_match = db.fetchall(
                     "select * from archfiles where "
                     + "filename = '%s' or filename = '%s.gz'"
@@ -515,10 +514,10 @@ class Updater(object):
                 # the time of the previous file ingest
                 if last_ok_date is None:
                     last_ok_date = \
-                        ingest_dates[-backcnt:][idx - 1]
+                        ingested_files['ingest_date'][-backcnt:][idx - 1]
 
         if last_ok_date is None:
-            last_ok_date = ingest_dates[-1]
+            last_ok_date = ingested_files['ingest_date'][-1]
         return missing, last_ok_date
 
     def _get_arc_ingested_files(self):
@@ -527,7 +526,7 @@ class Updater(object):
         tbl = h5f.get_node('/', 'data')
         arc_files = tbl[:]
         h5f.close()
-        return arc_files
+        return Table(arc_files)
 
     def _get_archive_files(self, start, stop):
         """
@@ -552,7 +551,6 @@ class Updater(object):
         arc5.sendline('tstart=%s' % DateTime(start).date)
         arc5.sendline('tstop=%s' % DateTime(stop).date)
         arc5.sendline('get %s' % filetype['arc5gl_query'].lower())
-
         return sorted(glob(filetype['fileglob']))
 
     def _read_archfile(self, i, f, archfiles):
@@ -728,7 +726,7 @@ class Updater(object):
         # get the files, store in file archive, and record in database
         for file in files:
             # Retrieve CXC archive files in a temp directory with arc5gl
-            missed_file = file['filename'].decode()
+            missed_file = file['filename']
             arc5.sendline('dataset=flight')
             arc5.sendline('detector=pcad')
             arc5.sendline('subdetector=aca')
@@ -740,7 +738,7 @@ class Updater(object):
             have_files = sorted(glob(self.filetype['fileglob']))
             if not len(have_files):
                 raise ValueError
-            filename = have_files[0].decode()
+            filename = have_files[0]
             # if it isn't gzipped, just gzip it
             if re.match('.*\.fits$', filename):
                 import gzip
