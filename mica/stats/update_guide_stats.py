@@ -336,8 +336,8 @@ def calc_gui_stats(data, star_info):
         stats['aoaczan_mean'] = np.mean(kal['AOACZAN{}'.format(slot)])
 
         for dist in ['0.3', '1', '3', '5']:
-            stats['f_within_{}'.format(dist)] = np.count_nonzero(dr < float(dist)) / stats['n_kalman']
-        stats['f_outside_5'] = np.count_nonzero(dr > 5) / stats['n_kalman']
+            stats['f_within_{}'.format(dist)] = np.count_nonzero(dr < float(dist)) / len(kal)
+        stats['f_outside_5'] = np.count_nonzero(dr > 5) / len(kal)
 
         gui_stats[slot] = stats
 
