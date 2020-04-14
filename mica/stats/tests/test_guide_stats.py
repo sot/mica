@@ -7,7 +7,7 @@ import pytest
 from .. import guide_stats
 from .. import update_guide_stats
 
-HAS_GS_TABLE = os.path.exists(update_guide_stats.TABLE_FILE)
+HAS_GS_TABLE = os.path.exists(guide_stats.TABLE_FILE)
 
 
 @pytest.mark.skipif('not HAS_GS_TABLE', reason='Test requires guide stats table')
@@ -44,9 +44,8 @@ def test_make_gui_stats():
     # make a new table if the supplied file doesn't exist
     fh, fn = tempfile.mkstemp(suffix='.h5')
     os.unlink(fn)
-    update_guide_stats.TABLE_FILE = fn
     obsid = 20001
     obsid_info, gui, star_info, catalog, temp = update_guide_stats.calc_stats(obsid)
     t = update_guide_stats.table_gui_stats(obsid_info, gui, star_info, catalog, temp)
-    update_guide_stats._save_gui_stats(t)
+    update_guide_stats._save_gui_stats(t, table_file=fn)
     os.unlink(fn)
