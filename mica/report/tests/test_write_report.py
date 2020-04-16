@@ -9,7 +9,6 @@ from .. import report
 try:
     import Ska.DBI
     with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user='aca_ops', database='axafocat') as db:
-        assert db.conn._is_connected == 1
         HAS_SYBASE_ACCESS = True
 except:
     HAS_SYBASE_ACCESS = False
