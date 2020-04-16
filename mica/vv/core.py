@@ -54,44 +54,6 @@ VV_VERSION = 3
 logger = logging.getLogger('vv')
 
 
-def parse_obspar(file):
-    """
-    Parse obspar.
-    """
-    # borrowed from telem_archive
-    convert = {'i': int,
-               'r': float,
-               's': str}
-    try:
-        lines = gzip.open(file, 'rb').readlines()
-    except IOError:
-        lines = open(file, 'rb').readlines()
-    # Filter any really weird characters (version 1 obsid 17575 and a few others)
-    lines = [line.decode('utf8', 'ignore') for line in lines]
-    obs_read = csv.DictReader(lines,
-                              fieldnames=('name', 'type', 'hidden', 'value',
-                                          'def1', 'def2', 'descr'),
-                              dialect='excel')
-
-    for row in obs_read:
-        row['value'] = convert[row['type']](row['value'])
-        row['name'] = row['name'].replace('-', '_')
-        yield row
-
-    return
-
-
-def get_obspar(obsparfile):
-    """Get the obspar for obsid starting at tstart.  Return as a dict."""
-
-    obspar = {'num_ccd_on': 0}
-    for row in parse_obspar(obsparfile):
-        obspar.update({row['name']: row['value']})
-        if re.match(r'^ccd[is]\d_on$', row['name']) and row['value'] == 'Y':
-            obspar['num_ccd_on'] += 1
-
-    return obspar
-
 
 R2A = 206264.81
 D2R = 0.017453293
