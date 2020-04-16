@@ -317,7 +317,7 @@ def obs_links(obsid, sequence=None, plan=None):
     # in the schedule either in the past or the near future
     if plan is not None:
         plan_date = Time(plan)
-        if plan_date.cxcsec < (DateTime() + 21).secs:
+        if plan_date < Time.now() + 21 * u.day:
             mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     else:
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
