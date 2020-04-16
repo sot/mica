@@ -29,7 +29,7 @@ import gzip
 def parse_obspar(file):
     """
     Return the rows of an IRAF formatted obspar as a dictionary.
-b
+
     :param file: obspar file
 
     :returns: row of obspar
@@ -39,10 +39,9 @@ b
                'r': float,
                's': str}
     try:
-        lines = gzip.open(file, 'rb').readlines()
+        lines = gzip.open(file, 'rt', encoding='utf8', errors='ignore').readlines()
     except IOError:
-        lines = open(file, 'rb').readlines()
-    lines = [line.decode('utf8', 'ignore') for line in lines]
+        lines = open(file, 'rt', encoding='utf8', errors='ignore').readlines()
     obs_read = csv.DictReader(lines,
                               fieldnames=('name', 'type', 'hidden', 'value',
                                           'def1', 'def2', 'descr'),
