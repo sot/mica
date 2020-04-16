@@ -508,7 +508,7 @@ def main(obsid):
         if summary is None:
             raise ValueError("Obsid not found in target table")
         report_status['ocat'] = summary['status']
-        links = obs_links(obsid, summary['seq_nbr'], str(summary['lts_lt_plan']))
+        links = obs_links(obsid, summary['seq_nbr'], summary['lts_lt_plan'])
 
     if not er and (summary['status'] in
                    ['canceled', 'unobserved', 'untriggered']):
@@ -518,9 +518,9 @@ def main(obsid):
 
     if summary is not None:
         if summary['lts_lt_plan'] is not None:
-            report_status['long_term'] = str(summary['lts_lt_plan'])
+            report_status['long_term'] = summary['lts_lt_plan']
         if summary['soe_st_sched_date']:
-            report_status['short_term'] =  str(summary['soe_st_sched_date'])
+            report_status['short_term'] =  summary['soe_st_sched_date']
 
     last_sched = ''
     if not er:
