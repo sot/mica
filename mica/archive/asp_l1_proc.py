@@ -6,10 +6,12 @@ import os
 import re
 import logging
 from astropy.io import fits
-import Ska.DBI
 from glob import glob
 import gzip
 from pathlib import Path
+
+import Ska.DBI
+from Ska.File import get_globfiles
 
 from mica.common import MICA_ARCHIVE
 
@@ -55,9 +57,11 @@ def update(obsids, config=None):
             procdir = os.path.dirname(sol)
 
             # As of DS 10.8.3, there are both "com" logs and per-ai logs.
-            # This glob should get the per-ai logs.
-            logfile = glob(os.path.join(procdir, "asp_l1_f*log*"))[0]
-            aspect_log = gzip.open(logfile, 'rt').read()
+            # This glob should get the per-ai logs.  We only want one
+            # of them to get an obspar_version.
+            logfiles = get_globfiles(os.path.join(procdir, "asp_l1_f*log*"),
+                                     minfiles=1, maxfiles=1)
+            aspect_log = gzip.open(logfiles[0], 'rt').read()
 
             # read the obspar version with a regex from the log
             obspar_version = int(
