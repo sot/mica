@@ -1,10 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from __future__ import division, print_function
-
 import os
 import sys
 import warnings
-
 import re
 import logging
 import gzip
@@ -16,19 +13,18 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import tables
-import tables3_api
-from astropy.table import Table
 from six.moves import zip
 from pathlib import Path
+from astropy.table import Table
+from astropy.time import Time
 
+import tables3_api
 from Ska.Shell import bash
 import agasc
 import Ska.DBI
 from Chandra.Time import DateTime
-from astropy.time import Time
 from Ska.engarchive import fetch_sci
 from kadi import events
-
 from Chandra.cmd_states import fetch_states
 import mica
 from mica.archive import obspar
