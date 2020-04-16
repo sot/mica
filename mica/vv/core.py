@@ -116,9 +116,6 @@ class Obi(object):
 
     def save_plots_and_resid(self):
         self._save_info_json()
-        #self._save_info_pkl()
-        #for slot in self.all_slot_data:
-        #    self.plot_slot(slot, save=True, close=True)
         for slot in self.all_slot_data:
             self.plot_slot(slot, save=True, close=True, singles=True)
 
@@ -245,18 +242,12 @@ class Obi(object):
         if file is None:
             file = os.path.join(self.tempdir, 'vv_report.json')
         save = self.info()
-        jfile = open(file, 'w')
-        jfile.write(json.dumps(save, sort_keys=True, indent=4,
-                               cls=NumpyAwareJSONEncoder))
-        jfile.close()
+        with open(file, 'w') as jfile:
+            jfile.write(json.dumps(save, sort_keys=True, indent=4,
+                                   cls=NumpyAwareJSONEncoder))
+            jfile.close()
         logger.info("Saved JSON to {}".format(file))
 
-    def _save_info_pkl(self, file=None):
-        if file is None:
-            file = os.path.join(self.tempdir, 'vv_report.pkl')
-        pfile = open(file, 'wb')
-        pickle.dump(self.info(), pfile)
-        pfile.close()
 
     def shelve_info(self, file):
         if self.info()['aspect_1_id'] is None:
