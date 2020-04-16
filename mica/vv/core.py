@@ -1,9 +1,9 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from __future__ import division
 
+import warnings
 import os
 import re
-import astropy.io.fits as pyfits
+import six
 import pickle
 import json
 import shelve
@@ -20,13 +20,19 @@ if __name__ == '__main__':
 import matplotlib.pyplot as plt
 from scipy.signal import medfilt as medfilt
 from scipy.stats import scoreatpercentile
+import astropy.io.fits as pyfits
+from astropy.table import Table
+from astropy.units import UnitsWarning
 
 import Ska.Numpy
 from Chandra.Time import DateTime
-from astropy.table import Table
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
-import six
+
+from mica.archive.obsid_archive import parse_obspar, get_obspar
+
+
+warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -34,9 +40,9 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
-import warnings
-from astropy.units import UnitsWarning
-warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
+
+
+
 
 
 class InconsistentAspectIntervals(ValueError):
