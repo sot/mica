@@ -31,7 +31,6 @@ from Ska.engarchive import fetch
 
 from mica.archive.obsid_archive import parse_obspar, get_obspar
 
-
 warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
@@ -41,10 +40,6 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-
-
-
-
 class InconsistentAspectIntervals(ValueError):
     pass
 
@@ -52,7 +47,6 @@ class InconsistentAspectIntervals(ValueError):
 VV_VERSION = 3
 
 logger = logging.getLogger('vv')
-
 
 
 R2A = 206264.81
