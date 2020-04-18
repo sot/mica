@@ -522,10 +522,9 @@ class Updater(object):
 
     def _get_arc_ingested_files(self):
         table_file = os.path.join(self.data_root, self.cda_table)
-        h5f = tables.open_file(table_file)
-        tbl = h5f.get_node('/', 'data')
-        arc_files = tbl[:]
-        h5f.close()
+        with tables.open_file(table_file) as h5f:
+            tbl = h5f.get_node('/', 'data')
+            arc_files = tbl[:]
         return Table(arc_files)
 
     def _get_archive_files(self, start, stop):
