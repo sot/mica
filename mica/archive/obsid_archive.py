@@ -39,9 +39,9 @@ def parse_obspar(file):
                'r': float,
                's': str}
     try:
-        lines = gzip.open(file).readlines()
+        lines = gzip.open(file, 'rt', encoding='utf8', errors='ignore').readlines()
     except IOError:
-        lines = open(file).readlines()
+        lines = open(file, 'rt', encoding='utf8', errors='ignore').readlines()
     obs_read = csv.DictReader(lines,
                               fieldnames=('name', 'type', 'hidden', 'value',
                                           'def1', 'def2', 'descr'),

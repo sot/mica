@@ -5,6 +5,7 @@ import re
 import logging
 import shutil
 import time
+from astropy.table import Table
 import astropy.io.fits as pyfits
 import numpy as np
 import numpy.ma as ma
@@ -13,9 +14,9 @@ import collections
 import tables
 from itertools import count
 from pathlib import Path
-
 import six
 from six.moves import zip
+
 import Ska.DBI
 import Ska.arc5gl
 from Chandra.Time import DateTime
@@ -35,11 +36,11 @@ ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'startmjf', 'startmnf',
                       'tlmver', 'ascdsver', 'revision', 'date',
                       'imgsize')
 
-
-FDTYPE = [('level', '|S4'), ('instrum', '|S7'), ('content', '|S13'),
-         ('arc5gl_query', '|S27'), ('fileglob', '|S9')]
-FILETYPE = np.rec.fromrecords([('L0', 'PCAD', 'ACADATA', 'ACA0', '*fits.gz')],
-                              dtype=FDTYPE)[0]
+FILETYPE = {'level': 'L0',
+            'instrum': 'PCAD',
+            'content': 'ACADATA',
+            'arc5gl_query': 'ACA0',
+            'fileglob': '*fits.gz'}
 
 ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('MNF', '>i4'),
@@ -465,7 +466,7 @@ class Updater(object):
                     startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
-        for idate, backcnt in zip(ingested_files[::-1]['ingest_date'],
+        for idate, backcnt in zip(ingested_files['ingest_date'][::-1],
                                    count(1)):
             if idate < startdate:
                 break
@@ -513,19 +514,18 @@ class Updater(object):
                 # the time of the previous file ingest
                 if last_ok_date is None:
                     last_ok_date = \
-                        ingested_files[-backcnt:][idx - 1]['ingest_date']
+                        ingested_files['ingest_date'][-backcnt:][idx - 1]
 
         if last_ok_date is None:
-            last_ok_date = ingested_files[-1]['ingest_date']
+            last_ok_date = ingested_files['ingest_date'][-1]
         return missing, last_ok_date
 
     def _get_arc_ingested_files(self):
         table_file = os.path.join(self.data_root, self.cda_table)
-        h5f = tables.openFile(table_file)
-        tbl = h5f.getNode('/', 'data')
-        arc_files = tbl[:]
-        h5f.close()
-        return arc_files
+        with tables.open_file(table_file) as h5f:
+            tbl = h5f.get_node('/', 'data')
+            arc_files = tbl[:]
+        return Table(arc_files)
 
     def _get_archive_files(self, start, stop):
         """
@@ -550,7 +550,6 @@ class Updater(object):
         arc5.sendline('tstart=%s' % DateTime(start).date)
         arc5.sendline('tstop=%s' % DateTime(stop).date)
         arc5.sendline('get %s' % filetype['arc5gl_query'].lower())
-
         return sorted(glob(filetype['fileglob']))
 
     def _read_archfile(self, i, f, archfiles):

@@ -1,10 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from __future__ import division, print_function
-
 import os
 import sys
 import warnings
-
 import re
 import logging
 import gzip
@@ -16,18 +13,19 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import tables
-import tables3_api
-from astropy.table import Table
 from six.moves import zip
 from pathlib import Path
+from astropy.table import Table
+from astropy.time import Time
+import astropy.units as u
 
+import tables3_api
 from Ska.Shell import bash
 import agasc
 import Ska.DBI
 from Chandra.Time import DateTime
 from Ska.engarchive import fetch_sci
 from kadi import events
-
 from Chandra.cmd_states import fetch_states
 import mica
 from mica.archive import obspar
@@ -117,7 +115,7 @@ def rec_to_dict_list(recarray):
 
 
 def get_star_acq_stats(id):
-    hdu = tables.open_file(acq_stats.table_file)
+    hdu = tables.open_file(acq_stats.TABLE_FILE)
     tbl = hdu.root.data
     acqs = tbl.read_where("agasc_id == {}".format(id))
     tbl.close()
@@ -184,7 +182,7 @@ def get_star_trak_stats(id):
 
 
 def get_obs_acq_stats(obsid):
-    hdu = tables.open_file(acq_stats.table_file)
+    hdu = tables.open_file(acq_stats.TABLE_FILE)
     tbl = hdu.root.data
     acqs = tbl.read_where("obsid == {}".format(obsid))
     tbl.close()
@@ -319,9 +317,8 @@ def obs_links(obsid, sequence=None, plan=None):
     # if this is a science observation, only try to get a star catalog if it has a home
     # in the schedule either in the past or the near future
     if plan is not None:
-        plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:02d}.000".format(
-                plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
-        if plan_date.secs < (DateTime() + 21).secs:
+        plan_date = Time(plan)
+        if plan_date < Time.now() + 21 * u.day:
             mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     else:
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
@@ -539,10 +536,8 @@ def main(obsid):
     logger.debug("Fetching starcheck catalog")
     try:
         if summary is not None and summary['lts_lt_plan'] is not None:
-            plan = summary['lts_lt_plan']
-            plan_date = DateTime("{:4d}:{:03d}:{:02d}:{:02d}:{:02d}.000".format(
-                    plan.year, plan.dayofyear, plan.hour, plan.minute, plan.second))
-            if plan_date.secs > (DateTime() + 21).secs:
+            plan_date = Time(summary['lts_lt_plan'])
+            if plan_date.cxcsec > (DateTime() + 21).secs:
                 raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         obs_sc, mp_dir, status = get_starcheck(obsid)
@@ -658,7 +653,7 @@ def main(obsid):
                 logger.debug("linking {} into {}".format(file, outdir))
                 bash("ln -s {} {}".format(file, outdir))
         asp_dir = asp_l1.get_obs_dirs(obsid)['last']
-        asp_logs = sorted(glob(os.path.join(asp_dir, "asp*log*gz")))
+        asp_logs = sorted(glob(os.path.join(asp_dir, "asp_l1_f*log*gz")))
         for log, interval in zip(asp_logs, vv['intervals']):
             logmatch = re.search('(.*log)\.gz', os.path.basename(log))
             if logmatch:
@@ -666,7 +661,7 @@ def main(obsid):
                 newlog = os.path.join(outdir, newlogname)
                 if not os.path.exists(newlog):
                     logger.debug("copying/gunzipping asp log {}".format(newlog))
-                    logtext = gzip.open(log).readlines()
+                    logtext = gzip.open(log, 'rt').readlines()
                     f = open(newlog, 'w')
                     f.writelines(logtext)
                     f.close()

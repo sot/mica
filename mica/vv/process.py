@@ -18,6 +18,28 @@ from mica.archive import obsid_archive
 from .core import Obi, VV_VERSION
 from .vv import FILES
 
+
+VV_DTYPE = np.dtype(
+    [('obsid', '<i4'),
+     ('revision', '<i4'),
+     ('isdefault', '<i4'),
+     ('aspect_1_id', '<i4'),
+     ('used', '<i4'), ('vv_version', '<i4'),
+     ('ap_date', '|S21'),
+     ('tstart', '<f8'), ('tstop', '<f8'),
+     ('sim_z', '<f8'), ('sim_z_offset', '<f8'), ('instrument', '|S10'),
+     ('ra_pnt', '<f8'), ('dec_pnt', '<f8'), ('roll_pnt', '<f8'),
+     ('slot', '<i4'), ('type', '|S10'),
+     ('n_pts', '<i4'), ('rad_off', '<f8'),
+     ('frac_dy_big', '<f8'), ('frac_dz_big', '<f8'), ('frac_mag_big', '<f8'),
+     ('mean_y', '<f8'), ('mean_z', '<f8'),
+     ('dy_mean', '<f8'), ('dy_med', '<f8'), ('dy_rms', '<f8'),
+     ('dz_mean', '<f8'), ('dz_med', '<f8'), ('dz_rms', '<f8'),
+     ('dr_mean', '<f8'), ('dr_med', '<f8'), ('dr_rms', '<f8'),
+     ('mag_mean', '<f8'), ('mag_med', '<f8'), ('mag_rms', '<f8'),
+     ('mean_aacccdpt', '<f8')])
+
+
 KNOWN_BAD_OBSIDS = []
 if os.path.exists(FILES['bad_obsid_list']):
     KNOWN_BAD_OBSIDS = json.loads(open(FILES['bad_obsid_list']).read())
@@ -191,10 +213,18 @@ def process(obsid, version='last'):
     obi.save_plots_and_resid()
     shelf_file = os.path.join(FILES['data_root'],
                               FILES['shelf_file'])
+    if not os.path.exists(os.path.dirname(shelf_file)):
+        os.makedirs(os.path.dirname(shelf_file))
     obi.shelve_info(shelf_file)
     _file_vv(obi)
-    h5 = tables.openFile(FILES['h5_file'], 'a')
-    tbl = h5.getNode('/', 'vv')
+    if not os.path.exists(FILES['h5_file']):
+        vv_desc, byteorder = tables.descr_from_dtype(VV_DTYPE)
+        filters = tables.Filters(complevel=5, complib='zlib')
+        h5f = tables.open_file(FILES['h5_file'], 'a')
+        tbl = h5f.create_table('/', 'vv', vv_desc, filters=filters, expectedrows=1e6)
+        h5f.close()
+    h5 = tables.open_file(FILES['h5_file'], 'a')
+    tbl = h5.get_node('/', 'vv')
     obi.set_tbl(tbl)
     obi.slots_to_table()
     tbl.flush()

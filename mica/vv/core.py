@@ -1,9 +1,9 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from __future__ import division
 
+import warnings
 import os
 import re
-import astropy.io.fits as pyfits
+import six
 import pickle
 import json
 import shelve
@@ -20,23 +20,24 @@ if __name__ == '__main__':
 import matplotlib.pyplot as plt
 from scipy.signal import medfilt as medfilt
 from scipy.stats import scoreatpercentile
+import astropy.io.fits as pyfits
+from astropy.table import Table
+from astropy.units import UnitsWarning
 
 import Ska.Numpy
 from Chandra.Time import DateTime
-from astropy.table import Table
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
-import six
+
+from mica.archive.obsid_archive import parse_obspar, get_obspar
+
+warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if hasattr(obj, 'tolist'):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
-
-import warnings
-from astropy.units import UnitsWarning
-warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
 
 
 class InconsistentAspectIntervals(ValueError):
@@ -46,43 +47,6 @@ class InconsistentAspectIntervals(ValueError):
 VV_VERSION = 3
 
 logger = logging.getLogger('vv')
-
-
-def parse_obspar(file):
-    """
-    Parse obspar.
-    """
-# borrowed from telem_archive
-    convert = {'i': int,
-               'r': float,
-               's': str}
-    try:
-        lines = gzip.open(file, 'rt').readlines()
-    except IOError:
-        lines = open(file).readlines()
-    obs_read = csv.DictReader(lines,
-                              fieldnames=('name', 'type', 'hidden', 'value',
-                                          'def1', 'def2', 'descr'),
-                              dialect='excel')
-
-    for row in obs_read:
-        row['value'] = convert[row['type']](row['value'])
-        row['name'] = row['name'].replace('-', '_')
-        yield row
-
-    return
-
-
-def get_obspar(obsparfile):
-    """Get the obspar for obsid starting at tstart.  Return as a dict."""
-
-    obspar = {'num_ccd_on': 0}
-    for row in parse_obspar(obsparfile):
-        obspar.update({row['name']: row['value']})
-        if re.match(r'^ccd[is]\d_on$', row['name']) and row['value'] == 'Y':
-            obspar['num_ccd_on'] += 1
-
-    return obspar
 
 
 R2A = 206264.81
@@ -146,9 +110,6 @@ class Obi(object):
 
     def save_plots_and_resid(self):
         self._save_info_json()
-        self._save_info_pkl()
-        #for slot in self.all_slot_data:
-        #    self.plot_slot(slot, save=True, close=True)
         for slot in self.all_slot_data:
             self.plot_slot(slot, save=True, close=True, singles=True)
 
@@ -275,18 +236,12 @@ class Obi(object):
         if file is None:
             file = os.path.join(self.tempdir, 'vv_report.json')
         save = self.info()
-        jfile = open(file, 'w')
-        jfile.write(json.dumps(save, sort_keys=True, indent=4,
-                               cls=NumpyAwareJSONEncoder))
-        jfile.close()
+        with open(file, 'w') as jfile:
+            jfile.write(json.dumps(save, sort_keys=True, indent=4,
+                                   cls=NumpyAwareJSONEncoder))
+            jfile.close()
         logger.info("Saved JSON to {}".format(file))
 
-    def _save_info_pkl(self, file=None):
-        if file is None:
-            file = os.path.join(self.tempdir, 'vv_report.pkl')
-        pfile = open(file, 'w')
-        pickle.dump(self.info(), pfile)
-        pfile.close()
 
     def shelve_info(self, file):
         if self.info()['aspect_1_id'] is None:
@@ -354,21 +309,21 @@ class Obi(object):
              for slot_str in save['slots'] if 'n_pts' in save['slots'][slot_str]],
             dtype=self.table.dtype)
 
-        have_obsid_coord = self.table.getWhereList('(obsid == %d)'
+        have_obsid_coord = self.table.get_where_list('(obsid == %d)'
                                                    % (save['obsid']),
                                                    sort=True)
         # if there are previous records for this obsid
         if len(have_obsid_coord):
             logger.info("obsid %d is in table" % save['obsid'])
-            obsid_rec = self.table.readCoordinates(have_obsid_coord)
+            obsid_rec = self.table.read_coordinates(have_obsid_coord)
             # if the current entry is default, mark other entries as
             # not-default
             if self.isdefault:
                 obsid_rec['isdefault'] = 0
-                self.table.modifyCoordinates(have_obsid_coord, obsid_rec)
+                self.table.modify_coordinates(have_obsid_coord, obsid_rec)
             # if we already have the revision, update in place
             if np.any(obsid_rec['revision'] == save['revision']):
-                rev_coord = self.table.getWhereList(
+                rev_coord = self.table.get_where_list(
                     '(obsid == %d) & (revision == %d)'
                     % (save['obsid'], save['revision']),
                     sort=True)
@@ -377,7 +332,7 @@ class Obi(object):
                         "Could not update; different number of slots")
                 logger.info("updating obsid %d rev %d in place"
                        % (save['obsid'], save['revision']))
-                self.table.modifyCoordinates(rev_coord, save_rec)
+                self.table.modify_coordinates(rev_coord, save_rec)
             else:
                 self.table.append(save_rec)
         else:
@@ -400,9 +355,13 @@ class Obi(object):
         obsdir = self.obsdir
         asol_files = sorted(glob(os.path.join(obsdir, 'pcad*asol*')))
         self.aiids = []
+
+        # Infer an aspect interval from each aspect solution, but
+        # exclude the combined aspect solution by CONTENT type.
         if len(asol_files):
             for file in asol_files:
-                self.aiids.append(self._aiid_from_asol(file, obsdir))
+                if pyfits.open(file)[1].header['CONTENT'] != 'ASPSOLOBI':
+                    self.aiids.append(self._aiid_from_asol(file, obsdir))
         ASP_dirs = sorted(glob(os.path.join(obsdir, 'ASP_L1_*')))
         if len(ASP_dirs):
             for dir in ASP_dirs:
@@ -911,6 +870,8 @@ class AspectInterval(object):
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
         # don't filter for only good stars at this point
         prop = Table.read(gsfile)
+        for col in prop.colnames:
+            prop.rename_column(col, col.lower())
         info = []
         hdulist = pyfits.open(os.path.join(datadir, gsfile))
         header = hdulist[1].header
@@ -968,6 +929,18 @@ class AspectInterval(object):
         asol_file = glob(
             os.path.join(datadir, "%s_asol1.fits*" % aiid))[0]
         asol = Table.read(asol_file)
+        # Add logic to handle column names in DS 10.8.3 aspect solutions
+        if 'ady' in asol.colnames:
+            colmap = {'ady': 'dy',
+                      'adz': 'dz',
+                      'adtheta': 'dtheta',
+                      'ra_raw': 'ra',
+                      'dec_raw': 'dec',
+                      'roll_raw': 'roll',
+                      'q_att_raw': 'q_att'}
+            for col in colmap:
+                asol.remove_column(colmap[col])
+                asol.rename_column(col, colmap[col])
         # Add code to handle first processing of 16091 with
         # non-confirming asol file
         if ('dtheta' not in asol.dtype.names

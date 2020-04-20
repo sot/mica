@@ -82,7 +82,7 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
     new_lines = urllib.request.urlopen(url).readlines()
     files = make_data_table(new_lines)
     logger.info("Creating new table at %s" % table_file)
-    h5f = tables.openFile(table_file, 'a',
+    h5f = tables.open_file(table_file, 'a',
                           filters=tables.Filters(complevel=5, complib='zlib'))
     desc, bo = tables.table.descr_from_dtype(files[0].dtype)
     tbl = h5f.createTable('/', 'data', desc)
@@ -108,30 +108,38 @@ def update_cda_table(data_root=None,
         make_table_from_scratch(table_file, cda_fetch_url)
         return
 
-    # Do an update
-    h5f = tables.openFile(table_file, 'a')
-    try:
-        tbl = h5f.getNode('/', 'data')
-        cda_files = tbl[:]
-        lastdate = DateTime(cda_files[-1]['ingest_date'])
-        logger.info("Fetching new CDA list from %s" % lastdate.date)
-        query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
-                lastdate.mon, lastdate.day, lastdate.year))
-        url = cda_fetch_url + query
-        logger.info("URL for fetch {}".format(url))
-        new_lines = urllib.request.urlopen(url).readlines()
-        files = make_data_table(new_lines)
-        match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
-        if len(match) == 0:
-            raise ValueError("no overlap")
-        match_last_idx = match[-1]
-        i_diff = 0
-        for have_entry, new_entry in zip(cda_files[match_last_idx:], files):
-            if have_entry['filename'] != new_entry['filename']:
-                break
-            i_diff += 1
+    # Load the existing table
+    with tables.open_file(table_file, 'r') as h5f:
+        tbl = h5f.get_node('/', 'data')
+        cda_files = Table(tbl[:])
+    lastdate = DateTime(cda_files[-1]['ingest_date'])
 
-        if i_diff < len(files):
+    # Get new data
+    logger.info("Fetching new CDA list from %s" % lastdate.date)
+    query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
+            lastdate.mon, lastdate.day, lastdate.year))
+    url = cda_fetch_url + query
+    logger.info("URL for fetch {}".format(url))
+    try:
+        new_lines = urllib.request.urlopen(url).readlines()
+    except urllib.error.URLError as err:
+        logger.info(err)
+        return
+    new_lines = [line.decode() for line in new_lines]
+    files = make_data_table(new_lines)
+    match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
+    if len(match) == 0:
+        raise ValueError("no overlap")
+    match_last_idx = match[-1]
+    i_diff = 0
+    for have_entry, new_entry in zip(cda_files[match_last_idx:], files):
+        if have_entry['filename'] != new_entry['filename']:
+            break
+        i_diff += 1
+
+    if i_diff < len(files):
+        with tables.open_file(table_file, 'a') as h5f:
+            tbl = h5f.get_node('/', 'data')
             logger.info("Updating %s with %d new rows"
                         % (table_file, len(files[i_diff:])))
             for file in files[i_diff:]:
@@ -145,17 +153,7 @@ def update_cda_table(data_root=None,
                 row['filetime'] = file['filetime']
                 row.append()
             tbl.flush()
-    # Just fetching errors instead of quitting with bad status
-    except urllib.error.URLError as err:
-        logger.info(err)
-    # Otherwise print the new lines if available to log and reraise
-    except Exception as err:
-        if new_lines is not None:
-            logger.info("Text of attempted table")
-            logger.info("".join(new_lines))
-        raise(err)
-    finally:
-        h5f.close()
+
 
 def main():
     opt = get_options()

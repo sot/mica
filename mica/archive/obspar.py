@@ -15,6 +15,7 @@ from glob import glob
 import re
 
 from mica.archive import obsid_archive
+from mica.archive.obsid_archive import parse_obspar
 from mica.common import MICA_ARCHIVE
 
 # these keys are available in the obspar and will be included in the
@@ -265,34 +266,6 @@ def get_obspar_file(obsid, version='default'):
     return None
 
 
-# borrowed from telem_archive and also duplicated in mica.vv.core
-import csv
-import gzip
-
-def parse_obspar(file):
-    """
-    Parse obspar. 
-    """
-    convert = {'i': int,
-               'r': float,
-               's': str}
-    try:
-        lines = gzip.open(file, 'rt').readlines()
-    except IOError:
-        lines = open(file).readlines()
-    obs_read = csv.DictReader(lines,
-                              fieldnames=('name', 'type', 'hidden', 'value',
-                                          'def1', 'def2', 'descr'),
-                              dialect='excel')
-
-    for row in obs_read:
-        row['value'] = convert[row['type']](row['value'])
-        row['name'] = row['name'].replace('-', '_')
-        yield row
-
-    return
-
-
 def get_obspar(obsid, version='default'):
     """
     Get the obspar for obsid.  Return as a dict.
@@ -316,6 +289,7 @@ def get_obspar(obsid, version='default'):
         if re.match(r'^ccd[is]\d_on$', row['name']) and row['value'] == 'Y':
             obspar['num_ccd_on'] += 1
     return obspar
+
 
 def get_files(obsid=None, start=None, stop=None, revision=None):
     """
