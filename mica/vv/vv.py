@@ -15,7 +15,7 @@ from mica.common import MICA_ARCHIVE
 FILES = dict(
     data_root=os.path.join(MICA_ARCHIVE, 'vv'),
     temp_root=os.path.join(MICA_ARCHIVE, 'tempvv'),
-    shelf_file=os.path.join(MICA_ARCHIVE, 'vv', 'vv_shelf.db'),
+    shelf_file=os.path.join(MICA_ARCHIVE, 'vv', 'vv_shelf'),
     h5_file=os.path.join(MICA_ARCHIVE, 'vv', 'vv.h5'),
     last_file=os.path.join(MICA_ARCHIVE, 'vv', 'last_id.txt'),
     asp1_proc_table=os.path.join(MICA_ARCHIVE, 'asp1', 'processing_asp_l1.db3'),
