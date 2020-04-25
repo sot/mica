@@ -848,11 +848,9 @@ def save_state_in_db(obsid, notes):
 
 
 def update():
-
     recent_obs = np.unique(fetch_states(start=DateTime(-7), vals=['obsid'])['obsid'])
     for obs in recent_obs:
-        process_obsids([obs])
-
+        process_obsids([int(obs)]) # the int() is here to keep json happy downstream
 
 
 def process_obsids(obsids, update=True, retry=False):
@@ -920,6 +918,7 @@ def process_obsids(obsids, update=True, retry=False):
             f = open(full_report_file, 'w')
             f.write(page)
             f.close()
+
             # Save the bad state in the database
             save_state_in_db(obsid, notes)
 
