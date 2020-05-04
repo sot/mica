@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-
+import os
 from mica.stats import update_acq_stats
+import mica.stats.acq_stats
 update_acq_stats.main()
 
-import os
-table_file = mica.stats.acq_stats.table_file
+
+table_file = mica.stats.acq_stats.TABLE_FILE
 file_stat = os.stat(table_file)
 if file_stat.st_size > 50e6:
     print("""
