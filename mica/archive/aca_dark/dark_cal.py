@@ -122,9 +122,11 @@ def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=F
     """
     DARK_CAL['id'] = get_dark_cal_id(date, select)
 
-    hdus = fits.open(MICA_FILES['dark_image.fits'].abs, memmap=False)
-    dark = hdus[0].data
-    hdus.close()
+    with fits.open(MICA_FILES['dark_image.fits'].abs, memmap=False) as hdus:
+        dark = hdus[0].data
+        # Recast as native byte ordering since FITS is typically not. This
+        # statement is normally the same as dark.astype(np.float32).
+        dark = dark.astype(dark.dtype.type)
 
     with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
         props = json.load(fh)
