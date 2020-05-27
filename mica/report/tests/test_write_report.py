@@ -8,7 +8,7 @@ from .. import report
 
 try:
     import Ska.DBI
-    with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user='aca_ops', database='axafocat') as db:
+    with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user='jeanconn', database='axafvv') as db:
         HAS_SYBASE_ACCESS = True
 except:
     HAS_SYBASE_ACCESS = False
@@ -17,7 +17,7 @@ except:
 HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES['data_root'])
 
 
-@pytest.mark.skipif('not HAS_SYBASE_ACCESS', reason='Report test requires Sybase/OCAT access')
+@pytest.mark.skipif('not HAS_SYBASE_ACCESS', reason='Report test requires Sybase VV access')
 @pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Report test requires mica starcheck archive')
 def test_write_reports():
     """
