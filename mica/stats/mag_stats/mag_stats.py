@@ -10,9 +10,10 @@ from agasc import get_star
 from cheta import fetch
 from Quaternion import Quat
 import Ska.quatutil
+import mica
 
 
-version = 'v0.0.12'
+version = mica.__version__
 
 
 def _magnitude_correction(time, mag_aca):
