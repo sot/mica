@@ -254,7 +254,7 @@ def calc_obsid_stats(telem):
 
     dt = np.mean(np.diff(times))
     s = pd.Series(mags[ok], index=times[ok])
-    s_100s = s.rolling(window=int(100 / dt), center=True).median().dropna()
+    s_100s = s.rolling(window=int(100 / dt), min_periods=1, center=True).median().dropna()
     s_500s = s.rolling(window=int(500 / dt), center=True).median().dropna()
     s_1000s = s.rolling(window=int(1000 / dt), center=True).median().dropna()
 
