@@ -42,6 +42,25 @@ FILETYPE = {'level': 'L0',
             'arc5gl_query': 'ACA0',
             'fileglob': '*fits.gz'}
 
+ACA_DTYPE_2 = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
+               ('MNF', '>i4'),
+               ('END_INTEG_TIME', '>f8'), ('INTEG', '>f4'), ('GLBSTAT', '|u1'),
+               ('COMMCNT', '|u1'), ('COMMPROG', '|u1'), ('IMGFID1', '|u1'),
+               ('IMGNUM1', '|u1'), ('IMGFUNC1', '|u1'), ('IMGSTAT', '|u1'),
+               ('IMGROW0', '>i2'), ('IMGCOL0', '>i2'), ('IMGSCALE', '>i2'),
+               ('BGDAVG', '>i2'), ('IMGFID2', '|u1'), ('IMGNUM2', '|u1'),
+               ('IMGFUNC2', '|u1'), ('BGDRMS', '>i2'), ('TEMPCCD', '>f4'),
+               ('TEMPHOUS', '>f4'), ('TEMPPRIM', '>f4'), ('TEMPSEC', '>f4'),
+               ('BGDSTAT', '|u1'), ('IMGFID3', '|u1'), ('IMGNUM3', '|u1'),
+               ('IMGFUNC3', '|u1'), ('IMGFID4', '|u1'), ('IMGNUM4', '|u1'),
+               ('IMGFUNC4', '|u1'), ('IMGRAW', '>f4', (8, 8)),
+               ('HD3TLM62', '|u1'),
+               ('HD3TLM63', '|u1'), ('HD3TLM64', '|u1'), ('HD3TLM65', '|u1'),
+               ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
+               ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
+               ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
+               ('IMGSIZE', '>i4'), ('FILENAME', '<U128'))
+
 ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('MNF', '>i4'),
              ('END_INTEG_TIME', '>f8'), ('INTEG', '>f4'), ('GLBSTAT', '|u1'),
@@ -95,8 +114,21 @@ def get_options():
     return opt
 
 
+def _mask(n):
+    m = np.zeros((8, 8), dtype=bool)
+    if n == 6:
+        m[:, [0, -1]] = True
+        m[[0, -1]] = True
+        m[[1, 1, -2, -2], [1, -2, 1, -2]] = True
+    if n == 4:
+        m[:, [0, 1, -2, -1]] = True
+        m[[0, 1, -2, -1]] = True
+    return m
+
+
 def get_slot_data(start, stop, slot, imgsize=None,
                   db=None, data_root=None, columns=None,
+                  img_shape_8x8=False
                   ):
     """
     For a the given parameters, retrieve telemetry and construct a
@@ -135,7 +167,10 @@ def get_slot_data(start, stop, slot, imgsize=None,
     data_files = _get_file_records(start, stop, slots=[slot],
                                     imgsize=imgsize, db=db,
                                     data_root=data_root)
-    dtype = [k for k in ACA_DTYPE if k[0] in columns]
+    if img_shape_8x8:
+        dtype = [k for k in ACA_DTYPE_2 if k[0] in columns]
+    else:
+        dtype = [k for k in ACA_DTYPE if k[0] in columns]
     if not len(data_files):
         # return an empty masked array
         return ma.zeros(0, dtype=dtype)
@@ -163,10 +198,18 @@ def get_slot_data(start, stop, slot, imgsize=None,
         if 'FILENAME' in columns:
             all_rows['FILENAME'][rowcount:(rowcount + len(chunk))] = f['filename']
         if 'IMGRAW' in columns:
-            all_rows['IMGRAW'].reshape(rows, 8, 8)[
-                rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
-                chunk.field('IMGRAW').reshape(len(chunk),
-                                              f_imgsize, f_imgsize))
+            if img_shape_8x8:
+                if f_imgsize == 8:
+                    all_rows['IMGRAW'][rowcount:(rowcount + len(chunk))] = chunk.field('IMGRAW')
+                else:
+                    i = (8 - f_imgsize) // 2
+                    all_rows['IMGRAW'][rowcount:(rowcount + len(chunk)), i:-i, i:-i] = \
+                        chunk.field('IMGRAW')
+            else:
+                all_rows['IMGRAW'].reshape(rows, 8, 8)[
+                    rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
+                    chunk.field('IMGRAW').reshape(len(chunk),
+                                                  f_imgsize, f_imgsize))
         rowcount += len(chunk)
 
     # just include the rows in the requested time range in the returned data
