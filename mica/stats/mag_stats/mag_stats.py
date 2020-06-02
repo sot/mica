@@ -2,16 +2,19 @@ import scipy.stats
 import numpy as np
 from astropy.table import Table, vstack
 
-import catalogs
+from . import catalogs
 
 import pandas as pd
+import numba
 from Chandra.Time import DateTime
 from agasc import get_star
 from cheta import fetch
 from Quaternion import Quat
 import Ska.quatutil
 import mica
-
+from mica.archive import aca_l0
+from mica.archive.aca_dark.dark_cal import get_dark_cal_image
+from chandra_aca.transform import count_rate_to_mag
 
 version = mica.__version__
 
@@ -110,17 +113,29 @@ def get_telemetry(obs):
     stop = dwell['tstop']
     slot = obs['slot']
 
+    slot_data_cols = ['TIME', 'END_INTEG_TIME', 'IMGSIZE', 'IMGROW0', 'IMGCOL0', 'IMGRAW']
+    slot_data = aca_l0.get_slot_data(start, stop, slot=obs['slot'],
+                                     img_shape_8x8=True, columns=slot_data_cols)
+
     dmag = _magnitude_correction(start, obs['mag'])
 
     msid = fetch.MSID(f'AOACMAG{slot}', start, stop)
-    times = msid.times[::2]
-    mags = msid.vals[::2]
+    t1 = np.round(msid.times, 3)
+    t2 = np.round(slot_data['END_INTEG_TIME'], 3)
+    c, i1, i2 = np.intersect1d(t1, t2, return_indices=True)
+    times = msid.times[i1]
+    mags = msid.vals[i1]
+
+    # the following line removes a couple of points at the edges. I have not checked why they differ
+    slot_data = slot_data[i2]
 
     telem = {
         'times': times,
         'mags': mags,
-        'mags_corrected': mags - dmag
+        'mags_corrected': mags - dmag,
+        'mags_from_img': mag_from_img(slot_data, start)
     }
+    telem.update({k: slot_data[k] for k in slot_data_cols[2:]})
 
     names = ['AOACASEQ', 'AOPCADMD', f'AOACIIR{slot}', f'AOACISP{slot}']
     msids = fetch.MSIDset(names, times[0] - 4, times[-1] + 4)
@@ -159,6 +174,36 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None):
         telem[i]['obsid'] = obsid
     return vstack(telem)
 
+
+@numba.jit(nopython=True)
+def staggered_aca_slice(array_in, array_out, row, col):
+    for i in np.arange(len(row)):
+        if row[i] == 1024 or col[i] == 1024:
+            array_out[i] = np.nan
+        else:
+            array_out[i] = array_in[row[i]:row[i]+8,col[i]:col[i]+8]
+
+
+def mag_from_img(slot_data, t_start):
+    dark_cal = get_dark_cal_image(t_start, 'nearest', t_ccd_ref=-11.2, aca_image=False)
+    i = 512 + np.where(slot_data['IMGSIZE'] == 8,
+                       slot_data['IMGROW0'],
+                       slot_data['IMGROW0'] + 1
+                       )
+    j = 512 + np.where(slot_data['IMGSIZE'] == 8,
+                       slot_data['IMGCOL0'],
+                       slot_data['IMGCOL0'] + 1
+                       )
+
+    dark = np.zeros([len(i), 8, 8], dtype=np.float64)
+
+    staggered_aca_slice(dark_cal.astype(float), dark, i, j)
+    img_sub = slot_data['IMGRAW'] - dark * 1.696 / 5
+
+    counts = np.ma.sum(np.ma.sum(img_sub.data[:, 1:7, 1:7], axis=1), axis=1)
+    mag = count_rate_to_mag(counts * 5 / 1.7)
+
+    return mag
 
 def get_obsid_stats(obs, telem=None):
     """
@@ -201,7 +246,7 @@ def calc_obsid_stats(telem):
         dictionary with stats
     """
     times = telem['times']
-    mags = telem['mags']
+    mags = telem['mags_from_img']
 
     track = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK ') & \
             (telem[f'AOACISP'] == 'OK ') & (telem['AOPCADMD'] == 'NPNT')
@@ -312,7 +357,7 @@ def get_agasc_id_stats(agasc_id):
 
     all_telem = vstack([Table(t) for t in all_telem])
 
-    mags = all_telem['mags_corrected']
+    mags = all_telem['mags_from_img']
 
     ok = (all_telem['AOACASEQ'] == 'KALM') & (all_telem['AOACIIR'] == 'OK ') & \
          (all_telem['AOACISP'] == 'OK ') & (all_telem['AOPCADMD'] == 'NPNT') & \
