@@ -76,12 +76,17 @@ def _load_startcat_commands():
 
     # Check that the association is correct.
     dt = CxoTime(dwells['manvr_start'][idxs]) - CxoTime(STARCAT_CMDS['mp_starcat_time'])
-    assert np.all((dt.sec > 1) & (dt.sec < 1200))
+    ok = (dt.sec > 1) & (dt.sec < 1200)
+
+    print(f'WARNING: {np.sum(~ok)} entries where star-catalog/maneuver association is not right')
+    #assert np.all((dt.sec > 1) & (dt.sec < 1200))
+
+    STARCAT_CMDS = STARCAT_CMDS[ok]
 
     # Now re-select dwells to be only dwells with a star catalog and set the
     # corresponding command time for MP_STARCAT.  This is the unique key to
     # allow going from a star catalog to the NPM dwell that uses the catalog.
-    dwells = dwells[idxs]
+    dwells = dwells[idxs][ok]
     dwells['mp_starcat_time'] = STARCAT_CMDS['mp_starcat_time']
     dwells.add_index('mp_starcat_time')
 
