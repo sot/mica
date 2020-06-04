@@ -14,10 +14,20 @@ import Ska.quatutil
 import mica
 from mica.archive import aca_l0
 from mica.archive.aca_dark.dark_cal import get_dark_cal_image
-from chandra_aca.transform import count_rate_to_mag
+from chandra_aca.transform import count_rate_to_mag, pixels_to_yagzag
 
 version = mica.__version__
 
+MASK = {
+'mouse_bit': np.array([[ True, True, True, True, True, True, True, True],
+                       [ True, True, False, False, False, False, True, True],
+                       [ True, False, False, False, False, False, False, True],
+                       [ True, False, False, False, False, False, False, True],
+                       [ True, False, False, False, False, False, False, True],
+                       [ True, False, False, False, False, False, False, True],
+                       [ True, True, False, False, False, False, True, True],
+                       [ True, True, True, True, True, True, True, True]])
+}
 
 def _magnitude_correction(time, mag_aca):
     """
@@ -42,7 +52,7 @@ def _magnitude_correction(time, mag_aca):
     return np.squeeze(dmag)
 
 
-def get_residuals(star, slot, times):
+def get_star_position(star, slot, telem):
     """
     Residuals for a given AGASC record at a given slot/time.
 
@@ -55,11 +65,6 @@ def get_residuals(star, slot, times):
     """
     aca_misalign = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     R2A = 206264.81
-    names = [f'AOATTQT{i}' for i in range(1, 5)] + [f'AOACZAN{slot}', f'AOACYAN{slot}']
-
-    msids = fetch.MSIDset(names, times[0] - 4, times[-1] + 4)
-    t = np.in1d(msids[names[0]].times, times)
-    telem = {n: msids[n].vals[t] for n in names}
 
     q_att = Quat(q=np.array([telem['AOATTQT1'],
                              telem['AOATTQT2'],
@@ -72,22 +77,39 @@ def get_residuals(star, slot, times):
                    star_pos_eci).transpose()
     yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
     zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
-    dy = telem[f'AOACYAN{slot}'] - yag
-    dz = telem[f'AOACZAN{slot}'] - zag
 
-    # telem['yag'] = yag
-    # telem['zag'] = zag
-    telem['AOACYAN'] = telem[f'AOACYAN{slot}']
-    telem['AOACZAN'] = telem[f'AOACZAN{slot}']
+    return {
+        'star_yag': yag,
+        'star_zag': zag,
+    }
 
-    del telem[f'AOACYAN{slot}']
-    del telem[f'AOACZAN{slot}']
 
-    telem['dy'] = dy
-    telem['dz'] = dz
-    # cheating here and ignoring spherical trig
-    telem['dr'] = (dy ** 2 + dz ** 2) ** .5
-    return telem
+# this is in case one has to return empty telemetry
+_telem_dtype = [('times', 'float64'),
+                ('IMGSIZE', 'int32'),
+                ('IMGROW0', 'int16'),
+                ('IMGCOL0', 'int16'),
+                ('IMGRAW', 'float32'),
+                ('AOACASEQ', '<U4'),
+                ('AOPCADMD', '<U4'),
+                ('AOATTQT1', 'float64'),
+                ('AOATTQT2', 'float64'),
+                ('AOATTQT3', 'float64'),
+                ('AOATTQT4', 'float64'),
+                ('AOACIIR', '<U3'),
+                ('AOACISP', '<U3'),
+                ('AOACYAN', 'float64'),
+                ('AOACZAN', 'float64'),
+                ('AOACMAG', 'float32'),
+                ('mags_img', 'float64'),
+                ('yag_img', 'float64'),
+                ('zag_img', 'float64'),
+                ('star_yag', 'float64'),
+                ('star_zag', 'float64'),
+                ('mags', 'float64'),
+                ('dy', 'float64'),
+                ('dz', 'float64'),
+                ('dr', 'float64')]
 
 
 def get_telemetry(obs):
@@ -109,48 +131,59 @@ def get_telemetry(obs):
     :return: dict
     """
     dwell = catalogs.DWELLS_NP[catalogs.DWELLS_MAP[obs['mp_starcat_time']]]
+    star = get_star(obs['agasc_id'], date=dwell['tstart'])
     start = dwell['tstart']
     stop = dwell['tstop']
     slot = obs['slot']
 
+    # first we get slot data from mica and magnitudes from cheta and match them in time
     slot_data_cols = ['TIME', 'END_INTEG_TIME', 'IMGSIZE', 'IMGROW0', 'IMGCOL0', 'IMGRAW']
     slot_data = aca_l0.get_slot_data(start, stop, slot=obs['slot'],
                                      img_shape_8x8=True, columns=slot_data_cols)
-
-    dmag = _magnitude_correction(start, obs['mag'])
 
     msid = fetch.MSID(f'AOACMAG{slot}', start, stop)
     t1 = np.round(msid.times, 3)
     t2 = np.round(slot_data['END_INTEG_TIME'], 3)
     c, i1, i2 = np.intersect1d(t1, t2, return_indices=True)
     times = msid.times[i1]
-    mags = msid.vals[i1]
 
     # the following line removes a couple of points at the edges. I have not checked why they differ
     slot_data = slot_data[i2]
 
+    if len(times) == 0:
+        # the intersection was null.
+        return {k: np.array([], dtype=v) for k, v in _telem_dtype}
+    # Now that we have the times, we get the rest of the MSIDs
     telem = {
-        'times': times,
-        'mags': mags,
-        'mags_corrected': mags - dmag,
-        'mags_from_img': mag_from_img(slot_data, start)
+        'times': times
     }
     telem.update({k: slot_data[k] for k in slot_data_cols[2:]})
 
-    names = ['AOACASEQ', 'AOPCADMD', f'AOACIIR{slot}', f'AOACISP{slot}']
+    names = ['AOACASEQ', 'AOPCADMD', f'AOACIIR{slot}', f'AOACISP{slot}', f'AOACMAG{slot}',
+             f'AOACZAN{slot}', f'AOACYAN{slot}'] + [f'AOATTQT{i}' for i in range(1, 5)]
     msids = fetch.MSIDset(names, times[0] - 4, times[-1] + 4)
-    # the following works because the MSIDs are in the same group
+    # the following just works...
     t = np.in1d(msids[names[0]].times, times)
     telem.update({n: msids[n].vals[t] for n in names})
+    for name in ['AOACIIR', 'AOACISP', 'AOACYAN', 'AOACZAN', 'AOACMAG']:
+        telem[name] = telem[f'{name}{slot}']
+        del telem[f'{name}{slot}']
 
-    telem['AOACIIR'] = telem[f'AOACIIR{slot}']
-    telem['AOACISP'] = telem[f'AOACISP{slot}']
+    # etc...
+    telem.update(get_mag_from_img(slot_data, start))
+    telem.update(get_star_position(star=star, slot=obs['slot'], telem=telem))
 
-    del telem[f'AOACIIR{slot}']
-    del telem[f'AOACISP{slot}']
+    telem['mags'] = telem['mags_img']
+    #dmag = _magnitude_correction(start, obs['mag'])
+    #telem['mags'] = telem['AOACMAG']
+    #telem['mags_corrected'] = telem['AOACMAG'] - dmag
 
-    star = get_star(obs['agasc_id'], date=times[0])
-    telem.update(get_residuals(star=star, slot=obs['slot'], times=times))
+    telem['dy'] = telem['yag_img'] - telem['star_yag']
+    telem['dz'] = telem['zag_img'] - telem['star_zag']
+    #telem['dy'] = telem[f'AOACYAN{slot}'] - telem['star_yag']
+    #telem['dz'] = telem[f'AOACZAN{slot}'] - telem['star_zag']
+    # cheating here and ignoring spherical trig
+    telem['dr'] = (telem['dy'] ** 2 + telem['dz'] ** 2) ** .5
 
     return telem
 
@@ -178,32 +211,54 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None):
 @numba.jit(nopython=True)
 def staggered_aca_slice(array_in, array_out, row, col):
     for i in np.arange(len(row)):
-        if row[i] == 1024 or col[i] == 1024:
-            array_out[i] = np.nan
-        else:
-            array_out[i] = array_in[row[i]:row[i]+8,col[i]:col[i]+8]
+        if row[i]+8 < 1024 and col[i]+8 < 1024:
+            array_out[i] = array_in[row[i]:row[i]+8, col[i]:col[i]+8]
 
 
-def mag_from_img(slot_data, t_start):
+def get_mag_from_img(slot_data, t_start):
     dark_cal = get_dark_cal_image(t_start, 'nearest', t_ccd_ref=-11.2, aca_image=False)
-    i = 512 + np.where(slot_data['IMGSIZE'] == 8,
-                       slot_data['IMGROW0'],
-                       slot_data['IMGROW0'] + 1
-                       )
-    j = 512 + np.where(slot_data['IMGSIZE'] == 8,
-                       slot_data['IMGCOL0'],
-                       slot_data['IMGCOL0'] + 1
-                       )
 
-    dark = np.zeros([len(i), 8, 8], dtype=np.float64)
+    # all images will be 8x8, with a centered mask, imgrow will always be the one of the 8x8 corner.
+    imgrow_8x8 = np.where(slot_data['IMGSIZE'] == 8,
+                          slot_data['IMGROW0'],
+                          slot_data['IMGROW0'] - 1
+                          )
+    imgcol_8x8 = np.where(slot_data['IMGSIZE'] == 8,
+                          slot_data['IMGCOL0'],
+                          slot_data['IMGCOL0'] - 1
+                          )
+    # a useful mask to select entries when it is tracking
+    m = slot_data['IMGSIZE'] > 4
 
-    staggered_aca_slice(dark_cal.astype(float), dark, i, j)
+    # subtract closest dark cal
+    dark = np.zeros([len(slot_data), 8, 8], dtype=np.float64)
+    staggered_aca_slice(dark_cal.astype(float), dark, 512 + imgrow_8x8, 512 + imgcol_8x8)
     img_sub = slot_data['IMGRAW'] - dark * 1.696 / 5
+    img_sub.mask *= MASK['mouse_bit']
 
-    counts = np.ma.sum(np.ma.sum(img_sub.data[:, 1:7, 1:7], axis=1), axis=1)
-    mag = count_rate_to_mag(counts * 5 / 1.7)
+    # calculate magnitude
+    mag = np.zeros(len(slot_data))
+    counts = np.ma.sum(np.ma.sum(img_sub, axis=1), axis=1)
+    mag[m] = count_rate_to_mag(counts[m] * 5 / 1.7)
 
-    return mag
+    # centroids
+    yag = np.zeros(len(slot_data))
+    zag = np.zeros(len(slot_data))
+    pixel_center = np.arange(8) + 0.5
+    projected_image = np.ma.sum(slot_data['IMGRAW'], axis=1)
+    col = np.ma.sum(pixel_center * projected_image, axis=1) / np.ma.sum(projected_image, axis=1)
+    projected_image = np.ma.sum(slot_data['IMGRAW'], axis=2)
+    row = np.ma.sum(pixel_center * projected_image, axis=1) / np.ma.sum(projected_image, axis=1)
+
+    y_pixel = row + imgrow_8x8
+    z_pixel = col + imgcol_8x8
+    yag[m], zag[m] = pixels_to_yagzag(y_pixel[m], z_pixel[m])
+    return {
+        'mags_img': mag,
+        'yag_img': yag,
+        'zag_img': zag
+    }
+
 
 def get_obsid_stats(obs, telem=None):
     """
@@ -246,10 +301,11 @@ def calc_obsid_stats(telem):
         dictionary with stats
     """
     times = telem['times']
-    mags = telem['mags_from_img']
+    mags = telem['mags']
 
     track = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK ') & \
-            (telem[f'AOACISP'] == 'OK ') & (telem['AOPCADMD'] == 'NPNT')
+            (telem[f'AOACISP'] == 'OK ') & (telem['AOPCADMD'] == 'NPNT') & \
+            (telem['IMGSIZE'] > 4)
     dr3 = (telem['dr'] < 3)
     dr5 = (telem['dr'] < 5)
 
@@ -342,7 +398,11 @@ def get_agasc_id_stats(agasc_id):
         telem = get_telemetry(obs)
         telem['obsid'] = np.ones_like(telem['times']) * obs['obsid']
         telem['agasc_id'] = np.ones_like(telem['times']) * agasc_id
-        all_telem.append(telem)
+        if len(telem['times']):
+            all_telem.append(telem)
+
+    if len(all_telem) == 0:
+        raise Exception(f'No telemetry data for agasc_id {agasc_id}')
 
     stats = Table([get_obsid_stats(obs, telem=telem) for obs, telem in zip(star_obs, all_telem)])
     n_obsids = len(stats)
@@ -357,8 +417,7 @@ def get_agasc_id_stats(agasc_id):
 
     all_telem = vstack([Table(t) for t in all_telem])
 
-    mags = all_telem['mags_from_img']
-
+    mags = all_telem['mags']
     ok = (all_telem['AOACASEQ'] == 'KALM') & (all_telem['AOACIIR'] == 'OK ') & \
          (all_telem['AOACISP'] == 'OK ') & (all_telem['AOPCADMD'] == 'NPNT') & \
         np.in1d(all_telem['obsid'], stats[stats['obsid_ok']]['obsid'])
@@ -406,7 +465,7 @@ def get_agasc_id_stats(agasc_id):
             f'sigma_plus_dr{dr}': 0,
         })
 
-    if sum(ok) < 100:
+    if sum(ok) < 10:
         return result, stats
 
     sigma_minus, q25, median, q75, sigma_plus = np.quantile(mags[ok],

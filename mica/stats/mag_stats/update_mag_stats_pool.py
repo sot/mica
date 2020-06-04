@@ -2,10 +2,9 @@
 import numpy as np
 import datetime
 from multiprocessing import Pool
-import update_mag_stats
-import catalogs
-import mag_stats
+from mica.stats.mag_stats import update_mag_stats, catalogs, mag_stats
 import pickle
+import argparse
 
 
 def get_agasc_id_stats(agasc_ids, batch_size=100):
@@ -47,20 +46,35 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
             time.sleep(1)
     failed_jobs = [arg for arg, job in zip(args, jobs) if not job.successful()]
     results = [job.get() for job in jobs if job.successful()]
-    if results:
-        obsid_stats = vstack([r[0] for r in results])
-        agasc_stats = vstack([r[1] for r in results])
-        fails = sum([r[2] for r in results], [])
-    else:
-        obsid_stats, agasc_stats, fails = Table(), Table(), Table()
+
+    # TODO: make sure nothing is skipped here
+    obsid_stats = [r[0] for r in results if r[0] is not None]
+    agasc_stats = [r[1] for r in results if r[1] is not None]
+    obsid_stats = vstack(obsid_stats) if obsid_stats else Table()
+    agasc_stats = vstack(agasc_stats) if agasc_stats else Table()
+    fails = sum([r[2] for r in results], [])
+
     return obsid_stats, agasc_stats, fails, failed_jobs
 
 
+def parser():
+    parse = argparse.ArgumentParser()
+    parse.add_argument('--agasc-id-file')
+    return parse
+
 def main():
-    agasc_ids = sorted(np.unique(catalogs.STARS_OBS['agasc_id']))
+    args = parser().parse_args()
+    if args.agasc_id_file:
+        with open(args.agasc_id_file, 'r') as f:
+            agasc_ids = [int(l.strip()) for l in f.readlines()]
+            agasc_ids = np.intersect1d(agasc_ids, catalogs.STARS_OBS['agasc_id'])
+    else:
+        agasc_ids = sorted(catalogs.STARS_OBS['agasc_id'])
+    agasc_ids = np.unique(agasc_ids)
+    stars_obs = catalogs.STARS_OBS[np.in1d(catalogs.STARS_OBS['agasc_id'], agasc_ids)]
     batch_size = 10
     print(f'Will process {len(agasc_ids)} stars'
-          f' on {len(catalogs.STARS_OBS)} observations')
+          f' on {len(stars_obs)} observations')
 
     obsid_stats, agasc_stats, fails, fail_jobs = get_agasc_id_stats(agasc_ids, batch_size)
 
@@ -68,7 +82,7 @@ def main():
           f'  {len(obsid_stats)} OBSIDs,'
           f'  {len(agasc_stats)} stars,'
           f'  {len(fails)} failed stars,'
-          f'  {len(fail_jobs)} jobs')
+          f'  {len(fail_jobs)} failed jobs')
     filename = f'mag_stats_failed_jobs_{mag_stats.version}.pkl'
     with open(filename, 'wb') as out:
         pickle.dump(fail_jobs, out)

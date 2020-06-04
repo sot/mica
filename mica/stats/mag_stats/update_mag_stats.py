@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 import os
 import numpy as np
-import catalogs
-import mag_stats
+from mica.stats.mag_stats import catalogs, mag_stats
 import pickle
 import tables
 
@@ -17,7 +16,7 @@ def get_agasc_id_stats(agasc_ids):
     :return: astropy.table.Table, astropy.table.Table, list
         obsid_stats, agasc_stats, fails
     """
-    import mag_stats
+    from mica.stats.mag_stats import mag_stats
     from astropy.table import Table, vstack
 
     fails = []
@@ -31,8 +30,13 @@ def get_agasc_id_stats(agasc_ids):
         except Exception as e:
             fails.append((agasc_id, str(e)))
 
-    agasc_stats = Table(agasc_stats)
-    obsid_stats = vstack(obsid_stats)
+    try:
+        agasc_stats = Table(agasc_stats) if agasc_stats else None
+        obsid_stats = vstack(obsid_stats) if obsid_stats else None
+    except Exception as e:
+        agasc_stats = None
+        obsid_stats = None
+        fails = [(agasc_id, f'Exception at bottom of get_agasc_id_stats: {str(e)}')]
     return obsid_stats, agasc_stats, fails
 
 
@@ -51,19 +55,20 @@ def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
     :param outdir:
     :return:
     """
-    filename = os.path.join(outdir, f'mag_stats_agasc_{mag_stats.version}.fits')
-    if os.path.exists(filename):
-        os.remove(filename)
-    agasc_stats.write(filename)
-
-    filename = os.path.join(outdir, f'mag_stats_obsid_{mag_stats.version}.fits')
-    if os.path.exists(filename):
-        os.remove(filename)
-    obsid_stats.write(filename)
-
-    filename = os.path.join(outdir, f'mag_stats_fails_{mag_stats.version}.pkl')
-    with open(filename, 'wb') as out:
-        pickle.dump(fails, out)
+    if len(agasc_stats):
+        filename = os.path.join(outdir, f'mag_stats_agasc_{mag_stats.version}.fits')
+        if os.path.exists(filename):
+            os.remove(filename)
+        agasc_stats.write(filename)
+    if len(obsid_stats):
+        filename = os.path.join(outdir, f'mag_stats_obsid_{mag_stats.version}.fits')
+        if os.path.exists(filename):
+            os.remove(filename)
+        obsid_stats.write(filename)
+    if len(fails):
+        filename = os.path.join(outdir, f'mag_stats_fails_{mag_stats.version}.pkl')
+        with open(filename, 'wb') as out:
+            pickle.dump(fails, out)
 
 
 def update_mags_stats_supplement(agasc_stats, filename=None):
