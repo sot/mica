@@ -137,7 +137,7 @@ def get_telemetry(obs):
     slot = obs['slot']
 
     # first we get slot data from mica and magnitudes from cheta and match them in time
-    slot_data_cols = ['TIME', 'END_INTEG_TIME', 'IMGSIZE', 'IMGROW0', 'IMGCOL0', 'IMGRAW']
+    slot_data_cols = ['TIME', 'END_INTEG_TIME', 'IMGSIZE', 'IMGROW0', 'IMGCOL0', 'TEMPCCD', 'IMGRAW']
     slot_data = aca_l0.get_slot_data(start, stop, slot=obs['slot'],
                                      img_shape_8x8=True, columns=slot_data_cols)
 
@@ -241,6 +241,12 @@ def get_mag_from_img(slot_data, t_start):
     counts = np.ma.sum(np.ma.sum(img_sub, axis=1), axis=1)
     mag[m] = count_rate_to_mag(counts[m] * 5 / 1.7)
 
+    # this extra step is to investigate the background scale
+    dark = np.ma.array(dark * 1.696 / 5, mask=img_sub.mask)
+    img_raw = np.ma.array(slot_data['IMGRAW'], mask=img_sub.mask)
+    dark_count = np.ma.sum(np.ma.sum(dark, axis=1), axis=1)
+    img_count = np.ma.sum(np.ma.sum(img_raw, axis=1), axis=1)
+
     # centroids
     yag = np.zeros(len(slot_data))
     zag = np.zeros(len(slot_data))
@@ -256,7 +262,9 @@ def get_mag_from_img(slot_data, t_start):
     return {
         'mags_img': mag,
         'yag_img': yag,
-        'zag_img': zag
+        'zag_img': zag,
+        'counts_img': img_count,
+        'counts_dark': dark_count
     }
 
 
@@ -363,6 +371,8 @@ def calc_obsid_stats(telem):
         'q25': q25,
         'median': q50,
         'q75': q75,
+        'counts_img': np.mean(telem['counts_img'][ok]),
+        'counts_dark': np.mean(telem['counts_dark'][ok]),
         'mean': np.mean(mags[ok]),
         'mean_err': scipy.stats.sem(mags[ok]),
         'std': np.std(mags[ok]),
