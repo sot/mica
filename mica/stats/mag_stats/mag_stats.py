@@ -216,7 +216,9 @@ def staggered_aca_slice(array_in, array_out, row, col):
 
 
 def get_mag_from_img(slot_data, t_start):
-    dark_cal = get_dark_cal_image(t_start, 'nearest', t_ccd_ref=-11.2, aca_image=False)
+    dark_cal = get_dark_cal_image(t_start, 'nearest',
+                                  t_ccd_ref=np.mean(slot_data['TEMPCCD'] - 273.16),
+                                  aca_image=False)
 
     # all images will be 8x8, with a centered mask, imgrow will always be the one of the 8x8 corner.
     imgrow_8x8 = np.where(slot_data['IMGSIZE'] == 8,
@@ -309,7 +311,6 @@ def calc_obsid_stats(telem):
         dictionary with stats
     """
     times = telem['times']
-    mags = telem['mags']
 
     track = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK ') & \
             (telem[f'AOACISP'] == 'OK ') & (telem['AOPCADMD'] == 'NPNT') & \
@@ -321,11 +322,11 @@ def calc_obsid_stats(telem):
     f_3 = sum(track & dr3) / len(track)
     f_5 = sum(track & dr5) / len(track)
     if sum(track & dr3):
-        f_14 = sum(track & dr3 & (mags >= 13.9)) / sum(track & dr3)
+        f_14 = sum(track & dr3 & (telem['AOACMAG'] >= 13.9)) / sum(track & dr3)
     else:
         f_14 = np.nan
 
-    ok = track & dr3 & (mags < 13.9)
+    ok = track & dr3 & (telem['AOACMAG'] < 13.9)
     f_ok = sum(ok) / len(ok)
 
     stats = {
@@ -347,16 +348,21 @@ def calc_obsid_stats(telem):
         't_std': np.inf,
         't_skew': np.inf,
         't_kurt': np.inf,
-        'n': len(mags),
+        'n': len(telem['AOACMAG']),
         'n_ok': sum(ok),
         'outliers': -1,
         'lf_variability_100s': np.inf,
         'lf_variability_500s': np.inf,
         'lf_variability_1000s': np.inf,
+        'tempccd': np.nan,
     }
     if sum(ok) < 10:
         return stats
 
+    aoacmag_q25, aoacmag_q50, aoacmag_q75 = np.quantile(telem['AOACMAG'][ok], [0.25, 0.5, 0.75])
+
+
+    mags = telem['mags']
     q25, q50, q75 = np.quantile(mags[ok], [0.25, 0.5, 0.75])
     iqr = q75 - q25
     outlier = ok & ((mags > q75 + 3 * iqr) | (mags < q25 - 3 * iqr))
@@ -368,6 +374,11 @@ def calc_obsid_stats(telem):
     s_1000s = s.rolling(window=int(1000 / dt), center=True).median().dropna()
 
     stats.update({
+        'aoacmag_mean': np.mean(telem['AOACMAG'][ok]),
+        'aoacmag_err': np.std(telem['AOACMAG'][ok]),
+        'aoacmag_q25': aoacmag_q25,
+        'aoacmag_median': aoacmag_q50,
+        'aoacmag_q75': aoacmag_q75,
         'q25': q25,
         'median': q50,
         'q75': q75,
@@ -387,6 +398,7 @@ def calc_obsid_stats(telem):
         'lf_variability_100s': np.max(s_100s) - np.min(s_100s),
         'lf_variability_500s': np.max(s_500s) - np.min(s_500s),
         'lf_variability_1000s': np.max(s_1000s) - np.min(s_1000s),
+        'tempccd': np.mean(telem['TEMPCCD'][ok]) - 273.16,
     })
     return stats
 
