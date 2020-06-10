@@ -285,18 +285,20 @@ def get_obsid_stats(obs, telem=None):
     if telem is None:
         telem = get_telemetry(obs)
 
+    star = get_star(obs['agasc_id'])
     dwell = catalogs.DWELLS_NP[catalogs.DWELLS_MAP[obs['mp_starcat_time']]]
     start = dwell['tstart']
     stop = dwell['tstop']
 
-    stats = {k: obs[k] for k in obs.colnames}
+    stats = {k: obs[k] for k in
+             ['agasc_id', 'obsid', 'slot', 'type', 'mp_starcat_time', 'timeline_id']}
     stats.update({'tstart': start,
-                  'tstop': stop})
+                  'tstop': stop,
+                  'mag_correction': _magnitude_correction(start, star['MAG_ACA']),
+                  'mag_aca': star['MAG_ACA'],
+                  'mag_aca_err': star['MAG_ACA_ERR'] / 100,
+                  })
     stats.update(calc_obsid_stats(telem))
-
-    dmag = _magnitude_correction(start, obs['mag'])
-    stats['mag_correction'] = dmag[()]
-    stats['mean_corrected'] = stats['mean'] - dmag
 
     return stats
 
