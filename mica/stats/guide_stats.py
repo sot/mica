@@ -1,6 +1,5 @@
 import os
 import tables
-import tables3_api
 
 SKA = os.environ.get('SKA', '/proj/sot/ska')
 TABLE_FILE = os.path.join(SKA, 'data', 'guide_stats', 'guide_stats.h5')

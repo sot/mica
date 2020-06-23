@@ -19,7 +19,6 @@ from astropy.table import Table
 from astropy.time import Time
 import astropy.units as u
 
-import tables3_api
 from Ska.Shell import bash
 import agasc
 import Ska.DBI
