@@ -27,9 +27,9 @@ def test_l0_images_meta():
                             'TIME': np.float64(467055637.49031752)}
 
 has_l0_2007_archive = os.path.exists(os.path.join(aca_l0.CONFIG['data_root'], '2007'))
+has_asp_l1 = os.path.exists(os.path.join(asp_l1.CONFIG['data_root']))
 
-
-@pytest.mark.skipif('not has_l0_2007_archive', reason='Test requires 2007 L0 archive')
+@pytest.mark.skipif('not has_l0_2007_archive or not has_asp_l1', reason='Test requires 2007 L0 archive')
 def test_get_l0_images():
     """
     Do a validation test of get_l0_images:
