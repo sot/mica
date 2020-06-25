@@ -1,4 +1,5 @@
 import scipy.stats
+import scipy.special
 import numpy as np
 from astropy.table import Table, vstack
 
@@ -50,6 +51,37 @@ def _magnitude_correction(time, mag_aca):
             np.exp(q[3] + q[4] * np.atleast_1d(mag_aca)))
     dmag[np.atleast_1d(time) < t_ref.secs] = 0
     return np.squeeze(dmag)
+
+
+def _responsivity(time):
+    """
+    ACA magnitude response over time.
+
+    This was estimated with bright stars that were observed more than a hundred times during the
+    mission. More details in notebook:
+
+    :param time: float
+        Time in CXC seconds
+    :return:
+    """
+    a, b, c = [3.24323540e-02, 5.35475665e+08, 8.44499654e+07]
+    return - a*(1 + scipy.special.erf((time - b)/c))/2
+
+
+def _droop_systematic_shift(magnitude):
+    """
+    Difference between the magnitude determined from DC-subtracted image telemetry and
+    the catalog ACA magnitude.
+
+    The magnitude shift is time-independent. It depends only on the catalog magnitude and is zero
+    for bright stars. More details in notebook:
+
+    :param magnitude: float
+        Catalog ACA magnitude
+    :return:
+    """
+    a, b = [11.24808388,  0.54867984]
+    return np.exp((magnitude - a) / b)
 
 
 def get_star_position(star, slot, telem):
@@ -173,10 +205,9 @@ def get_telemetry(obs):
     telem.update(get_mag_from_img(slot_data, start))
     telem.update(get_star_position(star=star, slot=obs['slot'], telem=telem))
 
-    telem['mags'] = telem['mags_img']
-    #dmag = _magnitude_correction(start, obs['mag'])
-    #telem['mags'] = telem['AOACMAG']
-    #telem['mags_corrected'] = telem['AOACMAG'] - dmag
+    droop_shift = _droop_systematic_shift(star['MAG_ACA'])
+    responsivity = _responsivity(start)
+    telem['mags'] = telem['mags_img'] - responsivity - droop_shift
 
     telem['dy'] = telem['yag_img'] - telem['star_yag']
     telem['dz'] = telem['zag_img'] - telem['star_zag']
@@ -292,9 +323,13 @@ def get_obsid_stats(obs, telem=None):
 
     stats = {k: obs[k] for k in
              ['agasc_id', 'obsid', 'slot', 'type', 'mp_starcat_time', 'timeline_id']}
+    droop_shift = _droop_systematic_shift(star['MAG_ACA'])
+    responsivity = _responsivity(start)
     stats.update({'tstart': start,
                   'tstop': stop,
-                  'mag_correction': _magnitude_correction(start, star['MAG_ACA']),
+                  'mag_correction': - responsivity - droop_shift,
+                  'responsivity': responsivity,
+                  'droop_shift': droop_shift,
                   'mag_aca': star['MAG_ACA'],
                   'mag_aca_err': star['MAG_ACA_ERR'] / 100,
                   })
@@ -503,6 +538,7 @@ def get_agasc_id_stats(agasc_id):
     stats['w'] = np.where(stats['std'] != 0,
                           1. / stats['std'],
                           1. / min_std)
+    stats['mean_corrected'] = stats['t_mean'] + stats['mag_correction']
     stats['weighted_mean'] = stats['mean_corrected'] * stats['w']
 
     mag_weighted_mean = (stats['weighted_mean'].sum() / stats['w'].sum())
