@@ -39,8 +39,8 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
                     eta = ''
                 else:
                     dt1 = (now - start).total_seconds()
-                    dt = datetime.timedelta(seconds=len(jobs) * dt1 / finished)
-                    eta = f'ETA: {(start + dt).strftime(fmt)}'
+                    dt = datetime.timedelta(seconds=(len(jobs)-finished) * dt1 / finished)
+                    eta = f'ETA: {(now + dt).strftime(fmt)}'
                 progress = 100*finished/len(jobs)
                 print(f'{progress:6.2f}% at {now.strftime(fmt)}, {eta}')
             time.sleep(1)
