@@ -410,7 +410,7 @@ def calc_acq_stats(manvr, vals, times):
 
 def _get_obsids_to_update(check_missing=False):
     if check_missing:
-        last_tstart = '2007:271'
+        last_tstart = '2007:271:12:00:00'
         kadi_obsids = events.obsids.filter(start=last_tstart)
         try:
             h5 = tables.open_file(table_file, 'r')
@@ -427,7 +427,7 @@ def _get_obsids_to_update(check_missing=False):
             last_tstart = tbl.cols.guide_tstart[tbl.colindexes['guide_tstart'][-1]]
             h5.close()
         except:
-            last_tstart = '2002:012'
+            last_tstart = '2002:012:12:00:00'
         kadi_obsids = events.obsids.filter(start=last_tstart)
         # Skip the first obsid (as we already have it in the table)
         obsids = [o.obsid for o in kadi_obsids][1:]

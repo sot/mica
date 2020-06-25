@@ -226,7 +226,7 @@ def get_dark_cal_props_table(start=None, stop=None, include_image=False, as_tabl
 
     :returns: astropy Table or list of dark calibration properties
     """
-    start_id = date_to_dark_id('1999:001' if start is None else start)
+    start_id = date_to_dark_id('1999:001:12:00:00' if start is None else start)
     stop_id = date_to_dark_id(stop)
     dark_dirs = [dark_id for dark_id in get_dark_cal_dirs()
                  if dark_id >= start_id and dark_id <= stop_id]

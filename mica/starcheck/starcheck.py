@@ -90,7 +90,7 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     """
     if config is None:
         config = DEFAULT_CONFIG
-    start_date = DateTime(start or '1999:001').date
+    start_date = DateTime(start or '1999:001:12:00:00').date
     stop_date = DateTime(stop).date
     with Ska.DBI.DBI(**config['starcheck_db']) as db:
         mons = db.fetchall("""select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
