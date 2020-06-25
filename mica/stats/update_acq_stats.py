@@ -10,7 +10,6 @@ from Chandra.Time import DateTime
 import mica.archive.obspar
 from mica.starcheck import get_starcheck_catalog, get_starcheck_catalog_at_date
 import tables
-import tables3_api
 import numpy as np
 import Ska.quatutil
 import Ska.astro
