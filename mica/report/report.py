@@ -231,7 +231,7 @@ def target_summary(obsid):
 def guess_shortterm(mp_dir):
 #file:///proj/web-icxc/htdocs/mp/schedules/cycle14/JUL2213B.html
     mp_short_top = '/proj/web-icxc/htdocs/mp/schedules'
-    dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
+    dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
     if not dir_match:
         return None
     dir_string = "{}{}.html".format(
@@ -245,7 +245,7 @@ def guess_shortterm(mp_dir):
 
 
 def guess_fot_summary(mp_dir):
-    dir_match = re.match('/(\d{4})/((\w{3})\d{4})/ofls(\w)', mp_dir)
+    dir_match = re.match(r'/(\d{4})/((\w{3})\d{4})/ofls(\w)', mp_dir)
     if not dir_match:
         return None
     appr_loads = 'http://occweb.cfa.harvard.edu/occweb/FOT/mission_planning/PRODUCTS/APPR_LOADS'
@@ -333,10 +333,10 @@ def obs_links(obsid, sequence=None, plan=None):
                             'label': 'Centroid Dashboard'}
 
     if mp_dir is not None:
-        dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
+        dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
         mp_label = "{}{}".format(dir_match.group(1),
                                  dir_match.group(2).upper())
-        mp_date_m = re.match('(\d{4}):(\d{3}):\d{2}:\d{2}:\d{2}\.\d{3}', mp_date)
+        mp_date_m = re.match(r'(\d{4}):(\d{3}):\d{2}:\d{2}:\d{2}\.\d{3}', mp_date)
         if mp_date_m:
             year = int(mp_date_m.group(1))
             doy = int(mp_date_m.group(2))
@@ -588,7 +588,7 @@ def main(obsid):
         return
 
     if not er and 'shortterm' in links:
-        dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
+        dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
         mp_label = "{}{}".format(dir_match.group(1),
                                  dir_match.group(2).upper())
         last_sched = 'in <A HREF="{}">{}</A> at {}'.format(
