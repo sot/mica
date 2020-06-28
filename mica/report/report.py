@@ -25,7 +25,7 @@ import Ska.DBI
 from Chandra.Time import DateTime
 from Ska.engarchive import fetch_sci
 from kadi import events
-from Chandra.cmd_states import fetch_states
+from kadi.commands.states import get_states
 import mica
 from mica.archive import obspar
 from mica.catalog import catalog
@@ -847,8 +847,8 @@ def save_state_in_db(obsid, notes):
 
 
 def update():
-    recent_obs = np.unique(fetch_states(start=DateTime(-7), vals=['obsid'])['obsid'])
-    for obs in recent_obs:
+    recent_obs = get_states(start=-7, state_keys=['obsid'], merge_identical=True)
+    for obs in recent_obs['obsid']:
         process_obsids([int(obs)]) # the int() is here to keep json happy downstream
 
 
