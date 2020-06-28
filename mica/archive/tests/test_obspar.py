@@ -10,8 +10,8 @@ def test_get_obsids():
     """
     Test that archive.obspar.get_obsids gets a reasonable set of obsids.
     """
-    start = "2016:001"
-    stop = "2016:005"
+    start = "2016:001:12:00:00"
+    stop = "2016:005:12:00:00"
     mica_obs = obspar.get_obsids(start, stop)
     # from kadi.events.obsids.filter(start, stop)
     kadi_obsid_list = [51365, 18736, 18036, 18203, 18119,

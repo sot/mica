@@ -346,7 +346,7 @@ def calc_gui_stats(data, star_info):
 
 def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop=None):
     if check_missing:
-        last_tstart = start if start is not None else '2007:271'
+        last_tstart = start if start is not None else '2007:271:12:00:00'
         kadi_obsids = events.obsids.filter(start=last_tstart)
         try:
             h5 = tables.open_file(table_file, 'r')
@@ -363,7 +363,7 @@ def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop
             last_tstart = tbl.cols.kalman_tstart[tbl.colindexes['kalman_tstart'][-1]]
             h5.close()
         except:
-            last_tstart = start if start is not None else  '2002:012'
+            last_tstart = start if start is not None else  '2002:012:12:00:00'
         kadi_obsids = events.obsids.filter(start=last_tstart, stop=stop)
         # Skip the first obsid (as we already have it in the table)
         obsids = [o.obsid for o in kadi_obsids][1:]

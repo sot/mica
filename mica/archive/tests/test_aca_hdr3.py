@@ -21,7 +21,7 @@ def test_MSIDset():
     msids = sorted(msids)
 
     # Read all MSIDs as a set
-    dat = aca_hdr3.MSIDset(msids, '2010:001', '2010:003')
+    dat = aca_hdr3.MSIDset(msids, '2010:001:12:00:00', '2010:003:12:00:00')
 
     val_lengths = np.array([len(dat[msid].vals) for msid in msids])
     time_lengths = np.array([len(dat[msid].times) for msid in msids])

@@ -72,7 +72,7 @@ def make_data_table(lines):
     return files
 
 
-def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001'):
+def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001:12:00:00'):
     logger.info("Fetching new CDA list from %s" % start)
     ct_start = DateTime(start)
     query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(

@@ -73,8 +73,8 @@ def get_trak_cat_from_telem(start, stop, cmd_quat):
 
 @pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
 def test_validate_catalogs_over_range():
-    start = '2017:001'
-    stop = '2017:002'
+    start = '2017:001:12:00:00'
+    stop = '2017:002:12:00:00'
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
         print(dwell)
@@ -142,7 +142,7 @@ def test_obsid_catalog_fetch():
 
 @pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
 def test_monitor_fetch():
-    mons = starcheck.get_monitor_windows(start='2009:002', stop='2009:007')
+    mons = starcheck.get_monitor_windows(start='2009:002:12:00:00', stop='2009:007:12:00:00')
     assert len(mons) == 10
 
 
