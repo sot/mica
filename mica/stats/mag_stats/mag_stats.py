@@ -470,10 +470,13 @@ def get_agasc_id_stats(agasc_id):
     stats['obsid_ok'] = (
         (stats['n'] > 10) &
         (stats['f_ok'] > 0.3) &
-        (stats['lf_variability_100s'] < 1) &
-        ((stats['q75'] - stats['q25'] == 0) | (stats['outliers'] < 0.05 * stats['n']))
+        (stats['lf_variability_100s'] < 1)
     )
-
+    for t in all_telem:
+        s = stats[stats['obsid'] == t['obsid'][0]]
+        iqr = s['q75'] - s['q25']
+        t['obsid_outlier'] = ((s['q75'] - s['q25'] == 0) &
+                              (t['mags'] < s['q25'] - 1.5*iqr) | (t['mags'] > s['q75'] + 1.5*iqr))
     all_telem = vstack([Table(t) for t in all_telem])
 
     mags = all_telem['mags']
@@ -492,7 +495,8 @@ def get_agasc_id_stats(agasc_id):
         'mag_aca_err': star['MAG_ACA_ERR']/100,
         'color': star['COLOR1'],
         'n_obsids': n_obsids,
-        'n_obsids_ok': sum(stats['obsid_ok']),
+        'n_obsids_ok': np.sum(stats['obsid_ok']),
+        'n_no_track': np.sum(stats['f_ok'] < 0.3),
         'n': len(ok),
         'n_ok': sum(ok),
         'f_ok': f_ok,  # f_ok does not count samples with mag >= 13.9
@@ -532,6 +536,7 @@ def get_agasc_id_stats(agasc_id):
     iqr = q75 - q25
     outlier_1 = ok & ((mags > q75 + 1.5 * iqr) | (mags < q25 - 1.5 * iqr))
     outlier_2 = ok & ((mags > q75 + 3 * iqr) | (mags < q25 - 3 * iqr))
+    outlier = all_telem['obsid_outlier']
 
     # combine measurements using a weighted mean
     min_std = max(0.1, stats['std'].min())
@@ -560,9 +565,12 @@ def get_agasc_id_stats(agasc_id):
         'std': np.std(mags[ok]),
         'mag_weighted_mean': mag_weighted_mean,
         'mag_weighted_std': mag_weighted_std,
-        't_mean': np.mean(mags[ok & (~outlier_1)]),
-        't_std': np.std(mags[ok & (~outlier_1)]),
-        'n_outlier': sum(ok & outlier_1),
+        't_mean': np.mean(mags[ok & (~outlier)]),
+        't_std': np.std(mags[ok & (~outlier)]),
+        'n_outlier': sum(ok & outlier),
+        't_mean_1': np.mean(mags[ok & (~outlier_1)]),
+        't_std_1': np.std(mags[ok & (~outlier_1)]),
+        'n_outlier_1': sum(ok & outlier_1),
         't_mean_2': np.mean(mags[ok & (~outlier_2)]),
         't_std_2': np.std(mags[ok & (~outlier_2)]),
         'n_outlier_2': sum(ok & outlier_2),
@@ -570,12 +578,15 @@ def get_agasc_id_stats(agasc_id):
 
     for dr in [3, 5]:
         k = ok & (all_telem['dr'] < dr)
+        k2 = ok & (all_telem['dr'] >= dr)
         sigma_minus, q25, median, q75, sigma_plus = np.quantile(mags[k],
                                                                 [0.158, 0.25, 0.5, 0.75, 0.842])
-        outlier = ok & ((mags > q75 + 1.5 * iqr) | (mags < q25 - 1.5 * iqr))
+        outlier = ok & all_telem['obsid_outlier']
         result.update({
             f't_mean_dr{dr}': np.mean(mags[k & (~outlier)]),
             f't_std_dr{dr}': np.std(mags[k & (~outlier)]),
+            f't_mean_dr{dr}_not': np.mean(mags[k2 & (~outlier)]),
+            f't_std_dr{dr}_not': np.std(mags[k2 & (~outlier)]),
             f'mean_dr{dr}': np.mean(mags[k]),
             f'std_dr{dr}': np.std(mags[k]),
             f'f_dr{dr}': sum(k) / sum(ok),
