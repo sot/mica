@@ -201,13 +201,19 @@ def get_telemetry(obs):
         telem[name] = telem[f'{name}{slot}']
         del telem[f'{name}{slot}']
 
+    ok = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK ') & \
+         (telem[f'AOACISP'] == 'OK ') & (telem['AOPCADMD'] == 'NPNT') & \
+         (telem['IMGSIZE'] > 4)
+
     # etc...
-    telem.update(get_mag_from_img(slot_data, start))
+    telem.update(get_mag_from_img(slot_data, start, ok))
     telem.update(get_star_position(star=star, slot=obs['slot'], telem=telem))
 
     droop_shift = _droop_systematic_shift(star['MAG_ACA'])
     responsivity = _responsivity(start)
     telem['mags'] = telem['mags_img'] - responsivity - droop_shift
+    telem['mags'][~ok] = 0.
+    telem['ok'] = ok
 
     telem['dy'] = telem['yag_img'] - telem['star_yag']
     telem['dz'] = telem['zag_img'] - telem['star_zag']
@@ -246,7 +252,7 @@ def staggered_aca_slice(array_in, array_out, row, col):
             array_out[i] = array_in[row[i]:row[i]+8, col[i]:col[i]+8]
 
 
-def get_mag_from_img(slot_data, t_start):
+def get_mag_from_img(slot_data, t_start, ok=True):
     dark_cal = get_dark_cal_image(t_start, 'nearest',
                                   t_ccd_ref=np.mean(slot_data['TEMPCCD'] - 273.16),
                                   aca_image=False)
@@ -260,8 +266,6 @@ def get_mag_from_img(slot_data, t_start):
                           slot_data['IMGCOL0'],
                           slot_data['IMGCOL0'] - 1
                           )
-    # a useful mask to select entries when it is tracking
-    m = slot_data['IMGSIZE'] > 4
 
     # subtract closest dark cal
     dark = np.zeros([len(slot_data), 8, 8], dtype=np.float64)
@@ -272,8 +276,8 @@ def get_mag_from_img(slot_data, t_start):
     # calculate magnitude
     mag = np.zeros(len(slot_data))
     counts = np.ma.sum(np.ma.sum(img_sub, axis=1), axis=1)
+    m = ok & np.isfinite(counts) & (counts > 0)
     mag[m] = count_rate_to_mag(counts[m] * 5 / 1.7)
-
     # this extra step is to investigate the background scale
     dark = np.ma.array(dark * 1.696 / 5, mask=img_sub.mask)
     img_raw = np.ma.array(slot_data['IMGRAW'], mask=img_sub.mask)
@@ -465,24 +469,25 @@ def get_agasc_id_stats(agasc_id):
 
     stats = Table([get_obsid_stats(obs, telem=telem) for obs, telem in zip(star_obs, all_telem)])
     n_obsids = len(stats)
-    stats = stats[stats['f_dr3'] > 0]
+    #stats = stats[stats['f_dr3'] > 0]
 
     stats['obsid_ok'] = (
         (stats['n'] > 10) &
         (stats['f_ok'] > 0.3) &
         (stats['lf_variability_100s'] < 1)
     )
+
     for t in all_telem:
-        s = stats[stats['obsid'] == t['obsid'][0]]
-        iqr = s['q75'] - s['q25']
-        t['obsid_outlier'] = ((s['q75'] - s['q25'] == 0) &
-                              (t['mags'] < s['q25'] - 1.5*iqr) | (t['mags'] > s['q75'] + 1.5*iqr))
+        t['obsid_outlier'] = np.zeros_like(t['ok'])
+        s = stats[stats['obsid'] == t['obsid'][0]][0]
+        if np.any(t['ok']) and s['f_track'] > 0:
+            iqr = s['q75'] - s['q25']
+            t['obsid_outlier'] = (t['ok'] & (iqr > 0) &
+                                  (t['mags'] < s['q25'] - 1.5*iqr) | (t['mags'] > s['q75'] + 1.5*iqr))
     all_telem = vstack([Table(t) for t in all_telem])
 
     mags = all_telem['mags']
-    ok = (all_telem['AOACASEQ'] == 'KALM') & (all_telem['AOACIIR'] == 'OK ') & \
-         (all_telem['AOACISP'] == 'OK ') & (all_telem['AOPCADMD'] == 'NPNT') & \
-        np.in1d(all_telem['obsid'], stats[stats['obsid_ok']]['obsid'])
+    ok = all_telem['ok'] & np.in1d(all_telem['obsid'], stats[stats['obsid_ok']]['obsid'])
 
     f_ok = sum(ok)/len(ok)
 
@@ -510,14 +515,20 @@ def get_agasc_id_stats(agasc_id):
         't_mean': 0,
         't_std': 0,
         'n_outlier': 0,
+        't_mean_1': 0,
+        't_std_1': 0,
+        'n_outlier_1': 0,
         't_mean_2': 0,
         't_std_2': 0,
         'n_outlier_2': 0,
     }
+
     for dr in [3, 5]:
         result.update({
             f't_mean_dr{dr}': 0,
             f't_std_dr{dr}': 0,
+            f't_mean_dr{dr}_not': 0,
+            f't_std_dr{dr}_not': 0,
             f'mean_dr{dr}': 0,
             f'std_dr{dr}': 0,
             f'f_dr{dr}': 0,
@@ -527,6 +538,12 @@ def get_agasc_id_stats(agasc_id):
             f'sigma_minus_dr{dr}': 0,
             f'sigma_plus_dr{dr}': 0,
         })
+
+    result.update({
+        'n': len(ok),
+        'n_ok': sum(ok),
+        'f_ok': f_ok,  # f_ok does not count samples with mag >= 13.9
+    })
 
     if sum(ok) < 10:
         return result, stats
