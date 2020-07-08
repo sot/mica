@@ -225,6 +225,26 @@ def get_telemetry(obs):
     return telem
 
 
+def astropy_table_cache(name, dir):
+    def decorator_cache(func):
+        from functools import wraps
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            import os
+            arg_str = '_'.join(args) + '_'.join([str(kwargs[k]) for k in sorted(kwargs.keys())])
+            filename = f'{name}_{arg_str}.fits'
+            filename = os.path.join(dir, filename)
+            if os.path.exists(filename):
+                return Table.read(filename)
+            else:
+                result = func(*args, **kwargs)
+                result.write(filename)
+                return result
+        return wrapper
+    return decorator_cache
+
+
+@astropy_table_cache(name='telem', dir='/Users/javierg/SAO/mica/mag_stats_cache/telem')
 def get_telemetry_by_agasc_id(agasc_id, obsid=None):
     """
     Get all telemetry relevant for the mag_stats task for a given AGASC ID.
