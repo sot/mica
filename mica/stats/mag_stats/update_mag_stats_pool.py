@@ -31,9 +31,10 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
         for arg in args:
             jobs.append(pool.apply_async(update_mag_stats.get_agasc_id_stats, [arg]))
         start = datetime.datetime.now()
+        now = None
         while finished < len(jobs):
             finished = sum([f.ready() for f in jobs])
-            if 100*finished/len(jobs) - progress > 0.1:
+            if now is None or 100*finished/len(jobs) - progress > 0.02:
                 now = datetime.datetime.now()
                 if finished == 0:
                     eta = ''
@@ -93,4 +94,6 @@ def main():
 
 
 if __name__ == '__main__':
+    import warnings
+    #warnings.simplefilter('error', UserWarning)
     main()
