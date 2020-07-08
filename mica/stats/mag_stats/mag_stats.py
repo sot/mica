@@ -242,6 +242,7 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None):
     telem = [Table(get_telemetry(o)) for o in obs]
     for i, obsid in enumerate(obs['obsid']):
         telem[i]['obsid'] = obsid
+        telem[i]['agasc_id'] = agasc_id
     return vstack(telem)
 
 
@@ -456,13 +457,9 @@ def get_agasc_id_stats(agasc_id):
     idx0, idx1 = catalogs.STARS_OBS_MAP[agasc_id]
     star_obs = catalogs.STARS_OBS[idx0:idx1]
 
-    all_telem = []
-    for obs in star_obs:
-        telem = get_telemetry(obs)
-        telem['obsid'] = np.ones_like(telem['times']) * obs['obsid']
-        telem['agasc_id'] = np.ones_like(telem['times']) * agasc_id
-        if len(telem['times']):
-            all_telem.append(telem)
+    all_telem = get_telemetry_by_agasc_id(agasc_id=agasc_id)
+    all_telem = [{k: all_telem[all_telem['obsid'] == obsid][k]
+                 for k in all_telem.colnames} for obsid in star_obs['obsid']]
 
     if len(all_telem) == 0:
         raise Exception(f'No telemetry data for agasc_id {agasc_id}')
