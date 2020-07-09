@@ -200,9 +200,10 @@ def get_telemetry(obs):
     for name in ['AOACIIR', 'AOACISP', 'AOACYAN', 'AOACZAN', 'AOACMAG']:
         telem[name] = telem[f'{name}{slot}']
         del telem[f'{name}{slot}']
-
-    ok = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK ') & \
-         (telem[f'AOACISP'] == 'OK ') & (telem['AOPCADMD'] == 'NPNT') & \
+    for name in ['AOACIIR', 'AOACISP']:
+        telem[name] = np.char.rstrip(telem[name])
+    ok = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK') & \
+         (telem[f'AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT') & \
          (telem['IMGSIZE'] > 4)
 
     # etc...
@@ -374,8 +375,8 @@ def calc_obsid_stats(telem):
     """
     times = telem['times']
 
-    track = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK ') & \
-            (telem[f'AOACISP'] == 'OK ') & (telem['AOPCADMD'] == 'NPNT') & \
+    track = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK') & \
+            (telem[f'AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT') & \
             (telem['IMGSIZE'] > 4)
     dr3 = (telem['dr'] < 3)
     dr5 = (telem['dr'] < 5)
