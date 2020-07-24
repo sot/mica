@@ -443,6 +443,13 @@ def calc_obsid_stats(telem):
     f_ok = sum(ok) / len(ok)
 
     stats = {
+        'aoacmag_mean': np.inf,
+        'aoacmag_err': np.inf,
+        'aoacmag_q25': np.inf,
+        'aoacmag_median': np.inf,
+        'aoacmag_q75': np.inf,
+        'counts_img': np.inf,
+        'counts_dark': np.inf,
         'f_track': f_track,
         'f_dr5': f_5,
         'f_dr3': f_3,
