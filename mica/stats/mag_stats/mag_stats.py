@@ -547,7 +547,6 @@ def get_agasc_id_stats(agasc_id):
 
     stats = Table([get_obsid_stats(obs, telem=telem) for obs, telem in zip(star_obs, all_telem)])
     n_obsids = len(stats)
-    #stats = stats[stats['f_dr3'] > 0]
 
     stats['obsid_ok'] = (
         (stats['n'] > 10) &

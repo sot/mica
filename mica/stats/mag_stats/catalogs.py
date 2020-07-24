@@ -78,7 +78,7 @@ def _load_startcat_commands():
     dt = CxoTime(dwells['manvr_start'][idxs]) - CxoTime(STARCAT_CMDS['mp_starcat_time'])
     ok = (dt.sec > 1) & (dt.sec < 1200)
 
-    print(f'WARNING: {np.sum(~ok)} entries where star-catalog/maneuver association is not right')
+    #print(f'WARNING: {np.sum(~ok)} entries where star-catalog/maneuver association is not right')
     #assert np.all((dt.sec > 1) & (dt.sec < 1200))
 
     STARCAT_CMDS = STARCAT_CMDS[ok]
