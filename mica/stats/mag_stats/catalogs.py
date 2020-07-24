@@ -187,6 +187,7 @@ def _load_observed_catalogs():
 
     STARS_OBS = ces.group_by('agasc_id')
     STARS_OBS.add_index('agasc_id')
+    STARS_OBS.add_index('mp_starcat_time')
 
     # Make a table that contains the indices into `star_obs` and gives the
     # repeat count `n_obs` for each star.

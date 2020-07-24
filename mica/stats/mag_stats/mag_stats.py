@@ -310,6 +310,8 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None):
     else:
         obs = catalogs.STARS_OBS[(catalogs.STARS_OBS['agasc_id'] == agasc_id) &
                                  (catalogs.STARS_OBS['obsid'] == obsid)]
+    if len(obs) > 1:
+        obs = obs.loc['mp_starcat_time', sorted(obs['mp_starcat_time'])]
     telem = [Table(get_telemetry(o)) for o in obs]
     for i, obsid in enumerate(obs['obsid']):
         telem[i]['obsid'] = obsid
@@ -534,6 +536,8 @@ def get_agasc_id_stats(agasc_id):
     # Get a table of every time the star has been observed
     idx0, idx1 = catalogs.STARS_OBS_MAP[agasc_id]
     star_obs = catalogs.STARS_OBS[idx0:idx1]
+    if len(star_obs) > 1:
+        star_obs = star_obs.loc['mp_starcat_time', sorted(star_obs['mp_starcat_time'])]
 
     all_telem = get_telemetry_by_agasc_id(agasc_id=agasc_id)
     all_telem = [{k: all_telem[all_telem['obsid'] == obsid][k]
