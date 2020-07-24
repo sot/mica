@@ -131,10 +131,13 @@ def get_star_position(star, slot, telem):
     aca_misalign = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     R2A = 206264.81
 
-    q_att = Quat(q=np.array([telem['AOATTQT1'],
-                             telem['AOATTQT2'],
-                             telem['AOATTQT3'],
-                             telem['AOATTQT4']]).transpose())
+    q = np.array([telem['AOATTQT1'],
+                  telem['AOATTQT2'],
+                  telem['AOATTQT3'],
+                  telem['AOATTQT4']]).transpose()
+    norm = np.sum(q**2, axis=1, keepdims=True)
+    # I am just normalizing q, just in case.
+    q_att = Quat(q=q/norm)
     Ts = q_att.transform
 
     star_pos_eci = Ska.quatutil.radec2eci(star['RA_PMCORR'], star['DEC_PMCORR'])
