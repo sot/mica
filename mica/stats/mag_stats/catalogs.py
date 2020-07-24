@@ -178,6 +178,9 @@ def _load_observed_catalogs():
 
     tt = Table([agasc_ids, mag_errs], names=['agasc_id', 'mag_aca_err'])
     ces = table.join(ces, tt, keys='agasc_id')
+    # dropping catalog entries with not corresponding dwell
+    # (these were usually dropped because start or stop was None)
+    ces = ces[np.in1d(ces['mp_starcat_time'], DWELLS_NP['mp_starcat_time'])]
     # print(ces[-5:])
 
     # Make final table of observed guide star catalog entries `star_obs`
