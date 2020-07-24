@@ -1,3 +1,4 @@
+import collections
 import scipy.stats
 import scipy.special
 import numpy as np
@@ -29,6 +30,38 @@ MASK = {
                        [ True, True, False, False, False, False, True, True],
                        [ True, True, True, True, True, True, True, True]])
 }
+
+
+EXCEPTION_CODES = collections.defaultdict(lambda: -1)
+EXCEPTION_CODES.update({
+    'No level 0 data': 1,
+    'No telemetry data': 2,
+    'Mismatch in telemetry between aca_l0 and cheta': 3,
+    'Time mismatch between cheta and level0': 4,
+})
+EXCEPTION_MSG = {
+    -1: 'Unknown',
+    0: 'OK',
+    1: 'No level 0 data',
+    2: 'No telemetry data',
+    3: 'Mismatch in telemetry between aca_l0 and cheta',
+    4: 'Time mismatch between cheta and level0',
+}
+
+
+class MagStatsException(Exception):
+    def __init__(self, msg='', agasc_id=None, obsid=None, timeline_id=None):
+        super().__init__(msg)
+        self.error_code = EXCEPTION_CODES[msg]
+        self.msg = msg
+        self.agasc_id = agasc_id
+        self.obsid = obsid
+        self.timeline_id = timeline_id
+
+    def __str__(self):
+        return f'MagStatsException: {self.msg} (agasc_id: {self.agasc_id}, ' \
+               f'obsid: {self.obsid}, timeline_id: {self.timeline_id})'
+
 
 def _magnitude_correction(time, mag_aca):
     """
@@ -178,13 +211,22 @@ def get_telemetry(obs):
     t2 = np.round(slot_data['END_INTEG_TIME'], 3)
     c, i1, i2 = np.intersect1d(t1, t2, return_indices=True)
     times = msid.times[i1]
+    if len(t1) and not len(t2):
+        raise MagStatsException('No level 0 data',
+                                agasc_id=obs["agasc_id"],
+                                obsid=obs["obsid"],
+                                timeline_id=obs["timeline_id"])
 
     # the following line removes a couple of points at the edges. I have not checked why they differ
     slot_data = slot_data[i2]
 
     if len(times) == 0:
         # the intersection was null.
-        return {k: np.array([], dtype=v) for k, v in _telem_dtype}
+        raise MagStatsException('Time mismatch between cheta and level0',
+                                agasc_id=obs["agasc_id"],
+                                obsid=obs["obsid"],
+                                timeline_id=obs["timeline_id"])
+
     # Now that we have the times, we get the rest of the MSIDs
     telem = {
         'times': times
@@ -197,6 +239,11 @@ def get_telemetry(obs):
     # the following just works...
     t = np.in1d(msids[names[0]].times, times)
     telem.update({n: msids[n].vals[t] for n in names})
+    if len(telem['AOACASEQ']) != len(telem['IMGSIZE']):
+        raise MagStatsException(
+            "Mismatch in telemetry between aca_l0 and cheta",
+            agasc_id=obs['agasc_id'], obsid=obs['obsid'], timeline_id=obs['timeline_id']
+        )
     for name in ['AOACIIR', 'AOACISP', 'AOACYAN', 'AOACZAN', 'AOACMAG']:
         telem[name] = telem[f'{name}{slot}']
         del telem[f'{name}{slot}']
@@ -483,7 +530,7 @@ def get_agasc_id_stats(agasc_id):
                  for k in all_telem.colnames} for obsid in star_obs['obsid']]
 
     if len(all_telem) == 0:
-        raise Exception(f'No telemetry data for agasc_id {agasc_id}')
+        raise MagStatsException('No telemetry data', agasc_id=agasc_id)
 
     stats = Table([get_obsid_stats(obs, telem=telem) for obs, telem in zip(star_obs, all_telem)])
     n_obsids = len(stats)
