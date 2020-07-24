@@ -539,9 +539,8 @@ def get_agasc_id_stats(agasc_id):
     if len(star_obs) > 1:
         star_obs = star_obs.loc['mp_starcat_time', sorted(star_obs['mp_starcat_time'])]
 
-    all_telem = get_telemetry_by_agasc_id(agasc_id=agasc_id)
-    all_telem = [{k: all_telem[all_telem['obsid'] == obsid][k]
-                 for k in all_telem.colnames} for obsid in star_obs['obsid']]
+    all_telem = [Table(get_telemetry(o)) for o in star_obs]
+    all_telem = [{k: telem[k] for k in telem.colnames} for telem in all_telem]
 
     if len(all_telem) == 0:
         raise MagStatsException('No telemetry data', agasc_id=agasc_id)
@@ -556,9 +555,9 @@ def get_agasc_id_stats(agasc_id):
         (stats['lf_variability_100s'] < 1)
     )
 
-    for t in all_telem:
+    for s, t in zip(stats, all_telem):
+        t['obsid_ok'] = np.ones_like(t['ok'], dtype=bool) * s['obsid_ok']
         t['obsid_outlier'] = np.zeros_like(t['ok'])
-        s = stats[stats['obsid'] == t['obsid'][0]][0]
         if np.any(t['ok']) and s['f_track'] > 0:
             iqr = s['q75'] - s['q25']
             t['obsid_outlier'] = (t['ok'] & (iqr > 0) &
@@ -566,7 +565,7 @@ def get_agasc_id_stats(agasc_id):
     all_telem = vstack([Table(t) for t in all_telem])
 
     mags = all_telem['mags']
-    ok = all_telem['ok'] & np.in1d(all_telem['obsid'], stats[stats['obsid_ok']]['obsid'])
+    ok = all_telem['ok'] & all_telem['obsid_ok']
 
     f_ok = sum(ok)/len(ok)
 
