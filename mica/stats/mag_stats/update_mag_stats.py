@@ -22,14 +22,17 @@ def get_agasc_id_stats(agasc_ids):
     fails = []
     obsid_stats = []
     agasc_stats = []
+    obs_failures = []
     for i, agasc_id in enumerate(agasc_ids):
         try:
-            agasc_stat, obsid_stat = mag_stats.get_agasc_id_stats(agasc_id=agasc_id)
+            agasc_stat, obsid_stat, obs_fail = mag_stats.get_agasc_id_stats(agasc_id=agasc_id)
             agasc_stats.append(agasc_stat)
             obsid_stats.append(obsid_stat)
+            obs_failures.append(obs_fail)
         except Exception as e:
             fails.append((agasc_id, str(e)))
 
+    obs_failures = [f for obs in obs_failures for f in obs]
     try:
         agasc_stats = Table(agasc_stats) if agasc_stats else None
         obsid_stats = vstack(obsid_stats) if obsid_stats else None
@@ -37,7 +40,7 @@ def get_agasc_id_stats(agasc_ids):
         agasc_stats = None
         obsid_stats = None
         fails = [(agasc_id, f'Exception at bottom of get_agasc_id_stats: {str(e)}')]
-    return obsid_stats, agasc_stats, fails
+    return obsid_stats, agasc_stats, fails, obs_failures
 
 
 def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
@@ -101,11 +104,12 @@ def update_mags_stats_supplement(agasc_stats, filename=None):
 def main():
     agasc_ids = sorted(np.unique(catalogs.STARS_OBS['agasc_id']))
     print(f'Will process {len(agasc_ids)} stars on {len(catalogs.STARS_OBS)} observations')
-    obsid_stats, agasc_stats, fails = get_agasc_id_stats(agasc_ids)
+    obsid_stats, agasc_stats, fails, obs_failures = get_agasc_id_stats(agasc_ids)
     print(f'Got:\n'
           f'  {len(obsid_stats)} OBSIDs,'
           f'  {len(agasc_stats)} stars,'
-          f'  {len(fails)} failed stars')
+          f'  {len(fails)} failed stars,'
+          f'  {len(obs_failures)} failed observations')
     update_mag_stats(obsid_stats, agasc_stats, fails)
 
 

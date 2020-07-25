@@ -54,8 +54,9 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
     obsid_stats = vstack(obsid_stats) if obsid_stats else Table()
     agasc_stats = vstack(agasc_stats) if agasc_stats else Table()
     fails = sum([r[2] for r in results], [])
+    obs_fails = sum([r[3] for r in results], [])
 
-    return obsid_stats, agasc_stats, fails, failed_jobs
+    return obsid_stats, agasc_stats, fails, failed_jobs, obs_fails
 
 
 def parser():
@@ -77,19 +78,22 @@ def main():
     print(f'Will process {len(agasc_ids)} stars'
           f' on {len(stars_obs)} observations')
 
-    obsid_stats, agasc_stats, fails, fail_jobs = get_agasc_id_stats(agasc_ids, batch_size)
+    obsid_stats, agasc_stats, fails, fail_jobs, fail_obs = get_agasc_id_stats(agasc_ids, batch_size)
 
     print(f'Got:\n'
           f'  {len(obsid_stats)} OBSIDs,'
           f'  {len(agasc_stats)} stars,'
           f'  {len(fails)} failed stars,'
-          f'  {len(fail_jobs)} failed jobs')
+          f'  {len(fail_jobs)} failed jobs'
+          f'  {len(fail_obs)} failed observations')
     filename = f'mag_stats_failed_jobs_{mag_stats.version}.pkl'
     with open(filename, 'wb') as out:
         pickle.dump(fail_jobs, out)
     if len(agasc_stats):
         update_mag_stats.update_mag_stats(obsid_stats, agasc_stats,
-                                          {'fails': fails, 'fail_jobs': fail_jobs})
+                                          {'fails': fails,
+                                           'fail_jobs': fail_jobs,
+                                           'fail_obs': fail_obs})
 
 
 
