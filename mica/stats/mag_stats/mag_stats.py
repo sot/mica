@@ -539,14 +539,22 @@ def get_agasc_id_stats(agasc_id):
     if len(star_obs) > 1:
         star_obs = star_obs.loc['mp_starcat_time', sorted(star_obs['mp_starcat_time'])]
 
-    all_telem = [Table(get_telemetry(o)) for o in star_obs]
-    all_telem = [{k: telem[k] for k in telem.colnames} for telem in all_telem]
+    failures = np.zeros(len(star_obs), dtype=int)
+    all_telem = []
+    stats = []
+    for i, o in enumerate(star_obs):
+        try:
+            telem = Table(get_telemetry(o))
+            all_telem.append(telem)
+            stats.append(get_obsid_stats(o, telem={k: telem[k] for k in telem.colnames}))
+        except MagStatsException as e:
+            failures[i] = e.error_code
 
     if len(all_telem) == 0:
         raise MagStatsException('No telemetry data', agasc_id=agasc_id)
 
-    stats = Table([get_obsid_stats(obs, telem=telem) for obs, telem in zip(star_obs, all_telem)])
-    n_obsids = len(stats)
+    stats = Table(stats)
+    n_obsids = len(star_obs)
 
     stats['obsid_ok'] = (
         (stats['n'] > 10) &
@@ -577,6 +585,7 @@ def get_agasc_id_stats(agasc_id):
         'mag_aca_err': star['MAG_ACA_ERR']/100,
         'color': star['COLOR1'],
         'n_obsids': n_obsids,
+        'n_obsids_fail': np.sum(failures.astype(bool)),
         'n_obsids_ok': np.sum(stats['obsid_ok']),
         'n_no_track': np.sum(stats['f_ok'] < 0.3),
         'n': len(ok),
@@ -623,7 +632,7 @@ def get_agasc_id_stats(agasc_id):
     })
 
     if sum(ok) < 10:
-        return result, stats
+        return result, stats, failures
 
     sigma_minus, q25, median, q75, sigma_plus = np.quantile(mags[ok],
                                                             [0.158, 0.25, 0.5, 0.75, 0.842])
@@ -691,4 +700,4 @@ def get_agasc_id_stats(agasc_id):
             f'sigma_plus_dr{dr}': sigma_plus,
         })
 
-    return result, stats
+    return result, stats, failures
