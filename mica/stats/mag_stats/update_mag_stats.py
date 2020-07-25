@@ -42,6 +42,8 @@ def get_agasc_id_stats(agasc_ids):
             agasc_stats.append(agasc_stat)
             obsid_stats.append(obsid_stat)
             obs_failures.append(obs_fail)
+        except mag_stats.MagStatsException as e:
+            fails.append((agasc_id, e.msg))
         except Exception as e:
             fails.append((agasc_id, str(e)))
 
