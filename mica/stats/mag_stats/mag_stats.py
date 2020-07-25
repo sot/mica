@@ -433,16 +433,16 @@ def calc_obsid_stats(telem):
     dr3 = (telem['dr'] < 3)
     dr5 = (telem['dr'] < 5)
 
-    f_track = sum(track) / len(track)
-    f_3 = sum(track & dr3) / len(track)
-    f_5 = sum(track & dr5) / len(track)
-    if sum(track & dr3):
-        f_14 = sum(track & dr3 & (telem['AOACMAG'] >= 13.9)) / sum(track & dr3)
+    f_track = np.sum(track) / len(track)
+    f_3 = np.sum(track & dr3) / len(track)
+    f_5 = np.sum(track & dr5) / len(track)
+    if np.sum(track & dr3):
+        f_14 = np.sum(track & dr3 & (telem['AOACMAG'] >= 13.9)) / np.sum(track & dr3)
     else:
         f_14 = np.nan
 
     ok = track & dr3 & (telem['AOACMAG'] < 13.9)
-    f_ok = sum(ok) / len(ok)
+    f_ok = np.sum(ok) / len(ok)
 
     stats = {
         'aoacmag_mean': np.inf,
@@ -471,18 +471,17 @@ def calc_obsid_stats(telem):
         't_skew': np.inf,
         't_kurt': np.inf,
         'n': len(telem['AOACMAG']),
-        'n_ok': sum(ok),
+        'n_ok': np.sum(ok),
         'outliers': -1,
         'lf_variability_100s': np.inf,
         'lf_variability_500s': np.inf,
         'lf_variability_1000s': np.inf,
         'tempccd': np.nan,
     }
-    if sum(ok) < 10:
+    if stats['n_ok'] < 10:
         return stats
 
     aoacmag_q25, aoacmag_q50, aoacmag_q75 = np.quantile(telem['AOACMAG'][ok], [0.25, 0.5, 0.75])
-
 
     mags = telem['mags']
     q25, q50, q75 = np.quantile(mags[ok], [0.25, 0.5, 0.75])
@@ -516,7 +515,7 @@ def calc_obsid_stats(telem):
         't_std': np.std(mags[ok & (~outlier)]),
         't_skew': scipy.stats.skew(mags[ok & (~outlier)]),
         't_kurt': scipy.stats.kurtosis(mags[ok & (~outlier)]),
-        'outliers': sum(outlier),
+        'outliers': np.sum(outlier),
         'lf_variability_100s': np.max(s_100s) - np.min(s_100s),
         'lf_variability_500s': np.max(s_500s) - np.min(s_500s),
         'lf_variability_1000s': np.max(s_1000s) - np.min(s_1000s),
@@ -574,7 +573,7 @@ def get_agasc_id_stats(agasc_id):
     mags = all_telem['mags']
     ok = all_telem['ok'] & all_telem['obsid_ok']
 
-    f_ok = sum(ok)/len(ok)
+    f_ok = np.sum(ok)/len(ok)
 
     ok *= (mags < 13.9)
 
@@ -589,7 +588,7 @@ def get_agasc_id_stats(agasc_id):
         'n_obsids_ok': np.sum(stats['obsid_ok']),
         'n_no_track': np.sum(stats['f_ok'] < 0.3),
         'n': len(ok),
-        'n_ok': sum(ok),
+        'n_ok': np.sum(ok),
         'f_ok': f_ok,  # f_ok does not count samples with mag >= 13.9
         'median': 0,
         'sigma_minus': 0,
@@ -625,13 +624,7 @@ def get_agasc_id_stats(agasc_id):
             f'sigma_plus_dr{dr}': 0,
         })
 
-    result.update({
-        'n': len(ok),
-        'n_ok': sum(ok),
-        'f_ok': f_ok,  # f_ok does not count samples with mag >= 13.9
-    })
-
-    if sum(ok) < 10:
+    if result['n_ok'] < 10:
         return result, stats, failures
 
     sigma_minus, q25, median, q75, sigma_plus = np.quantile(mags[ok],
@@ -657,9 +650,9 @@ def get_agasc_id_stats(agasc_id):
     result.update({
         'agasc_id': agasc_id,
         'n_obsids': len(stats),
-        'n_obsids_ok': sum(stats['obsid_ok']),
+        'n_obsids_ok': np.sum(stats['obsid_ok']),
         'n': len(ok),
-        'n_ok': sum(ok),
+        'n_ok': np.sum(ok),
         'f_ok': f_ok,  # f_ok does not count samples with mag >= 13.9
         'median': median,
         'sigma_minus': sigma_minus,
@@ -670,13 +663,13 @@ def get_agasc_id_stats(agasc_id):
         'mag_weighted_std': mag_weighted_std,
         't_mean': np.mean(mags[ok & (~outlier)]),
         't_std': np.std(mags[ok & (~outlier)]),
-        'n_outlier': sum(ok & outlier),
+        'n_outlier': np.sum(ok & outlier),
         't_mean_1': np.mean(mags[ok & (~outlier_1)]),
         't_std_1': np.std(mags[ok & (~outlier_1)]),
-        'n_outlier_1': sum(ok & outlier_1),
+        'n_outlier_1': np.sum(ok & outlier_1),
         't_mean_2': np.mean(mags[ok & (~outlier_2)]),
         't_std_2': np.std(mags[ok & (~outlier_2)]),
-        'n_outlier_2': sum(ok & outlier_2),
+        'n_outlier_2': np.sum(ok & outlier_2),
     })
 
     for dr in [3, 5]:
@@ -692,9 +685,9 @@ def get_agasc_id_stats(agasc_id):
             f't_std_dr{dr}_not': np.std(mags[k2 & (~outlier)]),
             f'mean_dr{dr}': np.mean(mags[k]),
             f'std_dr{dr}': np.std(mags[k]),
-            f'f_dr{dr}': sum(k) / sum(ok),
-            f'n_dr{dr}': sum(k),
-            f'n_dr{dr}_outliers': sum(k & outlier),
+            f'f_dr{dr}': np.sum(k) / np.sum(ok),
+            f'n_dr{dr}': np.sum(k),
+            f'n_dr{dr}_outliers': np.sum(k & outlier),
             f'median_dr{dr}': median,
             f'sigma_minus_dr{dr}': sigma_minus,
             f'sigma_plus_dr{dr}': sigma_plus,
