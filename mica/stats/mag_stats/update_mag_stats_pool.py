@@ -99,5 +99,5 @@ def main():
 
 if __name__ == '__main__':
     import warnings
-    #warnings.simplefilter('error', UserWarning)
+    warnings.simplefilter('ignore', UserWarning)
     main()
