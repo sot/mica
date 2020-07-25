@@ -8,6 +8,19 @@ import tables
 np.seterr(all='ignore')
 
 
+def level0_archive_time_range():
+    import sqlite3
+    import os
+    db_file = os.path.expandvars('$SKA/data/mica/archive/aca0/archfiles.db3')
+    with sqlite3.connect(db_file) as connection:
+        cursor = connection.cursor()
+        cursor.execute("select tstop from archfiles order by tstop desc limit 1")
+        t_stop = cursor.fetchall()[0][0]
+        cursor.execute("select tstop from archfiles order by tstart asc limit 1")
+        t_start = cursor.fetchall()[0][0]
+        return t_stop, t_start
+
+
 def get_agasc_id_stats(agasc_ids):
     """
     Call mag_stats.get_agasc_id_stats for each AGASC ID
