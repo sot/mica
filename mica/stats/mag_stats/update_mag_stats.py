@@ -4,6 +4,8 @@ import numpy as np
 from mica.stats.mag_stats import catalogs, mag_stats
 import pickle
 import tables
+import argparse
+
 
 np.seterr(all='ignore')
 
@@ -89,7 +91,7 @@ def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
             pickle.dump(fails, out)
 
 
-def update_mags_stats_supplement(agasc_stats, filename=None):
+def update_supplement(agasc_stats, filename=None):
     """
     Update the magnitude table of the AGASC supplement.
 
@@ -103,22 +105,60 @@ def update_mags_stats_supplement(agasc_stats, filename=None):
     agasc_stats['mag_aca'] = agasc_stats['t_mean_dr3']
     agasc_stats['mag_aca_err'] = agasc_stats['t_std_dr3']
 
-    outliers = agasc_stats[
+    outliers_new = agasc_stats[
         (agasc_stats['color'] == 1.5) | (agasc_stats['color'] == 0.7) | agasc_stats['outlier']]
-    outliers = outliers[['agasc_id', 'color', 'mag_aca', 'mag_aca_err']].as_array()
+    names = ['agasc_id', 'color', 'mag_aca', 'mag_aca_err', 'last_obs_time']
+    outliers_new = outliers_new[names].as_array()
 
-    if filename is not None:
+    if filename is None:
         filename = f'agasc_supplement_{mag_stats.version}.h5'
+    if os.path.exists(filename):
+        # I could do what follows directly in place, but the table is not that large.
+        with tables.File(filename, 'r+') as h5:
+            outliers_current = h5.root.mags[:]
+            # find the indices of agasc_ids in both current and new lists
+            _, i_new, i_cur = np.intersect1d(outliers_new['agasc_id'],
+                                             outliers_current['agasc_id'],
+                                             return_indices=True)
+            current = outliers_current[i_cur]
+            new = outliers_new[i_new]
+            # from those, find the ones which differ in last observation time
+            i_cur = i_cur[current['last_obs_time'] != new['last_obs_time']]
+            i_new = i_new[current['last_obs_time'] != new['last_obs_time']]
+            # overwrite current values with new values
+            outliers_current[i_cur] = outliers_new[i_new]
+            # find agasc_ids in new list but not in current list
+            new_agasc_ids = ~np.in1d(outliers_new['agasc_id'], outliers_current['agasc_id'])
+            # and add them to the current list
+            outliers_current = np.concatenate([outliers_current, outliers_new[new_agasc_ids]])
+            outliers = np.sort(outliers_current)
+    else:
+        outliers = outliers_new
+
     mode = 'r+' if os.path.exists(filename) else 'w'
     with tables.File(filename, mode) as h5:
         if 'mags' in h5.root:
             h5.remove_node('/mags')
         h5.create_table('/', 'mags', outliers)
 
+def parser():
+    parse = argparse.ArgumentParser()
+    parse.add_argument('--agasc-id-file')
+    return parse
+
 
 def main():
-    agasc_ids = sorted(np.unique(catalogs.STARS_OBS['agasc_id']))
-    print(f'Will process {len(agasc_ids)} stars on {len(catalogs.STARS_OBS)} observations')
+    args = parser().parse_args()
+    if args.agasc_id_file:
+        with open(args.agasc_id_file, 'r') as f:
+            agasc_ids = [int(l.strip()) for l in f.readlines()]
+            agasc_ids = np.intersect1d(agasc_ids, catalogs.STARS_OBS['agasc_id'])
+    else:
+        agasc_ids = sorted(catalogs.STARS_OBS['agasc_id'])
+    agasc_ids = np.unique(agasc_ids)
+    stars_obs = catalogs.STARS_OBS[np.in1d(catalogs.STARS_OBS['agasc_id'], agasc_ids)]
+
+    print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
     obsid_stats, agasc_stats, fails, obs_failures = get_agasc_id_stats(agasc_ids)
     print(f'Got:\n'
           f'  {len(obsid_stats)} OBSIDs,'
@@ -126,6 +166,7 @@ def main():
           f'  {len(fails)} failed stars,'
           f'  {len(obs_failures)} failed observations')
     update_mag_stats(obsid_stats, agasc_stats, fails)
+    update_supplement(agasc_stats)
 
 
 if __name__ == '__main__':

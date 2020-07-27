@@ -543,6 +543,9 @@ def get_agasc_id_stats(agasc_id):
     star_obs = catalogs.STARS_OBS[idx0:idx1]
     if len(star_obs) > 1:
         star_obs = star_obs.loc['mp_starcat_time', sorted(star_obs['mp_starcat_time'])]
+    last_starcat_time = max(star_obs['mp_starcat_time'])
+    last_dwell = catalogs.DWELLS_NP[catalogs.DWELLS_MAP[last_starcat_time]]
+    last_obs_time = last_dwell['tstop']
 
     failures = []
     all_telem = []
@@ -585,6 +588,7 @@ def get_agasc_id_stats(agasc_id):
 
     star = get_star(agasc_id, date=all_telem['times'][0])
     result = {
+        'last_obs_time': last_obs_time,
         'agasc_id': agasc_id,
         'mag_aca': star['MAG_ACA'],
         'mag_aca_err': star['MAG_ACA_ERR']/100,
