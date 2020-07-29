@@ -128,18 +128,26 @@ def update_supplement(agasc_stats, filename=None):
             # overwrite current values with new values
             outliers_current[i_cur] = outliers_new[i_new]
             # find agasc_ids in new list but not in current list
-            new_agasc_ids = ~np.in1d(outliers_new['agasc_id'], outliers_current['agasc_id'])
+            new_stars = ~np.in1d(outliers_new['agasc_id'], outliers_current['agasc_id'])
             # and add them to the current list
-            outliers_current = np.concatenate([outliers_current, outliers_new[new_agasc_ids]])
+            outliers_current = np.concatenate([outliers_current, outliers_new[new_stars]])
             outliers = np.sort(outliers_current)
+
+            new_stars = outliers_new[new_stars]['agasc_id']
+            updated_stars = outliers_new[i_new]['agasc_id']
     else:
         outliers = outliers_new
+        new_stars = outliers_new['agasc_id']
+        updated_stars = []
 
     mode = 'r+' if os.path.exists(filename) else 'w'
     with tables.File(filename, mode) as h5:
         if 'mags' in h5.root:
             h5.remove_node('/mags')
         h5.create_table('/', 'mags', outliers)
+
+    return new_stars, updated_stars
+
 
 def parser():
     parse = argparse.ArgumentParser()
@@ -166,8 +174,7 @@ def main():
           f'  {len(fails)} failed stars,'
           f'  {len(obs_failures)} failed observations')
     update_mag_stats(obsid_stats, agasc_stats, fails)
-    update_supplement(agasc_stats)
-
+    new_stars, updated_stars = update_supplement(agasc_stats)
 
 if __name__ == '__main__':
     main()
