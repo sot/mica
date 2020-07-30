@@ -278,15 +278,21 @@ def get_telemetry(obs):
 
 def astropy_table_cache(name, dir):
     def decorator_cache(func):
+        import inspect
+        signature = inspect.signature(func)
         from functools import wraps
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, name=name, **kwargs):
             import os
-            arg_str = '_'.join(args) + '_'.join([str(kwargs[k]) for k in sorted(kwargs.keys())])
-            filename = f'{name}_{arg_str}.fits'
+            name += '::'
+            s_args = signature.bind(*args, **kwargs).arguments
+            arg_str = '-'.join(
+                ['{a}:{v}'.format(a=a, v=s_args[a]) for a in s_args])
+            filename = f'{name}{arg_str}.fits'
             filename = os.path.join(dir, filename)
             if os.path.exists(filename):
-                return Table.read(filename)
+                # Table.read returns a big-endian array, and as_array converts to native endianness
+                return Table(Table.read(filename).as_array())
             else:
                 result = func(*args, **kwargs)
                 result.write(filename)
