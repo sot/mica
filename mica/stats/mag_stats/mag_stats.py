@@ -307,7 +307,7 @@ def astropy_table_cache(name, dir):
 
 
 @astropy_table_cache(name='telem', dir='/Users/javierg/SAO/mica/mag_stats_cache/telem')
-def get_telemetry_by_agasc_id(agasc_id, obsid=None):
+def get_telemetry_by_agasc_id(agasc_id, obsid=None, ignore_exceptions=False):
     """
     Get all telemetry relevant for the mag_stats task for a given AGASC ID.
 
@@ -324,10 +324,16 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None):
                                  (catalogs.STARS_OBS['obsid'] == obsid)]
     if len(obs) > 1:
         obs = obs.loc['mp_starcat_time', sorted(obs['mp_starcat_time'])]
-    telem = [Table(get_telemetry(o)) for o in obs]
-    for i, obsid in enumerate(obs['obsid']):
-        telem[i]['obsid'] = obsid
-        telem[i]['agasc_id'] = agasc_id
+    telem = []
+    for i, o in enumerate(obs):
+        try:
+            t = Table(get_telemetry(o))
+            t['obsid'] = o['obsid']
+            t['agasc_id'] = agasc_id
+            telem.append(t)
+        except Exception:
+            if not ignore_exceptions:
+                raise
     return vstack(telem)
 
 
@@ -603,7 +609,7 @@ def get_agasc_id_stats(agasc_id, tstop=None):
         'mag_aca_err': star['MAG_ACA_ERR']/100,
         'color': star['COLOR1'],
         'n_obsids': n_obsids,
-        'n_obsids_fail': np.sum(len(failures)),
+        'n_obsids_fail': len(failures),
         'n_obsids_ok': np.sum(stats['obsid_ok']),
         'n_no_track': np.sum(stats['f_ok'] < 0.3),
         'n': len(ok),
@@ -668,8 +674,6 @@ def get_agasc_id_stats(agasc_id, tstop=None):
 
     result.update({
         'agasc_id': agasc_id,
-        'n_obsids': len(stats),
-        'n_obsids_ok': np.sum(stats['obsid_ok']),
         'n': len(ok),
         'n_ok': np.sum(ok),
         'f_ok': f_ok,  # f_ok does not count samples with mag >= 13.9
