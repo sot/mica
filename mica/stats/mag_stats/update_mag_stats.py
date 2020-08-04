@@ -60,6 +60,7 @@ def get_agasc_id_stats(agasc_ids):
         # transform Exception to MagStatsException for standard book keeping
         fails.append(dict(mag_stats.MagStatsException(
             msg=f'Exception at end of get_agasc_id_stats: {str(e)}')))
+
     return obsid_stats, agasc_stats, fails
 
 
@@ -102,12 +103,13 @@ def update_supplement(agasc_stats, filename=None):
     :param filename:
     :return:
     """
-
-    agasc_stats['outlier'] = \
-        np.abs(agasc_stats['t_mean_dr3'] - agasc_stats['mag_aca']) > 3 * agasc_stats['mag_aca_err']
-
     outliers_new = agasc_stats[
-        (agasc_stats['color'] == 1.5) | (agasc_stats['color'] == 0.7) | agasc_stats['outlier']]
+        (agasc_stats['n_obsids_ok'] > 0) &
+        (agasc_stats['selected_atol'] |
+         agasc_stats['selected_rtol'] |
+         agasc_stats['selected_color'] |
+         agasc_stats['selected_mag_aca_err'])
+    ]
     outliers_new['mag_aca'] = outliers_new['t_mean_dr3']
     outliers_new['mag_aca_err'] = outliers_new['t_std_dr3']
     names = ['agasc_id', 'color', 'mag_aca', 'mag_aca_err', 'last_obs_time']

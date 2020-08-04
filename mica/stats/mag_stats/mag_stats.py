@@ -631,6 +631,11 @@ def get_agasc_id_stats(agasc_id, tstop=None):
         't_mean_2': 0,
         't_std_2': 0,
         'n_outlier_2': 0,
+        # these are the criteria for including in supplement
+        'selected_atol': False,
+        'selected_rtol': False,
+        'selected_mag_aca_err': False,
+        'selected_color': False
     }
 
     for dr in [3, 5]:
@@ -715,5 +720,14 @@ def get_agasc_id_stats(agasc_id, tstop=None):
             f'sigma_minus_dr{dr}': sigma_minus,
             f'sigma_plus_dr{dr}': sigma_plus,
         })
+
+
+    # these are the criteria for including in supplement
+    result.update({
+        'selected_atol': np.abs(result['t_mean_dr3'] - result['mag_aca']) > 0.3,
+        'selected_rtol': np.abs(result['t_mean_dr3'] - result['mag_aca']) > 3 * result['mag_aca_err'],
+        'selected_mag_aca_err': result['mag_aca_err'] > 0.2,
+        'selected_color': (result['color'] == 1.5) | (np.isclose(result['color'], 0.7))
+    })
 
     return result, stats, failures
