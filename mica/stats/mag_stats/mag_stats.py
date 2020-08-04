@@ -17,6 +17,7 @@ import mica
 from mica.archive import aca_l0
 from mica.archive.aca_dark.dark_cal import get_dark_cal_image
 from chandra_aca.transform import count_rate_to_mag, pixels_to_yagzag
+from cxotime import CxoTime
 
 version = mica.__version__
 
@@ -198,6 +199,7 @@ def get_telemetry(obs):
         It must have the following columns: 'agasc_id', 'mp_starcat_time', 'mag', 'slot'
     :return: dict
     """
+    catalogs.load()
     dwell = catalogs.DWELLS_NP[catalogs.DWELLS_MAP[obs['mp_starcat_time']]]
     star = get_star(obs['agasc_id'], date=dwell['tstart'])
     start = dwell['tstart']
@@ -310,6 +312,7 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None):
     :param obsid: int (optional)
     :return: dict
     """
+    catalogs.load()
     if obsid is None:
         obs = catalogs.STARS_OBS[
             (catalogs.STARS_OBS['agasc_id'] == agasc_id)]
@@ -397,6 +400,7 @@ def get_obsid_stats(obs, telem=None):
     :return: dict
         dictionary with stats
     """
+    catalogs.load()
     if telem is None:
         telem = get_telemetry(obs)
 
@@ -530,7 +534,7 @@ def calc_obsid_stats(telem):
     return stats
 
 
-def get_agasc_id_stats(agasc_id):
+def get_agasc_id_stats(agasc_id, tstop=None):
     """
     Get summary magnitude statistics for an AGASC ID.
 
@@ -538,14 +542,16 @@ def get_agasc_id_stats(agasc_id):
     :return: dict
         dictionary with stats
     """
+    catalogs.load()
     # Get a table of every time the star has been observed
     idx0, idx1 = catalogs.STARS_OBS_MAP[agasc_id]
     star_obs = catalogs.STARS_OBS[idx0:idx1]
+    if tstop is not None:
+        star_obs[star_obs['mp_starcat_time'] <= tstop]
     if len(star_obs) > 1:
         star_obs = star_obs.loc['mp_starcat_time', sorted(star_obs['mp_starcat_time'])]
     last_starcat_time = max(star_obs['mp_starcat_time'])
-    last_dwell = catalogs.DWELLS_NP[catalogs.DWELLS_MAP[last_starcat_time]]
-    last_obs_time = last_dwell['tstop']
+    last_obs_time = CxoTime(last_starcat_time).cxcsec
 
     failures = []
     all_telem = []

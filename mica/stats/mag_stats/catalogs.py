@@ -21,7 +21,7 @@ STARS_OBS_MAP = None
 STARS_OBS_NP = None
 
 
-def _load_startcat_commands():
+def _load_startcat_commands(tstop=None):
     """
     Get all star catalog commands.  This is a definitive list of commands
     *actually run* on the spacecraft (to the best of our knowledge).
@@ -66,6 +66,8 @@ def _load_startcat_commands():
     # Clip starcat_cmds to be within time range of dwells
     ok = (STARCAT_CMDS['mp_starcat_time'] < dwells['manvr_start'][-1])
     STARCAT_CMDS = STARCAT_CMDS[ok]
+    if tstop is not None:
+        STARCAT_CMDS = STARCAT_CMDS[STARCAT_CMDS['mp_starcat_time'] <= CxoTime(tstop).date]
 
     # Now make a time-based association between every star catalog command and the
     # subsequent maneuver command.  By the way that commands are built it is req'd
@@ -102,7 +104,7 @@ def _load_startcat_commands():
                   for idx in range(len(DWELLS_NP))}
 
 
-def _load_observed_catalogs():
+def _load_observed_catalogs(tstop=None):
     """
     Get actually observed star catalog entries for the mission.
 
@@ -210,5 +212,7 @@ def _load_observed_catalogs():
     STARS_OBS_NP = STARS_OBS.as_array()
 
 
-_load_startcat_commands()
-_load_observed_catalogs()
+def load(tstop=None):
+    if STARCAT_CMDS is None:
+        _load_startcat_commands(tstop)
+        _load_observed_catalogs(tstop)

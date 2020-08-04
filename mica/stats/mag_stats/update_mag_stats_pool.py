@@ -3,6 +3,7 @@ import numpy as np
 import datetime
 from multiprocessing import Pool
 from mica.stats.mag_stats import update_mag_stats, catalogs, mag_stats
+from cxotime import CxoTime
 import pickle
 import argparse
 
@@ -62,18 +63,37 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
 def parser():
     parse = argparse.ArgumentParser()
     parse.add_argument('--agasc-id-file')
+    parse.add_argument('--start')
+    parse.add_argument('--stop')
     return parse
+
 
 def main():
     args = parser().parse_args()
+    catalogs.load(args.stop)
     if args.agasc_id_file:
         with open(args.agasc_id_file, 'r') as f:
             agasc_ids = [int(l.strip()) for l in f.readlines()]
             agasc_ids = np.intersect1d(agasc_ids, catalogs.STARS_OBS['agasc_id'])
+    elif args.start:
+        if not args.stop:
+            args.stop = CxoTime.now().date
+        else:
+            args.stop = CxoTime(args.stop).date
+        args.start = CxoTime(args.start).date
+        obs_in_time = ((catalogs.STARS_OBS['mp_starcat_time'] >= args.start) &
+                       (catalogs.STARS_OBS['mp_starcat_time'] <= args.stop))
+        agasc_ids = sorted(catalogs.STARS_OBS[obs_in_time]['agasc_id'])
     else:
         agasc_ids = sorted(catalogs.STARS_OBS['agasc_id'])
     agasc_ids = np.unique(agasc_ids)
     stars_obs = catalogs.STARS_OBS[np.in1d(catalogs.STARS_OBS['agasc_id'], agasc_ids)]
+
+    if args.start is None:
+        args.start = CxoTime(stars_obs['mp_starcat_time']).min().date
+    if args.stop is None:
+        args.stop = CxoTime(stars_obs['mp_starcat_time']).max().date
+
     batch_size = 10
     print(f'Will process {len(agasc_ids)} stars'
           f' on {len(stars_obs)} observations')
@@ -95,6 +115,7 @@ def main():
                                            'fail_jobs': fail_jobs,
                                            'fail_obs': fail_obs})
 
+        new_stars, updated_stars = update_mag_stats.update_supplement(agasc_stats)
 
 
 if __name__ == '__main__':

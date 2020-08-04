@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import os
-import numpy as np
-from mica.stats.mag_stats import catalogs, mag_stats
 import pickle
-import tables
 import argparse
+import numpy as np
+import tables
+
+from mica.stats.mag_stats import catalogs, mag_stats
+from cxotime import CxoTime
 
 
 np.seterr(all='ignore')
@@ -102,11 +104,11 @@ def update_supplement(agasc_stats, filename=None):
 
     agasc_stats['outlier'] = \
         np.abs(agasc_stats['t_mean_dr3'] - agasc_stats['mag_aca']) > 3 * agasc_stats['mag_aca_err']
-    agasc_stats['mag_aca'] = agasc_stats['t_mean_dr3']
-    agasc_stats['mag_aca_err'] = agasc_stats['t_std_dr3']
 
     outliers_new = agasc_stats[
         (agasc_stats['color'] == 1.5) | (agasc_stats['color'] == 0.7) | agasc_stats['outlier']]
+    outliers_new['mag_aca'] = outliers_new['t_mean_dr3']
+    outliers_new['mag_aca_err'] = outliers_new['t_std_dr3']
     names = ['agasc_id', 'color', 'mag_aca', 'mag_aca_err', 'last_obs_time']
     outliers_new = outliers_new[names].as_array()
 
@@ -152,19 +154,36 @@ def update_supplement(agasc_stats, filename=None):
 def parser():
     parse = argparse.ArgumentParser()
     parse.add_argument('--agasc-id-file')
+    parse.add_argument('--start')
+    parse.add_argument('--stop')
     return parse
 
 
 def main():
     args = parser().parse_args()
+    catalogs.load(args.stop)
     if args.agasc_id_file:
         with open(args.agasc_id_file, 'r') as f:
             agasc_ids = [int(l.strip()) for l in f.readlines()]
             agasc_ids = np.intersect1d(agasc_ids, catalogs.STARS_OBS['agasc_id'])
+    elif args.start:
+        if not args.stop:
+            args.stop = CxoTime.now().date
+        else:
+            args.stop = CxoTime(args.stop).date
+        args.start = CxoTime(args.start).date
+        obs_in_time = ((catalogs.STARS_OBS['mp_starcat_time'] >= args.start) &
+                       (catalogs.STARS_OBS['mp_starcat_time'] <= args.stop))
+        agasc_ids = sorted(catalogs.STARS_OBS[obs_in_time]['agasc_id'])
     else:
         agasc_ids = sorted(catalogs.STARS_OBS['agasc_id'])
     agasc_ids = np.unique(agasc_ids)
     stars_obs = catalogs.STARS_OBS[np.in1d(catalogs.STARS_OBS['agasc_id'], agasc_ids)]
+
+    if args.start is None:
+        args.start = stars_obs['mp_starcat_time'].min()
+    if args.stop is None:
+        args.stop = stars_obs['mp_starcat_time'].max()
 
     print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
     obsid_stats, agasc_stats, fails, obs_failures = get_agasc_id_stats(agasc_ids)
@@ -173,8 +192,10 @@ def main():
           f'  {len(agasc_stats)} stars,'
           f'  {len(fails)} failed stars,'
           f'  {len(obs_failures)} failed observations')
-    update_mag_stats(obsid_stats, agasc_stats, fails)
-    new_stars, updated_stars = update_supplement(agasc_stats)
+    if len(agasc_stats):
+        update_mag_stats(obsid_stats, agasc_stats, fails)
+        new_stars, updated_stars = update_supplement(agasc_stats)
+
 
 if __name__ == '__main__':
     main()
