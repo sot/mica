@@ -4,7 +4,6 @@ import datetime
 from multiprocessing import Pool
 from mica.stats.mag_stats import update_mag_stats, catalogs, mag_stats
 from cxotime import CxoTime
-import pickle
 import argparse
 
 
@@ -46,7 +45,11 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
                 progress = 100*finished/len(jobs)
                 print(f'{progress:6.2f}% at {now.strftime(fmt)}, {eta}')
             time.sleep(1)
-    failed_jobs = [arg for arg, job in zip(args, jobs) if not job.successful()]
+    fails = []
+    failed_agasc_ids = [i for arg, job in zip(args, jobs) if not job.successful() for i in arg]
+    for agasc_id in failed_agasc_ids:
+        fails.append(dict(mag_stats.MagStatsException(agasc_id=agasc_id, msg='Failed job')))
+
     results = [job.get() for job in jobs if job.successful()]
 
     # TODO: make sure nothing is skipped here
@@ -54,10 +57,9 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
     agasc_stats = [r[1] for r in results if r[1] is not None]
     obsid_stats = vstack(obsid_stats) if obsid_stats else Table()
     agasc_stats = vstack(agasc_stats) if agasc_stats else Table()
-    fails = sum([r[2] for r in results], [])
-    obs_fails = sum([r[3] for r in results], [])
+    fails += sum([r[2] for r in results], [])
 
-    return obsid_stats, agasc_stats, fails, failed_jobs, obs_fails
+    return obsid_stats, agasc_stats, fails
 
 
 def parser():
@@ -98,25 +100,22 @@ def main():
     print(f'Will process {len(agasc_ids)} stars'
           f' on {len(stars_obs)} observations')
 
-    obsid_stats, agasc_stats, fails, fail_jobs, fail_obs = get_agasc_id_stats(agasc_ids, batch_size)
+    obsid_stats, agasc_stats, fails = get_agasc_id_stats(agasc_ids, batch_size)
 
+    failed_global = [f for f in fails if not f['agasc_id'] and not f['obsid']]
+    failed_stars = [f for f in fails if f['agasc_id'] and not f['obsid']]
+    failed_obs = [f for f in fails if f['obsid']]
     print(f'Got:\n'
           f'  {len(obsid_stats)} OBSIDs,'
           f'  {len(agasc_stats)} stars,'
-          f'  {len(fails)} failed stars,'
-          f'  {len(fail_jobs)} failed jobs'
-          f'  {len(fail_obs)} failed observations')
-    filename = f'mag_stats_failed_jobs_{mag_stats.version}.pkl'
-    with open(filename, 'wb') as out:
-        pickle.dump(fail_jobs, out)
+          f'  {len(failed_stars)} failed stars,'
+          f'  {len(failed_obs)} failed observations,'
+          f'  {len(failed_global)} global errors')
+
+    update_mag_stats.update_mag_stats(obsid_stats, agasc_stats, fails)
+
     if len(agasc_stats):
-        update_mag_stats.update_mag_stats(obsid_stats, agasc_stats,
-                                          {'fails': fails,
-                                           'fail_jobs': fail_jobs,
-                                           'fail_obs': fail_obs})
-
         new_stars, updated_stars = update_mag_stats.update_supplement(agasc_stats)
-
 
 if __name__ == '__main__':
     import warnings

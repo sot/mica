@@ -33,13 +33,6 @@ MASK = {
 }
 
 
-EXCEPTION_CODES = collections.defaultdict(lambda: -1)
-EXCEPTION_CODES.update({
-    'No level 0 data': 1,
-    'No telemetry data': 2,
-    'Mismatch in telemetry between aca_l0 and cheta': 3,
-    'Time mismatch between cheta and level0': 4,
-})
 EXCEPTION_MSG = {
     -1: 'Unknown',
     0: 'OK',
@@ -47,7 +40,10 @@ EXCEPTION_MSG = {
     2: 'No telemetry data',
     3: 'Mismatch in telemetry between aca_l0 and cheta',
     4: 'Time mismatch between cheta and level0',
+    5: 'Failed job'
 }
+EXCEPTION_CODES = collections.defaultdict(lambda: -1)
+EXCEPTION_CODES.update({msg: code for code, msg in EXCEPTION_MSG.items() if code > 0})
 
 
 class MagStatsException(Exception):
@@ -62,6 +58,13 @@ class MagStatsException(Exception):
     def __str__(self):
         return f'MagStatsException: {self.msg} (agasc_id: {self.agasc_id}, ' \
                f'obsid: {self.obsid}, timeline_id: {self.timeline_id})'
+
+    def __iter__(self):
+        yield 'error_code', self.error_code
+        yield 'msg', self.msg
+        yield 'agasc_id', self.agasc_id
+        yield 'obsid', self.obsid
+        yield 'timeline_id', self.timeline_id
 
 
 def _magnitude_correction(time, mag_aca):
@@ -562,7 +565,7 @@ def get_agasc_id_stats(agasc_id, tstop=None):
             all_telem.append(telem)
             stats.append(get_obsid_stats(o, telem={k: telem[k] for k in telem.colnames}))
         except MagStatsException as e:
-            failures.append((e.agasc_id, e.obsid, e.timeline_id, e.msg, e.error_code))
+            failures.append(dict(e))
 
     if len(all_telem) == 0:
         raise MagStatsException('No telemetry data', agasc_id=agasc_id)

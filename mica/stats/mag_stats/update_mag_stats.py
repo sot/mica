@@ -39,27 +39,28 @@ def get_agasc_id_stats(agasc_ids):
     fails = []
     obsid_stats = []
     agasc_stats = []
-    obs_failures = []
     for i, agasc_id in enumerate(agasc_ids):
         try:
             agasc_stat, obsid_stat, obs_fail = mag_stats.get_agasc_id_stats(agasc_id=agasc_id)
             agasc_stats.append(agasc_stat)
             obsid_stats.append(obsid_stat)
-            obs_failures.append(obs_fail)
+            fails += obs_fail
         except mag_stats.MagStatsException as e:
-            fails.append((agasc_id, e.msg))
+            fails.append(dict(e))
         except Exception as e:
-            fails.append((agasc_id, str(e)))
+            # transform Exception to MagStatsException for standard book keeping
+            fails.append(dict(mag_stats.MagStatsException(agasc_id=agasc_id, msg=str(e))))
 
-    obs_failures = [f for obs in obs_failures for f in obs]
     try:
         agasc_stats = Table(agasc_stats) if agasc_stats else None
         obsid_stats = vstack(obsid_stats) if obsid_stats else None
     except Exception as e:
         agasc_stats = None
         obsid_stats = None
-        fails = [(agasc_id, f'Exception at bottom of get_agasc_id_stats: {str(e)}')]
-    return obsid_stats, agasc_stats, fails, obs_failures
+        # transform Exception to MagStatsException for standard book keeping
+        fails.append(dict(mag_stats.MagStatsException(
+            msg=f'Exception at end of get_agasc_id_stats: {str(e)}')))
+    return obsid_stats, agasc_stats, fails
 
 
 def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
@@ -77,12 +78,12 @@ def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
     :param outdir:
     :return:
     """
-    if len(agasc_stats):
+    if agasc_stats is not None and len(agasc_stats):
         filename = os.path.join(outdir, f'mag_stats_agasc_{mag_stats.version}.fits')
         if os.path.exists(filename):
             os.remove(filename)
         agasc_stats.write(filename)
-    if len(obsid_stats):
+    if obsid_stats is not None and len(obsid_stats):
         filename = os.path.join(outdir, f'mag_stats_obsid_{mag_stats.version}.fits')
         if os.path.exists(filename):
             os.remove(filename)
@@ -186,12 +187,17 @@ def main():
         args.stop = stars_obs['mp_starcat_time'].max()
 
     print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
-    obsid_stats, agasc_stats, fails, obs_failures = get_agasc_id_stats(agasc_ids)
+    obsid_stats, agasc_stats, fails = get_agasc_id_stats(agasc_ids)
+
+    failed_global = [f for f in fails if not f['agasc_id'] and not f['obsid']]
+    failed_stars = [f for f in fails if f['agasc_id'] and not f['obsid']]
+    failed_obs = [f for f in fails if f['obsid']]
     print(f'Got:\n'
           f'  {len(obsid_stats)} OBSIDs,'
           f'  {len(agasc_stats)} stars,'
-          f'  {len(fails)} failed stars,'
-          f'  {len(obs_failures)} failed observations')
+          f'  {len(failed_stars)} failed stars,'
+          f'  {len(failed_obs)} failed observations,'
+          f'  {len(failed_global)} global errors')
     if len(agasc_stats):
         update_mag_stats(obsid_stats, agasc_stats, fails)
         new_stars, updated_stars = update_supplement(agasc_stats)
