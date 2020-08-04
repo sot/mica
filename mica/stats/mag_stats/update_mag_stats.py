@@ -6,7 +6,7 @@ import numpy as np
 import tables
 from astropy import table
 
-from mica.stats.mag_stats import catalogs, mag_stats
+from mica.stats.mag_stats import catalogs, mag_stats, mag_stats_report as msr
 from cxotime import CxoTime
 
 
@@ -178,6 +178,7 @@ def parser():
     parse.add_argument('--agasc-id-file')
     parse.add_argument('--start')
     parse.add_argument('--stop')
+    parse.add_argument('--report', action='store_true', default=False)
     return parse
 
 
@@ -223,6 +224,11 @@ def main():
         update_mag_stats(obsid_stats, agasc_stats, fails)
         new_stars, updated_stars = update_supplement(agasc_stats)
 
+        if args.report:
+            print("making report")
+            msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
+                                       fails=fails, report_date=CxoTime.now().date,
+                                       tstart=args.start, tstop=args.stop)
 
 if __name__ == '__main__':
     main()

@@ -2,7 +2,7 @@
 import numpy as np
 import datetime
 from multiprocessing import Pool
-from mica.stats.mag_stats import update_mag_stats, catalogs, mag_stats
+from mica.stats.mag_stats import update_mag_stats, catalogs, mag_stats, mag_stats_report as msr
 from cxotime import CxoTime
 import argparse
 
@@ -67,6 +67,7 @@ def parser():
     parse.add_argument('--agasc-id-file')
     parse.add_argument('--start')
     parse.add_argument('--stop')
+    parse.add_argument('--report', action='store_true', default=False)
     return parse
 
 
@@ -116,6 +117,13 @@ def main():
 
     if len(agasc_stats):
         new_stars, updated_stars = update_mag_stats.update_supplement(agasc_stats)
+
+        if args.report:
+            print("making report")
+            msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
+                                       fails=fails, report_date=CxoTime.now().date,
+                                       tstart=args.start, tstop=args.stop)
+
 
 if __name__ == '__main__':
     import warnings
