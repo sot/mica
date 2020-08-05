@@ -4,6 +4,7 @@ import pickle
 import argparse
 import numpy as np
 import tables
+from astropy import table
 
 from mica.stats.mag_stats import catalogs, mag_stats
 from cxotime import CxoTime
@@ -64,6 +65,20 @@ def get_agasc_id_stats(agasc_ids):
     return obsid_stats, agasc_stats, fails
 
 
+def _update_table(table_old, table_new, keys):
+    # checking names, because actual types change upon saving in fits format
+    assert table_old.as_array().dtype.names == table_new.as_array().dtype.names, \
+        'Tables have different dtype'
+    table_old = table_old.copy()
+    new_row = np.ones(len(table_new), dtype=bool)
+    _, i_new, i_old = np.intersect1d(table_new[keys].as_array(),
+                                     table_old[keys].as_array(),
+                                     return_indices=True)
+    new_row[i_new] = False
+    table_old[i_old] = table_new[i_new]
+    return table.vstack([table_old, table_new[new_row]])
+
+
 def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
     """
     Update the mag_stats catalog.
@@ -82,11 +97,15 @@ def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
     if agasc_stats is not None and len(agasc_stats):
         filename = os.path.join(outdir, f'mag_stats_agasc_{mag_stats.version}.fits')
         if os.path.exists(filename):
+            agasc_stats = _update_table(table.Table.read(filename), agasc_stats,
+                                        keys=['agasc_id'])
             os.remove(filename)
         agasc_stats.write(filename)
     if obsid_stats is not None and len(obsid_stats):
         filename = os.path.join(outdir, f'mag_stats_obsid_{mag_stats.version}.fits')
         if os.path.exists(filename):
+            obsid_stats = _update_table(table.Table.read(filename), obsid_stats,
+                                        keys=['agasc_id', 'obsid', 'timeline_id'])
             os.remove(filename)
         obsid_stats.write(filename)
     if len(fails):
