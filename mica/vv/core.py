@@ -1024,7 +1024,7 @@ class AspectInterval(object):
                 mock_prop = dict(
                                  id_status='OMITTED',
                                  slot=slot,
-                                 id_string=ocat_info['id'],
+                                 id_string=str(ocat_info['id']),
                                  id_num=ocat_info['id'],
                                  ang_y_nom=ocat_info['y_ang'],
                                  ang_z_nom=ocat_info['z_ang'],
