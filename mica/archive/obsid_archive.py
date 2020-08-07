@@ -102,7 +102,7 @@ class ObsArchive:
                  "get %s" % config[small]
                  (example '*fidpr*')
     * small_ver_regex: regular expression to search for version from
-                     retrieved files (example 'pacdf\d+N(\d{3})_')
+                     retrieved files (example 'pcadf\\d+N(\\d{3})_')
     * full: arc5gl keyword for products (example 'asp1')
     * rebuild: If True/set, allow update mode to rebuild the database
                from obsid 1.
@@ -594,7 +594,7 @@ class ObsArchive:
 
     def get_todo_from_links(self, archive_dir):
         """
-        Return a list of all of the \*_last directories in the file archive
+        Return a list of all of the \\*_last directories in the file archive
         (and specify revision=default to attempt to get new released products
         for them).
         """
