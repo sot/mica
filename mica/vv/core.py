@@ -346,7 +346,7 @@ class Obi(object):
         if ((self.obspar['tstart'] >= header['TSTOP'])
             or (self.obspar['tstop'] <= header['TSTART'])):
             return None
-        aiid_match = re.search('(pcadf\d+[^_]*)_', asol_file)
+        aiid_match = re.search(r'(pcadf\d+[^_]*)_', asol_file)
         if aiid_match:
             return dict(id=aiid_match.group(1),
                         dir=obsdir)
@@ -1088,7 +1088,7 @@ class AspectInterval(object):
         aiid = self.aiid
         datadir = self.aspdir
         try:
-            id_end = re.match('\w+(\D\d+N\d{3})', aiid)
+            id_end = re.match(r'\w+(\D\d+N\d{3})', aiid)
             logfiles = glob(os.path.join(datadir, "*%s.log*" % id_end.group(1)))
             logfile = logfiles[0]
             try:

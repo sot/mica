@@ -739,7 +739,7 @@ class Updater(object):
                 raise ValueError
             filename = have_files[0]
             # if it isn't gzipped, just gzip it
-            if re.match('.*\.fits$', filename):
+            if re.match(r'.*\.fits$', filename):
                 import gzip
                 f_in = open(file, 'rb')
                 f_out = gzip.open("%s.gz" % filename, 'wb')

@@ -273,7 +273,7 @@ class ObsArchive:
         if not verdirs:
             return None
         for v in verdirs:
-            nmatch = re.search("%s_v(\d{2})" % strobs, v)
+            nmatch = re.search(r"%s_v(\d{2})" % strobs, v)
             if nmatch:
                 dirmap[int(nmatch.group(1))] = v
                 dirmap['revisions'].append(int(nmatch.group(1)))
@@ -607,7 +607,7 @@ class ObsArchive:
             last_links = glob(os.path.join(cdir, "?????_last"))
             for link in last_links:
                 target = os.readlink(link)
-                lmatch = re.search('(\d{5})_v(\d+)$', target)
+                lmatch = re.search(r'(\d{5})_v(\d+)$', target)
                 if lmatch:
                     obs = dict(obsid=int(lmatch.group(1)),
                                revision=int(lmatch.group(2)))

@@ -654,7 +654,7 @@ def main(obsid):
         asp_dir = asp_l1.get_obs_dirs(obsid)['last']
         asp_logs = sorted(glob(os.path.join(asp_dir, "asp_l1_f*log*gz")))
         for log, interval in zip(asp_logs, vv['intervals']):
-            logmatch = re.search('(.*log)\.gz', os.path.basename(log))
+            logmatch = re.search(r'(.*log)\.gz', os.path.basename(log))
             if logmatch:
                 newlogname = "{}.txt".format(logmatch.group(1))
                 newlog = os.path.join(outdir, newlogname)
