@@ -864,7 +864,7 @@ def process_obsids(obsids, update=True, retry=False):
             logger.info("Skipping {}, output dir exists.".format(obsid))
             continue
         if not retry and os.path.exists(os.path.join(outdir, "proc_err")):
-            logger.warn("Skipping {}, previous processing error.".format(obsid))
+            logger.warning("Skipping {}, previous processing error.".format(obsid))
             continue
         if not os.path.exists(outdir):
             os.makedirs("{}".format(outdir))
@@ -877,7 +877,7 @@ def process_obsids(obsids, update=True, retry=False):
         except:
             import traceback
             etype, emess, trace = sys.exc_info()
-            logger.warn("Failed report on {}".format(obsid))
+            logger.warning("Failed report on {}".format(obsid))
             # Make an empty file to record the error status
             f = open(os.path.join(outdir, 'proc_err'), 'w')
             f.close()

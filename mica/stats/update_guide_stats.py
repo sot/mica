@@ -423,7 +423,7 @@ def calc_stats(obsid):
     if abs(starcat_dtime) > 300:
         raise ValueError("Starcheck cat time delta is {}".format(starcat_dtime))
     if abs(starcat_dtime) > 30:
-        logger.warn("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
+        logger.warning("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
     # The NPNT dwell should end when the next maneuver starts, but explicitly confirm via pcadmd
     pcadmd = fetch.Msid('AOPCADMD', manvr.kalman_start, manvr.get_next().tstart + 20)
     next_nman_start = pcadmd.times[pcadmd.vals != 'NPNT'][0]

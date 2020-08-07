@@ -187,7 +187,7 @@ class Obi(object):
             raise ValueError(
                 "More than one entry found for obsid/obi/rev in aspect_1")
         if len(aspect_1) == 0:
-            logger.warn("obsid / revision not in axafapstat.aspect_1")
+            logger.warning("obsid / revision not in axafapstat.aspect_1")
             return (None, None)
         return aspect_1[0]['aspect_1_id'], aspect_1[0]['ap_date']
 
@@ -226,7 +226,7 @@ class Obi(object):
             self._info['aspect_1_id'] =  aspect_1_id
             self._info['ap_date'] =  str(ap_date)
         except:
-            logger.warn("Could not determine aspect_1_id/date from Sybase database")
+            logger.warning("Could not determine aspect_1_id/date from Sybase database")
 
         # we don't care about the DateTimeType for ap_date,
         # so just cast to a string
@@ -245,7 +245,7 @@ class Obi(object):
 
     def shelve_info(self, file):
         if self.info()['aspect_1_id'] is None:
-            logger.warn("Shelving not implemented for obsids without aspect_1_ids")
+            logger.warning("Shelving not implemented for obsids without aspect_1_ids")
             return
         s = shelve.open(file)
         s["%s_%s" % (self.info()['obsid'], self.info()['revision'])] \
@@ -255,7 +255,7 @@ class Obi(object):
 
     def slots_to_db(self):
         if self.info()['aspect_1_id'] is None:
-            logger.warn("Database save not implemented for obsids without aspect_1_ids")
+            logger.warning("Database save not implemented for obsids without aspect_1_ids")
             return
         save = self.info()
         in_db = self.db.fetchall("""select * from %s where
@@ -283,11 +283,11 @@ class Obi(object):
     def slots_to_table(self):
         save = self.info()
         if save['aspect_1_id'] is None:
-            logger.warn("Table save not implemented for obsids without aspect_1_ids")
+            logger.warning("Table save not implemented for obsids without aspect_1_ids")
             return
         mean_aacccdpt = self._get_ccd_temp(save['tstart'], save['tstop'])
         if mean_aacccdpt is None:
-            logger.warn(
+            logger.warning(
                 "No AACCCDPT data for {}.  Skipping HDF5 ingest".format(
                     save['obsid']))
             return
@@ -519,13 +519,13 @@ class Obi(object):
                 wtext = "Warning: monitor window obsid {} has {} aspect intervals".format(
                     obsid, len(self.aiids))
                 self._errors.append(wtext)
-                logger.warn(wtext)
+                logger.warning(wtext)
         else:
             if len(self.aiids) > 1:
                 wtext = "Warning: obsid {} has {} aspect intervals".format(
                     obsid, len(self.aiids))
                 self._errors.append(wtext)
-                logger.warn(wtext)
+                logger.warning(wtext)
 
         for t in ('gsprop', 'fidprop'):
             if getattr(self.aspect_intervals[0], t) is None:
@@ -998,8 +998,8 @@ class AspectInterval(object):
         try:
             ocat_stars = self._read_ocat_stars()
         except:
-            logger.warn('Could not get OCAT stars from database')
-            logger.warn('Skipping checks for missing slots')
+            logger.warning('Could not get OCAT stars from database')
+            logger.warning('Skipping checks for missing slots')
             return
         tstart = self.asol_header['TSTART']
         agasc_equinox = DateTime('2000:001:00:00:00.000')
@@ -1009,8 +1009,8 @@ class AspectInterval(object):
         for slot in missing_slots:
             #stype = self._identify_missing_slot(slot)
             #if stype is None:
-            #    logger.warn("No image data to identify missing slot {}".format(slot))
-            #    logger.warn("Skipping slot")
+            #    logger.warning("No image data to identify missing slot {}".format(slot))
+            #    logger.warning("Skipping slot")
             #missing_types.append(stype)
             if slot not in ocat_stars['slot']:
                 logger.info("Missing slot not in OCAT.  Skipping...")
@@ -1020,7 +1020,7 @@ class AspectInterval(object):
                 logger.info("Missing slot is MONITOR.  Skipping...")
                 continue
             if ocat_info['type'] == 2:
-                logger.warn("Missing slot is FID.")
+                logger.warning("Missing slot is FID.")
                 mock_prop = dict(
                                  id_status='OMITTED',
                                  slot=slot,

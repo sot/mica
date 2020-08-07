@@ -754,12 +754,12 @@ class ObsArchive:
             with Ska.DBI.DBI(**apstat) as db:
                 current_status = db.fetchall(apstat_query)
             if len(current_status) == 0:
-                logger.warn(
+                logger.warning(
                     "warning: obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
                     % query_vars)
                 continue
             if len(current_status) > 1:
-                logger.warn(
+                logger.warning(
                     "warning: obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
                     % query_vars)
                 continue

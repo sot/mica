@@ -480,7 +480,7 @@ def warn_on_acq_anom(acqs, emails):
 """.format(
             **output_dict)
         # Log and Send message for slot.  Obsid can have more than one email
-        logger.warn(text)
+        logger.warning(text)
         msg = MIMEText(text)
         msg['From'] = 'aca@head.cfa.harvard.edu'
         msg['Subject'] = "Acq Anomaly: Obsid {} (mica processing)".format(anom['obsid'])
@@ -575,7 +575,7 @@ def calc_stats(obsid):
     if abs(starcat_dtime) > 300:
         raise ValueError("Starcheck cat time delta is {}".format(starcat_dtime))
     if abs(starcat_dtime) > 30:
-        logger.warn("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
+        logger.warning("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
     vals, times, one_shot, star_info = get_modern_data(manvr, dwell, starcheck)
 
     acq_stats = calc_acq_stats(manvr, vals, times)
