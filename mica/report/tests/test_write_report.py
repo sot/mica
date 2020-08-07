@@ -3,14 +3,22 @@ import tempfile
 import os
 import shutil
 import pytest
+from warnings import warn
+
+from testr.test_helper import on_head_network, has_sybase
 
 from .. import report
 
 try:
     import Ska.DBI
-    with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user='jeanconn', database='axafvv') as db:
+    user = os.environ.get('USER') or os.environ.get('LOGNAME')
+    with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
         HAS_SYBASE_ACCESS = True
-except:
+except Exception:
+    if on_head_network() and not has_sybase():
+        warn("On HEAD but no sybase access. Run ska_envs or define SYBASE/SYBASE_OCS")
+    if on_head_network() and has_sybase():
+        warn(f"{user} account probably doesn't have axafvv database access")
     HAS_SYBASE_ACCESS = False
 
 

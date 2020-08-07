@@ -259,7 +259,8 @@ def guess_fot_summary(mp_dir):
 
 
 def official_vv(obsid):
-    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='jeanconn', database='axafvv')
+    user = os.environ.get('USER') or os.environ.get('LOGNAME')
+    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv')
     vv = vv_db.fetchone("""select vvid from vvreport where obsid = {obsid}
                            and creation_date = (
                               select max(creation_date) from vvreport where obsid = {obsid})
@@ -275,7 +276,8 @@ def official_vv(obsid):
 
 
 def official_vv_notes(obsid, summary):
-    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='jeanconn', database='axafvv',
+    user = os.environ.get('USER') or os.environ.get('LOGNAME')
+    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv',
                         numpy=False)
     all_vv = vv_db.fetchall("""select * from vvreport where obsid = {obsid}
                         """.format(obsid=obsid))
