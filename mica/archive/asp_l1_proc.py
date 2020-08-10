@@ -65,7 +65,7 @@ def update(obsids, config=None):
 
             # read the obspar version with a regex from the log
             obspar_version = int(
-                re.search("axaff\d{5}_\d{3}N(\d{3})_obs0a\.par",
+                re.search(r"axaff\d{5}_\d{3}N(\d{3})_obs0a\.par",
                           aspect_log).group(1))
             hdus = fits.open(sol)
             obi = hdus[1].header['OBI_NUM']

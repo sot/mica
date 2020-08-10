@@ -1,10 +1,9 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
 import re
-import numpy as np
 
 from Chandra.Time import DateTime
-from Chandra.cmd_states import get_cmd_states
+from kadi.commands.states import get_states
 import Ska.DBI
 from kadi import events
 from astropy.table import Table
@@ -197,7 +196,8 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     # There is a tiny window of time in cmd_states but not yet in kadi, but this code tries to
     # grab the dwell and maneuver that would be related to a date in that range
     if date < last_tl and len(dwells) == 0:
-        pcad_states = get_cmd_states.fetch_states(start=DateTime(date) - 2, vals=['pcad_mode'])
+        pcad_states = get_states(start=DateTime(date) - 2, state_keys=['pcad_mode'],
+                                 merge_identical=True)
         dwell = pcad_states[(pcad_states['pcad_mode'] == 'NPNT') & (pcad_states['datestop'] >= date)][0]
         manvr = pcad_states[(pcad_states['pcad_mode'] == 'NMAN')
                             & (pcad_states['datestop'] <= dwell['datestart'])][-1]

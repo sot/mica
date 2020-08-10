@@ -102,7 +102,7 @@ class ObsArchive:
                  "get %s" % config[small]
                  (example '*fidpr*')
     * small_ver_regex: regular expression to search for version from
-                     retrieved files (example 'pacdf\d+N(\d{3})_')
+                     retrieved files (example 'pcadf\\d+N(\\d{3})_')
     * full: arc5gl keyword for products (example 'asp1')
     * rebuild: If True/set, allow update mode to rebuild the database
                from obsid 1.
@@ -273,7 +273,7 @@ class ObsArchive:
         if not verdirs:
             return None
         for v in verdirs:
-            nmatch = re.search("%s_v(\d{2})" % strobs, v)
+            nmatch = re.search(r"%s_v(\d{2})" % strobs, v)
             if nmatch:
                 dirmap[int(nmatch.group(1))] = v
                 dirmap['revisions'].append(int(nmatch.group(1)))
@@ -594,7 +594,7 @@ class ObsArchive:
 
     def get_todo_from_links(self, archive_dir):
         """
-        Return a list of all of the \*_last directories in the file archive
+        Return a list of all of the \\*_last directories in the file archive
         (and specify revision=default to attempt to get new released products
         for them).
         """
@@ -607,7 +607,7 @@ class ObsArchive:
             last_links = glob(os.path.join(cdir, "?????_last"))
             for link in last_links:
                 target = os.readlink(link)
-                lmatch = re.search('(\d{5})_v(\d+)$', target)
+                lmatch = re.search(r'(\d{5})_v(\d+)$', target)
                 if lmatch:
                     obs = dict(obsid=int(lmatch.group(1)),
                                revision=int(lmatch.group(2)))
@@ -754,12 +754,12 @@ class ObsArchive:
             with Ska.DBI.DBI(**apstat) as db:
                 current_status = db.fetchall(apstat_query)
             if len(current_status) == 0:
-                logger.warn(
+                logger.warning(
                     "warning: obsid %(obsid)d revision %(revision)d not in %(apstat_table)s"
                     % query_vars)
                 continue
             if len(current_status) > 1:
-                logger.warn(
+                logger.warning(
                     "warning: obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
                     % query_vars)
                 continue

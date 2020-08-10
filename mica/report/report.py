@@ -25,7 +25,7 @@ import Ska.DBI
 from Chandra.Time import DateTime
 from Ska.engarchive import fetch_sci
 from kadi import events
-from Chandra.cmd_states import fetch_states
+from kadi.commands.states import get_states
 import mica
 from mica.archive import obspar
 from mica.catalog import catalog
@@ -231,7 +231,7 @@ def target_summary(obsid):
 def guess_shortterm(mp_dir):
 #file:///proj/web-icxc/htdocs/mp/schedules/cycle14/JUL2213B.html
     mp_short_top = '/proj/web-icxc/htdocs/mp/schedules'
-    dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
+    dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
     if not dir_match:
         return None
     dir_string = "{}{}.html".format(
@@ -245,7 +245,7 @@ def guess_shortterm(mp_dir):
 
 
 def guess_fot_summary(mp_dir):
-    dir_match = re.match('/(\d{4})/((\w{3})\d{4})/ofls(\w)', mp_dir)
+    dir_match = re.match(r'/(\d{4})/((\w{3})\d{4})/ofls(\w)', mp_dir)
     if not dir_match:
         return None
     appr_loads = 'http://occweb.cfa.harvard.edu/occweb/FOT/mission_planning/PRODUCTS/APPR_LOADS'
@@ -333,10 +333,10 @@ def obs_links(obsid, sequence=None, plan=None):
                             'label': 'Centroid Dashboard'}
 
     if mp_dir is not None:
-        dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
+        dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
         mp_label = "{}{}".format(dir_match.group(1),
                                  dir_match.group(2).upper())
-        mp_date_m = re.match('(\d{4}):(\d{3}):\d{2}:\d{2}:\d{2}\.\d{3}', mp_date)
+        mp_date_m = re.match(r'(\d{4}):(\d{3}):\d{2}:\d{2}:\d{2}\.\d{3}', mp_date)
         if mp_date_m:
             year = int(mp_date_m.group(1))
             doy = int(mp_date_m.group(2))
@@ -588,7 +588,7 @@ def main(obsid):
         return
 
     if not er and 'shortterm' in links:
-        dir_match = re.match('/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
+        dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
         mp_label = "{}{}".format(dir_match.group(1),
                                  dir_match.group(2).upper())
         last_sched = 'in <A HREF="{}">{}</A> at {}'.format(
@@ -654,7 +654,7 @@ def main(obsid):
         asp_dir = asp_l1.get_obs_dirs(obsid)['last']
         asp_logs = sorted(glob(os.path.join(asp_dir, "asp_l1_f*log*gz")))
         for log, interval in zip(asp_logs, vv['intervals']):
-            logmatch = re.search('(.*log)\.gz', os.path.basename(log))
+            logmatch = re.search(r'(.*log)\.gz', os.path.basename(log))
             if logmatch:
                 newlogname = "{}.txt".format(logmatch.group(1))
                 newlog = os.path.join(outdir, newlogname)
@@ -847,8 +847,8 @@ def save_state_in_db(obsid, notes):
 
 
 def update():
-    recent_obs = np.unique(fetch_states(start=DateTime(-7), vals=['obsid'])['obsid'])
-    for obs in recent_obs:
+    recent_obs = get_states(start=-7, state_keys=['obsid'], merge_identical=True)
+    for obs in recent_obs['obsid']:
         process_obsids([int(obs)]) # the int() is here to keep json happy downstream
 
 
@@ -864,7 +864,7 @@ def process_obsids(obsids, update=True, retry=False):
             logger.info("Skipping {}, output dir exists.".format(obsid))
             continue
         if not retry and os.path.exists(os.path.join(outdir, "proc_err")):
-            logger.warn("Skipping {}, previous processing error.".format(obsid))
+            logger.warning("Skipping {}, previous processing error.".format(obsid))
             continue
         if not os.path.exists(outdir):
             os.makedirs("{}".format(outdir))
@@ -877,7 +877,7 @@ def process_obsids(obsids, update=True, retry=False):
         except:
             import traceback
             etype, emess, trace = sys.exc_info()
-            logger.warn("Failed report on {}".format(obsid))
+            logger.warning("Failed report on {}".format(obsid))
             # Make an empty file to record the error status
             f = open(os.path.join(outdir, 'proc_err'), 'w')
             f.close()

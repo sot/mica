@@ -7,11 +7,8 @@ from itertools import count
 from operator import itemgetter
 from pathlib import Path
 
-import numpy as np
-
 from six.moves import zip
 from Chandra.Time import DateTime
-from Chandra.cmd_states import get_cmd_states
 import Ska.Shell
 import Ska.DBI
 

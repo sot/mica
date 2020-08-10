@@ -529,7 +529,7 @@ def slot_for_msid(msid):
     """
     For a given 'MSID' return the slot number that contains those data.
     """
-    mmatch = re.match('(\d)\d\d', msid)
+    mmatch = re.match(r'(\d)\d\d', msid)
     slot = int(mmatch.group(1))
     return slot
 
