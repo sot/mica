@@ -543,7 +543,7 @@ def calc_obsid_stats(telem):
     return stats
 
 
-def get_agasc_id_stats(agasc_id, tstop=None):
+def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
     """
     Get summary magnitude statistics for an AGASC ID.
 
@@ -584,6 +584,12 @@ def get_agasc_id_stats(agasc_id, tstop=None):
         (stats['f_ok'] > 0.3) &
         (stats['lf_variability_100s'] < 1)
     )
+    stats['comments'] = np.zeros(len(stats), dtype='<U80')
+    if excluded_observations:
+        excluded_mask = np.in1d(stats['obsid'], np.fromiter(excluded_observations, dtype=int))
+        stats['obsid_ok'] *= ~excluded_mask
+        for i in np.argwhere(excluded_mask).T[0]:
+            stats['comments'][i] = excluded_observations[stats[i]['obsid']]
 
     for s, t in zip(stats, all_telem):
         t['obsid_ok'] = np.ones_like(t['ok'], dtype=bool) * s['obsid_ok']

@@ -2,6 +2,7 @@
 import os
 import pickle
 import argparse
+import yaml
 import numpy as np
 import tables
 from astropy import table
@@ -26,7 +27,7 @@ def level0_archive_time_range():
         return t_stop, t_start
 
 
-def get_agasc_id_stats(agasc_ids):
+def get_agasc_id_stats(agasc_ids, excluded_observations={}):
     """
     Call mag_stats.get_agasc_id_stats for each AGASC ID
 
@@ -42,7 +43,9 @@ def get_agasc_id_stats(agasc_ids):
     agasc_stats = []
     for i, agasc_id in enumerate(agasc_ids):
         try:
-            agasc_stat, obsid_stat, obs_fail = mag_stats.get_agasc_id_stats(agasc_id=agasc_id)
+            agasc_stat, obsid_stat, obs_fail = \
+                mag_stats.get_agasc_id_stats(agasc_id=agasc_id,
+                                             excluded_observations=excluded_observations)
             agasc_stats.append(agasc_stat)
             obsid_stats.append(obsid_stat)
             fails += obs_fail
@@ -178,6 +181,7 @@ def parser():
     parse.add_argument('--agasc-id-file')
     parse.add_argument('--start')
     parse.add_argument('--stop')
+    parse.add_argument('--excluded-observations')
     parse.add_argument('--report', action='store_true', default=False)
     return parse
 
@@ -204,12 +208,23 @@ def main():
     stars_obs = catalogs.STARS_OBS[np.in1d(catalogs.STARS_OBS['agasc_id'], agasc_ids)]
 
     if args.start is None:
-        args.start = stars_obs['mp_starcat_time'].min()
+        args.start = CxoTime(stars_obs['mp_starcat_time']).min().date
     if args.stop is None:
-        args.stop = stars_obs['mp_starcat_time'].max()
+        args.stop = CxoTime(stars_obs['mp_starcat_time']).max().date
+
+    excluded_observations = {}
+    if args.excluded_observations:
+        with open(args.excluded_observations) as f:
+            exclude = yaml.load(f, Loader=yaml.FullLoader)
+            for k in exclude:
+                for obsid in exclude[k]:
+                    if obsid not in excluded_observations:
+                        excluded_observations[obsid] = ''
+                    excluded_observations[obsid] += k
 
     print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
-    obsid_stats, agasc_stats, fails = get_agasc_id_stats(agasc_ids)
+    obsid_stats, agasc_stats, fails = \
+        get_agasc_id_stats(agasc_ids, excluded_observations=excluded_observations)
 
     failed_global = [f for f in fails if not f['agasc_id'] and not f['obsid']]
     failed_stars = [f for f in fails if f['agasc_id'] and not f['obsid']]
