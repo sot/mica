@@ -155,6 +155,15 @@ def update_supplement(agasc_stats, filename=None):
             i_cur = i_cur[current['last_obs_time'] != new['last_obs_time']]
             i_new = i_new[current['last_obs_time'] != new['last_obs_time']]
             # overwrite current values with new values
+            updated_stars = np.zeros(len(outliers_new[i_new]),
+                                     dtype=[('agasc_id', np.int64),
+                                            ('mag_aca', np.float64),
+                                            ('mag_aca_err', np.float64)])
+            updated_stars['mag_aca'] = (outliers_new[i_new]['mag_aca'] -
+                                        outliers_current[i_cur]['mag_aca'])
+            updated_stars['mag_aca_err'] = (outliers_new[i_new]['mag_aca_err'] -
+                                            outliers_current[i_cur]['mag_aca_err'])
+            updated_stars['agasc_id'] = outliers_new[i_new]['agasc_id']
             outliers_current[i_cur] = outliers_new[i_new]
             # find agasc_ids in new list but not in current list
             new_stars = ~np.in1d(outliers_new['agasc_id'], outliers_current['agasc_id'])
@@ -163,12 +172,6 @@ def update_supplement(agasc_stats, filename=None):
             outliers = np.sort(outliers_current)
 
             new_stars = outliers_new[new_stars]['agasc_id']
-            updated_stars = np.zeros(len(new), dtype=[('agasc_id', np.int64),
-                                                      ('mag_aca', np.float64),
-                                                      ('mag_aca_err', np.float64)])
-            updated_stars['mag_aca'] = current['mag_aca'] - new['mag_aca']
-            updated_stars['mag_aca_err'] = current['mag_aca_err'] - new['mag_aca_err']
-            updated_stars['agasc_id'] = current['agasc_id']
     else:
         outliers = outliers_new
         new_stars = outliers_new['agasc_id']
