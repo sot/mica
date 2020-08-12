@@ -6,10 +6,8 @@ from astropy.table import Table
 from astropy import table
 from Ska.DBI import DBI
 
-from kadi import events
 from cxotime import CxoTime
 import tables
-from kadi.commands import get_cmds
 from Chandra.Time import date2secs
 
 TIMELINES = None
@@ -41,6 +39,9 @@ def _load_startcat_commands(tstop=None):
 
     :return:
     """
+    from kadi import events
+    from kadi.commands import get_cmds
+
     global STARCAT_CMDS
     global DWELLS_NP
     global DWELLS_MAP
@@ -108,6 +109,8 @@ def _load_startcat_commands(tstop=None):
         DWELLS_MAP = {DWELLS_NP['mp_starcat_time'][idx]: idx
                       for idx in range(len(DWELLS_NP))}
 
+    del os.environ['DJANGO_SETTINGS_MODULE']
+    del os.environ['DJANGO_ALLOW_ASYNC_UNSAFE']
 
 def _load_observed_catalogs(tstop=None):
     """
