@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-import numpy as np
 import datetime
+from functools import partial
 from multiprocessing import Pool
-from mica.stats.mag_stats import update_mag_stats, catalogs, mag_stats, mag_stats_report as msr
-from cxotime import CxoTime
-import argparse
+from mica.stats.mag_stats import update_mag_stats, mag_stats
 
 
-def get_agasc_id_stats(agasc_ids, batch_size=100):
+def get_agasc_id_stats(agasc_ids, excluded_observations={}, batch_size=100):
     """
     Call update_mag_stats.get_agasc_id_stats multiple times using a multiprocessing.Pool
 
@@ -29,7 +27,8 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
         args.append(agasc_ids[i:i + batch_size])
     with Pool() as pool:
         for arg in args:
-            jobs.append(pool.apply_async(update_mag_stats.get_agasc_id_stats, [arg]))
+            jobs.append(pool.apply_async(update_mag_stats.get_agasc_id_stats,
+                                         [arg, excluded_observations]))
         start = datetime.datetime.now()
         now = None
         while finished < len(jobs):
@@ -62,67 +61,9 @@ def get_agasc_id_stats(agasc_ids, batch_size=100):
     return obsid_stats, agasc_stats, fails
 
 
-def parser():
-    parse = argparse.ArgumentParser()
-    parse.add_argument('--agasc-id-file')
-    parse.add_argument('--start')
-    parse.add_argument('--stop')
-    parse.add_argument('--report', action='store_true', default=False)
-    return parse
-
-
 def main():
-    args = parser().parse_args()
-    catalogs.load(args.stop)
-    if args.agasc_id_file:
-        with open(args.agasc_id_file, 'r') as f:
-            agasc_ids = [int(l.strip()) for l in f.readlines()]
-            agasc_ids = np.intersect1d(agasc_ids, catalogs.STARS_OBS['agasc_id'])
-    elif args.start:
-        if not args.stop:
-            args.stop = CxoTime.now().date
-        else:
-            args.stop = CxoTime(args.stop).date
-        args.start = CxoTime(args.start).date
-        obs_in_time = ((catalogs.STARS_OBS['mp_starcat_time'] >= args.start) &
-                       (catalogs.STARS_OBS['mp_starcat_time'] <= args.stop))
-        agasc_ids = sorted(catalogs.STARS_OBS[obs_in_time]['agasc_id'])
-    else:
-        agasc_ids = sorted(catalogs.STARS_OBS['agasc_id'])
-    agasc_ids = np.unique(agasc_ids)
-    stars_obs = catalogs.STARS_OBS[np.in1d(catalogs.STARS_OBS['agasc_id'], agasc_ids)]
-
-    if args.start is None:
-        args.start = CxoTime(stars_obs['mp_starcat_time']).min().date
-    if args.stop is None:
-        args.stop = CxoTime(stars_obs['mp_starcat_time']).max().date
-
-    batch_size = 10
-    print(f'Will process {len(agasc_ids)} stars'
-          f' on {len(stars_obs)} observations')
-
-    obsid_stats, agasc_stats, fails = get_agasc_id_stats(agasc_ids, batch_size)
-
-    failed_global = [f for f in fails if not f['agasc_id'] and not f['obsid']]
-    failed_stars = [f for f in fails if f['agasc_id'] and not f['obsid']]
-    failed_obs = [f for f in fails if f['obsid']]
-    print(f'Got:\n'
-          f'  {len(obsid_stats)} OBSIDs,'
-          f'  {len(agasc_stats)} stars,'
-          f'  {len(failed_stars)} failed stars,'
-          f'  {len(failed_obs)} failed observations,'
-          f'  {len(failed_global)} global errors')
-
-    update_mag_stats.update_mag_stats(obsid_stats, agasc_stats, fails)
-
-    if len(agasc_stats):
-        new_stars, updated_stars = update_mag_stats.update_supplement(agasc_stats)
-
-        if args.report:
-            print("making report")
-            msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
-                                       fails=fails, report_date=CxoTime.now().date,
-                                       tstart=args.start, tstop=args.stop)
+    get_stats = partial(get_agasc_id_stats, batch_size=10)
+    update_mag_stats.do(get_stats)
 
 
 if __name__ == '__main__':

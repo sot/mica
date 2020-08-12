@@ -187,8 +187,8 @@ def parser():
     return parse
 
 
-def main():
-    args = parser().parse_args()
+def do(get_stats=get_agasc_id_stats):
+    args, _ = parser().parse_known_args()
     catalogs.load(args.stop)
     if args.agasc_id_file:
         with open(args.agasc_id_file, 'r') as f:
@@ -225,7 +225,7 @@ def main():
 
     print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
     obsid_stats, agasc_stats, fails = \
-        get_agasc_id_stats(agasc_ids, excluded_observations=excluded_observations)
+        get_stats(agasc_ids, excluded_observations=excluded_observations)
 
     failed_global = [f for f in fails if not f['agasc_id'] and not f['obsid']]
     failed_stars = [f for f in fails if f['agasc_id'] and not f['obsid']]
@@ -245,6 +245,10 @@ def main():
             msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
                                        fails=fails, report_date=CxoTime.now().date,
                                        tstart=args.start, tstop=args.stop)
+
+def main():
+    do()
+
 
 if __name__ == '__main__':
     main()
