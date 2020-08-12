@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 
 from astropy.table import Table
@@ -100,8 +101,12 @@ def _load_startcat_commands(tstop=None):
     dwells['tstart'] = date2secs(dwells['start'].tolist())
     dwells['tstop'] = date2secs(dwells['stop'].tolist())
     DWELLS_NP = dwells['mp_starcat_time', 'tstart', 'tstop'].as_array()
-    DWELLS_MAP = {DWELLS_NP['mp_starcat_time'][idx]: idx
-                  for idx in range(len(DWELLS_NP))}
+    if sys.version_info.minor == 6:
+        DWELLS_MAP = {DWELLS_NP['mp_starcat_time'][idx].decode('ascii'): idx
+                      for idx in range(len(DWELLS_NP))}
+    else:
+        DWELLS_MAP = {DWELLS_NP['mp_starcat_time'][idx]: idx
+                      for idx in range(len(DWELLS_NP))}
 
 
 def _load_observed_catalogs(tstop=None):
