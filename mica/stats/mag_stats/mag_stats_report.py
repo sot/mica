@@ -542,6 +542,7 @@ def multi_star_html_report(agasc_stats, obs_stats, new_stars=[], updated_stars=[
 
     run_template = jinja2.Template(RUN_REPORT_SIMPLE)
 
+    updated_star_ids = updated_stars['agasc_id'] if updated_stars else []
     sections = [{
         'id': 'new_stars',
         'title': 'New Stars',
@@ -549,7 +550,7 @@ def multi_star_html_report(agasc_stats, obs_stats, new_stars=[], updated_stars=[
     }, {
         'id': 'updated_stars',
         'title': 'Updated Stars',
-        'stars': updated_stars
+        'stars': updated_star_ids
     }]
 
     info = {

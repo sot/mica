@@ -150,6 +150,7 @@ def update_supplement(agasc_stats, filename=None):
                                              return_indices=True)
             current = outliers_current[i_cur]
             new = outliers_new[i_new]
+
             # from those, find the ones which differ in last observation time
             i_cur = i_cur[current['last_obs_time'] != new['last_obs_time']]
             i_new = i_new[current['last_obs_time'] != new['last_obs_time']]
@@ -162,11 +163,17 @@ def update_supplement(agasc_stats, filename=None):
             outliers = np.sort(outliers_current)
 
             new_stars = outliers_new[new_stars]['agasc_id']
-            updated_stars = outliers_new[i_new]['agasc_id']
+            updated_stars = np.zeros(len(new), dtype=[('agasc_id', np.int64),
+                                                      ('mag_aca', np.float64),
+                                                      ('mag_aca_err', np.float64)])
+            updated_stars['mag_aca'] = current['mag_aca'] - new['mag_aca']
+            updated_stars['mag_aca_err'] = current['mag_aca_err'] - new['mag_aca_err']
+            updated_stars['agasc_id'] = current['agasc_id']
     else:
         outliers = outliers_new
         new_stars = outliers_new['agasc_id']
-        updated_stars = []
+        updated_stars = np.array([], dtype=[('agasc_id', np.int64), ('mag_aca', np.float64),
+                                            ('mag_aca_err', np.float64)])
 
     mode = 'r+' if os.path.exists(filename) else 'w'
     with tables.File(filename, mode) as h5:
@@ -240,6 +247,7 @@ def do(get_stats=get_agasc_id_stats):
         update_mag_stats(obsid_stats, agasc_stats, fails)
         new_stars, updated_stars = update_supplement(agasc_stats)
 
+        print(f'{len(new_stars)} new stars, {len(updated_stars)} updated stars')
         if args.report:
             print("making report")
             msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
