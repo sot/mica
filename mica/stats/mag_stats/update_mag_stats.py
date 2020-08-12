@@ -154,7 +154,7 @@ def update_supplement(agasc_stats, filename=None):
             # from those, find the ones which differ in last observation time
             i_cur = i_cur[current['last_obs_time'] != new['last_obs_time']]
             i_new = i_new[current['last_obs_time'] != new['last_obs_time']]
-            # overwrite current values with new values
+            # overwrite current values with new values (and calculate diff to return)
             updated_stars = np.zeros(len(outliers_new[i_new]),
                                      dtype=[('agasc_id', np.int64),
                                             ('mag_aca', np.float64),
@@ -165,6 +165,7 @@ def update_supplement(agasc_stats, filename=None):
                                             outliers_current[i_cur]['mag_aca_err'])
             updated_stars['agasc_id'] = outliers_new[i_new]['agasc_id']
             outliers_current[i_cur] = outliers_new[i_new]
+
             # find agasc_ids in new list but not in current list
             new_stars = ~np.in1d(outliers_new['agasc_id'], outliers_current['agasc_id'])
             # and add them to the current list
