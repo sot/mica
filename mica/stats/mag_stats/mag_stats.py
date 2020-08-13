@@ -551,6 +551,8 @@ def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
     :return: dict
         dictionary with stats
     """
+    min_mag_obs_err = 0.3
+
     catalogs.load()
     # Get a table of every time the star has been observed
     idx0, idx1 = catalogs.STARS_OBS_MAP[agasc_id]
@@ -613,6 +615,9 @@ def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
         'agasc_id': agasc_id,
         'mag_aca': star['MAG_ACA'],
         'mag_aca_err': star['MAG_ACA_ERR']/100,
+        'mag_obs': 0.,
+        'mag_obs_err': min_mag_obs_err,
+        'mag_obs_std': 0.,
         'color': star['COLOR1'],
         'n_obsids': n_obsids,
         'n_obsids_fail': len(failures),
@@ -727,6 +732,11 @@ def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
             f'sigma_plus_dr{dr}': sigma_plus,
         })
 
+    result.update({
+        'mag_obs': result['t_mean_dr3'],
+        'mag_obs_err': np.sqrt(result['t_std_dr3']**2 + min_mag_obs_err**2),
+        'mag_obs_std': result['t_std_dr3'],
+    })
 
     # these are the criteria for including in supplement
     result.update({
