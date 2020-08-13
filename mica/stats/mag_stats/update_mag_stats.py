@@ -117,7 +117,7 @@ def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
             pickle.dump(fails, out)
 
 
-def update_supplement(agasc_stats, filename=None):
+def update_supplement(agasc_stats, filename):
     """
     Update the magnitude table of the AGASC supplement.
 
@@ -137,8 +137,6 @@ def update_supplement(agasc_stats, filename=None):
     names = ['agasc_id', 'color', 'mag_aca', 'mag_aca_err', 'last_obs_time']
     outliers_new = outliers_new[names].as_array()
 
-    if filename is None:
-        filename = f'agasc_supplement_{mag_stats.version}.h5'
     if os.path.exists(filename):
         # I could do what follows directly in place, but the table is not that large.
         with tables.File(filename, 'r+') as h5:
@@ -198,8 +196,12 @@ def parser():
 
 
 def do(get_stats=get_agasc_id_stats):
+    filename = f'agasc_supplement_{mag_stats.version}.h5'
+
     args, _ = parser().parse_known_args()
     catalogs.load(args.stop)
+
+    # first, get list of AGASC IDs from file, from start/stop or take all observations.
     if args.agasc_id_file:
         with open(args.agasc_id_file, 'r') as f:
             agasc_ids = [int(l.strip()) for l in f.readlines()]
@@ -218,11 +220,13 @@ def do(get_stats=get_agasc_id_stats):
     agasc_ids = np.unique(agasc_ids)
     stars_obs = catalogs.STARS_OBS[np.in1d(catalogs.STARS_OBS['agasc_id'], agasc_ids)]
 
+    # default values for start/stop cover all the observations
     if args.start is None:
         args.start = CxoTime(stars_obs['mp_starcat_time']).min().date
     if args.stop is None:
         args.stop = CxoTime(stars_obs['mp_starcat_time']).max().date
 
+    # exclude an ad-hoc list of observations
     excluded_observations = {}
     if args.excluded_observations:
         with open(args.excluded_observations) as f:
@@ -233,6 +237,25 @@ def do(get_stats=get_agasc_id_stats):
                         excluded_observations[obsid] = ''
                     excluded_observations[obsid] += k
 
+    # if supplement exists, get the latest observation for each agasc_id in stars_obs,
+    # find the ones already in the supplement, and drop the ones for which supplement.last_obs_time
+    # is equal or larger than stars_obs.mp_starcat_time
+    if os.path.exists(filename):
+        with tables.File(filename, 'r+') as h5:
+            outliers_current = h5.root.mags[:]
+            times = stars_obs[['agasc_id', 'mp_starcat_time']].group_by(
+                'agasc_id').groups.aggregate(lambda d: np.max(CxoTime(d)).date)
+            times = table.join(times,
+                               table.Table(outliers_current[['agasc_id', 'last_obs_time']]),
+                               join_type='left')
+            update = (times['last_obs_time'].mask | (
+                      (~times['last_obs_time'].mask) &
+                      (CxoTime(times['mp_starcat_time']).cxcsec < times['last_obs_time']).data))
+            stars_obs = stars_obs[np.in1d(stars_obs['agasc_id'], times[update]['agasc_id'])]
+            agasc_ids = np.sort(np.unique(stars_obs['agasc_id']))
+            print(f'Skipping {len(update) - np.sum(update)} stars (already in the supplement)')
+
+    # do the processing
     print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
     obsid_stats, agasc_stats, fails = \
         get_stats(agasc_ids, excluded_observations=excluded_observations)
@@ -248,9 +271,9 @@ def do(get_stats=get_agasc_id_stats):
           f'  {len(failed_global)} global errors')
     if len(agasc_stats):
         update_mag_stats(obsid_stats, agasc_stats, fails)
-        new_stars, updated_stars = update_supplement(agasc_stats)
+        new_stars, updated_stars = update_supplement(agasc_stats, filename=filename)
 
-        print(f'{len(new_stars)} new stars, {len(updated_stars)} updated stars')
+        print(f'  {len(new_stars)} new stars, {len(updated_stars)} updated stars')
         if args.report:
             print("making report")
             msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
