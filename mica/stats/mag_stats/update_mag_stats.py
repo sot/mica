@@ -280,10 +280,14 @@ def do(get_stats=get_agasc_id_stats):
 
         print(f'  {len(new_stars)} new stars, {len(updated_stars)} updated stars')
         if args.report:
-            print("making report")
+            import datetime
+            now = datetime.datetime.now()
+            print(f"making report at {now}")
             msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
                                        fails=fails, report_date=CxoTime.now().date,
                                        tstart=args.start, tstop=args.stop, include_all_stars=True)
+    now = datetime.datetime.now()
+    print(f"done at {now}")
 
 def main():
     do()
