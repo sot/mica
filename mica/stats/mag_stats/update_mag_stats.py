@@ -117,7 +117,7 @@ def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
             pickle.dump(fails, out)
 
 
-def update_supplement(agasc_stats, filename):
+def update_supplement(agasc_stats, filename, include_all=True):
     """
     Update the magnitude table of the AGASC supplement.
 
@@ -125,13 +125,18 @@ def update_supplement(agasc_stats, filename):
     :param filename:
     :return:
     """
-    outliers_new = agasc_stats[
-        (agasc_stats['n_obsids_ok'] > 0) &
-        (agasc_stats['selected_atol'] |
-         agasc_stats['selected_rtol'] |
-         agasc_stats['selected_color'] |
-         agasc_stats['selected_mag_aca_err'])
-    ]
+    if include_all:
+        outliers_new = agasc_stats[
+            (agasc_stats['n_obsids_ok'] > 0)
+        ]
+    else:
+        outliers_new = agasc_stats[
+            (agasc_stats['n_obsids_ok'] > 0) &
+            (agasc_stats['selected_atol'] |
+             agasc_stats['selected_rtol'] |
+             agasc_stats['selected_color'] |
+             agasc_stats['selected_mag_aca_err'])
+        ]
     outliers_new['mag_aca'] = outliers_new['mag_obs']
     outliers_new['mag_aca_err'] = outliers_new['mag_obs_err']
     names = ['agasc_id', 'color', 'mag_aca', 'mag_aca_err', 'last_obs_time']
@@ -278,7 +283,7 @@ def do(get_stats=get_agasc_id_stats):
             print("making report")
             msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
                                        fails=fails, report_date=CxoTime.now().date,
-                                       tstart=args.start, tstop=args.stop)
+                                       tstart=args.start, tstop=args.stop, include_all_stars=True)
 
 def main():
     do()
