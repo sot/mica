@@ -132,8 +132,8 @@ def update_supplement(agasc_stats, filename=None):
          agasc_stats['selected_color'] |
          agasc_stats['selected_mag_aca_err'])
     ]
-    outliers_new['mag_aca'] = outliers_new['t_mean_dr3']
-    outliers_new['mag_aca_err'] = outliers_new['t_std_dr3']
+    outliers_new['mag_aca'] = outliers_new['mag_obs']
+    outliers_new['mag_aca_err'] = outliers_new['mag_obs_err']
     names = ['agasc_id', 'color', 'mag_aca', 'mag_aca_err', 'last_obs_time']
     outliers_new = outliers_new[names].as_array()
 
