@@ -171,7 +171,7 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
           <table class="table table-bordered table-sm">
             <tr> <td style="width: 30%"> Last Obs. </td> <td style="width: 30%"> {{ agasc_stats.last_obs }} </td> </tr>
             <tr>
-              <td style="width: 30%"> mag<sub>aca</sub> </td>
+              <td style="width: 30%"> mag<sub>catalog</sub> </td>
               <td style="width: 30%"> {{ "%.2f" | format(agasc_stats.mag_aca) }} &#177; {{ "%.2f" | format(agasc_stats.mag_aca_err) }} </td>
             </tr>
             <tr>
@@ -188,7 +188,7 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
           <table class="table table-bordered table-sm">
             <tr>
               <td> N<sub>obs</sub> </td>
-              <td> {{ agasc_stats.n_obsids }} <span style="color:red;"> ({{ agasc_stats.n_obs_bad }} bad) <span style="color:red;"> </td>
+              <td> {{ agasc_stats.n_obsids }} <span{%- if agasc_stats.n_obs_bad %} style="color:red;"{% endif -%}> ({{ agasc_stats.n_obs_bad }} bad) <span> </td>
             </tr>
             <tr> <td> f<sub>ok</sub> </td> <td> {{ "%.1f" | format(100*agasc_stats.f_ok) }}%  </td> </tr>
             <tr> <td> f<sub>3 arcsec</sub> </td> <td> {{ "%.1f" | format(100*agasc_stats.f_dr3) }}% </td> </tr>
@@ -488,10 +488,12 @@ RUN_REPORT_SIMPLE = """<html lang="en">
         <th> f<sub>ok</sub> </th>
         <th> f<sub>3 arcsec</sub> </th>
         <th> f<sub>5 arcsec</sub> </th>
-        <th> mag<sub>aca</sub> </th>
-        <th> mag<sub>3 arcsec </sub> </th>
+        <th> mag<sub>catalog</sub> </th>
+        <th> mag<sub>obs</sub> </th>
+        <th> &delta;<sub>mag cat</sub> </th>
+        <th> &delta;<sub>mag</sub>/&sigma;<sub>mag</sub> </th>
         <th> &delta;<sub>mag</sub> </th>
-        <th> &sigma;<sub>mag</sub> </th>
+        <th> &delta;<sub>&sigma;</sub> </th>
         <th> color </th>
       </tr>
       {%- for star in section.stars %}
@@ -503,9 +505,11 @@ RUN_REPORT_SIMPLE = """<html lang="en">
         <td> {{ "%.1f" | format(100*star.f_dr3) }}% </td>
         <td> {{ "%.1f" | format(100*star.f_dr5) }}% </td>
         <td {%- if star.selected_mag_aca_err %} class="table-info" {% endif %}> {{ "%.2f" | format(star.mag_aca) }} &#177; {{ "%.2f" | format(star.mag_aca_err) }}  </td>
-        <td> {{ "%.2f" | format(star.t_mean_dr3) }} &#177; {{ "%.2f" | format(star.t_std_dr3) }}  </td>
+        <td> {{ "%.2f" | format(star.mag_obs) }} &#177; {{ "%.2f" | format(star.mag_obs_err) }}  </td>
         <td {%- if star.selected_atol %} class="table-info" {% endif %}> {{ "%.2f" | format(star.delta) }}  </td>
         <td {%- if star.selected_rtol %} class="table-info" {% endif %}> {{ "%.2f" | format(star.sigma) }}  </td>
+        <td> {% if star.new %} &ndash; {% else %}{{ "%.2f" | format(star.update_mag_aca) }}{% endif %}  </td>
+        <td> {% if star.new %} &ndash; {% else %}{{ "%.2f" | format(star.update_mag_aca_err) }}{% endif %}  </td>
         <td {%- if star.selected_color %} class="table-info" {% endif %}> {{ "%.2f" | format(star.color) }}  </td>
       </tr>
       {%- endfor %}
@@ -554,8 +558,8 @@ def multi_star_html_report(agasc_stats, obs_stats, new_stars=[], updated_stars=[
     }]
 
     info = {
-        'tstart': tstart if tstart else OBS_STATS['mp_starcat_time'].min(),
-        'tstop': tstop if tstop else OBS_STATS['mp_starcat_time'].max(),
+        'tstart': tstart if tstart else CxoTime(OBS_STATS['mp_starcat_time']).min().date,
+        'tstop': tstop if tstop else CxoTime(OBS_STATS['mp_starcat_time']).max().date,
         'report_date': report_date if report_date else CxoTime.now().date
     }
 
@@ -600,7 +604,15 @@ def multi_star_html_report(agasc_stats, obs_stats, new_stars=[], updated_stars=[
     agasc_stats['flag'][agasc_stats['n_obs_bad_new'] > 0] = 'danger'
     agasc_stats['delta'] = (agasc_stats['t_mean_dr3'] - agasc_stats['mag_aca'])
     agasc_stats['sigma'] = (agasc_stats['t_mean_dr3'] - agasc_stats['mag_aca'])/agasc_stats['mag_aca_err']
-
+    agasc_stats['new'] = True
+    agasc_stats['new'][np.in1d(agasc_stats['agasc_id'], updated_star_ids)] = False
+    agasc_stats['update_mag_aca'] = np.nan
+    agasc_stats['update_mag_aca_err'] = np.nan
+    if updated_stars:
+        agasc_stats['update_mag_aca'][np.in1d(agasc_stats['agasc_id'], updated_star_ids)] = \
+            updated_stars['mag_aca']
+        agasc_stats['update_mag_aca_err'][np.in1d(agasc_stats['agasc_id'], updated_star_ids)] = \
+            updated_stars['mag_aca_err']
     # make all individual star reports
     star_reports = {}
     for agasc_id in np.atleast_1d(agasc_ids):
