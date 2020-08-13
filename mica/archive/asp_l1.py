@@ -215,7 +215,8 @@ def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
         # Quaternion multiply the asol quats with that inv misalign and save
         # I could also do this with the transform matrix and then only need
         # one accessory quat function.
-        att_chunks.append((Quat(asol['q_att']) * Quat(q_mis_inv)).q)
+        q_att_name = 'q_att_raw' if 'q_att_raw' in asol.colnames else 'q_att'
+        att_chunks.append((Quat(asol[q_att_name]) * Quat(q_mis_inv)).q)
         time_chunks.append(np.array(asol['time']))
         records.append(asol.meta)
     return np.vstack(att_chunks), np.hstack(time_chunks), records
