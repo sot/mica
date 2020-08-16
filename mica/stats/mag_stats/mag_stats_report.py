@@ -418,7 +418,7 @@ def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_s
     s['last_obs'] = ':'.join(o[-1]['mp_starcat_time'].split(':')[:4])
 
     # OBSIDs can be repeated
-    obsids = np.unique(o[~o['obsid_ok']]['obsid'])
+    obsids = list(np.unique(o[~o['obsid_ok']]['obsid']))
 
     args = [{'only_ok': False, 'draw_agasc_mag': True, 'draw_legend': True},
             {'title': 'mag stats',

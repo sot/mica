@@ -5,6 +5,7 @@ import argparse
 import yaml
 import numpy as np
 import tables
+import datetime
 from astropy import table
 
 from mica.stats.mag_stats import catalogs, mag_stats, mag_stats_report as msr
@@ -280,7 +281,6 @@ def do(get_stats=get_agasc_id_stats):
 
         print(f'  {len(new_stars)} new stars, {len(updated_stars)} updated stars')
         if args.report:
-            import datetime
             now = datetime.datetime.now()
             print(f"making report at {now}")
             msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
