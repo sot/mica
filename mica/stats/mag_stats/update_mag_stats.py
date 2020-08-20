@@ -283,7 +283,17 @@ def do(get_stats=get_agasc_id_stats):
         if args.report:
             now = datetime.datetime.now()
             print(f"making report at {now}")
-            msr.multi_star_html_report(agasc_stats, obsid_stats, new_stars, updated_stars,
+            sections = [{
+                'id': 'new_stars',
+                'title': 'New Stars',
+                'stars': new_stars
+            }, {
+                'id': 'updated_stars',
+                'title': 'Updated Stars',
+                'stars': updated_stars['agasc_id'] if updated_stars else []
+            }]
+            msr.multi_star_html_report(agasc_stats, obsid_stats, sections=sections,
+                                       updated_stars=updated_stars,
                                        fails=fails, report_date=CxoTime.now().date,
                                        tstart=args.start, tstop=args.stop, include_all_stars=True)
     now = datetime.datetime.now()

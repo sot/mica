@@ -204,19 +204,19 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
       <h3> Observation Info </h3>
       <table  class="table table-hover">
         <tr>
-          <th> OBSID </th>
-          <th> OK </th>
-          <th> N </th>
-          <th> N<sub>ok</sub> </th>
-          <th> N<sub>out</sub> </th>
-          <th> f<sub>track</sub> </th>
-          <th> f<sub>ok</sub> </th>
-          <th> f<sub>dr3</sub> </th>
-          <th> f<sub>dr5</sub> </th>
-          <th> f<sub>14</sub> </th>
-          <th> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  </th>
-          <th> &langle; mag &rangle; </th>
-          <th> &sigma;<sub>mag</sub> </th>
+          <th  data-toggle="tooltip" data-placement="top" title="OBSID"> OBSID </th>
+          <th  data-toggle="tooltip" data-placement="top" data-html="true" title="Observation is considered in the calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> OK </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of time samples"> N </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of time samples considered as 'tracking' <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> IMGSIZE > 4 <br/> OBS_OK)"> N<sub>ok</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of outlying samples"> N<sub>out</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Tracking time as a fraction of the total time <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> IMGSIZE > 4 <br/> OBS_OK)"> f<sub>track</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Time where slot is tracking, mag < 13.9 and target within 3 arcsec <br/> as fraction of total time"> f<sub>ok</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Fraction of tracking time within 3 arcsec of target"> f<sub>dr3</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Fraction of tracking time within 3 arcsec of target"> f<sub>dr5</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Time where slot is tracking, mag < 13.9 and target within 3 arcsec <br/> as fraction of tracking time"> f<sub>14</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="100-second Rolling mean of mag - &langle; mag &rangle;"> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Mean magnitude"> &langle; mag &rangle; </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Magnitude uncertainty"> &sigma;<sub>mag</sub> </th>
         </tr>
         {%- for s in obs_stats %}
         <tr {%- if not s.obsid_ok %} class="table-danger" {% endif %}>
@@ -482,25 +482,28 @@ RUN_REPORT_SIMPLE = """<html lang="en">
     <h3> {{ section.title }} </h3>
     <table class="table table-hover">
       <tr>
-        <th> AGASC ID </th>
-        <th> n<sub>obs</sub> </th>
-        <th> n<sub>obs bad</sub> </th>
-        <th> f<sub>ok</sub> </th>
-        <th> f<sub>3 arcsec</sub> </th>
-        <th> f<sub>5 arcsec</sub> </th>
-        <th> mag<sub>catalog</sub> </th>
-        <th> mag<sub>obs</sub> </th>
-        <th> &delta;<sub>mag cat</sub> </th>
-        <th> &delta;<sub>mag</sub>/&sigma;<sub>mag</sub> </th>
-        <th> &delta;<sub>mag</sub> </th>
-        <th> &delta;<sub>&sigma;</sub> </th>
-        <th> color </th>
+      <tr>
+        <th data-toggle="tooltip" data-placement="top" title="ID in AGASC"> AGASC ID </th>
+        <th data-toggle="tooltip" data-placement="top" title="Number of times the star has been observed"> n<sub>obs</sub> </th>
+        <th data-toggle="tooltip" data-html="true" data-placement="top" title="Observations not included in calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> n<sub>bad</sub> </th>
+        <th data-toggle="tooltip" data-html="true" data-placement="top" title="New observations not included in calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> n<sub>bad new</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" data-html="true" title="tracking time as fraction of total time: <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> IMGSIZE > 4 <br/> OBS_OK)"> f<sub>track</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Fraction of the tracking time within 3 arcsec of target"> f<sub>3 arcsec</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Fraction of the tracking time within 5 arcsec of target"> f<sub>5 arcsec</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Magnitude in AGASC"> mag<sub>catalog</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Magnitude observed"> mag<sub>obs</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Difference between observed and catalog magnitudes"> &delta;<sub>mag cat</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Difference between observed and catalog magnitudes, divided by catalog magnitude error"> &delta;<sub>mag</sub>/&sigma;<sub>mag</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Variation in observed magnitude from the last version of AGASC supplement"> &delta;<sub>mag</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Variation in observed magnitude standard deviation from the last version of AGASC supplement"> &delta;<sub>&sigma;</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" title="Color in AGASC"> color </th>
       </tr>
       {%- for star in section.stars %}
       <tr {%- if star.flag != '' %} class="table-{{ star.flag }}" {% endif %}>
         <td> {%- if star.agasc_id in star_reports %} <a href="{{ star_reports[star.agasc_id] }}/index.html"> {{ star.agasc_id }} </a> {% else %} {{ star.agasc_id }} {% endif %} </td>
         <td> {{ star.n_obsids }}  </td>
-        <td> {%- if star.n_obs_bad > 0 %} {{ star.n_obs_bad - star.n_obs_bad_new }} + {{ star.n_obs_bad_new }} {% endif %} </td>
+        <td> {%- if star.n_obs_bad > 0 %} {{ star.n_obs_bad }} {% endif %} </td>
+        <td> {%- if star.n_obs_bad > 0 %} {{ star.n_obs_bad_new }} {% endif %} </td>
         <td> {{ "%.1f" | format(100*star.f_ok) }}%  </td>
         <td> {{ "%.1f" | format(100*star.f_dr3) }}% </td>
         <td> {{ "%.1f" | format(100*star.f_dr5) }}% </td>
@@ -535,27 +538,29 @@ RUN_REPORT_SIMPLE = """<html lang="en">
     </table>
     {% endif %}
     </div>
+    
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+    $("body").tooltip({ selector: '[data-toggle=tooltip]' });
+});
+  </script>
 </html>
 """
 
 
-def multi_star_html_report(agasc_stats, obs_stats, new_stars=[], updated_stars=[], fails=[],
+def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], updated_stars=[], fails=[],
                            tstart=None, tstop=None, report_date=None,
-                           directory='./mag_stats_reports', filename=None, include_all_stars=False):
+                           directory='./mag_stats_reports', filename=None, include_all_stars=False,
+                           make_single_reports=True):
     _init(agasc_stats, obs_stats)
 
     run_template = jinja2.Template(RUN_REPORT_SIMPLE)
 
     updated_star_ids = updated_stars['agasc_id'] if updated_stars else []
-    sections = [{
-        'id': 'new_stars',
-        'title': 'New Stars',
-        'stars': new_stars
-    }, {
-        'id': 'updated_stars',
-        'title': 'Updated Stars',
-        'stars': updated_star_ids
-    }]
 
     info = {
         'tstart': tstart if tstart else CxoTime(OBS_STATS['mp_starcat_time']).min().date,
@@ -618,12 +623,15 @@ def multi_star_html_report(agasc_stats, obs_stats, new_stars=[], updated_stars=[
     for agasc_id in np.atleast_1d(agasc_ids):
         try:
             dirname = os.path.join(directory, 'stars', f'{agasc_id//1e7:03.0f}', f'{agasc_id:.0f}')
-            single_star_html_report(agasc_stats, obs_stats, agasc_id, directory=dirname)
-            star_reports[agasc_id] = dirname
+            if make_single_reports:
+                single_star_html_report(agasc_stats, obs_stats, agasc_id, directory=dirname)
+            if os.path.exists(dirname):
+                star_reports[agasc_id] = dirname
         except mag_stats.MagStatsException:
             pass
 
     # remove empty sections, and set the star tables for each of the remaining sections
+    sections = sections.copy()
     sections = [section for section in sections if len(section['stars'])]
     for section in sections:
         section['stars'] = agasc_stats[np.in1d(agasc_stats['agasc_id'],
