@@ -82,7 +82,7 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
                             [mag_mean + mag_std, mag_mean + mag_std],
                             color='orange', alpha=0.1, zorder=100)
 
-    if fit_ylim:
+    if fit_ylim and agasc_stat['t_std_dr3'] > 0:
         ax.set_ylim((agasc_stat['t_mean_dr3'] - 6 * agasc_stat['t_std_dr3'],
                      agasc_stat['t_mean_dr3'] + 6 * agasc_stat['t_std_dr3']))
     
@@ -131,6 +131,66 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
     plt.sca(previous_axes)
 
 
+def plot_flags(telem, ax, obsid=None):
+    obsid_arg = obsid
+    times, mags, obsid_arr = telem['times'], telem['mags'], telem['obsid']
+
+    timeline = pd.DataFrame()
+    timeline['time'] = times
+    timeline['mag'] = mags
+    timeline['obsid'] = obsid_arr
+
+    obsids = np.unique(obsid_arr)
+
+    limits = {}
+    for i, obsid in enumerate(obsids):
+        limits[obsid] = (timeline.index[timeline.obsid == obsid].min(),
+                         timeline.index[timeline.obsid == obsid].max())
+
+    ok = ((telem['AOACASEQ'] == 'KALM') &
+          (telem['AOACIIR'] == 'OK') &
+          (telem['AOACISP'] == 'OK') &
+          (telem['AOPCADMD'] == 'NPNT') &
+          (telem['dr'] < 3) &
+          (mags < 13.9) &
+          (telem['IMGSIZE'] > 4)
+          )
+    flags = [
+        ('OK', ok),
+        ('mag > 13.9', (mags >= 13.9)),
+        ('dr > 3', (telem['IMGSIZE'] > 4) & (telem['dr'] >= 3)),
+        ('Ion. rad.', (telem['AOACIIR'] != 'OK')),
+        ('Sat. pixel.', (telem['AOACISP'] != 'OK')),
+        ('not KALM', (telem['AOACASEQ'] != 'KALM')),
+        ('not NPNT', (telem['AOPCADMD'] != 'NPNT')),
+        ('IMGSIZE = 4', ((telem['IMGSIZE'] <= 4) &
+                         (telem['AOACASEQ'] == 'KALM') & (telem['AOPCADMD'] == 'NPNT'))),
+    ]
+
+    ok = [f[1] for f in flags]
+    labels = [f[0] for f in flags]
+    ticks = [i+1 for i in range(len(flags))]
+    if obsid_arg:
+        print('HERE')
+        for i in range(len(ok)):
+            ok[i] = ok[i] * (telem['obsid'] == obsid)
+    x = np.arange(len(times))
+    y = np.ones_like(x)
+    for i in range(len(ok)):
+        ax.plot(x[ok[i]], ticks[i]*y[ok[i]], '.', color='k')
+    ax.set_yticklabels(labels)
+    ax.set_yticks(ticks)
+    ax.set_ylim((0, ticks[-1]+1))
+
+    sorted_obsids = sorted(limits.keys(), key=lambda l: limits[l][1])
+    for i, obsid in enumerate(sorted_obsids):
+        (tmin, tmax) = limits[obsid]
+        ax.plot([tmin, tmin], ax.get_ylim(), ':', color='purple', scaley=False)
+    if limits:
+        tmax = max([v[1] for v in limits.values()])
+        ax.plot([tmax, tmax], ax.get_ylim(), ':', color='purple', scaley=False)
+
+
 def plot_set(agasc_stats, obs_stats, agasc_id, args, telem=None, filename=None):
     if not args:
         return
@@ -143,7 +203,12 @@ def plot_set(agasc_stats, obs_stats, agasc_id, args, telem=None, filename=None):
     ax[0].set_title(f'AGASC ID {agasc_id}')
 
     for i, kwargs in enumerate(args):
-        plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, telem=telem, ax=ax[i], **kwargs)
+        if 'type' in kwargs and kwargs['type'] == 'flags':
+            plot_flags(telem, ax[i])
+            if i:
+                ax[i].set_xlim(ax[i-1].get_xlim())
+        else:
+            plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, telem=telem, ax=ax[i], **kwargs)
 
     plt.tight_layout()
     if filename is not None:
@@ -427,14 +492,16 @@ def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_s
              'draw_obsid_mag_stats': True,
              'draw_agasc_mag_stats': True,
              'draw_legend': True
-             }]
+             },
+            {'type': 'flags'}]
     for obsid in obsids:
         args.append({'obsid': obsid,
                      'only_ok': True,
                      'draw_obsid_mag_stats': True,
                      'draw_agasc_mag_stats': True,
                      'draw_legend': True
-                     })
+                     },
+                    {'type': 'flags'})
     fig = plot_set(agasc_stats, obs_stats, agasc_id, args=args, filename=os.path.join(directory, f'mag_stats.png'))
     plt.close(fig)
 
