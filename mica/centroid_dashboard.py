@@ -79,7 +79,7 @@ def add_bool_arg(parser, name, default=True, help_=''):
                        dest=name,
                        action='store_false',
                        help=f"Don't {help_}")
-    parser.set_defaults(**{name:default})
+    parser.set_defaults(**{name: default})
 
 
 def get_dr_dp_dy(refs, atts):
@@ -117,7 +117,7 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
     """
 
     try:
-        d = events.dwells.filter(obsid=obsid)[0]
+        events.dwells.filter(obsid=obsid)[0]
     except Exception as err:
         logger.info(f'ERROR: {err}')
         return None
@@ -141,7 +141,8 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
         # Use obc aspect solution
         flag = 1
         crs_ref = crs['obc']
-        logger.info(f'No ground aspect solution for {obsid}. Using obc aspect solution for reference')
+        logger.info(
+            f'No ground aspect solution for {obsid}. Using obc aspect solution for reference')
     else:
         crs_ref = crs['ground']
 
@@ -170,9 +171,9 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
             raise ValueError('Could not align obc and ref aspect solution times')
 
     except Exception as err:
-            logger.info(f'ERROR get_observed_att_errors: {err}')
-            return {'obsid': obsid,
-                    'flag': flag}
+        logger.info(f'ERROR get_observed_att_errors: {err}')
+        return {'obsid': obsid,
+                'flag': flag}
 
     # Compute attitude errors
     att_errors = get_dr_dp_dy(att_ref, att_obc)
@@ -217,9 +218,10 @@ def get_crs_per_obsid(obsid):
                                                     att_source=att_source,
                                                     centroid_source='obc')
                     crs[att_source][slot] = cr
-                except:
+                except Exception:
                     crs[att_source][slot] = None
-                    logger.info(f'Could not compute crs for {obsid} slot {slot} (att_source={att_source})')
+                    logger.info(
+                        f'Could not compute crs for {obsid} slot {slot} (att_source={att_source})')
 
     return crs
 
@@ -326,8 +328,8 @@ def get_observed_metrics(obsid):
                 aber_z = dat['aber-Z'][ok][0]
 
     if aber_flag == 0:
-        one_shot_aber_corrected = np.sqrt((one_shot_pitch - aber_y)**2 + \
-                                          (one_shot_yaw - aber_z)**2)
+        one_shot_aber_corrected = np.sqrt((one_shot_pitch - aber_y)**2
+                                          + (one_shot_yaw - aber_z)**2)
     else:
         one_shot_aber_corrected = -9999
 
@@ -349,7 +351,6 @@ def get_observed_metrics(obsid):
                  'att_errors': att_errors,
                  'att_flag': att_flag,
                  'dwell': True}
-
 
     out_slot = {'obsid': obsid, 'slots': {k: {} for k in range(8)}}
 
@@ -443,7 +444,7 @@ def plot_att_errors_per_obsid(obsid, coord='dr', att_errors=None,
     errs = att_errors[coord]
     dates = DateTime(att_errors['time'])
 
-    fig = plt.figure(figsize=(8, 2.5))
+    plt.figure(figsize=(8, 2.5))
 
     # Skip the first 5 min for observations with duration > 5 min
     dur = dates.secs[-1] - dates.secs[0]
@@ -580,7 +581,7 @@ def plot_n_kalman(obsid, save=False):
     stop = d.stop
     n_kalman = get_n_kalman(start, stop)
 
-    fig = plt.figure(figsize=(8, 2.5))
+    plt.figure(figsize=(8, 2.5))
 
     t0 = n_kalman.times[0]
 
@@ -673,7 +674,7 @@ def plot_crs_visualization(obsid, crs=None, factor=20, save=False, on_the_fly=Fa
             circle = plt.Circle((yp, zp), 5 * factor,
                                 color='darkorange', fill=False)
             ax.add_artist(circle)
-        except:
+        except Exception:
             pass
 
     plt.text(-511, 530, "ring radius = 5 arcsec (scaled)", color='darkorange')
@@ -865,12 +866,12 @@ def update_observed_metrics(factor=20, make_plots=False, save=False):
     # Update the 'per_obsid' table
     if rows_obsid:
         sort_cols = ['mean_date']
-        dat_obsid = update_data_table(rows_obsid, dat_obsid_old, GUIDE_METRICS_OBSID, sort_cols)
+        update_data_table(rows_obsid, dat_obsid_old, GUIDE_METRICS_OBSID, sort_cols)
 
         # Update the 'per_slot' table
         if rows_slots:
             sort_cols = ['mean_date', 'slot']
-            dat_slot = update_data_table(rows_slots, dat_slot_old, GUIDE_METRICS_SLOT, sort_cols)
+            update_data_table(rows_slots, dat_slot_old, GUIDE_METRICS_SLOT, sort_cols)
 
 
 def update_data_table(rows, dat_old, metrics_file, sort_cols):
@@ -891,8 +892,6 @@ def update_data_table(rows, dat_old, metrics_file, sort_cols):
 
     dat.sort(sort_cols)
     dat.write(filename, format='ascii.ecsv', overwrite=True)
-
-    return dat
 
 
 def make_html(row_obsid, rows_slot):
@@ -1065,7 +1064,8 @@ Next Observation
         if row['id'] < 100:
             id_ = ""
         else:
-            id_ = f"<a href='{star_path_root}/star_{row['id']}.html' style='text-decoration: none;'>{row['id']}</a>"
+            id_ = (f"<a href='{star_path_root}/star_{row['id']}.html' "
+                   + f"'style='text-decoration: none;'>{row['id']}</a>")
 
         string += f"""<td align='right'>{id_}</td>
 <td align='right'>{row['type']}</td>
@@ -1248,4 +1248,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
