@@ -54,11 +54,11 @@ def get_opt(args=None):
                         help=f"Processing start date (default=NOW - {NDAYS} days)")
     parser.add_argument("--stop",
                         help="Processing stop date (default=NOW)")
-    parser.add_argument("--data_root",
+    parser.add_argument("--data-root",
                         default=CD_ROOT,
                         help=f"Root directory for data files (default='{CD_ROOT}')")
     add_bool_arg(parser=parser,
-                 name='make_plots',
+                 name='make-plots',
                  help_="make plots if the option is included")
     add_bool_arg(parser=parser,
                  name='save',
