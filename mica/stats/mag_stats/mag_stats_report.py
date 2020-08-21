@@ -193,7 +193,7 @@ def plot_set(agasc_stats, obs_stats, agasc_id, args, telem=None, filename=None):
         return
     if telem is None:
         telem = mag_stats.get_telemetry_by_agasc_id(agasc_id, ignore_exceptions=True)
-
+        telem = mag_stats.add_obsid_info(telem, obs_stats[obs_stats['agasc_id'] == agasc_id])
     fig, ax = plt.subplots(len(args), 1, figsize=(15, 3.5*len(args)))
     if len(args) == 1:
         ax = [ax]
