@@ -410,7 +410,7 @@ def get_n_kalman(start, stop):
     return dat
 
 
-def get_cd_dir(obsid):
+def get_cd_dir(obsid, data_root):
     """
     Check if the centroid dashbord directory exists for the requested obsid,
     and create it if needed
@@ -418,7 +418,7 @@ def get_cd_dir(obsid):
     if obsid == -1:
         return ""
 
-    cd_obsid_root = os.path.join(opt.data_root, np.str(obsid)[:2], f"{obsid}")
+    cd_obsid_root = os.path.join(data_root, np.str(obsid)[:2], f"{obsid}")
 
     if not os.path.exists(cd_obsid_root):
         os.makedirs(cd_obsid_root)
@@ -427,7 +427,7 @@ def get_cd_dir(obsid):
     return cd_obsid_root
 
 
-def plot_att_errors_per_obsid(obsid, coord='dr', att_errors=None,
+def plot_att_errors_per_obsid(obsid, plot_dir, coord='dr', att_errors=None,
                               save=False, on_the_fly=False):
     """
     Make png plot of att errors vs time per obsid.
@@ -479,8 +479,7 @@ def plot_att_errors_per_obsid(obsid, coord='dr', att_errors=None,
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.25, top=0.95)
 
     if save:
-        cd_obsid_root = get_cd_dir(obsid)
-        outroot = os.path.join(cd_obsid_root, f'observed_{coord}s_{obsid}')
+        outroot = os.path.join(plot_dir, f'observed_{coord}s_{obsid}')
         logger.info(f'Writing plot file {outroot}.png')
         plt.savefig(outroot + '.png')
         plt.close()
@@ -488,7 +487,7 @@ def plot_att_errors_per_obsid(obsid, coord='dr', att_errors=None,
     return att_errors
 
 
-def plot_crs_per_obsid(obsid, crs=None, save=False, on_the_fly=False):
+def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
     """
     Make png plot of OBC centroid residuals in each slot. Residuals
     computed using ground attitude solution for science observations
@@ -571,8 +570,7 @@ def plot_crs_per_obsid(obsid, crs=None, save=False, on_the_fly=False):
                         bottom=0.08, top=0.98)
 
     if save:
-        cd_obsid_root = get_cd_dir(obsid)
-        outroot = os.path.join(cd_obsid_root, f'crs_time_{obsid}')
+        outroot = os.path.join(plot_dir, f'crs_time_{obsid}')
         logger.info(f'Writing plot file {outroot}.png')
         plt.savefig(outroot + '.png')
         plt.close()
@@ -580,7 +578,7 @@ def plot_crs_per_obsid(obsid, crs=None, save=False, on_the_fly=False):
     return crs
 
 
-def plot_n_kalman(obsid, save=False):
+def plot_n_kalman(obsid, plot_dir, save=False):
     """
     Fetch and plot number of Kalman stars as function of time for
     the requested obsid.
@@ -606,14 +604,13 @@ def plot_n_kalman(obsid, save=False):
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.25, top=0.95)
 
     if save:
-        cd_obsid_root = get_cd_dir(obsid)
-        outroot = os.path.join(cd_obsid_root, f'n_kalman_{obsid}')
+        outroot = os.path.join(plot_dir, f'n_kalman_{obsid}')
         logger.info(f'Writing plot file {outroot}.png')
         plt.savefig(outroot + '.png')
         plt.close()
 
 
-def plot_crs_visualization(obsid, crs=None, factor=20, save=False, on_the_fly=False):
+def plot_crs_visualization(obsid, plot_dir, crs=None, factor=20, save=False, on_the_fly=False):
     """
     Plot visualization of OBC centroid residuals with respect to ground (obc)
     aspect solution for science (ER) observations in the yang/zang plain.
@@ -689,8 +686,7 @@ def plot_crs_visualization(obsid, crs=None, factor=20, save=False, on_the_fly=Fa
     plt.text(-511, 530, "ring radius = 5 arcsec (scaled)", color='darkorange')
 
     if save:
-        cd_obsid_root = get_cd_dir(obsid)
-        outroot = os.path.join(cd_obsid_root, f'crs_vis_{obsid}')
+        outroot = os.path.join(plot_dir, f'crs_vis_{obsid}')
         logger.info(f'Writing plot file {outroot}.png')
         plt.savefig(outroot + '.png')
         plt.close()
@@ -698,7 +694,7 @@ def plot_crs_visualization(obsid, crs=None, factor=20, save=False, on_the_fly=Fa
     return crs
 
 
-def plot_observed_metrics(obsids, coord='dr', att_errors=None, factor=20,
+def plot_observed_metrics(obsids, plot_dir, coord='dr', att_errors=None, factor=20,
                           save=False, on_the_fly=False):
     """
     Generate plots of attitude errors, centroid residuals and number of Kalman stars
@@ -729,9 +725,9 @@ def plot_observed_metrics(obsids, coord='dr', att_errors=None, factor=20,
         if on_the_fly:
             kwargs['on_the_fly'] = False
 
-        plot_crs_per_obsid(obsid, crs=crs, **kwargs)
-        plot_crs_visualization(obsid, factor=factor, crs=crs, **kwargs)
-        plot_n_kalman(obsid, save=save)
+        plot_crs_per_obsid(obsid, plot_dir, crs=crs, **kwargs)
+        plot_crs_visualization(obsid, plot_dir, factor=factor, crs=crs, **kwargs)
+        plot_n_kalman(obsid, plot_dir, save=save)
 
 
 def read_metrics_from_file(filename):
@@ -739,7 +735,6 @@ def read_metrics_from_file(filename):
     Read in processed guide metrics (dr95, dr50, manvr_angle, ending dr,
     one shot updates, aber corrections) from file
     """
-    filename = os.path.join(opt.data_root, filename)
     if os.path.exists(filename):
         logger.info(f'Reading {filename}')
         dat_old = Table.read(filename, format='ascii.ecsv', guess=False)
@@ -756,7 +751,8 @@ class NoObsidError(ValueError):
     pass
 
 
-def update_observed_metrics(factor=20, make_plots=False, save=False):
+def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, force=False,
+                            factor=20, make_plots=False, save=False):
     """
     Update the ``GUIDE_METRICS_OBSID`` and ``GUIDE_METRICS_SLOT`` tables
     (ascii ECSV format) in place to reflect information about observed
@@ -771,28 +767,33 @@ def update_observed_metrics(factor=20, make_plots=False, save=False):
     :param save: if True then save the plots (default False)
     """
 
-    if opt.obsid is None:
+    if obsid is None:
         # Default is between NOW and (NOW - NDAYS) days
-        start = DateTime(opt.start) - (NDAYS if opt.start is None else 0)
-        stop = DateTime(opt.stop)
+        start = DateTime(start) - (NDAYS if start is None else 0)
+        stop = DateTime(stop)
         # Get obsids, both science and ERs
         obsids = [evt.obsid for evt in events.obsids.filter(start, stop)]
     else:
-        obsids = [np.int(opt.obsid)]
+        obsids = [np.int(obsid)]
 
+    if data_root is None:
+        data_root = CD_ROOT
+
+    obsid_metrics_file = os.path.join(data_root, GUIDE_METRICS_OBSID)
+    slot_metrics_file = os.path.join(data_root, GUIDE_METRICS_SLOT)
     # Read in existing files if they exists and make a set of already-processed obsids
-    dat_obsid_old, processed_obsids = read_metrics_from_file(GUIDE_METRICS_OBSID)
-
-    dat_slot_old, tmp = read_metrics_from_file(GUIDE_METRICS_SLOT)
+    dat_obsid_old, processed_obsids = read_metrics_from_file(obsid_metrics_file)
+    dat_slot_old, tmp = read_metrics_from_file(slot_metrics_file)
 
     rows_obsid = []
     rows_slots = []
     for obsid in obsids:
 
         logger.info(f'Obsid={obsid}')
+        obs_dir = get_cd_dir(obsid, data_root)
 
         if obsid in processed_obsids:
-            if not opt.force:
+            if not force:
                 logger.info(f'Skipping obsid {obsid}: already processed')
                 continue
             else:
@@ -810,24 +811,25 @@ def update_observed_metrics(factor=20, make_plots=False, save=False):
             if not metrics_obsid['dwell']:
                 logger.info(f'Skipping obsid {obsid}: not a dwell?')
                 info = 'Not a dwell'
-                make_special_case_html(metrics_obsid, info=info)
+                make_special_case_html(metrics_obsid, obs_dir, info=info)
                 continue
 
             if metrics_obsid['att_flag'] > 1:
                 logger.info(f'Skipping obsid {obsid}: problem matching obc/ground times')
                 info = 'Problem matching obc/ground att times'
-                make_special_case_html(metrics_obsid, info=info)
+                make_special_case_html(metrics_obsid, obs_dir, info=info)
                 continue
 
             if obsid < 40000 and metrics_obsid['att_flag'] == 1:
                 logger.info(f'Skipping science obsid {obsid}: no ground aspect solution')
                 info = 'No ground aspect solution for science obsid'
-                make_special_case_html(metrics_obsid, info=info)
+                make_special_case_html(metrics_obsid, obs_dir, info=info)
                 continue
 
             if make_plots:
                 kwargs = {'factor': factor, 'save': save}
                 plot_observed_metrics(obsid,
+                                      plot_dir=obs_dir,
                                       coord='dr',
                                       att_errors=metrics_obsid['att_errors'],
                                       **kwargs)
@@ -870,17 +872,17 @@ def update_observed_metrics(factor=20, make_plots=False, save=False):
                 rows_slots.append(out)
 
         # Build html page for this obsid
-        make_html(row_obsid, row_slots)
+        make_html(row_obsid, row_slots, obs_dir)
 
     # Update the 'per_obsid' table
     if rows_obsid:
         sort_cols = ['mean_date']
-        update_data_table(rows_obsid, dat_obsid_old, GUIDE_METRICS_OBSID, sort_cols)
+        update_data_table(rows_obsid, dat_obsid_old, obsid_metrics_file, sort_cols)
 
         # Update the 'per_slot' table
         if rows_slots:
             sort_cols = ['mean_date', 'slot']
-            update_data_table(rows_slots, dat_slot_old, GUIDE_METRICS_SLOT, sort_cols)
+            update_data_table(rows_slots, dat_slot_old, slot_metrics_file, sort_cols)
 
 
 def update_data_table(rows, dat_old, metrics_file, sort_cols):
@@ -896,14 +898,13 @@ def update_data_table(rows, dat_old, metrics_file, sort_cols):
     if dat_old is not None:
         dat = vstack([dat_old, dat])
 
-    filename = os.path.join(opt.data_root, metrics_file)
-    logger.info(f'Writing {filename}')
+    logger.info(f'Writing {metrics_file}')
 
     dat.sort(sort_cols)
-    dat.write(filename, format='ascii.ecsv', overwrite=True)
+    dat.write(metrics_file, format='ascii.ecsv', overwrite=True)
 
 
-def make_html(row_obsid, rows_slot):
+def make_html(row_obsid, rows_slot, obs_dir):
     """
     Build html page
 
@@ -927,7 +928,6 @@ def make_html(row_obsid, rows_slot):
     aber_z = row_obsid['aber_z']
     mean_date = row_obsid['mean_date']
 
-    cd_obsid_root = get_cd_dir(obsid)
     cd_preceding_root = os.path.join('../../', np.str(obsid_preceding)[:2], f"{obsid_preceding}")
     cd_next_root = os.path.join('../../', np.str(obsid_next)[:2], f"{obsid_next}")
 
@@ -1111,11 +1111,11 @@ Next Observation
 """
 
     logger.info(f'Writing index.html for obsid {obsid}')
-    with open(f"{cd_obsid_root}/index.html", "w") as outfile:
+    with open(f"{obs_dir}/index.html", "w") as outfile:
         outfile.write(string)
 
 
-def make_special_case_html(metrics_obsid, info=''):
+def make_special_case_html(metrics_obsid, obs_dir, info=''):
     """
     Build html page
 
@@ -1127,7 +1127,6 @@ def make_special_case_html(metrics_obsid, info=''):
     obsid_preceding = metrics_obsid['obsid_preceding']
     obsid_next = metrics_obsid['obsid_next']
 
-    cd_obsid_root = get_cd_dir(obsid)
     cd_preceding_root = os.path.join('../../', np.str(obsid_preceding)[:2], f"{obsid_preceding}")
     cd_next_root = os.path.join('../../', np.str(obsid_next)[:2], f"{obsid_next}")
 
@@ -1242,16 +1241,16 @@ Next Observation
 """
 
     logger.info(f'Writing index.html for obsid {obsid}')
-    with open(f"{cd_obsid_root}/index.html", "w") as outfile:
+    with open(f"{obs_dir}/index.html", "w") as outfile:
         outfile.write(string)
 
 
 def main():
-    global opt
     opt = get_opt()
     logger.info('Centroid dashboard, started')
-    kwargs = {'make_plots': opt.make_plots, 'save': opt.save}
-    update_observed_metrics(**kwargs)
+    update_observed_metrics(obsid=opt.obsid, start=opt.start, stop=opt.stop,
+                            force=opt.force, data_root=opt.data_root,
+                            make_plots=opt.make_plots, save=opt.save)
     logger.info('Centroid dashboard, ended')
 
 
