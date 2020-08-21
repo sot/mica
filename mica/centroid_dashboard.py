@@ -375,8 +375,21 @@ def get_observed_metrics(obsid):
                 # Use obc solution
                 val = crs['obc'][slot]
 
-            out['median_dy'] = np.median(val.dyags) if len(val.dyags) > 0 else -9999
-            out['median_dz'] = np.median(val.dzags) if len(val.dyags) > 0 else -9999
+            if len(val.dyags) > 0 and len(val.dzags) > 0:
+                out['std_dy'] = np.std(val.dyags)
+                out['std_dz'] = np.std(val.dzags)
+                out['rms_dy'] = np.sqrt(np.mean(val.dyags ** 2))
+                out['rms_dz'] = np.sqrt(np.mean(val.dzags ** 2))
+                out['median_dy'] = np.median(val.dyags)
+                out['median_dz'] = np.median(val.dzags)
+                drs = np.sqrt((val.dyags ** 2) + (val.dzags ** 2))
+                for dist in ['1.5', '3.0', '5.0']:
+                    out[f'f_within_{dist}'] = np.count_nonzero(drs < float(dist)) / len(drs)
+            else:
+                for metric in ['std_dy', 'std_dz', 'rms_dy', 'rms_dz', 'median_dy', 'median_dz']:
+                    out[metric] = -9999
+                for metric in ['f_within_5.0', 'f_within_3.0', 'f_within_1.5']:
+                    out[metric] = 0
 
             mags = fetch.Msid(f'aoacmag{slot}', start=d.start, stop=d.stop)
             out['median_mag'] = np.median(mags.vals)
