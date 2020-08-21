@@ -19,30 +19,37 @@ def _init(agasc_stats, obs_stats):
 
 
 def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=None,
-                  highlight_obsid=[], only_ok=True, draw_obsid_mag_stats=False, draw_agasc_mag_stats=False, draw_agasc_mag=False,
+                  highlight_obsid=[], highlight_outliers=True, only_ok=True, draw_obsid_mag_stats=False, draw_agasc_mag=False,
                   fit_ylim=True, title=None, draw_legend=False, ax=None):
     _init(agasc_stats, obs_stats)
     if title is not None:
         ax.set_title(title)
-    if type(highlight_obsid) is not list:
+    if type(highlight_obsid) is not list and np.isscalar(highlight_obsid):
         highlight_obsid = [highlight_obsid]
 
     agasc_stat = AGASC_STATS[AGASC_STATS['agasc_id'] == agasc_id][0]
-    obsid_arg = obsid
+    obs_stats = OBS_STATS[OBS_STATS['agasc_id'] == agasc_id]
+
     previous_axes = plt.gca()
     if ax is not None:
         plt.sca(ax)
     if ax is None:
-        fig = plt.figure()
         ax = plt.gca()
     if telem is None:
         telem = mag_stats.get_telemetry_by_agasc_id(agasc_id, ignore_exceptions=True)
+        telem = mag_stats.add_obsid_info(telem, obs_stats)
     times, mags, obsid_arr = telem['times'], telem['mags'], telem['obsid']
     if only_ok:
         ok = (telem['AOACASEQ'] == 'KALM') & (telem['AOACIIR'] == 'OK') & (telem['AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT')
-        ok = ok & (telem['dr'] < 3)
+        ok = ok & (telem['dr'] < 3) & telem['obsid_ok']
     else:
         ok = np.ones_like(mags, dtype=bool)
+
+    highlighted = np.zeros(len(times), dtype=bool)
+    if highlight_obsid:
+        highlighted = highlighted | np.in1d(telem['obsid'], highlight_obsid)
+    if highlight_outliers:
+        highlighted = highlighted | telem['obsid_outlier']
 
     timeline = pd.DataFrame()
     timeline['time'] = times
@@ -55,25 +62,25 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
 
     limits = {}
     for i, obsid in enumerate(obsids):
-        obsid_ok = (timeline.obsid == obsid) & ok
+        if np.sum(ok) == 0:
+            continue
         limits[obsid] = (timeline.index[timeline.obsid == obsid].min(),
                          timeline.index[timeline.obsid == obsid].max())
-        if np.sum(obsid_ok) == 0:
-            continue
-        
-        if obsid in highlight_obsid:
-            plt.scatter(timeline.index[obsid_ok],
-                        timeline[obsid_ok].mag,
+
+        if np.any(ok & highlighted):
+            print(obsid, '1')
+            plt.scatter(timeline.index[ok & highlighted],
+                        timeline[ok & highlighted].mag,
                         s=10, marker='.', color='r')
-        else:
-            plt.scatter(timeline.index[obsid_ok],
-                        timeline[obsid_ok].mag,
+        if np.any(ok & ~highlighted):
+            plt.scatter(timeline.index[ok & ~highlighted],
+                        timeline[ok & ~highlighted].mag,
                         s=10, marker='.', color='k')
-        sel = (OBS_STATS['agasc_id'] == agasc_id) & (OBS_STATS['obsid'] == obsid)
+        sel = (obs_stats['obsid'] == obsid)
         if draw_obsid_mag_stats and np.sum(sel):
             label = '' if i else 'mag$_{OBSID}$'
-            mag_mean = OBS_STATS[sel]['mean'][0]
-            mag_std = OBS_STATS[sel]['std'][0]
+            mag_mean = obs_stats[sel]['mean'][0]
+            mag_std = obs_stats[sel]['std'][0]
             timeline.loc[timeline.obsid == obsid, 'mag_mean'] = mag_mean
             timeline.loc[timeline.obsid == obsid, 'mag_std'] = mag_std
             ax.plot(timeline[timeline.obsid == obsid].mag_mean, linewidth=2, color='orange', label=label)
@@ -105,16 +112,6 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
         mag_aca = np.mean(agasc_stat['mag_aca'])
         ax.plot(xlim, [mag_aca, mag_aca], label='mag$_{AGASC}$',
                 color='green', scalex=False, scaley=False)
-    
-    if draw_agasc_mag_stats:
-        #mag_weighted_mean = s['mag_weighted_mean']
-        #mag_weighted_std = s['mag_weighted_std']
-        #ax.plot(ax.get_xlim(), [mag_weighted_mean, mag_weighted_mean],
-        #        label='weighted mean mag', color='r', scalex=False)
-        #ax.fill_between(xlim,
-        #                [mag_weighted_mean - mag_weighted_std, mag_weighted_mean - mag_weighted_std],
-        #                [mag_weighted_mean + mag_weighted_std, mag_weighted_mean + mag_weighted_std],
-        #                color='r', alpha=0.1)
         
         mag_weighted_mean = agasc_stat['t_mean_dr3']
         mag_weighted_std = agasc_stat['t_std_dr3']

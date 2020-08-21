@@ -306,7 +306,7 @@ def astropy_table_cache(name, dir):
     return decorator_cache
 
 
-@astropy_table_cache(name='telem', dir='/Users/javierg/SAO/mica/mag_stats_cache/telem')
+#@astropy_table_cache(name='telem', dir='/Users/javierg/SAO/mica/mag_stats_cache/telem')
 def get_telemetry_by_agasc_id(agasc_id, obsid=None, ignore_exceptions=False):
     """
     Get all telemetry relevant for the mag_stats task for a given AGASC ID.
@@ -335,6 +335,30 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None, ignore_exceptions=False):
             if not ignore_exceptions:
                 raise
     return vstack(telem)
+
+
+def add_obsid_info(telem, obs_stats):
+    obs_stats['obsid_ok'] = (
+        (obs_stats['n'] > 10) &
+        (obs_stats['f_ok'] > 0.3) &
+        (obs_stats['lf_variability_100s'] < 1)
+    )
+    obs_stats['comments'] = np.zeros(len(obs_stats), dtype='<U80')
+
+    telem = vstack(telem)
+    telem['obsid_ok'] = True
+    telem['obsid_outlier'] = False
+
+    for s in obs_stats:
+        obsid = s['obsid']
+        o = (telem['obsid'] == obsid)
+        telem['obsid_ok'][o] = np.ones(np.sum(o), dtype=bool) * s['obsid_ok']
+        if np.any(telem['ok'][o]) and s['f_track'] > 0:
+            iqr = s['q75'] - s['q25']
+            telem['obsid_outlier'][o] = (telem[o]['ok'] & (iqr > 0) &
+                                         (telem[o]['mags'] < s['q25'] - 1.5*iqr) |
+                                         (telem[o]['mags'] > s['q75'] + 1.5*iqr))
+    return telem
 
 
 @numba.jit(nopython=True)
