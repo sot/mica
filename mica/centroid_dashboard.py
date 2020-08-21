@@ -408,11 +408,11 @@ def get_cd_dir(obsid):
     cd_obsid_root = os.path.join(opt.data_root, np.str(obsid)[:2], f"{obsid}")
 
     if not os.path.exists(cd_obsid_root[:-5]):
-        os.mkdir(cd_obsid_root[:-5])
+        os.makedirs(cd_obsid_root[:-5])
         logger.info(f'Creating directory {cd_obsid_root[:-5]}')
 
     if not os.path.exists(cd_obsid_root):
-        os.mkdir(cd_obsid_root)
+        os.makedirs(cd_obsid_root)
         logger.info(f'Creating directory {cd_obsid_root}')
 
     return cd_obsid_root
