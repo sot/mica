@@ -473,7 +473,7 @@ def plot_att_errors_per_obsid(obsid, coord='dr', att_errors=None,
         cd_obsid_root = get_cd_dir(obsid)
         outroot = os.path.join(cd_obsid_root, f'observed_{coord}s_{obsid}')
         logger.info(f'Writing plot file {outroot}.png')
-        plt.savefig(outroot + '.png', frameon=False)
+        plt.savefig(outroot + '.png')
         plt.close()
 
     return att_errors
@@ -565,7 +565,7 @@ def plot_crs_per_obsid(obsid, crs=None, save=False, on_the_fly=False):
         cd_obsid_root = get_cd_dir(obsid)
         outroot = os.path.join(cd_obsid_root, f'crs_time_{obsid}')
         logger.info(f'Writing plot file {outroot}.png')
-        plt.savefig(outroot + '.png', frameon=False)
+        plt.savefig(outroot + '.png')
         plt.close()
 
     return crs
@@ -600,7 +600,7 @@ def plot_n_kalman(obsid, save=False):
         cd_obsid_root = get_cd_dir(obsid)
         outroot = os.path.join(cd_obsid_root, f'n_kalman_{obsid}')
         logger.info(f'Writing plot file {outroot}.png')
-        plt.savefig(outroot + '.png', frameon=False)
+        plt.savefig(outroot + '.png')
         plt.close()
 
 
@@ -683,7 +683,7 @@ def plot_crs_visualization(obsid, crs=None, factor=20, save=False, on_the_fly=Fa
         cd_obsid_root = get_cd_dir(obsid)
         outroot = os.path.join(cd_obsid_root, f'crs_vis_{obsid}')
         logger.info(f'Writing plot file {outroot}.png')
-        plt.savefig(outroot + '.png', frameon=False)
+        plt.savefig(outroot + '.png')
         plt.close()
 
     return crs
