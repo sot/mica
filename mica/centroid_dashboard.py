@@ -58,7 +58,7 @@ def get_opt(args=None):
                         default=CD_ROOT,
                         help=f"Root directory for data files (default='{CD_ROOT}')")
     add_bool_arg(parser=parser,
-                 name='make-plots',
+                 name='make_plots',
                  help_="make plots if the option is included")
     add_bool_arg(parser=parser,
                  name='save',
