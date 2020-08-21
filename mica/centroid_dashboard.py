@@ -34,7 +34,7 @@ GUIDE_METRICS_OBSID = 'guide_metrics_obsid.dat'
 GUIDE_METRICS_SLOT = 'guide_metrics_slot.dat'
 MICA_REPORTS = "https://icxc.harvard.edu/aspect/mica_reports/"
 MICA_PORTAL = "http://kadi.cfa.harvard.edu/mica/?obsid_or_date="
-CD_ROOT = "/proj/sot/ska/www/ASPECT_ICXC/centroid_dashboard/"
+CD_ROOT = "/proj/sot/ska/www/ASPECT_ICXC/centroid_reports"
 
 # Set up logging
 loglevel = pyyaks.logger.INFO
