@@ -40,54 +40,61 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
     if telem is None:
         telem = mag_stats.get_telemetry_by_agasc_id(agasc_id, ignore_exceptions=True)
         telem = mag_stats.add_obsid_info(telem, obs_stats)
-    times, mags, obsid_arr = telem['times'], telem['mags'], telem['obsid']
-    if only_ok:
-        ok = (telem['AOACASEQ'] == 'KALM') & (telem['AOACIIR'] == 'OK') & (telem['AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT')
-        ok = ok & (telem['dr'] < 3) & telem['obsid_ok']
-    else:
-        ok = np.ones_like(mags, dtype=bool)
 
-    highlighted = np.zeros(len(times), dtype=bool)
-    if highlight_obsid:
-        highlighted = highlighted | np.in1d(telem['obsid'], highlight_obsid)
-    if highlight_outliers:
-        highlighted = highlighted | telem['obsid_outlier']
+    obsids = [obsid] if obsid else np.unique(telem['obsid'])
 
-    timeline = pd.DataFrame()
-    timeline['time'] = times
-    timeline['mag'] = mags
-    timeline['obsid'] = obsid_arr
+    timeline = telem[['times', 'mags', 'obsid', 'obsid_outlier']].copy()
+    timeline['index'] = np.arange(len(timeline))
     timeline['mean'] = np.nan
     timeline['std'] = np.nan
+    timeline['mag_mean'] = np.nan
+    timeline['mag_std'] = np.nan
+    for i, obsid in enumerate(np.unique(timeline['obsid'])):
+        sel = (obs_stats['obsid'] == obsid)
+        if draw_obsid_mag_stats and np.sum(sel):
+            timeline['mag_mean'][timeline['obsid'] == obsid] = obs_stats[sel]['mean'][0]
+            timeline['mag_std'][timeline['obsid'] == obsid] = obs_stats[sel]['std'][0]
+    timeline = timeline.as_array()
 
-    obsids = [obsid] if obsid else np.unique(obsid_arr)
+    ok = (telem['AOACASEQ'] == 'KALM') & (telem['AOACIIR'] == 'OK') & (telem['AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT')
+    ok = ok & (telem['dr'] < 3) & telem['obsid_ok']
+
+    highlighted = np.zeros(len(timeline['times']), dtype=bool)
+    if highlight_obsid:
+        highlighted = highlighted | np.in1d(timeline['obsid'], highlight_obsid)
+    if highlight_outliers:
+        highlighted = highlighted | timeline['obsid_outlier']
+
 
     limits = {}
     for i, obsid in enumerate(obsids):
-        if np.sum(ok) == 0:
-            continue
-        limits[obsid] = (timeline.index[timeline.obsid == obsid].min(),
-                         timeline.index[timeline.obsid == obsid].max())
+        limits[obsid] = (timeline['index'][timeline['obsid'] == obsid].min(),
+                         timeline['index'][timeline['obsid'] == obsid].max())
 
-        if np.any((timeline.obsid == obsid) & ok & highlighted):
-            plt.scatter(timeline.index[(timeline.obsid == obsid) & ok & highlighted],
-                        timeline[(timeline.obsid == obsid) & ok & highlighted].mag,
+        if not only_ok and np.any((timeline['obsid'] == obsid) & ~ok):
+            plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ~ok],
+                        timeline[(timeline['obsid'] == obsid) & ~ok]['mags'],
                         s=10, marker='.', color='r')
-        if np.any((timeline.obsid == obsid) & ok & ~highlighted):
-            plt.scatter(timeline.index[(timeline.obsid == obsid) & ok & ~highlighted],
-                        timeline[(timeline.obsid == obsid) & ok & ~highlighted].mag,
+        if np.any((timeline['obsid'] == obsid) & ok & highlighted):
+            plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & highlighted],
+                        timeline[(timeline['obsid'] == obsid) & ok & highlighted]['mags'],
+                        s=10, marker='.', color='b')
+        if np.any((timeline['obsid'] == obsid) & ok & ~highlighted):
+            plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & ~highlighted],
+                        timeline[(timeline['obsid'] == obsid) & ok & ~highlighted]['mags'],
                         s=10, marker='.', color='k')
         sel = (obs_stats['obsid'] == obsid)
         if draw_obsid_mag_stats and np.sum(sel):
             label = '' if i else 'mag$_{OBSID}$'
-            mag_mean = obs_stats[sel]['mean'][0]
-            mag_std = obs_stats[sel]['std'][0]
-            timeline.loc[timeline.obsid == obsid, 'mag_mean'] = mag_mean
-            timeline.loc[timeline.obsid == obsid, 'mag_std'] = mag_std
-            ax.plot(timeline[timeline.obsid == obsid].mag_mean, linewidth=2, color='orange', label=label)
-            ax.fill_between([timeline.index[timeline.obsid == obsid][0], timeline.index[timeline.obsid == obsid][-1]],
-                            [mag_mean - mag_std, mag_mean - mag_std],
-                            [mag_mean + mag_std, mag_mean + mag_std],
+            o = (timeline['obsid'] == obsid)
+            mag_mean_minus = timeline['mag_mean'][o][0] - timeline['mag_std'][o][0]
+            mag_mean_plus = timeline['mag_mean'][o][0] + timeline['mag_std'][o][0]
+            ax.plot(timeline[o]['index'],
+                    timeline[o]['mag_mean'],
+                    linewidth=2, color='orange', label=label)
+            ax.fill_between([timeline['index'][o][0], timeline['index'][o][-1]],
+                            [mag_mean_minus, mag_mean_minus],
+                            [mag_mean_plus, mag_mean_plus],
                             color='orange', alpha=0.1, zorder=100)
 
     if fit_ylim and agasc_stat['t_std_dr3'] > 0:
@@ -131,18 +138,13 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
 
 
 def plot_flags(telemetry, ax, obsid=None):
-    obsid_arg = obsid
 
-    timeline = pd.DataFrame()
-    timeline['time'] = telemetry['times']
-    timeline['mag'] = telemetry['mags']
-    timeline['obsid'] = telemetry['obsid']
-    timeline['AOACASEQ'] = telemetry['AOACASEQ']
-    timeline['AOACIIR'] = telemetry['AOACIIR']
-    timeline['AOACISP'] = telemetry['AOACISP']
-    timeline['AOPCADMD'] = telemetry['AOPCADMD']
-    timeline['dr'] = telemetry['dr']
-    timeline['IMGSIZE'] = telemetry['IMGSIZE']
+    timeline = telemetry[['times', 'mags', 'obsid', 'obsid_ok', 'dr', 'IMGSIZE',
+                          'AOACASEQ', 'AOACIIR', 'AOACISP', 'AOPCADMD',
+                          ]]
+    timeline['x'] = np.arange(len(timeline))
+    timeline['y'] = np.ones(len(timeline))
+    timeline = timeline.as_array()
 
     if obsid:
         timeline = timeline[timeline['obsid'] == obsid]
@@ -151,20 +153,22 @@ def plot_flags(telemetry, ax, obsid=None):
 
     limits = {}
     for i, obsid in enumerate(obsids):
-        limits[obsid] = (timeline.index[timeline.obsid == obsid].min(),
-                         timeline.index[timeline.obsid == obsid].max())
+        limits[obsid] = (timeline['x'][timeline['obsid'] == obsid].min(),
+                         timeline['x'][timeline['obsid'] == obsid].max())
 
     ok = ((timeline['AOACASEQ'] == 'KALM') &
           (timeline['AOACIIR'] == 'OK') &
           (timeline['AOACISP'] == 'OK') &
           (timeline['AOPCADMD'] == 'NPNT') &
           (timeline['dr'] < 3) &
-          (timeline['mag'] < 13.9) &
-          (timeline['IMGSIZE'] > 4)
+          (timeline['mags'] < 13.9) &
+          (timeline['IMGSIZE'] > 4) &
+          timeline['obsid_ok']
           )
     flags = [
         ('OK', ok),
-        ('mag > 13.9', (timeline['mag'] >= 13.9)),
+        ('OBS not OK', ~timeline['obsid_ok']),
+        ('mags > 13.9', (timeline['mags'] >= 13.9)),
         ('dr > 3', (timeline['IMGSIZE'] > 4) & (timeline['dr'] >= 3)),
         ('Ion. rad.', (timeline['AOACIIR'] != 'OK')),
         ('Sat. pixel.', (timeline['AOACISP'] != 'OK')),
@@ -177,13 +181,9 @@ def plot_flags(telemetry, ax, obsid=None):
     ok = [f[1] for f in flags]
     labels = [f[0] for f in flags]
     ticks = [i+1 for i in range(len(flags))]
-    if obsid_arg:
-        for i in range(len(ok)):
-            ok[i] = ok[i] & (timeline['obsid'] == obsid)
-    x = np.arange(len(timeline['time']))
-    y = np.ones_like(x)
+
     for i in range(len(ok)):
-        ax.plot(x[ok[i]], ticks[i]*y[ok[i]], '.', color='k')
+        ax.plot(timeline['x'][ok[i]], ticks[i]*timeline['y'][ok[i]], '.', color='k')
     ax.set_yticklabels(labels)
     ax.set_yticks(ticks)
     ax.set_ylim((0, ticks[-1]+1))
