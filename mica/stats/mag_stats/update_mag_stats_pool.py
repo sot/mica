@@ -25,7 +25,7 @@ def get_agasc_id_stats(agasc_ids, excluded_observations={}, batch_size=100):
     finished = 0
     for i in range(0, n, batch_size):
         args.append(agasc_ids[i:i + batch_size])
-    with Pool(processes=12) as pool:
+    with Pool() as pool:
         for arg in args:
             jobs.append(pool.apply_async(update_mag_stats.get_agasc_id_stats,
                                          [arg, excluded_observations]))
