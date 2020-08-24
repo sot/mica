@@ -141,12 +141,14 @@ def get_star_position(star, slot, telem):
                   telem['AOATTQT4']]).transpose()
     norm = np.sum(q**2, axis=1, keepdims=True)
     # I am just normalizing q, just in case.
-    q_att = Quat(q=q / np.sqrt(norm))
+    n = np.squeeze(np.sqrt(norm))
+    q[n != 0] /= np.sqrt(norm)[n != 0]  # prevent warning when dividing by zero (it happens)
+    q_att = Quat(q=q)
     Ts = q_att.transform
 
     star_pos_eci = Ska.quatutil.radec2eci(star['RA_PMCORR'], star['DEC_PMCORR'])
     d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
-                   star_pos_eci).transpose()
+                       star_pos_eci).transpose()
     yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
     zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
 
@@ -331,7 +333,16 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None, ignore_exceptions=False):
             t['obsid'] = o['obsid']
             t['agasc_id'] = agasc_id
             telem.append(t)
-        except Exception:
+        except Exception as e:
+            import sys
+            import traceback
+            print(f'{agasc_id} failed', e)
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            trace = traceback.extract_tb(exc_traceback)
+            print(f'{exc_type.__name__} {exc_value}')
+            for step in trace:
+                print(f'  in {step.filename}:{step.lineno}/{step.name}:')
+                print(f'    {step.line}')
             if not ignore_exceptions:
                 raise
     return vstack(telem)
@@ -353,7 +364,8 @@ def add_obsid_info(telem, obs_stats):
         obsid = s['obsid']
         o = (telem['obsid'] == obsid)
         telem['obsid_ok'][o] = np.ones(np.sum(o), dtype=bool) * s['obsid_ok']
-        if np.any(telem['ok'][o]) and s['f_track'] > 0:
+        if (np.any(telem['ok'][o]) and s['f_track'] > 0 and
+                np.isfinite(s['q75']) and np.isfinite(s['q25'])):
             iqr = s['q75'] - s['q25']
             telem['obsid_outlier'][o] = (telem[o]['ok'] & (iqr > 0) &
                                          (telem[o]['mags'] < s['q25'] - 1.5*iqr) |

@@ -57,14 +57,13 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
     timeline = timeline.as_array()
 
     ok = (telem['AOACASEQ'] == 'KALM') & (telem['AOACIIR'] == 'OK') & (telem['AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT')
-    ok = ok & (telem['dr'] < 3) & telem['obsid_ok']
+    ok = ok & (telem['dr'] < 3)
 
     highlighted = np.zeros(len(timeline['times']), dtype=bool)
     if highlight_obsid:
         highlighted = highlighted | np.in1d(timeline['obsid'], highlight_obsid)
     if highlight_outliers:
         highlighted = highlighted | timeline['obsid_outlier']
-
 
     limits = {}
     for i, obsid in enumerate(obsids):
@@ -78,7 +77,7 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
         if np.any((timeline['obsid'] == obsid) & ok & highlighted):
             plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & highlighted],
                         timeline[(timeline['obsid'] == obsid) & ok & highlighted]['mags'],
-                        s=10, marker='.', color='b')
+                        s=10, marker='.', color='orange')
         if np.any((timeline['obsid'] == obsid) & ok & ~highlighted):
             plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & ~highlighted],
                         timeline[(timeline['obsid'] == obsid) & ok & ~highlighted]['mags'],
@@ -87,16 +86,18 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
         if draw_obsid_mag_stats and np.sum(sel):
             label = '' if i else 'mag$_{OBSID}$'
             o = (timeline['obsid'] == obsid)
-            mag_mean_minus = timeline['mag_mean'][o][0] - timeline['mag_std'][o][0]
-            mag_mean_plus = timeline['mag_mean'][o][0] + timeline['mag_std'][o][0]
-            ax.plot(timeline[o]['index'],
-                    timeline[o]['mag_mean'],
-                    linewidth=2, color='orange', label=label)
-            ax.fill_between([timeline['index'][o][0], timeline['index'][o][-1]],
-                            [mag_mean_minus, mag_mean_minus],
-                            [mag_mean_plus, mag_mean_plus],
-                            color='orange', alpha=0.1, zorder=100)
-
+            if np.isfinite(timeline['mag_mean'][o][0]) and np.isfinite(timeline['mag_std'][o][0]):
+                mag_mean_minus = timeline['mag_mean'][o][0] - timeline['mag_std'][o][0]
+                mag_mean_plus = timeline['mag_mean'][o][0] + timeline['mag_std'][o][0]
+                ax.plot(timeline[o]['index'],
+                        timeline[o]['mag_mean'],
+                        linewidth=2, color='orange', label=label)
+                ax.fill_between([timeline['index'][o][0], timeline['index'][o][-1]],
+                                [mag_mean_minus, mag_mean_minus],
+                                [mag_mean_plus, mag_mean_plus],
+                                color='orange', alpha=0.1, zorder=100)
+            else:
+                ax.plot([], [], linewidth=2, color='orange', label=label)
     if fit_ylim and agasc_stat['t_std_dr3'] > 0:
         ax.set_ylim((agasc_stat['t_mean_dr3'] - 6 * agasc_stat['t_std_dr3'],
                      agasc_stat['t_mean_dr3'] + 6 * agasc_stat['t_std_dr3']))
@@ -121,7 +122,8 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
         ax.plot(xlim, [mag_aca, mag_aca], label='mag$_{AGASC}$',
                 color='green', scalex=False, scaley=False)
 
-    if draw_agasc_mag_stats:
+    if (draw_agasc_mag_stats and
+            np.isfinite(agasc_stat['t_mean_dr3']) and agasc_stat['t_mean_dr3'] > 0):
         mag_weighted_mean = agasc_stat['t_mean_dr3']
         mag_weighted_std = agasc_stat['t_std_dr3']
         ax.plot(ax.get_xlim(), [mag_weighted_mean, mag_weighted_mean],
@@ -507,8 +509,8 @@ def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_s
                      'draw_obsid_mag_stats': True,
                      'draw_agasc_mag_stats': True,
                      'draw_legend': True
-                     },
-                    {'type': 'flags'})
+                     })
+        args.append({'type': 'flags'})
     fig = plot_set(agasc_stats, obs_stats, agasc_id, args=args, filename=os.path.join(directory, f'mag_stats.png'))
     plt.close(fig)
 
