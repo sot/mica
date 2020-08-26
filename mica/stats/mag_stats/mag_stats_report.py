@@ -51,7 +51,7 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
     timeline['mag_std'] = np.nan
     for i, obsid in enumerate(np.unique(timeline['obsid'])):
         sel = (obs_stats['obsid'] == obsid)
-        if draw_obsid_mag_stats and np.sum(sel):
+        if draw_obsid_mag_stats and np.any(sel):
             timeline['mag_mean'][timeline['obsid'] == obsid] = obs_stats[sel]['mean'][0]
             timeline['mag_std'][timeline['obsid'] == obsid] = obs_stats[sel]['std'][0]
     timeline = timeline.as_array()
