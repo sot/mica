@@ -25,7 +25,7 @@ def level0_archive_time_range():
         t_stop = cursor.fetchall()[0][0]
         cursor.execute("select tstop from archfiles order by tstart asc limit 1")
         t_start = cursor.fetchall()[0][0]
-        return t_stop, t_start
+        return CxoTime(t_stop).date, CxoTime(t_start).date
 
 
 def get_agasc_id_stats(agasc_ids, excluded_observations={}):
