@@ -217,8 +217,8 @@ def get_telemetry(obs):
                                      img_shape_8x8=True, columns=slot_data_cols)
 
     msid = fetch.MSID(f'AOACMAG{slot}', start, stop)
-    t1 = np.round(msid.times, 3)
-    t2 = np.round(slot_data['END_INTEG_TIME'], 3)
+    t1 = np.round(msid.times, 4)
+    t2 = np.round(slot_data['END_INTEG_TIME'], 4)
     c, i1, i2 = np.intersect1d(t1, t2, return_indices=True)
     times = msid.times[i1]
     if len(t1) and not len(t2):
