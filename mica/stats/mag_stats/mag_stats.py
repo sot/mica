@@ -405,7 +405,7 @@ def get_mag_from_img(slot_data, t_start, ok=True):
     img_sub.mask *= MASK['mouse_bit']
 
     # calculate magnitude
-    mag = np.zeros(len(slot_data))
+    mag = np.ones(len(slot_data)) * 14
     counts = np.ma.sum(np.ma.sum(img_sub, axis=1), axis=1)
     m = ok & np.isfinite(counts) & (counts > 0)
     mag[m] = count_rate_to_mag(counts[m] * 5 / 1.7)
