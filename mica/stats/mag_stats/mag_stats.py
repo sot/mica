@@ -220,16 +220,16 @@ def get_telemetry(obs):
                                      img_shape_8x8=True, columns=slot_data_cols)
 
     msid = fetch.MSID(f'AOACMAG{slot}', start, stop)
+    if len(slot_data) == 0:
+        raise MagStatsException('No level 0 data',
+                                agasc_id=obs["agasc_id"],
+                                obsid=obs["obsid"],
+                                timeline_id=obs["timeline_id"])
     tmin = np.min([np.min(slot_data['END_INTEG_TIME']), np.min(msid.times)])
     t1 = np.round((msid.times - tmin)/1.025)
     t2 = np.round((slot_data['END_INTEG_TIME'].data - tmin)/1.025)
     c, i1, i2 = np.intersect1d(t1, t2, return_indices=True)
     times = msid.times[i1]
-    if len(t1) and not len(t2):
-        raise MagStatsException('No level 0 data',
-                                agasc_id=obs["agasc_id"],
-                                obsid=obs["obsid"],
-                                timeline_id=obs["timeline_id"])
 
     # the following line removes a couple of points at the edges. I have not checked why they differ
     slot_data = slot_data[i2]
