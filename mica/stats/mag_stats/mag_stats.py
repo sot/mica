@@ -212,13 +212,16 @@ def get_telemetry(obs):
     slot = obs['slot']
 
     # first we get slot data from mica and magnitudes from cheta and match them in time
+    # to match them in time, we assume they come in steps of 1.025 seconds, starting from the first
+    # time sample.
     slot_data_cols = ['TIME', 'END_INTEG_TIME', 'IMGSIZE', 'IMGROW0', 'IMGCOL0', 'TEMPCCD', 'IMGRAW']
     slot_data = aca_l0.get_slot_data(start, stop, slot=obs['slot'],
                                      img_shape_8x8=True, columns=slot_data_cols)
 
     msid = fetch.MSID(f'AOACMAG{slot}', start, stop)
-    t1 = np.round(msid.times, 4)
-    t2 = np.round(slot_data['END_INTEG_TIME'], 4)
+    tmin = np.min([np.min(slot_data['END_INTEG_TIME']), np.min(msid.times)])
+    t1 = np.round((msid.times - tmin)/1.025)
+    t2 = np.round((slot_data['END_INTEG_TIME'].data - tmin)/1.025)
     c, i1, i2 = np.intersect1d(t1, t2, return_indices=True)
     times = msid.times[i1]
     if len(t1) and not len(t2):
