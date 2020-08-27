@@ -175,6 +175,7 @@ _telem_dtype = [('times', 'float64'),
                 ('AOACYAN', 'float64'),
                 ('AOACZAN', 'float64'),
                 ('AOACMAG', 'float32'),
+                ('AOACFCT', '<U4'),
                 ('mags_img', 'float64'),
                 ('yag_img', 'float64'),
                 ('zag_img', 'float64'),
@@ -246,7 +247,8 @@ def get_telemetry(obs):
     }
     telem.update({k: slot_data[k] for k in slot_data_cols[2:]})
 
-    names = ['AOACASEQ', 'AOPCADMD', f'AOACIIR{slot}', f'AOACISP{slot}', f'AOACMAG{slot}',
+    names = ['AOACASEQ', 'AOPCADMD',
+             f'AOACIIR{slot}', f'AOACISP{slot}', f'AOACMAG{slot}', f'AOACFCT{slot}',
              f'AOACZAN{slot}', f'AOACYAN{slot}'] + [f'AOATTQT{i}' for i in range(1, 5)]
     msids = fetch.MSIDset(names, times[0] - 4, times[-1] + 4)
     # the following just works...
@@ -257,14 +259,14 @@ def get_telemetry(obs):
             "Mismatch in telemetry between aca_l0 and cheta",
             agasc_id=obs['agasc_id'], obsid=obs['obsid'], timeline_id=obs['timeline_id']
         )
-    for name in ['AOACIIR', 'AOACISP', 'AOACYAN', 'AOACZAN', 'AOACMAG']:
+    for name in ['AOACIIR', 'AOACISP', 'AOACYAN', 'AOACZAN', 'AOACMAG', 'AOACFCT']:
         telem[name] = telem[f'{name}{slot}']
         del telem[f'{name}{slot}']
     for name in ['AOACIIR', 'AOACISP']:
         telem[name] = np.char.rstrip(telem[name])
     ok = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK') & \
          (telem[f'AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT') & \
-         (telem['IMGSIZE'] > 4)
+         (telem['AOACFCT'] == 'TRAK')
 
     # etc...
     telem.update(get_mag_from_img(slot_data, start, ok))
@@ -487,7 +489,7 @@ def calc_obsid_stats(telem):
 
     track = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK') & \
             (telem[f'AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT') & \
-            (telem['IMGSIZE'] > 4)
+            (telem['AOACFCT'] == 'TRAK')
     dr3 = (telem['dr'] < 3)
     dr5 = (telem['dr'] < 5)
 
@@ -495,9 +497,9 @@ def calc_obsid_stats(telem):
     f_3 = np.sum(track & dr3) / len(track)
     f_5 = np.sum(track & dr5) / len(track)
     if np.sum(track & dr3):
-        f_14 = np.sum(track & dr3 & (telem['AOACMAG'] >= 13.9)) / np.sum(track & dr3)
+        f_14 = np.sum(track & (telem['AOACMAG'] >= 13.9)) / np.sum(track)
     else:
-        f_14 = np.nan
+        f_14 = 0
 
     ok = track & dr3 & (telem['AOACMAG'] < 13.9)
     f_ok = np.sum(ok) / len(ok)
@@ -646,7 +648,7 @@ def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
 
     f_ok = np.sum(ok)/len(ok)
 
-    ok *= (mags < 13.9)
+    ok *= (all_telem['AOACMAG'] < 13.9)
 
     star = get_star(agasc_id, date=all_telem['times'][0])
     result = {

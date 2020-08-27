@@ -109,8 +109,10 @@ def _load_startcat_commands(tstop=None):
         DWELLS_MAP = {DWELLS_NP['mp_starcat_time'][idx]: idx
                       for idx in range(len(DWELLS_NP))}
 
-    del os.environ['DJANGO_SETTINGS_MODULE']
-    del os.environ['DJANGO_ALLOW_ASYNC_UNSAFE']
+    if 'DJANGO_SETTINGS_MODULE' in os.environ:
+        del os.environ['DJANGO_SETTINGS_MODULE']
+    if 'DJANGO_ALLOW_ASYNC_UNSAFE' in os.environ:
+        del os.environ['DJANGO_ALLOW_ASYNC_UNSAFE']
 
 def _load_observed_catalogs(tstop=None):
     """
