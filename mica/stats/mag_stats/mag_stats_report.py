@@ -634,7 +634,7 @@ def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], up
 
     run_template = jinja2.Template(RUN_REPORT_SIMPLE)
 
-    updated_star_ids = updated_stars['agasc_id'] if updated_stars else []
+    updated_star_ids = updated_stars['agasc_id'] if len(updated_stars) else []
 
     info = {
         'tstart': tstart if tstart else CxoTime(OBS_STATS['mp_starcat_time']).min().date,
@@ -687,7 +687,7 @@ def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], up
     agasc_stats['new'][np.in1d(agasc_stats['agasc_id'], updated_star_ids)] = False
     agasc_stats['update_mag_aca'] = np.nan
     agasc_stats['update_mag_aca_err'] = np.nan
-    if updated_stars:
+    if len(updated_stars):
         agasc_stats['update_mag_aca'][np.in1d(agasc_stats['agasc_id'], updated_star_ids)] = \
             updated_stars['mag_aca']
         agasc_stats['update_mag_aca_err'][np.in1d(agasc_stats['agasc_id'], updated_star_ids)] = \
