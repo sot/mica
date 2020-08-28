@@ -254,12 +254,12 @@ def do(get_stats=get_agasc_id_stats):
             times = table.join(times,
                                table.Table(outliers_current[['agasc_id', 'last_obs_time']]),
                                join_type='left')
-            if type(times['last_obs_time']) is table.column.Column:
-                update = (CxoTime(times['mp_starcat_time']).cxcsec < times['last_obs_time']).data
-            else:
+            if hasattr(times['last_obs_time'], 'mask'):
                 update = (times['last_obs_time'].mask | (
                           (~times['last_obs_time'].mask) &
                           (CxoTime(times['mp_starcat_time']).cxcsec < times['last_obs_time']).data))
+            else:
+                update = (CxoTime(times['mp_starcat_time']).cxcsec < times['last_obs_time'])
             stars_obs = stars_obs[np.in1d(stars_obs['agasc_id'], times[update]['agasc_id'])]
             agasc_ids = np.sort(np.unique(stars_obs['agasc_id']))
             print(f'Skipping {len(update) - np.sum(update)} stars (already in the supplement)')
