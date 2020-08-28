@@ -637,7 +637,7 @@ def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
     for s, t in zip(stats, all_telem):
         t['obsid_ok'] = np.ones_like(t['ok'], dtype=bool) * s['obsid_ok']
         t['obsid_outlier'] = np.zeros_like(t['ok'])
-        if np.any(t['ok']) and s['f_track'] > 0:
+        if np.any(t['ok']) and s['f_track'] > 0 and s['obsid_ok']:
             iqr = s['q75'] - s['q25']
             t['obsid_outlier'] = (t['ok'] & (iqr > 0) &
                                   (t['mags'] < s['q25'] - 1.5*iqr) | (t['mags'] > s['q75'] + 1.5*iqr))
@@ -717,16 +717,21 @@ def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
     outlier = all_telem['obsid_outlier']
 
     # combine measurements using a weighted mean
-    min_std = max(0.1, stats['std'].min())
-    stats['w'] = np.where(stats['std'] != 0,
-                          1. / stats['std'],
-                          1. / min_std)
-    stats['mean_corrected'] = stats['t_mean'] + stats['mag_correction']
-    stats['weighted_mean'] = stats['mean_corrected'] * stats['w']
+    obs_ok = stats['obsid_ok']
+    min_std = max(0.1, stats[obs_ok]['std'].min())
+    stats['w'] = np.nan
+    stats['mean_corrected'] = np.nan
+    stats['weighted_mean'] = np.nan
+    stats['w'][obs_ok] = np.where(stats['std'][obs_ok] != 0,
+                                  1. / stats['std'][obs_ok],
+                                  1. / min_std)
+    stats['mean_corrected'][obs_ok] = stats['t_mean'][obs_ok] + stats['mag_correction'][obs_ok]
+    stats['weighted_mean'][obs_ok] = stats['mean_corrected'][obs_ok] * stats['w'][obs_ok]
 
-    mag_weighted_mean = (stats['weighted_mean'].sum() / stats['w'].sum())
+    mag_weighted_mean = (stats[obs_ok]['weighted_mean'].sum() / stats[obs_ok]['w'].sum())
     mag_weighted_std = (
-        np.sqrt(((stats['mean'] - mag_weighted_mean)**2 * stats['w']).sum() / stats['w'].sum())
+        np.sqrt(((stats[obs_ok]['mean'] - mag_weighted_mean)**2 * stats[obs_ok]['w']).sum() /
+                stats[obs_ok]['w'].sum())
     )
 
     result.update({
@@ -758,11 +763,13 @@ def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
         sigma_minus, q25, median, q75, sigma_plus = np.quantile(mags[k],
                                                                 [0.158, 0.25, 0.5, 0.75, 0.842])
         outlier = ok & all_telem['obsid_outlier']
+        mag_not = np.nanmean(mags[k2 & (~outlier)]) if np.sum(k2 & (~outlier)) else np.nan
+        std_not = np.nanstd(mags[k2 & (~outlier)]) if np.sum(k2 & (~outlier)) else np.nan
         result.update({
             f't_mean_dr{dr}': np.mean(mags[k & (~outlier)]),
             f't_std_dr{dr}': np.std(mags[k & (~outlier)]),
-            f't_mean_dr{dr}_not': np.mean(mags[k2 & (~outlier)]),
-            f't_std_dr{dr}_not': np.std(mags[k2 & (~outlier)]),
+            f't_mean_dr{dr}_not': mag_not,
+            f't_std_dr{dr}_not': std_not,
             f'mean_dr{dr}': np.mean(mags[k]),
             f'std_dr{dr}': np.std(mags[k]),
             f'f_dr{dr}': np.sum(k) / np.sum(ok),
