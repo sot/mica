@@ -494,15 +494,15 @@ def calc_obsid_stats(telem):
     dr5 = (telem['dr'] < 5)
 
     f_track = np.sum(track) / len(track)
-    f_3 = np.sum(track & dr3) / len(track)
-    f_5 = np.sum(track & dr5) / len(track)
+    f_3 = np.sum(track & dr3) / np.sum(track)
+    f_5 = np.sum(track & dr5) / np.sum(track)
     if np.sum(track & dr3):
         f_14 = np.sum(track & (telem['AOACMAG'] >= 13.9)) / np.sum(track)
     else:
         f_14 = 0
 
     ok = track & dr3 & (telem['AOACMAG'] < 13.9)
-    f_ok = np.sum(ok) / len(ok)
+    f_ok = np.sum(ok) / len(track)
 
     stats = {
         'aoacmag_mean': np.inf,
