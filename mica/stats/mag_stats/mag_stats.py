@@ -584,7 +584,7 @@ def calc_obsid_stats(telem):
     return stats
 
 
-def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
+def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
     """
     Get summary magnitude statistics for an AGASC ID.
 
@@ -594,7 +594,7 @@ def get_agasc_id_stats(agasc_id, tstop=None, excluded_observations={}):
     """
     min_mag_obs_err = 0.3
 
-    catalogs.load()
+    catalogs.load(tstop=tstop)
     # Get a table of every time the star has been observed
     idx0, idx1 = catalogs.STARS_OBS_MAP[agasc_id]
     star_obs = catalogs.STARS_OBS[idx0:idx1]

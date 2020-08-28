@@ -28,7 +28,7 @@ def level0_archive_time_range():
         return CxoTime(t_stop).date, CxoTime(t_start).date
 
 
-def get_agasc_id_stats(agasc_ids, excluded_observations={}):
+def get_agasc_id_stats(agasc_ids, excluded_observations={}, tstop=None):
     """
     Call mag_stats.get_agasc_id_stats for each AGASC ID
 
@@ -46,7 +46,8 @@ def get_agasc_id_stats(agasc_ids, excluded_observations={}):
         try:
             agasc_stat, obsid_stat, obs_fail = \
                 mag_stats.get_agasc_id_stats(agasc_id=agasc_id,
-                                             excluded_observations=excluded_observations)
+                                             excluded_observations=excluded_observations,
+                                             tstop=tstop)
             agasc_stats.append(agasc_stat)
             obsid_stats.append(obsid_stat)
             fails += obs_fail
@@ -267,7 +268,7 @@ def do(get_stats=get_agasc_id_stats):
     # do the processing
     print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
     obsid_stats, agasc_stats, fails = \
-        get_stats(agasc_ids, excluded_observations=excluded_observations)
+        get_stats(agasc_ids, tstop=args.stop, excluded_observations=excluded_observations)
 
     failed_global = [f for f in fails if not f['agasc_id'] and not f['obsid']]
     failed_stars = [f for f in fails if f['agasc_id'] and not f['obsid']]
