@@ -141,7 +141,7 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
 
 def plot_flags(telemetry, ax, obsid=None):
 
-    timeline = telemetry[['times', 'mags', 'obsid', 'obsid_ok', 'dr', 'IMGSIZE',
+    timeline = telemetry[['times', 'mags', 'obsid', 'obsid_ok', 'dr', 'AOACFCT',
                           'AOACASEQ', 'AOACIIR', 'AOACISP', 'AOPCADMD',
                           ]]
     timeline['x'] = np.arange(len(timeline))
@@ -159,25 +159,25 @@ def plot_flags(telemetry, ax, obsid=None):
                          timeline['x'][timeline['obsid'] == obsid].max())
 
     ok = ((timeline['AOACASEQ'] == 'KALM') &
+          (timeline['AOPCADMD'] == 'NPNT') &
+          (timeline['AOACFCT'] == 'TRAK') &
           (timeline['AOACIIR'] == 'OK') &
           (timeline['AOACISP'] == 'OK') &
-          (timeline['AOPCADMD'] == 'NPNT') &
           (timeline['dr'] < 3) &
-          (timeline['mags'] < 13.9) &
-          (timeline['IMGSIZE'] > 4) &
           timeline['obsid_ok']
           )
     flags = [
         ('OK', ok),
         ('OBS not OK', ~timeline['obsid_ok']),
-        ('mags > 13.9', (timeline['mags'] >= 13.9)),
-        ('dr > 3', (timeline['IMGSIZE'] > 4) & (timeline['dr'] >= 3)),
+        ('dr > 3', ((timeline['AOACASEQ'] == 'KALM') &
+                    (timeline['AOPCADMD'] == 'NPNT') &
+                    (timeline['AOACFCT'] == 'TRAK') &
+                    (timeline['dr'] >= 3))),
         ('Ion. rad.', (timeline['AOACIIR'] != 'OK')),
         ('Sat. pixel.', (timeline['AOACISP'] != 'OK')),
-        ('not KALM', (timeline['AOACASEQ'] != 'KALM')),
-        ('not NPNT', (timeline['AOPCADMD'] != 'NPNT')),
-        ('IMGSIZE = 4', ((timeline['IMGSIZE'] <= 4) &
-                         (timeline['AOACASEQ'] == 'KALM') & (timeline['AOPCADMD'] == 'NPNT'))),
+        ('not track', ((timeline['AOACASEQ'] != 'KALM') |
+                       (timeline['AOPCADMD'] != 'NPNT') |
+                       (timeline['AOACFCT'] != 'TRAK'))),
     ]
 
     ok = [f[1] for f in flags]
@@ -281,13 +281,12 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
           <th  data-toggle="tooltip" data-placement="top" title="OBSID"> OBSID </th>
           <th  data-toggle="tooltip" data-placement="top" data-html="true" title="Observation is considered in the calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> OK </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of time samples"> N </th>
-          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of time samples considered as 'tracking' <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> IMGSIZE > 4 <br/> OBS_OK)"> N<sub>ok</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of time samples considered as 'tracking' <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> AOACFCT == 'TRAK' <br/> OBS_OK)"> N<sub>ok</sub> </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of outlying samples"> N<sub>out</sub> </th>
-          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Tracking time as a fraction of the total time <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> IMGSIZE > 4 <br/> OBS_OK)"> f<sub>track</sub> </th>
-          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Time where slot is tracking, mag < 13.9 and target within 3 arcsec <br/> as fraction of total time"> f<sub>ok</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Tracking time as a fraction of the total time <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> AOACFCT == 'TRAK' <br/> OBS_OK)"> f<sub>track</sub> </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Fraction of tracking time within 3 arcsec of target"> f<sub>dr3</sub> </th>
-          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Fraction of tracking time within 3 arcsec of target"> f<sub>dr5</sub> </th>
-          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Time where slot is tracking, mag < 13.9 and target within 3 arcsec <br/> as fraction of tracking time"> f<sub>14</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Fraction of tracking time within 5 arcsec of target"> f<sub>dr5</sub> </th>
+          <th data-toggle="tooltip" data-placement="top" data-html="true" title="Time where slot is tracking and target within 3 arcsec <br/> as fraction of total time"> f<sub>ok</sub> </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="100-second Rolling mean of mag - &langle; mag &rangle;"> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Mean magnitude"> &langle; mag &rangle; </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Magnitude uncertainty"> &sigma;<sub>mag</sub> </th>
@@ -300,10 +299,9 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
           <td> {{ s.n_ok }} </td>
           <td> {{ s.outliers }} </td>
           <td> {{ "%.1f" | format(100*s.f_track) }}% </td>
-          <td> {{ "%.1f" | format(100*s.f_ok) }}% </td>
           <td> {{ "%.1f" | format(100*s.f_dr3) }}% </td>
           <td> {{ "%.1f" | format(100*s.f_dr5) }}% </td>
-          <td> {{ "%.1f" | format(100*s.f_14) }}% </td>
+          <td> {{ "%.1f" | format(100*s.f_ok) }}% </td>
           <td> {{ "%.2f" | format(s.lf_variability_100s) }} </td>
           <td> {{ "%.2f" | format(s.t_mean) }} </td>
           <td> {{ "%.2f" | format(s.t_mean_err) }} </td>
@@ -563,7 +561,7 @@ RUN_REPORT_SIMPLE = """<html lang="en">
         <th data-toggle="tooltip" data-placement="top" title="Number of times the star has been observed"> n<sub>obs</sub> </th>
         <th data-toggle="tooltip" data-html="true" data-placement="top" title="Observations not included in calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> n<sub>bad</sub> </th>
         <th data-toggle="tooltip" data-html="true" data-placement="top" title="New observations not included in calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> n<sub>bad new</sub> </th>
-        <th data-toggle="tooltip" data-placement="top" data-html="true" title="tracking time as fraction of total time: <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> IMGSIZE > 4 <br/> OBS_OK)"> f<sub>track</sub> </th>
+        <th data-toggle="tooltip" data-placement="top" data-html="true" title="tracking time as fraction of total time: <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> AOACFCT == 'TRAK' <br/> OBS_OK)"> f<sub>track</sub> </th>
         <th data-toggle="tooltip" data-placement="top" title="Fraction of the tracking time within 3 arcsec of target"> f<sub>3 arcsec</sub> </th>
         <th data-toggle="tooltip" data-placement="top" title="Fraction of the tracking time within 5 arcsec of target"> f<sub>5 arcsec</sub> </th>
         <th data-toggle="tooltip" data-placement="top" title="Magnitude in AGASC"> mag<sub>catalog</sub> </th>
