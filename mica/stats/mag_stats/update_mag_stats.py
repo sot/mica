@@ -256,11 +256,12 @@ def do(get_stats=get_agasc_id_stats):
                                table.Table(outliers_current[['agasc_id', 'last_obs_time']]),
                                join_type='left')
             if hasattr(times['last_obs_time'], 'mask'):
+                # the mask can be there if there are new stars
                 update = (times['last_obs_time'].mask | (
                           (~times['last_obs_time'].mask) &
-                          (CxoTime(times['mp_starcat_time']).cxcsec < times['last_obs_time']).data))
+                          (CxoTime(times['mp_starcat_time']).cxcsec > times['last_obs_time']).data))
             else:
-                update = (CxoTime(times['mp_starcat_time']).cxcsec < times['last_obs_time'])
+                update = (CxoTime(times['mp_starcat_time']).cxcsec > times['last_obs_time'])
             stars_obs = stars_obs[np.in1d(stars_obs['agasc_id'], times[update]['agasc_id'])]
             agasc_ids = np.sort(np.unique(stars_obs['agasc_id']))
             print(f'Skipping {len(update) - np.sum(update)} stars (already in the supplement)')
@@ -294,7 +295,7 @@ def do(get_stats=get_agasc_id_stats):
             }, {
                 'id': 'updated_stars',
                 'title': 'Updated Stars',
-                'stars': updated_stars['agasc_id'] if updated_stars else []
+                'stars': updated_stars['agasc_id'] if len(updated_stars) else []
             }]
             msr.multi_star_html_report(agasc_stats, obsid_stats, sections=sections,
                                        updated_stars=updated_stars,
