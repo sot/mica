@@ -293,8 +293,8 @@ def get_telemetry(obs):
                             (telem['zang_img'] < z25 - 3 * (z75 - z25)))
 
         # storing a single number many times uses more memory, but I do this only once.
-        telem['yang_mean'] = np.mean(telem['yang_img'][ok & ~centroid_outlier])
-        telem['zang_mean'] = np.mean(telem['zang_img'][ok & ~centroid_outlier])
+        telem['yang_mean'] = np.ones(len(ok))*np.mean(telem['yang_img'][ok & ~centroid_outlier])
+        telem['zang_mean'] = np.ones(len(ok))*np.mean(telem['zang_img'][ok & ~centroid_outlier])
         telem['dy'] = telem['yang_img'] - telem['yang_mean']
         telem['dz'] = telem['zang_img'] - telem['zang_mean']
         telem['dr'] = (telem['dy'] ** 2 + telem['dz'] ** 2) ** .5
@@ -519,8 +519,8 @@ def calc_obsid_stats(telem):
     f_ok = np.sum(ok) / len(ok)
 
     if np.any(ok):
-        dr_star = np.sqrt((telem[ok]['yang_mean'] - telem[ok]['yang_star'])**2 +
-                          (telem[ok]['zang_mean'] - telem[ok]['zang_star'])**2)
+        dr_star = np.sqrt((telem['yang_mean'][ok] - telem['yang_star'][ok])**2 +
+                          (telem['zang_mean'][ok] - telem['zang_star'][ok])**2)[0]
     else:
         dr_star = np.inf
 
