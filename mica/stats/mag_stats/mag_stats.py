@@ -21,6 +21,7 @@ from cxotime import CxoTime
 
 version = mica.__version__
 
+MAX_MAG = 14
 MASK = {
 'mouse_bit': np.array([[ True, True, True, True, True, True, True, True],
                        [ True, True, False, False, False, False, True, True],
@@ -153,8 +154,8 @@ def get_star_position(star, slot, telem):
     zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
 
     return {
-        'star_yag': yag,
-        'star_zag': zag,
+        'yang_star': yag,
+        'zang_star': zag,
     }
 
 
@@ -177,10 +178,12 @@ _telem_dtype = [('times', 'float64'),
                 ('AOACMAG', 'float32'),
                 ('AOACFCT', '<U4'),
                 ('mags_img', 'float64'),
-                ('yag_img', 'float64'),
-                ('zag_img', 'float64'),
-                ('star_yag', 'float64'),
-                ('star_zag', 'float64'),
+                ('yang_img', 'float64'),
+                ('zang_img', 'float64'),
+                ('yang_star', 'float64'),
+                ('zang_star', 'float64'),
+                ('yang_mean', 'float64'),
+                ('zang_mean', 'float64'),
                 ('mags', 'float64'),
                 ('dy', 'float64'),
                 ('dz', 'float64'),
@@ -278,12 +281,23 @@ def get_telemetry(obs):
     telem['mags'][~ok] = 0.
     telem['ok'] = ok
 
-    telem['dy'] = telem['yag_img'] - telem['star_yag']
-    telem['dz'] = telem['zag_img'] - telem['star_zag']
-    #telem['dy'] = telem[f'AOACYAN{slot}'] - telem['star_yag']
-    #telem['dz'] = telem[f'AOACZAN{slot}'] - telem['star_zag']
-    # cheating here and ignoring spherical trig
-    telem['dr'] = (telem['dy'] ** 2 + telem['dz'] ** 2) ** .5
+    telem['dy'] = np.inf
+    telem['dz'] = np.inf
+    telem['dr'] = np.inf
+    if np.any(ok):
+        y25, y50, y75 = np.quantile(telem['yang_img'][ok], [0.25, 0.5, 0.75])
+        z25, z50, z75 = np.quantile(telem['zang_img'][ok], [0.25, 0.5, 0.75])
+        centroid_outlier = ((telem['yang_img'] > y75 + 3 * (y75 - y25)) |
+                            (telem['yang_img'] < y25 - 3 * (y75 - y25)) |
+                            (telem['zang_img'] > z75 + 3 * (z75 - z25)) |
+                            (telem['zang_img'] < z25 - 3 * (z75 - z25)))
+
+        # storing a single number many times uses more memory, but I do this only once.
+        telem['yang_mean'] = np.mean(telem['yang_img'][ok & ~centroid_outlier])
+        telem['zang_mean'] = np.mean(telem['zang_img'][ok & ~centroid_outlier])
+        telem['dy'] = telem['yang_img'] - telem['yang_mean']
+        telem['dz'] = telem['zang_img'] - telem['zang_mean']
+        telem['dr'] = (telem['dy'] ** 2 + telem['dz'] ** 2) ** .5
 
     return telem
 
@@ -356,7 +370,8 @@ def get_telemetry_by_agasc_id(agasc_id, obsid=None, ignore_exceptions=False):
 def add_obsid_info(telem, obs_stats):
     obs_stats['obsid_ok'] = (
         (obs_stats['n'] > 10) &
-        (obs_stats['f_ok'] > 0.3) &
+        (obs_stats['f_track'] > 0.3) &
+        (obs_stats['dr_star'] < 10) &
         (obs_stats['lf_variability_100s'] < 1)
     )
     obs_stats['comments'] = np.zeros(len(obs_stats), dtype='<U80')
@@ -407,7 +422,7 @@ def get_mag_from_img(slot_data, t_start, ok=True):
     img_sub.mask *= MASK['mouse_bit']
 
     # calculate magnitude
-    mag = np.ones(len(slot_data)) * 14
+    mag = np.ones(len(slot_data)) * MAX_MAG
     counts = np.ma.sum(np.ma.sum(img_sub, axis=1), axis=1)
     m = ok & np.isfinite(counts) & (counts > 0)
     mag[m] = count_rate_to_mag(counts[m] * 5 / 1.7)
@@ -431,8 +446,8 @@ def get_mag_from_img(slot_data, t_start, ok=True):
     yag[m], zag[m] = pixels_to_yagzag(y_pixel[m], z_pixel[m])
     return {
         'mags_img': mag,
-        'yag_img': yag,
-        'zag_img': zag,
+        'yang_img': yag,
+        'zang_img': zag,
         'counts_img': img_count,
         'counts_dark': dark_count
     }
@@ -489,22 +504,25 @@ def calc_obsid_stats(telem):
     """
     times = telem['times']
 
-    track = (telem['AOACASEQ'] == 'KALM') & (telem[f'AOACIIR'] == 'OK') & \
-            (telem[f'AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT') & \
+    kalman = (telem['AOACASEQ'] == 'KALM') & (telem['AOPCADMD'] == 'NPNT')
+    track = (telem[f'AOACIIR'] == 'OK') & (telem[f'AOACISP'] == 'OK') & \
             (telem['AOACFCT'] == 'TRAK')
     dr3 = (telem['dr'] < 3)
     dr5 = (telem['dr'] < 5)
 
-    f_track = np.sum(track) / len(track)
-    f_3 = np.sum(track & dr3) / np.sum(track)
-    f_5 = np.sum(track & dr5) / np.sum(track)
-    if np.sum(track & dr3):
-        f_14 = np.sum(track & (telem['AOACMAG'] >= 13.9)) / np.sum(track)
-    else:
-        f_14 = 0
+    f_kalman = np.sum(kalman) / len(kalman)
+    f_track = np.sum(kalman & track) / np.sum(kalman)
+    f_3 = np.sum(kalman & track & dr3) / np.sum(track)
+    f_5 = np.sum(kalman & track & dr5) / np.sum(track)
 
-    ok = track & dr3 & (telem['AOACMAG'] < 13.9)
-    f_ok = np.sum(ok) / len(track)
+    ok = kalman & track & dr5
+    f_ok = np.sum(ok) / len(ok)
+
+    if np.any(ok):
+        dr_star = np.sqrt((telem[ok]['yang_mean'] - telem[ok]['yang_star'])**2 +
+                          (telem[ok]['zang_mean'] - telem[ok]['zang_star'])**2)
+    else:
+        dr_star = np.inf
 
     stats = {
         'aoacmag_mean': np.inf,
@@ -514,10 +532,10 @@ def calc_obsid_stats(telem):
         'aoacmag_q75': np.inf,
         'counts_img': np.inf,
         'counts_dark': np.inf,
+        'f_kalman': f_kalman,
         'f_track': f_track,
         'f_dr5': f_5,
         'f_dr3': f_3,
-        'f_14': f_14,
         'f_ok': f_ok,
         'q25': np.inf,
         'median': np.inf,
@@ -539,6 +557,7 @@ def calc_obsid_stats(telem):
         'lf_variability_500s': np.inf,
         'lf_variability_1000s': np.inf,
         'tempccd': np.nan,
+        'dr_star': dr_star,
     }
     if stats['n_ok'] < 10:
         return stats
@@ -625,7 +644,8 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
 
     stats['obsid_ok'] = (
         (stats['n'] > 10) &
-        (stats['f_ok'] > 0.3) &
+        (stats['f_track'] > 0.3) &
+        (stats['dr_star'] < 10) &
         (stats['lf_variability_100s'] < 1)
     )
     stats['comments'] = np.zeros(len(stats), dtype='<U80')
@@ -649,8 +669,6 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
 
     f_ok = np.sum(ok)/len(ok)
 
-    ok *= (all_telem['AOACMAG'] < 13.9)
-
     star = get_star(agasc_id, date=all_telem['times'][0])
     result = {
         'last_obs_time': last_obs_time,
@@ -667,7 +685,7 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
         'n_no_track': np.sum(stats['f_ok'] < 0.3),
         'n': len(ok),
         'n_ok': np.sum(ok),
-        'f_ok': f_ok,  # f_ok does not count samples with mag >= 13.9
+        'f_ok': f_ok,
         'median': 0,
         'sigma_minus': 0,
         'sigma_plus': 0,
@@ -739,7 +757,7 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
         'agasc_id': agasc_id,
         'n': len(ok),
         'n_ok': np.sum(ok),
-        'f_ok': f_ok,  # f_ok does not count samples with mag >= 13.9
+        'f_ok': f_ok,
         'median': median,
         'sigma_minus': sigma_minus,
         'sigma_plus': sigma_plus,
@@ -782,15 +800,15 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
         })
 
     result.update({
-        'mag_obs': result['t_mean_dr3'],
-        'mag_obs_err': np.sqrt(result['t_std_dr3']**2 + min_mag_obs_err**2),
-        'mag_obs_std': result['t_std_dr3'],
+        'mag_obs': result['t_mean_dr5'],
+        'mag_obs_err': np.sqrt(result['t_std_dr5']**2 + min_mag_obs_err**2),
+        'mag_obs_std': result['t_std_dr5'],
     })
 
     # these are the criteria for including in supplement
     result.update({
-        'selected_atol': np.abs(result['t_mean_dr3'] - result['mag_aca']) > 0.3,
-        'selected_rtol': np.abs(result['t_mean_dr3'] - result['mag_aca']) > 3 * result['mag_aca_err'],
+        'selected_atol': np.abs(result['mag_obs'] - result['mag_aca']) > 0.3,
+        'selected_rtol': np.abs(result['mag_obs'] - result['mag_aca']) > 3 * result['mag_aca_err'],
         'selected_mag_aca_err': result['mag_aca_err'] > 0.2,
         'selected_color': (result['color'] == 1.5) | (np.isclose(result['color'], 0.7))
     })
