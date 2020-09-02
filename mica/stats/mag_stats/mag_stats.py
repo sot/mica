@@ -470,6 +470,8 @@ def get_obsid_stats(obs, telem=None):
                   'droop_shift': droop_shift,
                   'mag_aca': star['MAG_ACA'],
                   'mag_aca_err': star['MAG_ACA_ERR'] / 100,
+                  'row': obs['row'],
+                  'col': obs['col'],
                   })
     stats.update(calc_obsid_stats(telem))
 
@@ -602,8 +604,6 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
         star_obs[star_obs['mp_starcat_time'] <= tstop]
     if len(star_obs) > 1:
         star_obs = star_obs.loc['mp_starcat_time', sorted(star_obs['mp_starcat_time'])]
-    last_starcat_time = max(star_obs['mp_starcat_time'])
-    last_obs_time = CxoTime(last_starcat_time).cxcsec
 
     failures = []
     all_telem = []
@@ -613,6 +613,7 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
             telem = Table(get_telemetry(o))
             all_telem.append(telem)
             stats.append(get_obsid_stats(o, telem={k: telem[k] for k in telem.colnames}))
+            last_obs_time = CxoTime(o['mp_starcat_time']).cxcsec
         except MagStatsException as e:
             failures.append(dict(e))
 

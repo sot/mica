@@ -9,6 +9,7 @@ from Ska.DBI import DBI
 from cxotime import CxoTime
 import tables
 from Chandra.Time import date2secs
+from chandra_aca.transform import yagzag_to_pixels
 
 TIMELINES = None
 STARCAT_CMDS = None
@@ -159,7 +160,8 @@ def _load_observed_catalogs(tstop=None):
                           'data', 'mica', 'archive', 'starcheck', 'starcheck.db3')
     with DBI(server=server, dbi='sqlite') as db:
         cat_entries = db.fetchall(
-            'select obsid, slot, starcheck_catalog.id, sc_id, type, mag, mp_starcat_time, dir '
+            'select obsid, slot, starcheck_catalog.id, sc_id, '
+            'type, mag, mp_starcat_time, dir, yang, zang '
             'from starcheck_catalog, starcheck_id '
             'where starcheck_catalog.id is not NULL '
             'AND starcheck_catalog.sc_id = starcheck_id.id')
@@ -199,6 +201,10 @@ def _load_observed_catalogs(tstop=None):
     # ------------------------------------------------------------------
 
     # Group table by agasc_id
+
+    row, col = yagzag_to_pixels(ces['yang'], ces['zang'])
+    ces['row'] = row
+    ces['col'] = col
 
     STARS_OBS = ces.group_by('agasc_id')
     STARS_OBS.add_index('agasc_id')
