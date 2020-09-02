@@ -278,8 +278,11 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
       <h3> Observation Info </h3>
       <table  class="table table-hover">
         <tr>
-          <th  data-toggle="tooltip" data-placement="top" title="OBSID"> OBSID </th>
-          <th  data-toggle="tooltip" data-placement="top" data-html="true" title="Observation is considered in the calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> OK </th>
+          <th data-toggle="tooltip" data-placement="top" title="OBSID"> OBSID </th>
+          <th data-toggle="tooltip" data-placement="top" title="MP starcat time"> Time </th>
+          <th data-toggle="tooltip" data-placement="top" title="Pixel row"> Row </th>
+          <th data-toggle="tooltip" data-placement="top" title="Pixel column"> Col </th>
+          <!-- th data-toggle="tooltip" data-placement="top" data-html="true" title="Observation is considered in the calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> OK </th -->
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of time samples"> N </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of time samples considered as 'tracking' <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> AOACFCT == 'TRAK' <br/> OBS_OK)"> N<sub>ok</sub> </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Number of outlying samples"> N<sub>out</sub> </th>
@@ -294,7 +297,10 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
         {%- for s in obs_stats %}
         <tr {%- if not s.obsid_ok %} class="table-danger" {% endif %}>
           <td> <a href="https://web-kadi.cfa.harvard.edu/mica/?obsid_or_date={{ s.obsid }}"> {{ s.obsid }} </td>
-          <td> {{ s.obsid_ok }} </td>
+          <td> {{ s.mp_starcat_time }} </td>
+          <td> {{ "%.1f" | format(s.row) }} </td>
+          <td> {{ "%.1f" | format(s.col) }} </td>
+          <!-- td> {{ s.obsid_ok }} </td -->
           <td> {{ s.n }} </td>
           <td> {{ s.n_ok }} </td>
           <td> {{ s.outliers }} </td>
@@ -472,6 +478,9 @@ STAR_REPORT_TABULATOR = """<html>
 def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_stats_reports',
                             static_dir='https://cxc.cfa.harvard.edu/mta/ASPECT/www_resources'):
     _init(agasc_stats, obs_stats)
+    if np.sum(AGASC_STATS['agasc_id'] == agasc_id) == 0:
+        return
+
     star_template = jinja2.Template(STAR_REPORT_BOOTSTRAP)
 
     if directory is None:
@@ -483,7 +492,7 @@ def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_s
     o = OBS_STATS[OBS_STATS['agasc_id'] == agasc_id]
     if len(o) == 0:
         raise Exception(f'agasc_id {agasc_id} has not observations')
-    o.sort(keys=['obsid'])
+    o.sort(keys=['mp_starcat_time'])
     s = AGASC_STATS[AGASC_STATS['agasc_id'] == agasc_id][0]
     s = {k: s[k] for k in s.colnames}
     s['n_obs_bad'] = s['n_obsids'] - s['n_obsids_ok']
@@ -672,7 +681,12 @@ def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], up
     agasc_stats = AGASC_STATS.copy()
     if len(agasc_stats) == 0:
         return [], []
-    assert np.all(np.in1d(agasc_stats['agasc_id'], new_obs['agasc_id'])), 'Not all AGASC IDs are in new obs.'
+    all_agasc_ids = np.unique(np.concatenate([
+        new_obs['agasc_id'],
+        [f['agasc_id'] for f in fails]
+    ]))
+
+    assert np.all(np.in1d(agasc_stats['agasc_id'], all_agasc_ids)), 'Not all AGASC IDs are in new obs.'
     agasc_stats['n_obs_bad'] = agasc_stats['n_obsids'] - agasc_stats['n_obsids_ok']
     agasc_stats['flag'] = '          '
     if len(agasc_stats):
