@@ -281,22 +281,21 @@ def get_telemetry(obs):
     telem['mags'][~ok] = 0.
     telem['ok'] = ok
 
-    telem['dy'] = np.inf
-    telem['dz'] = np.inf
-    telem['dr'] = np.inf
+    telem['dy'] = np.ones(len(ok)) * np.inf
+    telem['dz'] = np.ones(len(ok)) * np.inf
+    telem['dr'] = np.ones(len(ok)) * np.inf
     if np.any(ok):
-        y25, y50, y75 = np.quantile(telem['yang_img'][ok], [0.25, 0.5, 0.75])
-        z25, z50, z75 = np.quantile(telem['zang_img'][ok], [0.25, 0.5, 0.75])
-        centroid_outlier = ((telem['yang_img'] > y75 + 3 * (y75 - y25)) |
-                            (telem['yang_img'] < y25 - 3 * (y75 - y25)) |
-                            (telem['zang_img'] > z75 + 3 * (z75 - z25)) |
-                            (telem['zang_img'] < z25 - 3 * (z75 - z25)))
+        yang = telem['yang_img'] - telem['yang_star']
+        zang = telem['zang_img'] - telem['zang_star']
+        y25, y50, y75 = np.quantile(yang[ok], [0.25, 0.5, 0.75])
+        z25, z50, z75 = np.quantile(zang[ok], [0.25, 0.5, 0.75])
+        centroid_outlier = ((yang > y75 + 3 * (y75 - y25)) |
+                            (yang < y25 - 3 * (y75 - y25)) |
+                            (zang > z75 + 3 * (z75 - z25)) |
+                            (zang < z25 - 3 * (z75 - z25)))
 
-        # storing a single number many times uses more memory, but I do this only once.
-        telem['yang_mean'] = np.ones(len(ok))*np.mean(telem['yang_img'][ok & ~centroid_outlier])
-        telem['zang_mean'] = np.ones(len(ok))*np.mean(telem['zang_img'][ok & ~centroid_outlier])
-        telem['dy'] = telem['yang_img'] - telem['yang_mean']
-        telem['dz'] = telem['zang_img'] - telem['zang_mean']
+        telem['dy'] = yang - np.mean(yang[ok & ~centroid_outlier])
+        telem['dz'] = zang - np.mean(zang[ok & ~centroid_outlier])
         telem['dr'] = (telem['dy'] ** 2 + telem['dz'] ** 2) ** .5
 
     return telem
@@ -779,6 +778,8 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
     for dr in [3, 5]:
         k = ok & (all_telem['dr'] < dr)
         k2 = ok & (all_telem['dr'] >= dr)
+        if not np.any(k):
+            continue
         sigma_minus, q25, median, q75, sigma_plus = np.quantile(mags[k],
                                                                 [0.158, 0.25, 0.5, 0.75, 0.842])
         outlier = ok & all_telem['obsid_outlier']
