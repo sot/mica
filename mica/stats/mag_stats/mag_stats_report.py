@@ -139,7 +139,10 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
     plt.sca(previous_axes)
 
 
-def plot_flags(telemetry, ax, obsid=None):
+def plot_flags(telemetry, ax=None, obsid=None):
+
+    if ax is None:
+        ax = plt.gca()
 
     timeline = telemetry[['times', 'mags', 'obsid', 'obsid_ok', 'dr', 'AOACFCT',
                           'AOACASEQ', 'AOACIIR', 'AOACISP', 'AOPCADMD',
@@ -158,16 +161,15 @@ def plot_flags(telemetry, ax, obsid=None):
         limits[obsid] = (timeline['x'][timeline['obsid'] == obsid].min(),
                          timeline['x'][timeline['obsid'] == obsid].max())
 
-    ok = ((timeline['AOACASEQ'] == 'KALM') &
-          (timeline['AOPCADMD'] == 'NPNT') &
-          (timeline['AOACFCT'] == 'TRAK') &
-          (timeline['AOACIIR'] == 'OK') &
-          (timeline['AOACISP'] == 'OK') &
-          (timeline['dr'] < 3) &
-          timeline['obsid_ok']
-          )
+    all_ok = ((timeline['AOACASEQ'] == 'KALM') &
+              (timeline['AOPCADMD'] == 'NPNT') &
+              (timeline['AOACFCT'] == 'TRAK') &
+              (timeline['AOACIIR'] == 'OK') &
+              (timeline['AOACISP'] == 'OK') &
+              (timeline['dr'] < 3) &
+              timeline['obsid_ok']
+              )
     flags = [
-        ('OK', ok),
         ('OBS not OK', ~timeline['obsid_ok']),
         ('dr > 3', ((timeline['AOACASEQ'] == 'KALM') &
                     (timeline['AOPCADMD'] == 'NPNT') &
@@ -175,28 +177,52 @@ def plot_flags(telemetry, ax, obsid=None):
                     (timeline['dr'] >= 3))),
         ('Ion. rad.', (timeline['AOACIIR'] != 'OK')),
         ('Sat. pixel.', (timeline['AOACISP'] != 'OK')),
-        ('not track', ((timeline['AOACASEQ'] != 'KALM') |
-                       (timeline['AOPCADMD'] != 'NPNT') |
+        ('not track', ((timeline['AOACASEQ'] == 'KALM') &
+                       (timeline['AOPCADMD'] == 'NPNT') &
                        (timeline['AOACFCT'] != 'TRAK'))),
+        ('not Kalman', ((timeline['AOACASEQ'] != 'KALM') |
+                        (timeline['AOPCADMD'] != 'NPNT'))),
     ]
+
 
     ok = [f[1] for f in flags]
     labels = [f[0] for f in flags]
-    ticks = [i+1 for i in range(len(flags))]
+    ticks = [i for i in range(len(flags))]
 
     for i in range(len(ok)):
-        ax.plot(timeline['x'][ok[i]], ticks[i]*timeline['y'][ok[i]], '.', color='k')
+        ax.scatter(timeline['x'][ok[i]], ticks[i]*timeline['y'][ok[i]], s=4, marker='.', color='k')
     ax.set_yticklabels(labels)
     ax.set_yticks(ticks)
-    ax.set_ylim((0, ticks[-1]+1))
+    ax.set_ylim((-1, ticks[-1]+1))
+    ax.grid(True, axis='y', linestyle=':')
 
     sorted_obsids = sorted(limits.keys(), key=lambda l: limits[l][1])
     for i, obsid in enumerate(sorted_obsids):
         (tmin, tmax) = limits[obsid]
-        ax.plot([tmin, tmin], ax.get_ylim(), ':', color='purple', scaley=False)
+        ax.axvline(tmin, linestyle=':', color='purple')
     if limits:
-        tmax = max([v[1] for v in limits.values()])
-        ax.plot([tmax, tmax], ax.get_ylim(), ':', color='purple', scaley=False)
+        ax.axvline(tmax, linestyle=':', color='purple')
+
+    dr = timeline['dr'].copy()
+    dr[dr > 10] = 10
+    from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+    divider = make_axes_locatable(ax)
+    ax_dr = divider.append_axes("bottom", size='25%', pad=0., sharex=ax)
+    ax_dr.set_ylabel('dr')
+    ax_dr.scatter(timeline['x'][all_ok & (dr < 10)], dr[all_ok & (dr < 10)], s=3, marker='.', color='k')
+    ax_dr.scatter(timeline['x'][all_ok & (dr >= 10)], dr[all_ok & (dr >= 10)], s=3, marker='^', color='k')
+    ax_dr.scatter(timeline['x'][~all_ok & (dr < 10)], dr[~all_ok & (dr < 10)], s=3, marker='.', color='r')
+    ax_dr.scatter(timeline['x'][~all_ok & (dr >= 10)], dr[~all_ok & (dr >= 10)], s=3, marker='^', color='r')
+    ax_dr.set_ylim((-0.5, 10.5))
+    ax_dr.set_yticks([0., 2.5, 5, 7.5, 10], minor=True)
+    ax_dr.set_yticks([0., 5, 10], minor=False)
+    ax_dr.grid(True, axis='y', linestyle=':')
+
+    for i, obsid in enumerate(sorted_obsids):
+        (tmin, tmax) = limits[obsid]
+        ax_dr.axvline(tmin, linestyle=':', color='purple')
+    if limits:
+        ax_dr.axvline(tmax, linestyle=':', color='purple')
 
 
 def plot_set(agasc_stats, obs_stats, agasc_id, args, telem=None, filename=None):
