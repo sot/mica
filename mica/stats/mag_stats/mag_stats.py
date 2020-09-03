@@ -182,8 +182,6 @@ _telem_dtype = [('times', 'float64'),
                 ('zang_img', 'float64'),
                 ('yang_star', 'float64'),
                 ('zang_star', 'float64'),
-                ('yang_mean', 'float64'),
-                ('zang_mean', 'float64'),
                 ('mags', 'float64'),
                 ('dy', 'float64'),
                 ('dz', 'float64'),
@@ -511,15 +509,16 @@ def calc_obsid_stats(telem):
 
     f_kalman = np.sum(kalman) / len(kalman)
     f_track = np.sum(kalman & track) / np.sum(kalman)
-    f_3 = np.sum(kalman & track & dr3) / np.sum(track)
-    f_5 = np.sum(kalman & track & dr5) / np.sum(track)
+    f_3 = np.sum(kalman & track & dr3) / np.sum(kalman & track)
+    f_5 = np.sum(kalman & track & dr5) / np.sum(kalman & track)
 
     ok = kalman & track & dr5
     f_ok = np.sum(ok) / len(ok)
 
     if np.any(ok):
-        dr_star = np.sqrt((telem['yang_mean'][ok] - telem['yang_star'][ok])**2 +
-                          (telem['zang_mean'][ok] - telem['zang_star'][ok])**2)[0]
+        yang_mean = np.mean(telem['yang_img'][ok] - telem['yang_star'][ok])
+        zang_mean = np.mean(telem['zang_img'][ok] - telem['zang_star'][ok])
+        dr_star = np.sqrt(yang_mean**2 + zang_mean**2)
     else:
         dr_star = np.inf
 
