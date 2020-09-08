@@ -60,11 +60,12 @@ def _load_startcat_commands(tstop=None):
     # after a safing action the obsid in telemetry can stay fixed while maneuvers
     # continue happening.
     manvrs = events.manvrs.filter('2003:001')
-    rows = [(manvr.obsid, manvr.start, manvr.kalman_start, manvr.npnt_stop) for manvr in manvrs]
+    rows = [(manvr.obsid, manvr.start, manvr.kalman_start, manvr.npnt_stop,
+             manvr.stop_ra, manvr.stop_dec, manvr.stop_roll) for manvr in manvrs]
 
     # Form dwells table. At this point it includes maneuvers that might not have
     # a star catalog with NPM dwell.  That gets fixed in the next bit.
-    dwells = Table(rows=rows, names=('obsid', 'manvr_start', 'start', 'stop'))
+    dwells = Table(rows=rows, names=('obsid', 'manvr_start', 'start', 'stop', 'ra', 'dec', 'roll'))
 
     # Clip starcat_cmds to be within time range of dwells
     ok = (STARCAT_CMDS['mp_starcat_time'] < dwells['manvr_start'][-1])
@@ -102,7 +103,7 @@ def _load_startcat_commands(tstop=None):
     # Now make a numpy array version for speed and a map (fast version of .loc)
     dwells['tstart'] = date2secs(dwells['start'].tolist())
     dwells['tstop'] = date2secs(dwells['stop'].tolist())
-    DWELLS_NP = dwells['mp_starcat_time', 'tstart', 'tstop'].as_array()
+    DWELLS_NP = dwells['mp_starcat_time', 'tstart', 'tstop', 'ra', 'dec', 'roll'].as_array()
     if sys.version_info.minor == 6:
         DWELLS_MAP = {DWELLS_NP['mp_starcat_time'][idx].decode('ascii'): idx
                       for idx in range(len(DWELLS_NP))}
