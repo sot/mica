@@ -282,11 +282,12 @@ def get_telemetry(obs):
     telem['dy'] = np.ones(len(ok)) * np.inf
     telem['dz'] = np.ones(len(ok)) * np.inf
     telem['dr'] = np.ones(len(ok)) * np.inf
-    if np.any(ok):
-        yang = telem['yang_img'] - telem['yang_star']
-        zang = telem['zang_img'] - telem['zang_star']
-        y25, y50, y75 = np.quantile(yang[ok], [0.25, 0.5, 0.75])
-        z25, z50, z75 = np.quantile(zang[ok], [0.25, 0.5, 0.75])
+    yang = telem['yang_img'] - telem['yang_star']
+    zang = telem['zang_img'] - telem['zang_star']
+    rang = np.sqrt(yang**2 + zang**2)
+    if np.any(ok & (rang < 10)):
+        y25, y50, y75 = np.quantile(yang[ok & (rang < 10)], [0.25, 0.5, 0.75])
+        z25, z50, z75 = np.quantile(zang[ok & (rang < 10)], [0.25, 0.5, 0.75])
         centroid_outlier = ((yang > y75 + 3 * (y75 - y25)) |
                             (yang < y25 - 3 * (y75 - y25)) |
                             (zang > z75 + 3 * (z75 - z25)) |
@@ -368,7 +369,6 @@ def add_obsid_info(telem, obs_stats):
     obs_stats['obsid_ok'] = (
         (obs_stats['n'] > 10) &
         (obs_stats['f_track'] > 0.3) &
-        (obs_stats['dr_star'] < 10) &
         (obs_stats['lf_variability_100s'] < 1)
     )
     obs_stats['comments'] = np.zeros(len(obs_stats), dtype='<U80')
@@ -568,7 +568,7 @@ def calc_obsid_stats(telem):
     outlier = ok & ((mags > q75 + 3 * iqr) | (mags < q25 - 3 * iqr))
 
     dt = np.mean(np.diff(times))
-    s = pd.Series(mags[ok], index=times[ok])
+    s = pd.Series(mags[ok & ~outlier], index=times[ok & ~outlier])
     s_100s = s.rolling(window=int(100 / dt), min_periods=1, center=True).median().dropna()
     s_500s = s.rolling(window=int(500 / dt), center=True).median().dropna()
     s_1000s = s.rolling(window=int(1000 / dt), center=True).median().dropna()
@@ -643,7 +643,6 @@ def get_agasc_id_stats(agasc_id, excluded_observations={}, tstop=None):
     stats['obsid_ok'] = (
         (stats['n'] > 10) &
         (stats['f_track'] > 0.3) &
-        (stats['dr_star'] < 10) &
         (stats['lf_variability_100s'] < 1)
     )
     stats['comments'] = np.zeros(len(stats), dtype='<U80')
