@@ -538,7 +538,7 @@ def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_s
             {'type': 'flags'}]
     for obsid in obsids:
         args.append({'obsid': obsid,
-                     'only_ok': True,
+                     'only_ok': False,
                      'draw_obsid_mag_stats': True,
                      'draw_agasc_mag_stats': True,
                      'draw_legend': True
