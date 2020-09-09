@@ -593,6 +593,7 @@ RUN_REPORT_SIMPLE = """<html lang="en">
       <tr>
       <tr>
         <th data-toggle="tooltip" data-placement="top" title="ID in AGASC"> AGASC ID </th>
+        <th data-toggle="tooltip" data-placement="top" title="Last time the star was observed"> Last Obs </th>
         <th data-toggle="tooltip" data-placement="top" title="Number of times the star has been observed"> n<sub>obs</sub> </th>
         <th data-toggle="tooltip" data-html="true" data-placement="top" title="Observations not included in calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> n<sub>bad</sub> </th>
         <th data-toggle="tooltip" data-html="true" data-placement="top" title="New observations not included in calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> n<sub>bad new</sub> </th>
@@ -610,6 +611,7 @@ RUN_REPORT_SIMPLE = """<html lang="en">
       {%- for star in section.stars %}
       <tr {%- if star.flag != '' %} class="table-{{ star.flag }}" {% endif %}>
         <td> {%- if star.agasc_id in star_reports %} <a href="{{ star_reports[star.agasc_id] }}/index.html"> {{ star.agasc_id }} </a> {% else %} {{ star.agasc_id }} {% endif %} </td>
+        <td> {{ star.last_obs[:8] }} </td>
         <td> {{ star.n_obsids }}  </td>
         <td> {%- if star.n_obs_bad > 0 %} {{ star.n_obs_bad }} {% endif %} </td>
         <td> {%- if star.n_obs_bad > 0 %} {{ star.n_obs_bad_new }} {% endif %} </td>
@@ -727,6 +729,7 @@ def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], up
     agasc_stats['new'][np.in1d(agasc_stats['agasc_id'], updated_star_ids)] = False
     agasc_stats['update_mag_aca'] = np.nan
     agasc_stats['update_mag_aca_err'] = np.nan
+    agasc_stats['last_obs'] = CxoTime(agasc_stats['last_obs_time']).date
     if len(updated_stars):
         agasc_stats['update_mag_aca'][np.in1d(agasc_stats['agasc_id'], updated_star_ids)] = \
             updated_stars['mag_aca']
