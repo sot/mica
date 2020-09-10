@@ -20,7 +20,7 @@ def _init(agasc_stats, obs_stats):
 
 def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=None,
                   highlight_obsid=[], highlight_outliers=True, only_ok=True, draw_agasc_mag_stats=False, draw_obsid_mag_stats=False, draw_agasc_mag=False,
-                  fit_ylim=True, title=None, draw_legend=False, ax=None):
+                  ylim='fit', title=None, draw_legend=False, ax=None, draw_roll_mean=False, outside_markers=False):
     _init(agasc_stats, obs_stats)
     if title is not None:
         ax.set_title(title)
@@ -29,8 +29,9 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
 
     agasc_stat = AGASC_STATS[AGASC_STATS['agasc_id'] == agasc_id][0]
     obs_stats = OBS_STATS[OBS_STATS['agasc_id'] == agasc_id]
-    if obsid:
-        obs_stats = obs_stats[obs_stats['obsid'] == obsid]
+    arg_obsid = obsid
+    if arg_obsid:
+        obs_stats = obs_stats[obs_stats['obsid'] == arg_obsid]
 
     previous_axes = plt.gca()
     if ax is not None:
@@ -41,7 +42,7 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
         telem = mag_stats.get_telemetry_by_agasc_id(agasc_id, ignore_exceptions=True)
         telem = mag_stats.add_obsid_info(telem, obs_stats)
 
-    obsids = [obsid] if obsid else np.unique(telem['obsid'])
+    obsids = [arg_obsid] if arg_obsid else np.unique(telem['obsid'])
 
     timeline = telem[['times', 'mags', 'obsid', 'obsid_outlier']].copy()
     timeline['index'] = np.arange(len(timeline))
@@ -54,34 +55,106 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
         if draw_obsid_mag_stats and np.any(sel):
             timeline['mag_mean'][timeline['obsid'] == obsid] = obs_stats[sel]['mean'][0]
             timeline['mag_std'][timeline['obsid'] == obsid] = obs_stats[sel]['std'][0]
+
     timeline = timeline.as_array()
 
     ok = (telem['AOACASEQ'] == 'KALM') & (telem['AOACIIR'] == 'OK') & (telem['AOACISP'] == 'OK') & (telem['AOPCADMD'] == 'NPNT')
-    ok = ok & (telem['dr'] < 3)
+    ok = ok & (telem['dr'] < 5)
 
+    # set the limits of the plot beforehand
+    ok_ylim = ok & (telem['mags'] > 0)
+    if arg_obsid is not None:
+        ok_ylim = ok_ylim & (telem['obsid'] == arg_obsid)
+    if ylim == 'max':
+        ymin, ymax = np.min(telem['mags'][ok_ylim]), np.max(telem['mags'][ok_ylim])
+        dy = ymax - ymin
+        ax.set_ylim((ymin - 0.1 * dy, ymax + 0.1 * dy))
+    elif ylim == 'fit':
+        if np.sum(ok_ylim):
+            q25, q50, q75 = np.quantile(telem['mags'][ok_ylim], [.25, 0.5, 0.75])
+        else:
+            q25, q50, q75 = np.quantile(telem['mags'], [.25, 0.5, 0.75])
+        iqr = max(q75 - q25, 0.05)
+        ax.set_ylim((q25 - 2 * iqr, q75 + 2 * iqr))
+    elif ylim == 'stats':
+        if arg_obsid is not None:
+            q25, q50, q75 = obs_stats[['q25', 'median', 'q75']][0]
+            iqr = max(q75 - q25, 0.05)
+            ax.set_ylim((q25 - 3 * iqr, q75 + 3 * iqr))
+        elif arg_obsid is None and agasc_stat['mag_obs_std'] > 0:
+            ylim = (agasc_stat['mag_obs'] - 6 * agasc_stat['mag_obs_std'],
+                    agasc_stat['mag_obs'] + 6 * agasc_stat['mag_obs_std'])
+            ax.set_ylim(ylim)
+        else:
+            ymin, ymax = np.min(telem['mags'][ok_ylim]), np.max(telem['mags'][ok_ylim])
+            dy = ymax - ymin
+            ax.set_ylim((ymin - 0.1 * dy, ymax + 0.1 * dy))
+
+    # set flags for different categories of markers
     highlighted = np.zeros(len(timeline['times']), dtype=bool)
     if highlight_obsid:
         highlighted = highlighted | np.in1d(timeline['obsid'], highlight_obsid)
     if highlight_outliers:
         highlighted = highlighted | timeline['obsid_outlier']
 
+    ymin, ymax = ax.get_ylim()
+    ymin, ymax = (ymin + 0.01*(ymax - ymin)), (ymax - 0.01*(ymax - ymin))
+    top = np.ones_like(timeline['mags']) * ymax
+    bottom = np.ones_like(timeline['mags']) * ymin
+    if outside_markers:
+        outside_up = timeline['mags'] >= ymax
+        outside_down = timeline['mags'] <= ymin
+    else:
+        outside_up = np.zeros_like(timeline['mags'], dtype=bool)
+        outside_down = np.zeros_like(timeline['mags'], dtype=bool)
+    inside = ~outside_up & ~outside_down
+
+    # loop over obsids, making each plot
+    marker_handles = []
+    line_handles = []
     limits = {}
     for i, obsid in enumerate(obsids):
         limits[obsid] = (timeline['index'][timeline['obsid'] == obsid].min(),
                          timeline['index'][timeline['obsid'] == obsid].max())
-
         if not only_ok and np.any((timeline['obsid'] == obsid) & ~ok):
-            plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ~ok],
-                        timeline[(timeline['obsid'] == obsid) & ~ok]['mags'],
-                        s=10, marker='.', color='r')
+            s = plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ~ok & inside],
+                            timeline[(timeline['obsid'] == obsid) & ~ok & inside]['mags'],
+                            s=10, marker='.', color='r', label='not OK')
+            if i == 0:
+                marker_handles.append(s)
+            _ = plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ~ok & outside_down],
+                            bottom[(timeline['obsid'] == obsid) & ~ok & outside_down],
+                            s=10, marker='v', color='r')
+            _ = plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ~ok & outside_up],
+                            top[(timeline['obsid'] == obsid) & ~ok & outside_up],
+                            s=10, marker='^', color='r')
+
         if np.any((timeline['obsid'] == obsid) & ok & highlighted):
-            plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & highlighted],
-                        timeline[(timeline['obsid'] == obsid) & ok & highlighted]['mags'],
-                        s=10, marker='.', color='orange')
+            s = plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & highlighted & inside],
+                            timeline[(timeline['obsid'] == obsid) & ok & highlighted & inside]['mags'],
+                            s=10, marker='.', color='orange', label='Highlighted')
+            if i == 0:
+                marker_handles.append(s)
+            _ = plt.scatter(
+                timeline['index'][(timeline['obsid'] == obsid) & ok & highlighted & outside_up],
+                top[(timeline['obsid'] == obsid) & ok & highlighted & outside_up],
+                s=10, marker='^', color='orange', label='Highlighted')
+            _ = plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & highlighted & outside_down],
+                            bottom[(timeline['obsid'] == obsid) & ok & highlighted & outside_down],
+                            s=10, marker='v', color='orange', label='Highlighted')
+
         if np.any((timeline['obsid'] == obsid) & ok & ~highlighted):
-            plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & ~highlighted],
-                        timeline[(timeline['obsid'] == obsid) & ok & ~highlighted]['mags'],
-                        s=10, marker='.', color='k')
+            s = plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & ~highlighted & inside],
+                            timeline[(timeline['obsid'] == obsid) & ok & ~highlighted & inside]['mags'],
+                            s=10, marker='.', color='k', label='OK')
+            if i == 0:
+                marker_handles.append(s)
+            _ = plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & (~highlighted) & outside_down],
+                            bottom[(timeline['obsid'] == obsid) & ok & ~highlighted & outside_down],
+                            s=10, marker='v', color='k', label='OK')
+            _ = plt.scatter(timeline['index'][(timeline['obsid'] == obsid) & ok & ~highlighted & outside_up],
+                            top[(timeline['obsid'] == obsid) & ok & ~highlighted & outside_up],
+                            s=10, marker='^', color='k', label='OK')
         sel = (obs_stats['obsid'] == obsid)
         if draw_obsid_mag_stats and np.sum(sel):
             label = '' if i else 'mag$_{OBSID}$'
@@ -89,19 +162,31 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
             if np.isfinite(timeline['mag_mean'][o][0]) and np.isfinite(timeline['mag_std'][o][0]):
                 mag_mean_minus = timeline['mag_mean'][o][0] - timeline['mag_std'][o][0]
                 mag_mean_plus = timeline['mag_mean'][o][0] + timeline['mag_std'][o][0]
-                ax.plot(timeline[o]['index'],
-                        timeline[o]['mag_mean'],
-                        linewidth=2, color='orange', label=label)
+                l = ax.plot(timeline[o]['index'],
+                            timeline[o]['mag_mean'],
+                            linewidth=2, color='orange', label=label)
+                if i == 0:
+                    line_handles += l
                 ax.fill_between([timeline['index'][o][0], timeline['index'][o][-1]],
                                 [mag_mean_minus, mag_mean_minus],
                                 [mag_mean_plus, mag_mean_plus],
                                 color='orange', alpha=0.1, zorder=100)
             else:
-                ax.plot([], [], linewidth=2, color='orange', label=label)
-    if fit_ylim and agasc_stat['t_std_dr3'] > 0:
-        ax.set_ylim((agasc_stat['t_mean_dr3'] - 6 * agasc_stat['t_std_dr3'],
-                     agasc_stat['t_mean_dr3'] + 6 * agasc_stat['t_std_dr3']))
-    
+                (
+                    ax.plot([], [], linewidth=2, color='orange', label=label)
+                )
+        if draw_roll_mean:
+            o = (timeline['obsid'] == obsid) & ok
+
+            roll_mean = mag_stats.rolling_mean(timeline['times'],
+                                               timeline['mags'],
+                                               window=100,
+                                               selection=o)
+            l = ax.plot(timeline['index'], roll_mean, '--',
+                        linewidth=1, color='r', label='rolling mean')
+            if i == 0:
+                line_handles += l
+
     sorted_obsids = sorted(limits.keys(), key=lambda l: limits[l][1])
     for i, obsid in enumerate(sorted_obsids):
         (tmin, tmax) = limits[obsid]
@@ -119,15 +204,19 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
 
     if draw_agasc_mag:
         mag_aca = np.mean(agasc_stat['mag_aca'])
-        ax.plot(xlim, [mag_aca, mag_aca], label='mag$_{AGASC}$',
-                color='green', scalex=False, scaley=False)
+        line_handles += (
+            ax.plot(xlim, [mag_aca, mag_aca], label='mag$_{AGASC}$',
+                    color='green', scalex=False, scaley=False)
+        )
 
     if (draw_agasc_mag_stats and
-            np.isfinite(agasc_stat['t_mean_dr3']) and agasc_stat['t_mean_dr3'] > 0):
-        mag_weighted_mean = agasc_stat['t_mean_dr3']
-        mag_weighted_std = agasc_stat['t_std_dr3']
-        ax.plot(ax.get_xlim(), [mag_weighted_mean, mag_weighted_mean],
-                label='mag', color='r', scalex=False)
+            np.isfinite(agasc_stat['mag_obs']) and agasc_stat['mag_obs'] > 0):
+        mag_weighted_mean = agasc_stat['mag_obs']
+        mag_weighted_std = agasc_stat['mag_obs_std']
+        line_handles += (
+            ax.plot(ax.get_xlim(), [mag_weighted_mean, mag_weighted_mean],
+                    label='mag', color='r', scalex=False)
+        )
         ax.fill_between(xlim,
                         [mag_weighted_mean - mag_weighted_std, mag_weighted_mean - mag_weighted_std],
                         [mag_weighted_mean + mag_weighted_std, mag_weighted_mean + mag_weighted_std],
@@ -135,7 +224,11 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
     
     if draw_legend:
         ax.set_xlim((xlim[0], xlim[1] + 0.1*(xlim[1] - xlim[0])))
-        plt.legend(loc='center right')
+        if marker_handles:
+            ax.add_artist(plt.legend(handles=marker_handles, loc='lower right'))
+        if line_handles:
+            plt.legend(handles=line_handles, loc='upper right')
+
     plt.sca(previous_axes)
 
 
@@ -156,25 +249,18 @@ def plot_flags(telemetry, ax=None, obsid=None):
 
     obsids = np.unique(timeline['obsid'])
 
-    limits = {}
-    for i, obsid in enumerate(obsids):
-        limits[obsid] = (timeline['x'][timeline['obsid'] == obsid].min(),
-                         timeline['x'][timeline['obsid'] == obsid].max())
-
     all_ok = ((timeline['AOACASEQ'] == 'KALM') &
               (timeline['AOPCADMD'] == 'NPNT') &
               (timeline['AOACFCT'] == 'TRAK') &
               (timeline['AOACIIR'] == 'OK') &
               (timeline['AOACISP'] == 'OK') &
-              (timeline['dr'] < 3) &
-              timeline['obsid_ok']
+              (timeline['dr'] < 3)
               )
     flags = [
-        ('OBS not OK', ~timeline['obsid_ok']),
-        ('dr > 3', ((timeline['AOACASEQ'] == 'KALM') &
+        ('dr > 5', ((timeline['AOACASEQ'] == 'KALM') &
                     (timeline['AOPCADMD'] == 'NPNT') &
                     (timeline['AOACFCT'] == 'TRAK') &
-                    (timeline['dr'] >= 3))),
+                    (timeline['dr'] >= 5))),
         ('Ion. rad.', (timeline['AOACIIR'] != 'OK')),
         ('Sat. pixel.', (timeline['AOACISP'] != 'OK')),
         ('not track', ((timeline['AOACASEQ'] == 'KALM') &
@@ -184,6 +270,14 @@ def plot_flags(telemetry, ax=None, obsid=None):
                         (timeline['AOPCADMD'] != 'NPNT'))),
     ]
 
+    if obsid is None:
+        all_ok = timeline['obsid_ok'] & all_ok
+        flags = [('OBS not OK', ~timeline['obsid_ok'])] + flags
+
+    limits = {}
+    for i, obsid in enumerate(obsids):
+        limits[obsid] = (timeline['x'][timeline['obsid'] == obsid].min(),
+                         timeline['x'][timeline['obsid'] == obsid].max())
 
     ok = [f[1] for f in flags]
     labels = [f[0] for f in flags]
@@ -319,6 +413,7 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="100-second Rolling mean of mag - &langle; mag &rangle;"> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Mean magnitude"> &langle; mag &rangle; </th>
           <th data-toggle="tooltip" data-placement="top" data-html="true" title="Magnitude uncertainty"> &sigma;<sub>mag</sub> </th>
+          <th> Comments </th>
         </tr>
         {%- for s in obs_stats %}
         <tr {%- if not s.obsid_ok %} class="table-danger" {% endif %}>
@@ -337,6 +432,7 @@ STAR_REPORT_BOOTSTRAP = """<html lang="en">
           <td> {{ "%.2f" | format(s.lf_variability_100s) }} </td>
           <td> {{ "%.2f" | format(s.t_mean) }} </td>
           <td> {{ "%.2f" | format(s.t_mean_err) }} </td>
+          <td> {{ s.comments }} </td>
         </tr>
         {%- endfor %}
       </table>
@@ -527,23 +623,28 @@ def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_s
     # OBSIDs can be repeated
     obsids = list(np.unique(o[~o['obsid_ok']]['obsid']))
 
-    args = [{'only_ok': False, 'draw_agasc_mag': True, 'draw_legend': True},
+    args = [{'only_ok': False, 'draw_agasc_mag': True, 'draw_legend': True, 'ylim': 'max'},
             {'title': 'mag stats',
              'only_ok': True,
+             'ylim': 'stats',
              'highlight_obsid': obsids,
              'draw_obsid_mag_stats': True,
              'draw_agasc_mag_stats': True,
-             'draw_legend': True
+             'draw_legend': True,
+             'outside_markers': True
              },
             {'type': 'flags'}]
     for obsid in obsids:
         args.append({'obsid': obsid,
+                     'ylim': 'fit',
                      'only_ok': False,
                      'draw_obsid_mag_stats': True,
                      'draw_agasc_mag_stats': True,
-                     'draw_legend': True
+                     'draw_legend': True,
+                     'draw_roll_mean': True,
+                     'outside_markers': True
                      })
-        args.append({'type': 'flags'})
+        args.append({'type': 'flags', 'obsid': obsid})
     fig = plot_set(agasc_stats, obs_stats, agasc_id, args=args, filename=os.path.join(directory, f'mag_stats.png'))
     plt.close(fig)
 
@@ -566,6 +667,37 @@ RUN_REPORT_SIMPLE = """<html lang="en">
   <body>
 
     <div class="container">
+    {% if nav_links %}
+    <!--
+    <nav aria-label="Page navigation example">
+      <ul class="pagination">
+        <li class="page-item"><a class="page-link" href='{{ nav_links.previous}}'> Previous </a></li>
+        <li class="page-item"><a class="page-link" href='{{ nav_links.up}}'> Up </a></li>
+        <li class="page-item"><a class="page-link" href='{{ nav_links.next}}'> Next </a></li>
+      </ul>
+    </nav>
+    -->
+    <nav aria-label="Page navigation example">
+      <ul class="pagination">
+        <li class="page-item"><a class="page-link" href='{{ nav_links.previous}}'>
+          <span aria-hidden="true">&laquo;</span>
+          <span class="sr-only">Previous</span>
+        </a></li>
+        <li class="page-item"><a class="page-link" href='{{ nav_links.up}}'> 
+          <!--span aria-hidden="true">&#8896;</span-->
+          <!--span aria-hidden="true">&Hat;</span-->
+          <!--span aria-hidden="true">&#8962;</span-->
+          <span aria-hidden="true">&#127968;</span>
+          <span class="sr-only">Up</span>
+        </a></li>
+        <li class="page-item"><a class="page-link" href='{{ nav_links.next}}'>
+          <span aria-hidden="true">&raquo;</span>
+          <span class="sr-only">Next</span>
+        </a></li>
+      </ul>
+    </nav>
+
+    {% endif %}
     <h1> ACA Magnitude Statistics </h1>
     <h2> {{ info.report_date }} Update Report </h2>
     <table class="table table-sm">
@@ -598,7 +730,6 @@ RUN_REPORT_SIMPLE = """<html lang="en">
         <th data-toggle="tooltip" data-html="true" data-placement="top" title="Observations not included in calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> n<sub>bad</sub> </th>
         <th data-toggle="tooltip" data-html="true" data-placement="top" title="New observations not included in calculation <br/> n &gt; 10 <br/>f_ok &gt; 0.3 <br/> &langle; &delta; <sub>mag</sub> &rangle; <sub>100s</sub>  < 1"> n<sub>bad new</sub> </th>
         <th data-toggle="tooltip" data-placement="top" data-html="true" title="tracking time as fraction of total time: <br/> AOACASEQ == 'KALM' <br/> AOACIIR == 'OK' <br/> AOACISP == 'OK' <br/> AOPCADMD == 'NPNT' <br/> AOACFCT == 'TRAK' <br/> OBS_OK)"> f<sub>track</sub> </th>
-        <th data-toggle="tooltip" data-placement="top" title="Fraction of the tracking time within 3 arcsec of target"> f<sub>3 arcsec</sub> </th>
         <th data-toggle="tooltip" data-placement="top" title="Fraction of the tracking time within 5 arcsec of target"> f<sub>5 arcsec</sub> </th>
         <th data-toggle="tooltip" data-placement="top" title="Magnitude in AGASC"> mag<sub>catalog</sub> </th>
         <th data-toggle="tooltip" data-placement="top" title="Magnitude observed"> mag<sub>obs</sub> </th>
@@ -609,22 +740,37 @@ RUN_REPORT_SIMPLE = """<html lang="en">
         <th data-toggle="tooltip" data-placement="top" title="Color in AGASC"> color </th>
       </tr>
       {%- for star in section.stars %}
-      <tr {%- if star.flag != '' %} class="table-{{ star.flag }}" {% endif %}>
+      <tr {%- if star.flag != '' %} class="table-{{ star.flag }}" data-toggle="tooltip" data-placement="top" title="{{ tooltips[star.flag] }}" {% endif %}>
         <td> {%- if star.agasc_id in star_reports %} <a href="{{ star_reports[star.agasc_id] }}/index.html"> {{ star.agasc_id }} </a> {% else %} {{ star.agasc_id }} {% endif %} </td>
         <td> {{ star.last_obs[:8] }} </td>
         <td> {{ star.n_obsids }}  </td>
         <td> {%- if star.n_obs_bad > 0 %} {{ star.n_obs_bad }} {% endif %} </td>
         <td> {%- if star.n_obs_bad > 0 %} {{ star.n_obs_bad_new }} {% endif %} </td>
         <td> {{ "%.1f" | format(100*star.f_ok) }}%  </td>
-        <td> {{ "%.1f" | format(100*star.f_dr3) }}% </td>
         <td> {{ "%.1f" | format(100*star.f_dr5) }}% </td>
-        <td {%- if star.selected_mag_aca_err %} class="table-info" {% endif %}> {{ "%.2f" | format(star.mag_aca) }} &#177; {{ "%.2f" | format(star.mag_aca_err) }}  </td>
+        <td {% if star.selected_mag_aca_err -%}
+              class="table-info"
+              data-toggle="tooltip" data-placement="top"
+              title="Large magnitude error in catalog"
+            {%- endif %}> {{ "%.2f" | format(star.mag_aca) }} &#177; {{ "%.2f" | format(star.mag_aca_err) }}  </td>
         <td> {{ "%.2f" | format(star.mag_obs) }} &#177; {{ "%.2f" | format(star.mag_obs_err) }}  </td>
-        <td {%- if star.selected_atol %} class="table-info" {% endif %}> {{ "%.2f" | format(star.delta) }}  </td>
-        <td {%- if star.selected_rtol %} class="table-info" {% endif %}> {{ "%.2f" | format(star.sigma) }}  </td>
+        <td {%- if star.selected_atol %}
+              class="table-info"
+              data-toggle="tooltip" data-placement="top"
+              title="Large absolute difference between observed and cataloge magnitudes"
+            {% endif %}> {{ "%.2f" | format(star.delta) }}  </td>
+        <td {%- if star.selected_rtol %}
+              class="table-info"
+              data-toggle="tooltip" data-placement="top"
+              title="Large relative difference between observed and cataloge magnitudes"
+            {% endif %}> {{ "%.2f" | format(star.sigma) }}  </td>
         <td> {% if star.new %} &ndash; {% else %}{{ "%.2f" | format(star.update_mag_aca) }}{% endif %}  </td>
         <td> {% if star.new %} &ndash; {% else %}{{ "%.2f" | format(star.update_mag_aca_err) }}{% endif %}  </td>
-        <td {%- if star.selected_color %} class="table-info" {% endif %}> {{ "%.2f" | format(star.color) }}  </td>
+        <td {%- if star.selected_color %}
+              class="table-info"
+              data-toggle="tooltip" data-placement="top"
+              title="Color==1.5 or color==0.7 in catalog"
+            {% endif %}> {{ "%.2f" | format(star.color) }}  </td>
       </tr>
       {%- endfor %}
     <table>
@@ -666,7 +812,7 @@ RUN_REPORT_SIMPLE = """<html lang="en">
 def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], updated_stars=[], fails=[],
                            tstart=None, tstop=None, report_date=None,
                            directory='./mag_stats_reports', filename=None, include_all_stars=False,
-                           make_single_reports=True):
+                           make_single_reports=True, nav_links=None):
     _init(agasc_stats, obs_stats)
 
     run_template = jinja2.Template(RUN_REPORT_SIMPLE)
@@ -720,6 +866,10 @@ def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], up
     if len(agasc_stats):
         agasc_stats = table.join(agasc_stats, new_obs[['agasc_id', 'n_obs_bad_new']],
                                  keys=['agasc_id'])
+    tooltips = {
+        'warning': 'At least one bad observation',
+        'danger': 'At least one new bad observation'
+    }
     agasc_stats['flag'][:] = ''
     agasc_stats['flag'][agasc_stats['n_obs_bad'] > 0] = 'warning'
     agasc_stats['flag'][agasc_stats['n_obs_bad_new'] > 0] = 'danger'
@@ -763,4 +913,6 @@ def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], up
         out.write(run_template.render(info=info,
                                       sections=sections,
                                       failures=fails,
-                                      star_reports=star_reports))
+                                      star_reports=star_reports,
+                                      nav_links=nav_links,
+                                      tooltips=tooltips))
