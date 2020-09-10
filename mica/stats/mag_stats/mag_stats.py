@@ -2,12 +2,11 @@ import collections
 import scipy.stats
 import scipy.special
 import numpy as np
+import numba
 from astropy.table import Table, vstack
 
 from . import catalogs
 
-import pandas as pd
-import numba
 from Chandra.Time import DateTime
 from agasc import get_star
 from cheta import fetch
@@ -120,6 +119,56 @@ def _droop_systematic_shift(magnitude):
     """
     a, b = [11.24808388,  0.54867984]
     return np.exp((magnitude - a) / b)
+
+
+def rolling_mean(t, f, window, selection=None):
+    """
+    Calculate the rolling mean of the 'f' array, using a centered square window in time.
+
+    :param t: np.array
+        the time array.
+    :param f: np.array
+        the array to average.
+    :param window: float
+        the window size (in the same units as the time array).
+    :param selection:  np.array
+        An optional array of bool.
+    :return: np.array
+        An array with the same type and shape as 'f'
+    """
+    result = np.ones_like(f) * np.nan
+    if selection is None:
+        selection = np.ones_like(f, dtype=bool)
+
+    assert len(f) == len(t)
+    assert len(f) == len(selection)
+    assert len(selection.shape) == 1
+
+    _rolling_mean_(result, t, f, window, selection)
+    return result
+
+
+@numba.jit(nopython=True)
+def _rolling_mean_(result, t, f, window, selection):
+    i_min = 0
+    i_max = 0
+    n = 0
+    f_sum = 0
+    for i in range(len(f)):
+        if not selection[i]:
+            continue
+
+        while i_max < len(f) and t[i_max] < t[i] + window / 2:
+            if selection[i_max]:
+                f_sum += f[i_max]
+                n += 1
+            i_max += 1
+        while t[i_min] < t[i] - window / 2:
+            if selection[i_min]:
+                f_sum -= f[i_min]
+                n -= 1
+            i_min += 1
+        result[i] = f_sum / n
 
 
 def get_star_position(star, slot, telem):
@@ -567,11 +616,13 @@ def calc_obsid_stats(telem):
     iqr = q75 - q25
     outlier = ok & ((mags > q75 + 3 * iqr) | (mags < q25 - 3 * iqr))
 
-    dt = np.mean(np.diff(times))
-    s = pd.Series(mags[ok & ~outlier], index=times[ok & ~outlier])
-    s_100s = s.rolling(window=int(100 / dt), min_periods=1, center=True).median().dropna()
-    s_500s = s.rolling(window=int(500 / dt), center=True).median().dropna()
-    s_1000s = s.rolling(window=int(1000 / dt), center=True).median().dropna()
+    s_100s = rolling_mean(times, mags, window=100, selection=ok & ~outlier)
+    s_500s = rolling_mean(times, mags, window=500, selection=ok & ~outlier)
+    s_1000s = rolling_mean(times, mags, window=1000, selection=ok & ~outlier)
+
+    s_100s = s_100s[~np.isnan(s_100s)]
+    s_500s = s_500s[~np.isnan(s_500s)]
+    s_1000s = s_1000s[~np.isnan(s_1000s)]
 
     stats.update({
         'aoacmag_mean': np.mean(telem['AOACMAG'][ok]),
