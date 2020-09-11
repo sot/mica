@@ -161,7 +161,7 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
         sel = (obs_stats['obsid'] == obsid)
         if draw_obsid_mag_stats and np.sum(sel):
             label = '' if i else 'mag$_{OBSID}$'
-            o = (timeline['obsid'] == obsid)
+            o = ok & (timeline['obsid'] == obsid) & (~timeline['obsid_outlier'])
             if np.isfinite(timeline['mag_mean'][o][0]) and np.isfinite(timeline['mag_std'][o][0]):
                 mag_mean_minus = timeline['mag_mean'][o][0] - timeline['mag_std'][o][0]
                 mag_mean_plus = timeline['mag_mean'][o][0] + timeline['mag_std'][o][0]
@@ -601,7 +601,8 @@ STAR_REPORT_TABULATOR = """<html>
 
 
 def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_stats_reports',
-                            static_dir='https://cxc.cfa.harvard.edu/mta/ASPECT/www_resources'):
+                            static_dir='https://cxc.cfa.harvard.edu/mta/ASPECT/www_resources',
+                            highlight_obs=lambda o: ~o['obsid_ok']):
     _init(agasc_stats, obs_stats)
     if np.sum(AGASC_STATS['agasc_id'] == agasc_id) == 0:
         return
@@ -624,7 +625,7 @@ def single_star_html_report(agasc_stats, obs_stats, agasc_id, directory='./mag_s
     s['last_obs'] = ':'.join(o[-1]['mp_starcat_time'].split(':')[:4])
 
     # OBSIDs can be repeated
-    obsids = list(np.unique(o[~o['obsid_ok']]['obsid']))
+    obsids = list(np.unique(o[highlight_obs(o)]['obsid']))
 
     args = [{'only_ok': False, 'draw_agasc_mag': True, 'draw_legend': True, 'ylim': 'max'},
             {'title': 'mag stats',
@@ -812,10 +813,11 @@ RUN_REPORT_SIMPLE = """<html lang="en">
 """
 
 
-def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], updated_stars=[], fails=[],
+def multi_star_html_report(agasc_stats, obs_stats, sections={}, updated_stars=[], fails=[],
                            tstart=None, tstop=None, report_date=None,
                            directory='./mag_stats_reports', filename=None, include_all_stars=False,
-                           make_single_reports=True, nav_links=None):
+                           make_single_reports=True, nav_links=None,
+                           highlight_obs=lambda o: ~o['obsid_ok']):
     _init(agasc_stats, obs_stats)
 
     run_template = jinja2.Template(RUN_REPORT_SIMPLE)
@@ -894,7 +896,8 @@ def multi_star_html_report(agasc_stats, obs_stats, sections={}, new_stars=[], up
         try:
             dirname = os.path.join(directory, 'stars', f'{agasc_id//1e7:03.0f}', f'{agasc_id:.0f}')
             if make_single_reports:
-                single_star_html_report(agasc_stats, obs_stats, agasc_id, directory=dirname)
+                single_star_html_report(agasc_stats, obs_stats, agasc_id, directory=dirname,
+                                        highlight_obs=highlight_obs)
             if os.path.exists(dirname):
                 star_reports[agasc_id] = dirname
         except mag_stats.MagStatsException:
