@@ -20,7 +20,7 @@ from cxotime import CxoTime
 
 version = mica.__version__
 
-MAX_MAG = 14
+MAX_MAG = 15
 MASK = {
 'mouse_bit': np.array([[ True, True, True, True, True, True, True, True],
                        [ True, True, False, False, False, False, True, True],
@@ -472,6 +472,7 @@ def get_mag_from_img(slot_data, t_start, ok=True):
     counts = np.ma.sum(np.ma.sum(img_sub, axis=1), axis=1)
     m = ok & np.isfinite(counts) & (counts > 0)
     mag[m] = count_rate_to_mag(counts[m] * 5 / 1.7)
+    mag[mag > MAX_MAG] = MAX_MAG
     # this extra step is to investigate the background scale
     dark = np.ma.array(dark * 1.696 / 5, mask=img_sub.mask)
     img_raw = np.ma.array(slot_data['IMGRAW'], mask=img_sub.mask)
