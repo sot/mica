@@ -161,19 +161,32 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
         sel = (obs_stats['obsid'] == obsid)
         if draw_obsid_mag_stats and np.sum(sel):
             label = '' if i else 'mag$_{OBSID}$'
-            o = ok & (timeline['obsid'] == obsid) & (~timeline['obsid_outlier'])
-            if np.isfinite(timeline['mag_mean'][o][0]) and np.isfinite(timeline['mag_std'][o][0]):
-                mag_mean_minus = timeline['mag_mean'][o][0] - timeline['mag_std'][o][0]
-                mag_mean_plus = timeline['mag_mean'][o][0] + timeline['mag_std'][o][0]
-                l = ax.plot(timeline[o]['index'],
-                            timeline[o]['mag_mean'],
+            if np.isfinite(obs_stats[sel][0]['t_mean']) and np.isfinite(obs_stats[sel][0]['t_std']):
+                mag_mean = obs_stats[sel][0]['t_mean']
+                mag_mean_minus = mag_mean - obs_stats[sel][0]['t_std']
+                mag_mean_plus = mag_mean + obs_stats[sel][0]['t_std']
+                l = ax.plot(limits[obsid],
+                            [mag_mean, mag_mean],
                             linewidth=2, color='orange', label=label)
                 if i == 0:
                     line_handles += l
-                ax.fill_between([timeline['index'][o][0], timeline['index'][o][-1]],
+                ax.fill_between(limits[obsid],
                                 [mag_mean_minus, mag_mean_minus],
                                 [mag_mean_plus, mag_mean_plus],
                                 color='orange', alpha=0.1, zorder=100)
+            #o = ok & (timeline['obsid'] == obsid) & (~timeline['obsid_outlier'])
+            #if np.isfinite(timeline['mag_mean'][o][0]) and np.isfinite(timeline['mag_std'][o][0]):
+            #    mag_mean_minus = timeline['mag_mean'][o][0] - timeline['mag_std'][o][0]
+            #    mag_mean_plus = timeline['mag_mean'][o][0] + timeline['mag_std'][o][0]
+            #    l = ax.plot(timeline[o]['index'],
+            #                timeline[o]['mag_mean'],
+            #                linewidth=2, color='orange', label=label)
+            #    if i == 0:
+            #        line_handles += l
+            #    ax.fill_between([timeline['index'][o][0], timeline['index'][o][-1]],
+            #                    [mag_mean_minus, mag_mean_minus],
+            #                    [mag_mean_plus, mag_mean_plus],
+            #                    color='orange', alpha=0.1, zorder=100)
             else:
                 (
                     ax.plot([], [], linewidth=2, color='orange', label=label)
