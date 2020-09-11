@@ -63,32 +63,35 @@ def plot_agasc_id_single(agasc_stats, obs_stats, agasc_id, obsid=None, telem=Non
 
     # set the limits of the plot beforehand
     ok_ylim = ok & (telem['mags'] > 0)
+    ylims_set = False
     if arg_obsid is not None:
         ok_ylim = ok_ylim & (telem['obsid'] == arg_obsid)
-    if ylim == 'max':
-        ymin, ymax = np.min(telem['mags'][ok_ylim]), np.max(telem['mags'][ok_ylim])
-        dy = ymax - ymin
-        ax.set_ylim((ymin - 0.1 * dy, ymax + 0.1 * dy))
-    elif ylim == 'fit':
+    if ylim == 'fit':
         if np.sum(ok_ylim):
             q25, q50, q75 = np.quantile(telem['mags'][ok_ylim], [.25, 0.5, 0.75])
         else:
             q25, q50, q75 = np.quantile(telem['mags'], [.25, 0.5, 0.75])
         iqr = max(q75 - q25, 0.05)
         ax.set_ylim((q25 - 2 * iqr, q75 + 2 * iqr))
+        ylims_set = True
     elif ylim == 'stats':
         if arg_obsid is not None:
             q25, q50, q75 = obs_stats[['q25', 'median', 'q75']][0]
             iqr = max(q75 - q25, 0.05)
             ax.set_ylim((q25 - 3 * iqr, q75 + 3 * iqr))
+            ylims_set = True
         elif arg_obsid is None and agasc_stat['mag_obs_std'] > 0:
             ylim = (agasc_stat['mag_obs'] - 6 * agasc_stat['mag_obs_std'],
                     agasc_stat['mag_obs'] + 6 * agasc_stat['mag_obs_std'])
             ax.set_ylim(ylim)
-        else:
+            ylims_set = True
+    if ylim == 'max' or not ylims_set:
+        if np.any(ok_ylim):
             ymin, ymax = np.min(telem['mags'][ok_ylim]), np.max(telem['mags'][ok_ylim])
-            dy = ymax - ymin
-            ax.set_ylim((ymin - 0.1 * dy, ymax + 0.1 * dy))
+        else:
+            ymin, ymax = np.min(telem['mags']), np.max(telem['mags'])
+        dy = max(0.3, ymax - ymin)
+        ax.set_ylim((ymin - 0.1 * dy, ymax + 0.1 * dy))
 
     # set flags for different categories of markers
     highlighted = np.zeros(len(timeline['times']), dtype=bool)
