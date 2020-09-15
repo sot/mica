@@ -95,9 +95,9 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 html_theme = 'bootstrap-ska'
 html_theme_options = {
-logotext1: 'Ska!' ,
-logotext2: 'mi',
-logotext3: 'ca',
+    'logotext1': 'Ska!' ,
+    'logotext2': 'mi',
+    'logotext3': 'ca',
 }
 
 # Theme options are theme-specific and customize the look and feel of a theme
