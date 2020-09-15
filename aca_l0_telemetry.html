@@ -1,0 +1,461 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACA L0 telemetry &#8212; mica 4.21.3.dev26+g8fbfc7e documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Aspect L1 products" href="aspect_l1_products.html" />
+    <link rel="prev" title="ACA dark current" href="aca_dark_current.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="">
+        <span id="logotext1"></span><span id="logotext2"></span>
+    </a></li>
+    <li><a title="General Index" href="genindex.html">Index</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li class="right">
+	<a href="aspect_l1_products.html" title="Aspect L1 products">
+	  next &raquo;
+	</a>
+      </li>
+      <li class="right">
+	<a href="aca_dark_current.html" title="ACA dark current">
+	  &laquo; previous
+	</a>
+	 |
+      </li>
+      <li>
+	<a href="index.html">mica 4.21.3.dev26+g8fbfc7e documentation</a>
+	 &#187;
+      </li>
+      
+      <li>ACA L0 telemetry</li> 
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="aca-l0-telemetry">
+<h1>ACA L0 telemetry<a class="headerlink" href="#aca-l0-telemetry" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="api.html#module-mica.archive.aca_l0" title="mica.archive.aca_l0"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_l0</span></code></a> module provides tools to build and fetch from
+a file archive of ACA L0 telemetry.  This telemetry is stored in
+directories by year and day-of-year, and ingested filenames are stored
+in a lookup table.</p>
+<div class="section" id="get-files">
+<h2>Get_files()<a class="headerlink" href="#get-files" title="Permalink to this headline">¶</a></h2>
+<p>Methods are provided to retrieve files and read those data files into
+data structures.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_l0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obsid_files</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="mi">5438</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_8x8</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s1">&#39;2011:001&#39;</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="s1">&#39;2011:010&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_files</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s1">&#39;2012:001:00:00:00.000&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                              <span class="n">stop</span><span class="o">=</span><span class="s1">&#39;2012:002:00:00:00.000&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                              <span class="n">slots</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The values from those files may be read and plotted directly:</p>
+<blockquote>
+<div><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">Ska.Matplotlib</span> <span class="kn">import</span> <span class="n">plot_cxctime</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mf">3.5</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">aca_file</span> <span class="ow">in</span> <span class="n">time_files</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">f</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">aca_file</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">plot_cxctime</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;TIME&#39;</span><span class="p">],</span> <span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;TEMPCCD&#39;</span><span class="p">],</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+<span class="gp">...</span>
+</pre></div>
+</div>
+<img alt="_images/tempccd_from_files.png" src="_images/tempccd_from_files.png" />
+</div></blockquote>
+</div>
+<div class="section" id="get-slot-data">
+<h2>Get_slot_data()<a class="headerlink" href="#get-slot-data" title="Permalink to this headline">¶</a></h2>
+<p>The loop/plot above will break if the images aren’t filtered on
+“imgsize=[6, 8]”, as the ‘TEMPCCD’ columns is only available in 6x6
+and 8x8 data.  That’s one reason to use the convenience function
+<a class="reference internal" href="api.html#mica.archive.aca_l0.get_slot_data" title="mica.archive.aca_l0.get_slot_data"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_slot_data()</span></code></a>, as it places the values in a
+masked array (masking, for example, TEMPCCD when in 4x4 mode or when
+the data is just not available).</p>
+<blockquote>
+<div><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">temp_ccd</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_slot_data</span><span class="p">(</span><span class="s1">&#39;2012:001:00:00:00.000&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                                <span class="s1">&#39;2012:002:00:00:00.000&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                                 <span class="n">slot</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span>
+<span class="gp">... </span>                                 <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;TIME&#39;</span><span class="p">,</span> <span class="s1">&#39;TEMPCCD&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mf">3.5</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plot_cxctime</span><span class="p">(</span><span class="n">temp_ccd</span><span class="p">[</span><span class="s1">&#39;TIME&#39;</span><span class="p">],</span> <span class="n">temp_ccd</span><span class="p">[</span><span class="s1">&#39;TEMPCCD&#39;</span><span class="p">],</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/tempccd_from_get_slot_data.png" src="_images/tempccd_from_get_slot_data.png" />
+</div></blockquote>
+<p>(it is still wise to filter on imgsize in this example, as there is no
+advantage to reading each of the 4x4 files.)</p>
+<p>The <a class="reference internal" href="api.html#mica.archive.aca_l0.get_slot_data" title="mica.archive.aca_l0.get_slot_data"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_slot_data()</span></code></a> method will retrieve
+all columns by default and the resulting data structure, as mentioned,
+will have masked columns where those values are not available
+(i.e. HD3TLM64 in 6x6 or 4x4 image data).  See <a class="reference internal" href="#aca-l0-msids-columns">ACA L0 MSIDs/columns</a>
+for the list of available columns.</p>
+<p>The aca_l0 archive includes all of the raw image data.  The following
+code grabs the image data from slot 2 during a fid shift and creates a
+plot of each readout.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">scoreatpercentile</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">izip</span><span class="p">,</span> <span class="n">count</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">slot_data</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_slot_data</span><span class="p">(</span><span class="mi">98585849</span><span class="p">,</span> <span class="mi">98585884</span><span class="p">,</span> <span class="n">slot</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">vmax</span> <span class="o">=</span> <span class="n">scoreatpercentile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="s1">&#39;IMGRAW&#39;</span><span class="p">]),</span> <span class="mi">98</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">vmin</span> <span class="o">=</span> <span class="n">scoreatpercentile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="s1">&#39;IMGRAW&#39;</span><span class="p">]),</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">norm</span> <span class="o">=</span> <span class="n">mpl</span><span class="o">.</span><span class="n">colors</span><span class="o">.</span><span class="n">LogNorm</span><span class="p">(</span><span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">raw</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">izip</span><span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="s1">&#39;IMGRAW&#39;</span><span class="p">],</span> <span class="n">count</span><span class="p">()):</span>
+<span class="gp">... </span>    <span class="n">fig</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="gp">... </span>    <span class="n">imshow</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;F&#39;</span><span class="p">),</span>
+<span class="gp">... </span>           <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span>
+<span class="gp">... </span>           <span class="n">cmap</span><span class="o">=</span><span class="n">cm</span><span class="o">.</span><span class="n">gray</span><span class="p">,</span>
+<span class="gp">... </span>           <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">,</span>
+<span class="gp">... </span>           <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">,</span>
+<span class="gp">... </span>           <span class="n">aspect</span><span class="o">=</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;slot_2_</span><span class="si">{0:02d}</span><span class="s2">.png&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>ImageMagick can be used to knit those plots together into an animated gif:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">convert</span> <span class="o">-</span><span class="n">delay</span> <span class="mi">20</span> <span class="o">-</span><span class="n">loop</span> <span class="mi">0</span> <span class="n">slot</span><span class="o">*.</span><span class="n">png</span> <span class="n">slot_2</span><span class="o">.</span><span class="n">gif</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="get-l0-images">
+<h2>Get_l0_images()<a class="headerlink" href="#get-l0-images" title="Permalink to this headline">¶</a></h2>
+<p>An alternate way to access ACA L0 image is via the
+<a class="reference internal" href="api.html#mica.archive.aca_l0.get_l0_images" title="mica.archive.aca_l0.get_l0_images"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_l0_images()</span></code></a> function.  This returns a Python list of
+<code class="docutils literal notranslate"><span class="pre">ACAImage</span></code> objects (see the <code class="docutils literal notranslate"><span class="pre">chandra_aca.aca_image</span></code> docs for details).  Each of these
+objects contains the image along with relevant meta-data for each readout:: <code class="docutils literal notranslate"><span class="pre">['TIME',</span>
+<span class="pre">'IMGROW0',</span> <span class="pre">'IMGCOL0',</span> <span class="pre">'BGDAVG',</span> <span class="pre">'IMGSTAT',</span> <span class="pre">'IMGFUNC1',</span> <span class="pre">'IMGSIZE',</span> <span class="pre">'INTEG']</span></code>.</p>
+<p>For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">imgs</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_l0_images</span><span class="p">(</span><span class="mi">98585849</span><span class="p">,</span> <span class="mi">98585884</span><span class="p">,</span> <span class="n">slot</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">imgs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># ACAImage rounds the values for viewing</span>
+<span class="go">&lt;ACAImage row0=-246 col0=116</span>
+<span class="go">array([[  32,   81,   81,  212,  262,   98,   32,   27],</span>
+<span class="go">       [  21,   48,  305, 1170,  830,  169,   65,   38],</span>
+<span class="go">       [  38,   87,  825, 3434, 2635,  393,  147,   59],</span>
+<span class="go">       [  54,  114,  508, 3614, 5408, 1284,  398,   92],</span>
+<span class="go">       [  76,  163,  448, 2548, 5534, 1547,  344,  202],</span>
+<span class="go">       [  65,  103,  256,  809, 2602, 1656,  426,  114],</span>
+<span class="go">       [  16,   38,   54,  327, 1416, 1574,  502,  114],</span>
+<span class="go">       [  10,   16,   43,  103,  371, 1191,  491,   92]])&gt;</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">imgs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">aca</span><span class="p">[</span><span class="o">-</span><span class="mi">240</span><span class="p">,</span> <span class="mi">118</span><span class="p">]</span>  <span class="c1"># Access row=-240, col=118</span>
+<span class="go">53.90625</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">imgs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">meta</span>
+<span class="go">{&#39;BGDAVG&#39;: 25,</span>
+<span class="go"> &#39;IMGCOL0&#39;: 116,</span>
+<span class="go"> &#39;IMGFUNC1&#39;: 1,</span>
+<span class="go"> &#39;IMGROW0&#39;: -246,</span>
+<span class="go"> &#39;IMGSIZE&#39;: 8,</span>
+<span class="go"> &#39;IMGSTAT&#39;: 0,</span>
+<span class="go"> &#39;INTEG&#39;: 1.696,</span>
+<span class="go"> &#39;TIME&#39;: 98585849.940383524}</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">imgs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">TIME</span>
+<span class="go">98585849.940383524</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">imgs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">row0</span><span class="p">,</span> <span class="n">imgs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">col0</span>  <span class="c1"># shortcut: row0 =&gt; IMGROW0</span>
+<span class="go">(-246, 116)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="aca-l0-msids-columns">
+<h2>ACA L0 MSIDs/columns<a class="headerlink" href="#aca-l0-msids-columns" title="Permalink to this headline">¶</a></h2>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 32%" />
+<col style="width: 64%" />
+<col style="width: 4%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>msid</p></th>
+<th class="head"><p>description</p></th>
+<th class="head"><p>units</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>TIME</p></td>
+<td><p>Time-tag of the data record</p></td>
+<td><p>s</p></td>
+</tr>
+<tr class="row-odd"><td><p>QUALITY</p></td>
+<td><p>Data quality flag; 0 - good, 1 - bad</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>MJF</p></td>
+<td><p>Major frame ctr value</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>MNF</p></td>
+<td><p>Minor frame ctr value</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>END_INTEG_TIME</p></td>
+<td><p>end integration time</p></td>
+<td><p>s</p></td>
+</tr>
+<tr class="row-odd"><td><p>INTEG</p></td>
+<td><p>integration time</p></td>
+<td><p>s</p></td>
+</tr>
+<tr class="row-even"><td><p>GLBSTAT</p></td>
+<td><p>global status</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>COMMCNT</p></td>
+<td><p>command count</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>COMMPROG</p></td>
+<td><p>command progress</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGFID1</p></td>
+<td><p>image type</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>IMGNUM1</p></td>
+<td><p>image number (of 8)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGFUNC1</p></td>
+<td><p>image function</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>IMGSTAT</p></td>
+<td><p>image status</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGROW0</p></td>
+<td><p>row of lowerleft image pixel</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>IMGCOL0</p></td>
+<td><p>col of lowerleft image pixel</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGSCALE</p></td>
+<td><p>pixel scaling factor</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>BGDAVG</p></td>
+<td><p>average background</p></td>
+<td><p>DN</p></td>
+</tr>
+<tr class="row-odd"><td><p>IMGFID2</p></td>
+<td><p>image type</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>IMGNUM2</p></td>
+<td><p>image number (of 8)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGFUNC2</p></td>
+<td><p>image function</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>BGDRMS</p></td>
+<td><p>background RMS</p></td>
+<td><p>DN</p></td>
+</tr>
+<tr class="row-odd"><td><p>TEMPCCD</p></td>
+<td><p>temp 1 - CCD</p></td>
+<td><p>K</p></td>
+</tr>
+<tr class="row-even"><td><p>TEMPHOUS</p></td>
+<td><p>temp 2 - AC housing</p></td>
+<td><p>K</p></td>
+</tr>
+<tr class="row-odd"><td><p>TEMPPRIM</p></td>
+<td><p>temp 3 - lens cell</p></td>
+<td><p>K</p></td>
+</tr>
+<tr class="row-even"><td><p>TEMPSEC</p></td>
+<td><p>temp 4 - secondary mirror</p></td>
+<td><p>K</p></td>
+</tr>
+<tr class="row-odd"><td><p>BGDSTAT</p></td>
+<td><p>bgd pixel status</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>IMGFID3</p></td>
+<td><p>image type</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGNUM3</p></td>
+<td><p>image number (of 8)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>IMGFUNC3</p></td>
+<td><p>image function</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGFID4</p></td>
+<td><p>image type</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>IMGNUM4</p></td>
+<td><p>image number (of 8)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGFUNC4</p></td>
+<td><p>image function</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>IMGRAW</p></td>
+<td><p>aspect camera image</p></td>
+<td><p>DN</p></td>
+</tr>
+<tr class="row-odd"><td><p>HD3TLM62</p></td>
+<td><p>Hdr 3 tlm. imgtype=6 word=2</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>HD3TLM63</p></td>
+<td><p>Hdr 3 tlm. imgtype=6 word=3</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>HD3TLM64</p></td>
+<td><p>Hdr 3 tlm. imgtype=6 word=4</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>HD3TLM65</p></td>
+<td><p>Hdr 3 tlm. imgtype=6 word=5</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>HD3TLM66</p></td>
+<td><p>Hdr 3 tlm. imgtype=6 word=6</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>HD3TLM67</p></td>
+<td><p>Hdr 3 tlm. imgtype=6 word=7</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>HD3TLM72</p></td>
+<td><p>Hdr 3 tlm. imgtype=7 word=2</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>HD3TLM73</p></td>
+<td><p>Hdr 3 tlm. imgtype=7 word=3</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>HD3TLM74</p></td>
+<td><p>Hdr 3 tlm. imgtype=7 word=4</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>HD3TLM75</p></td>
+<td><p>Hdr 3 tlm. imgtype=7 word=5</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>HD3TLM76</p></td>
+<td><p>Hdr 3 tlm. imgtype=7 word=6</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>HD3TLM77</p></td>
+<td><p>Hdr 3 tlm. imgtype=7 word=7</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>IMGSIZE</p></td>
+<td><p>derived param (4 6 or 8)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>FILENAME</p></td>
+<td><p>derived param; source filename</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">ACA L0 telemetry</a><ul>
+<li><a class="reference internal" href="#get-files">Get_files()</a></li>
+<li><a class="reference internal" href="#get-slot-data">Get_slot_data()</a></li>
+<li><a class="reference internal" href="#get-l0-images">Get_l0_images()</a></li>
+<li><a class="reference internal" href="#aca-l0-msids-columns">ACA L0 MSIDs/columns</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="aca_dark_current.html"
+                        title="previous chapter">ACA dark current</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="aspect_l1_products.html"
+                        title="next chapter">Aspect L1 products</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/aca_l0_telemetry.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right">
+    <a href="_sources/aca_l0_telemetry.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

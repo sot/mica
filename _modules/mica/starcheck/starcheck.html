@@ -1,0 +1,486 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mica.starcheck.starcheck &#8212; mica 4.21.3.dev26+g8fbfc7e documentation</title>
+    <link rel="stylesheet" href="../../../_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script type="text/javascript" src="../../../_static/sidebar.js"></script>
+    <script type="text/javascript" src="../../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="../../../index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="">
+        <span id="logotext1"></span><span id="logotext2"></span>
+    </a></li>
+    <li><a title="General Index" href="../../../genindex.html">Index</a></li>
+    <li><a title="Module Index" href="../../../py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li>
+	<a href="../../../index.html">mica 4.21.3.dev26+g8fbfc7e documentation</a>
+	 &#187;
+      </li>
+      <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+      
+       
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for mica.starcheck.starcheck</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">from</span> <span class="nn">Chandra.Time</span> <span class="kn">import</span> <span class="n">DateTime</span>
+<span class="kn">from</span> <span class="nn">kadi.commands.states</span> <span class="kn">import</span> <span class="n">get_states</span>
+<span class="kn">import</span> <span class="nn">Ska.DBI</span>
+<span class="kn">from</span> <span class="nn">kadi</span> <span class="kn">import</span> <span class="n">events</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+
+<span class="kn">from</span> <span class="nn">mica.utils</span> <span class="kn">import</span> <span class="n">get_timeline_at_date</span>
+<span class="kn">from</span> <span class="nn">mica.common</span> <span class="kn">import</span> <span class="n">MICA_ARCHIVE</span>
+
+<span class="n">DEFAULT_CONFIG</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">starcheck_db</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s1">&#39;sqlite&#39;</span><span class="p">,</span>
+                                        <span class="n">server</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">,</span> <span class="s1">&#39;starcheck&#39;</span><span class="p">,</span> <span class="s1">&#39;starcheck.db3&#39;</span><span class="p">)),</span>
+                      <span class="n">mp_top_level</span><span class="o">=</span><span class="s1">&#39;/data/mpcrit1/mplogs&#39;</span><span class="p">,</span>
+                      <span class="n">timelines_db</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s1">&#39;sqlite&#39;</span><span class="p">,</span>
+                                        <span class="n">server</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;SKA&#39;</span><span class="p">],</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;cmd_states&#39;</span><span class="p">,</span> <span class="s1">&#39;cmd_states.db3&#39;</span><span class="p">)))</span>
+<span class="n">FILES</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">data_root</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">,</span> <span class="s1">&#39;starcheck&#39;</span><span class="p">),</span>
+             <span class="n">touch_file</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">,</span> <span class="s1">&#39;starcheck&#39;</span><span class="p">,</span> <span class="s2">&quot;starcheck_parser.touch&quot;</span><span class="p">),</span>
+             <span class="n">sql_def</span><span class="o">=</span><span class="s1">&#39;starcheck.sql&#39;</span><span class="p">)</span>
+
+
+<span class="n">OBS_CACHE</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<span class="k">def</span> <span class="nf">get_starcat</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the planned star catalog for an obsid.  Uses mica.starcheck database.</span>
+
+<span class="sd">    :param obsid: obsid</span>
+<span class="sd">    :param mp_dir: optional load specifier like &#39;FEB1317A&#39; or &#39;/2017/FEB1317/oflsa/&#39;</span>
+<span class="sd">    :returns: astropy.Table of star catalog</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">get_starcheck_catalog</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">)[</span><span class="s1">&#39;cat&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">get_dither</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the planned dither for an obsid.  Uses mica.starcheck database.  Note that this</span>
+<span class="sd">    does not have dither values for ERs and for some early mission observations.</span>
+
+<span class="sd">    Observations with dither dither disabled will have yaw and pitch amplitude set</span>
+<span class="sd">    to 0 and period of -999.</span>
+
+<span class="sd">    :param obsid: obsid</span>
+<span class="sd">    :param mp_dir: optional load specifier like &#39;FEB1317A&#39; or &#39;/2017/FEB1317/oflsa/&#39;</span>
+<span class="sd">    :returns: dictionary of planned dither parameters: &#39;yaw_ampl&#39;, &#39;pitch_ampl&#39;,</span>
+<span class="sd">    &#39;yaw_period&#39;, and &#39;pitch_period&#39;.  amplitudes in arcseconds, periods in seconds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">get_starcheck_catalog</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">)[</span><span class="s1">&#39;obs&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;dither_state&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Dither parameters not in starcheck database for obsid </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">obsid</span><span class="p">))</span>
+    <span class="c1"># For observations with no dither, period may be None, so just set to 1.0 to</span>
+    <span class="c1"># avoid divide-by-None and divide-by-0 errors.  It is moot for 0 amplitude anyway.</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;yaw_ampl&#39;</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;dither_y_amp&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;pitch_ampl&#39;</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;dither_z_amp&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;yaw_period&#39;</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;dither_y_period&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;dither_y_amp&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="o">-</span><span class="mf">999.0</span><span class="p">,</span>
+            <span class="s1">&#39;pitch_period&#39;</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;dither_z_period&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;dither_z_amp&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="o">-</span><span class="mf">999.0</span><span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">get_att</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the planned ACA attitude from the starcheck database.</span>
+
+<span class="sd">    :param obsid: obsid</span>
+<span class="sd">    :param mp_dir: optional load specifier like &#39;FEB1317A&#39; or &#39;/2017/FEB1317/oflsa/&#39;</span>
+<span class="sd">    :returns: list of RA, Dec, Roll</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">get_starcheck_catalog</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">)[</span><span class="s1">&#39;obs&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;point_ra&#39;</span><span class="p">],</span>
+            <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;point_dec&#39;</span><span class="p">],</span>
+            <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;point_roll&#39;</span><span class="p">]]</span>
+
+
+<div class="viewcode-block" id="get_monitor_windows"><a class="viewcode-back" href="../../../api.html#mica.starcheck.get_monitor_windows">[docs]</a><span class="k">def</span> <span class="nf">get_monitor_windows</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_obsid</span><span class="o">=</span><span class="mi">40000</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Use the database of starcheck products to get a list of monitor windows</span>
+<span class="sd">    This list is filtered by timelines content to only include catalogs that should have or will run.</span>
+
+<span class="sd">    :param start: Optional start time for filtering windows as fetched from the database</span>
+<span class="sd">    :param stop: Optional stop time for filtering windows as fetched from the database</span>
+<span class="sd">    :param min_obsid: Minimum obsid value for filtering.  Default of 40000 is intended to fetch only ERs</span>
+<span class="sd">    :param config: config dictionary. If supplied must include &#39;starcheck_db&#39; and &#39;timelines_db&#39; keys</span>
+<span class="sd">                   with dictionaries of the required arguments to Ska.DBI to connect to those databases.</span>
+<span class="sd">    :returns: astropy Table of monitor windows.  See get_starcheck_catalog_at_date for description of the values</span>
+<span class="sd">              of the &#39;status&#39; column.  The &#39;catalog&#39; column contains the get_starcheck_catalog_at_date</span>
+<span class="sd">              returned dictionary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">DEFAULT_CONFIG</span>
+    <span class="n">start_date</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">start</span> <span class="ow">or</span> <span class="s1">&#39;1999:001:12:00:00&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
+    <span class="n">stop_date</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
+    <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;starcheck_db&#39;</span><span class="p">])</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+        <span class="n">mons</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir</span>
+<span class="s2">                          from starcheck_catalog, starcheck_id</span>
+<span class="s2">                          where type = &#39;MON&#39; and obsid &gt; </span><span class="si">{}</span><span class="s2"></span>
+<span class="s2">                          and mp_starcat_date &gt;= &#39;</span><span class="si">{}</span><span class="s2">&#39;</span>
+<span class="s2">                          and mp_starcat_date &lt;= &#39;</span><span class="si">{}</span><span class="s2">&#39;</span>
+<span class="s2">                          and starcheck_id.id = starcheck_catalog.sc_id&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">min_obsid</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">stop_date</span><span class="p">))</span>
+    <span class="n">mons</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">mons</span><span class="p">)</span>
+    <span class="n">mons</span><span class="p">[</span><span class="s1">&#39;catalog&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;timelines_db&#39;</span><span class="p">])</span> <span class="k">as</span> <span class="n">timelines_db</span><span class="p">:</span>
+        <span class="n">statuses</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Check which ones actually ran or are likely to run</span>
+        <span class="k">for</span> <span class="n">mon</span> <span class="ow">in</span> <span class="n">mons</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">catalog</span> <span class="o">=</span> <span class="n">get_starcheck_catalog_at_date</span><span class="p">(</span><span class="n">mon</span><span class="p">[</span><span class="s1">&#39;mp_starcat_date&#39;</span><span class="p">],</span>
+                                                        <span class="n">timelines_db</span><span class="o">=</span><span class="n">timelines_db</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">catalog</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">catalog</span><span class="p">[</span><span class="s1">&#39;obs&#39;</span><span class="p">][</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">mon</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span>
+                        <span class="ow">and</span> <span class="n">catalog</span><span class="p">[</span><span class="s1">&#39;mp_dir&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">mon</span><span class="p">[</span><span class="s1">&#39;dir&#39;</span><span class="p">]):</span>
+                    <span class="n">mon</span><span class="p">[</span><span class="s1">&#39;catalog&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">catalog</span>
+                    <span class="n">statuses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">catalog</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">statuses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">LookupError</span><span class="p">:</span>
+                <span class="n">statuses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+        <span class="c1"># Add that status info to the table and filter on it</span>
+        <span class="n">mons</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">statuses</span>
+        <span class="n">mons</span> <span class="o">=</span> <span class="n">mons</span><span class="p">[</span><span class="n">mons</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;none&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">mons</span></div>
+
+
+<div class="viewcode-block" id="get_starcheck_catalog_at_date"><a class="viewcode-back" href="../../../api.html#mica.starcheck.get_starcheck_catalog_at_date">[docs]</a><span class="k">def</span> <span class="nf">get_starcheck_catalog_at_date</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timelines_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    For a given date, return a dictionary describing the starcheck catalog that should apply.</span>
+<span class="sd">    The content of that dictionary is from the database tables that parsed the starcheck report.</span>
+<span class="sd">    A catalog is defined as applying, in this function, to any time from the end of the</span>
+<span class="sd">    previous dwell through the end of the dwell in which the catalog was used.</span>
+
+<span class="sd">    Star catalog dictionary with keys:</span>
+
+<span class="sd">    - cat: catalog rows as astropy.table</span>
+<span class="sd">    - manvr: list of maneuvers to this attitude</span>
+<span class="sd">    - pred_temp: predicted ACA CCD temperature</span>
+<span class="sd">    - warnings: list of warnings below catalog in starcheck output</span>
+<span class="sd">    - obs: dictionary of observation target and pointing information</span>
+<span class="sd">    - mp_dir: directory with products that are the source of this catalog data</span>
+<span class="sd">    - status: string describing status of that observation, described below.</span>
+
+<span class="sd">    Status:</span>
+
+<span class="sd">    - ran: observation was observed</span>
+<span class="sd">    - planned: observation in a not-approved future schedule</span>
+<span class="sd">    - approved: observation in an approved future schedule (ingested in timelines/cmd_states)</span>
+<span class="sd">    - ran_pretimelines: ran, but before timelines database starts</span>
+<span class="sd">    - timelines_gap: after timelines database start but missing data</span>
+<span class="sd">    - no starcat: in the database but has no star catalog</span>
+
+<span class="sd">    :param date: Chandra.Time compatible date</span>
+<span class="sd">    :param starcheck_db: optional handle to already-open starcheck database</span>
+<span class="sd">    :param timelines_db: optional handle to already-open timelines database</span>
+<span class="sd">    :returns: dictionary with starcheck content described above</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">date</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
+    <span class="k">if</span> <span class="n">starcheck_db</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">starcheck_db</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">DEFAULT_CONFIG</span><span class="p">[</span><span class="s1">&#39;starcheck_db&#39;</span><span class="p">])</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">starcheck_db</span>
+    <span class="k">if</span> <span class="n">timelines_db</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">timelines_db</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">DEFAULT_CONFIG</span><span class="p">[</span><span class="s1">&#39;timelines_db&#39;</span><span class="p">])</span>
+    <span class="n">last_tl</span> <span class="o">=</span> <span class="n">timelines_db</span><span class="o">.</span><span class="n">fetchone</span><span class="p">(</span>
+        <span class="s2">&quot;select max(datestop) as datestop from timelines&quot;</span><span class="p">)[</span><span class="s1">&#39;datestop&#39;</span><span class="p">]</span>
+    <span class="n">first_tl</span> <span class="o">=</span> <span class="n">timelines_db</span><span class="o">.</span><span class="n">fetchone</span><span class="p">(</span>
+        <span class="s2">&quot;select min(datestart) as datestart from timelines&quot;</span><span class="p">)[</span><span class="s1">&#39;datestart&#39;</span><span class="p">]</span>
+    <span class="c1"># Check kadi to get the first dwell that *ends* after the given time</span>
+    <span class="n">dwells</span> <span class="o">=</span> <span class="n">events</span><span class="o">.</span><span class="n">dwells</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">stop__gte</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="c1"># if we&#39;re outside of timelines or not yet in kadi, just try from the starcheck database</span>
+    <span class="k">if</span> <span class="n">date</span> <span class="o">&gt;</span> <span class="n">last_tl</span> <span class="ow">or</span> <span class="n">date</span> <span class="o">&lt;</span> <span class="n">first_tl</span><span class="p">:</span>
+        <span class="c1"># Get one entry that is the last one before the specified time, in the most</span>
+        <span class="c1"># recently ingested products directory</span>
+        <span class="n">starcheck</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchone</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;select * from starcheck_obs, starcheck_id</span>
+<span class="sd">               where mp_starcat_time &lt;= &#39;{}&#39; and mp_starcat_time &gt; &#39;{}&#39;</span>
+<span class="sd">               and starcheck_id.id = starcheck_obs.sc_id</span>
+<span class="sd">               order by sc_id desc, mp_starcat_time desc &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">date</span><span class="p">,</span> <span class="p">(</span><span class="n">DateTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">starcheck</span><span class="p">:</span>
+            <span class="n">cat_info</span> <span class="o">=</span> <span class="n">get_starcheck_catalog</span><span class="p">(</span><span class="n">starcheck</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="n">mp_dir</span><span class="o">=</span><span class="n">starcheck</span><span class="p">[</span><span class="s1">&#39;dir&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">date</span> <span class="o">&lt;</span> <span class="n">first_tl</span><span class="p">:</span>
+                <span class="n">cat_info</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;ran_pretimelines&#39;</span>
+            <span class="k">if</span> <span class="n">date</span> <span class="o">&gt;</span> <span class="n">last_tl</span><span class="p">:</span>
+                <span class="n">cat_info</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;planned&#39;</span>
+            <span class="k">return</span> <span class="n">cat_info</span>
+
+    <span class="c1"># We want to search for legitimate commanding that would cover the time when a star</span>
+    <span class="c1"># catalog would have been commanded for this dwell.  This is generally the time range</span>
+    <span class="c1"># between the end of the previous dwell and the beginning of this dwell.  However, if</span>
+    <span class="c1"># there are multiple dwells from one maneuver, use the beginning of NMM from that one</span>
+    <span class="c1"># maneuver else, use the end of the last dwell.  Don&#39;t use nman_start time by default</span>
+    <span class="c1"># because that doesn&#39;t appear to work if the catalog was commanded in a nonstandard</span>
+    <span class="c1"># nmm sequence like dark cal.</span>
+
+    <span class="c1"># There is a tiny window of time in cmd_states but not yet in kadi, but this code tries to</span>
+    <span class="c1"># grab the dwell and maneuver that would be related to a date in that range</span>
+    <span class="k">if</span> <span class="n">date</span> <span class="o">&lt;</span> <span class="n">last_tl</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">dwells</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">pcad_states</span> <span class="o">=</span> <span class="n">get_states</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">DateTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="n">state_keys</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pcad_mode&#39;</span><span class="p">],</span>
+                                 <span class="n">merge_identical</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">dwell</span> <span class="o">=</span> <span class="n">pcad_states</span><span class="p">[(</span><span class="n">pcad_states</span><span class="p">[</span><span class="s1">&#39;pcad_mode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;NPNT&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">pcad_states</span><span class="p">[</span><span class="s1">&#39;datestop&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">date</span><span class="p">)][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">manvr</span> <span class="o">=</span> <span class="n">pcad_states</span><span class="p">[(</span><span class="n">pcad_states</span><span class="p">[</span><span class="s1">&#39;pcad_mode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;NMAN&#39;</span><span class="p">)</span>
+                            <span class="o">&amp;</span> <span class="p">(</span><span class="n">pcad_states</span><span class="p">[</span><span class="s1">&#39;datestop&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">dwell</span><span class="p">[</span><span class="s1">&#39;datestart&#39;</span><span class="p">])][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">start_cat_search</span> <span class="o">=</span> <span class="n">manvr</span><span class="p">[</span><span class="s1">&#39;datestart&#39;</span><span class="p">]</span>
+        <span class="n">dwell_start</span> <span class="o">=</span> <span class="n">dwell</span><span class="p">[</span><span class="s1">&#39;datestart&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># If we have a dwell from kadi, use it to search for commanding</span>
+        <span class="n">dwell</span> <span class="o">=</span> <span class="n">dwells</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dwell_start</span> <span class="o">=</span> <span class="n">dwell</span><span class="o">.</span><span class="n">start</span>
+        <span class="c1"># Try to use the beginning of the previous nman period to define when the catalog</span>
+        <span class="c1"># should have been commanded.  If there are multiple dwells for attitude, try to</span>
+        <span class="c1"># use nman_start if available.</span>
+        <span class="k">if</span> <span class="n">dwell</span><span class="o">.</span><span class="n">manvr</span><span class="o">.</span><span class="n">n_dwell</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">dwell</span><span class="o">.</span><span class="n">manvr</span><span class="o">.</span><span class="n">nman_start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">start_cat_search</span> <span class="o">=</span> <span class="n">dwell</span><span class="o">.</span><span class="n">manvr</span><span class="o">.</span><span class="n">nman_start</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">start_cat_search</span> <span class="o">=</span> <span class="n">dwell</span><span class="o">.</span><span class="n">get_previous</span><span class="p">()</span><span class="o">.</span><span class="n">stop</span>
+
+    <span class="n">timelines</span> <span class="o">=</span> <span class="n">timelines_db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;select * from timeline_loads where scs &lt; 131</span>
+<span class="sd">           and datestop &gt; &#39;{}&#39; and datestart &lt; &#39;{}&#39; order by datestart&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">start_cat_search</span><span class="p">,</span> <span class="n">dwell_start</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">timeline</span> <span class="ow">in</span> <span class="n">timelines</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">starchecks</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;select * from starcheck_obs, starcheck_id</span>
+<span class="sd">               where dir = &#39;{}&#39;</span>
+<span class="sd">               and mp_starcat_time &gt;= &#39;{}&#39;</span>
+<span class="sd">               and mp_starcat_time &lt;= &#39;{}&#39; and mp_starcat_time &lt;= &#39;{}&#39;</span>
+<span class="sd">               and starcheck_id.id = starcheck_obs.sc_id</span>
+<span class="sd">               order by mp_starcat_time &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">timeline</span><span class="p">[</span><span class="s1">&#39;mp_dir&#39;</span><span class="p">],</span>
+                <span class="n">timeline</span><span class="p">[</span><span class="s1">&#39;datestart&#39;</span><span class="p">],</span>
+                <span class="n">timeline</span><span class="p">[</span><span class="s1">&#39;datestop&#39;</span><span class="p">],</span> <span class="n">dwell_start</span><span class="p">))</span>
+        <span class="c1"># The last one should be the one before beginning of the dwell</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">starchecks</span><span class="p">):</span>
+            <span class="c1"># Use the obsid and the known products directory to use the more generic get_starcheck_catalog</span>
+            <span class="c1"># to fetch the right one from the database</span>
+            <span class="n">cat_info</span> <span class="o">=</span> <span class="n">get_starcheck_catalog</span><span class="p">(</span><span class="n">starchecks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="n">mp_dir</span><span class="o">=</span><span class="n">starchecks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;dir&#39;</span><span class="p">])</span>
+            <span class="n">cat_info</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;ran&#39;</span> <span class="k">if</span> <span class="n">date</span> <span class="o">&lt;</span> <span class="n">DateTime</span><span class="p">()</span><span class="o">.</span><span class="n">date</span> <span class="k">else</span> <span class="s1">&#39;approved&#39;</span>
+            <span class="k">return</span> <span class="n">cat_info</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="get_mp_dir"><a class="viewcode-back" href="../../../api.html#mica.starcheck.get_mp_dir">[docs]</a><span class="k">def</span> <span class="nf">get_mp_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timelines_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the mission planning directory for an obsid and some status information.  If the obsid catalog was</span>
+<span class="sd">    used more than once (multi-obi or rescheduled after being used in a vehicle-only interval), return the</span>
+<span class="sd">    directory and details of the last one used on the spacecraft.</span>
+
+<span class="sd">    The returned directory describes the directory that was used for the products with this star catalog.</span>
+<span class="sd">    The returned status has possible values:</span>
+
+<span class="sd">    - ran: observation was observed</span>
+<span class="sd">    - planned: observation in a not-approved future schedule</span>
+<span class="sd">    - approved: observation in an approved future schedule (ingested in timelines/cmd_states)</span>
+<span class="sd">    - ran_pretimelines: ran, but before timelines database starts</span>
+<span class="sd">    - timelines_gap: after timelines database start but missing data</span>
+<span class="sd">    - no starcat: in the database but has no star catalog</span>
+
+<span class="sd">    The return &#39;date&#39; is the date/time of the `MP_STARCAT` time.</span>
+
+<span class="sd">    :param obsid: obsid</span>
+<span class="sd">    :param starcheck_db: optional handle to already-open starcheck database</span>
+<span class="sd">    :param timelines_db: optional handle to already-open timelines database</span>
+<span class="sd">    :returns: directory, status, date .   Described above.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">starcheck_db</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">starcheck_db</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">DEFAULT_CONFIG</span><span class="p">[</span><span class="s1">&#39;starcheck_db&#39;</span><span class="p">])</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">starcheck_db</span>
+    <span class="k">if</span> <span class="n">timelines_db</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">timelines_db</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">DEFAULT_CONFIG</span><span class="p">[</span><span class="s1">&#39;timelines_db&#39;</span><span class="p">])</span>
+    <span class="n">last_tl</span> <span class="o">=</span> <span class="n">timelines_db</span><span class="o">.</span><span class="n">fetchone</span><span class="p">(</span>
+        <span class="s2">&quot;select max(datestop) as datestop from timelines&quot;</span><span class="p">)[</span><span class="s1">&#39;datestop&#39;</span><span class="p">]</span>
+    <span class="n">starchecks</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+        <span class="sd">&quot;&quot;&quot;select * from starcheck_obs, starcheck_id</span>
+<span class="sd">           where obsid = %d and starcheck_id.id = starcheck_obs.sc_id</span>
+<span class="sd">           order by sc_id &quot;&quot;&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)</span>
+    <span class="c1"># If this has a star catalog that predates timelines data just return the last record that matches</span>
+    <span class="c1"># and hope for the best</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">starchecks</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">starchecks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;mp_starcat_time&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span>
+        <span class="p">(</span><span class="n">starchecks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;mp_starcat_time&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="s1">&#39;2001:001:00:00:00.000&#39;</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">starchecks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;dir&#39;</span><span class="p">],</span> <span class="s1">&#39;ran_pretimelines&#39;</span><span class="p">,</span> <span class="n">starchecks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;mp_starcat_time&#39;</span><span class="p">])</span>
+    <span class="c1"># And if there are no entries, just return None for dir, status, time</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">starchecks</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="c1"># Go through the entries backwards (which are in ingest/date order)</span>
+    <span class="k">for</span> <span class="n">sc</span> <span class="ow">in</span> <span class="n">starchecks</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">sc_date</span> <span class="o">=</span> <span class="n">sc</span><span class="p">[</span><span class="s1">&#39;mp_starcat_time&#39;</span><span class="p">]</span>
+        <span class="c1"># If it has no star catalog, there&#39;s not much to do</span>
+        <span class="k">if</span> <span class="n">sc_date</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">sc</span><span class="p">[</span><span class="s1">&#39;dir&#39;</span><span class="p">],</span> <span class="s1">&#39;no starcat&#39;</span><span class="p">,</span> <span class="n">sc_date</span><span class="p">)</span>
+        <span class="c1"># If this is in a schedule not-yet-in-timelines or has no star catalog,</span>
+        <span class="c1"># we&#39;ll have to hope that is the most useful entry if there are multiples</span>
+        <span class="k">if</span> <span class="n">sc_date</span> <span class="o">&gt;</span> <span class="n">last_tl</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">sc</span><span class="p">[</span><span class="s1">&#39;dir&#39;</span><span class="p">],</span> <span class="s1">&#39;planned&#39;</span><span class="p">,</span> <span class="n">sc_date</span><span class="p">)</span>
+        <span class="n">tl</span> <span class="o">=</span> <span class="n">get_timeline_at_date</span><span class="p">(</span><span class="n">sc_date</span><span class="p">,</span> <span class="n">timelines_db</span><span class="o">=</span><span class="n">timelines_db</span><span class="p">)</span>
+        <span class="c1"># If there is a gap in timelines at this date, just return the most recent starcheck entry</span>
+        <span class="k">if</span> <span class="n">tl</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">tl</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">starchecks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;dir&#39;</span><span class="p">],</span> <span class="s1">&#39;timelines_gap&#39;</span><span class="p">,</span> <span class="n">starchecks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;mp_starcat_time&#39;</span><span class="p">])</span>
+        <span class="c1"># If the approved products in timelines are from a different directory, no-go</span>
+        <span class="k">if</span> <span class="n">tl</span><span class="p">[</span><span class="s1">&#39;mp_dir&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">sc</span><span class="p">[</span><span class="s1">&#39;dir&#39;</span><span class="p">]:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">sc_date</span> <span class="o">&lt;</span> <span class="n">DateTime</span><span class="p">()</span><span class="o">.</span><span class="n">date</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">sc</span><span class="p">[</span><span class="s1">&#39;dir&#39;</span><span class="p">],</span> <span class="s1">&#39;ran&#39;</span><span class="p">,</span> <span class="n">sc_date</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">sc</span><span class="p">[</span><span class="s1">&#39;dir&#39;</span><span class="p">],</span> <span class="s1">&#39;approved&#39;</span><span class="p">,</span> <span class="n">sc_date</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;get_mp_dir should find something or nothing&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_starcheck_catalog"><a class="viewcode-back" href="../../../api.html#mica.starcheck.get_starcheck_catalog">[docs]</a><span class="k">def</span> <span class="nf">get_starcheck_catalog</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timelines_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    For a given obsid, return a dictionary describing the starcheck catalog that should apply.</span>
+<span class="sd">    The content of that dictionary is from the database tables of that parsed the starcheck report</span>
+<span class="sd">    and has keys:</span>
+
+<span class="sd">    - cat: catalog rows as astropy.table</span>
+<span class="sd">    - manvr: list of maneuvers to this attitude</span>
+<span class="sd">    - pred_temp: predicted ACA CCD temperature</span>
+<span class="sd">    - warnings: list of warnings below catalog in starcheck output</span>
+<span class="sd">    - obs: dictionary of observation target and pointing information</span>
+<span class="sd">    - mp_dir: directory with products that are the source of this catalog data</span>
+<span class="sd">    - status: string describing status of that observation, described below.</span>
+
+<span class="sd">    Status:</span>
+
+<span class="sd">    - ran: observation was observed</span>
+<span class="sd">    - planned: observation in a not-approved future schedule</span>
+<span class="sd">    - approved: observation in an approved future schedule (ingested in timelines/cmd_states)</span>
+<span class="sd">    - ran_pretimelines: ran, but before timelines database starts</span>
+<span class="sd">    - timelines_gap: after timelines database start but missing data</span>
+
+<span class="sd">    :param obsid: obsid</span>
+<span class="sd">    :param mp_dir: optional load specifier like &#39;FEB1317A&#39; or &#39;/2017/FEB1317/oflsa/&#39;.</span>
+<span class="sd">                   By default the as-run loads (via ``get_mp_dir()``) are used.</span>
+<span class="sd">    :param starcheck_db: optional handle to already-open starcheck database</span>
+<span class="sd">    :param timelines_db: optional handle to already-open timelines database</span>
+<span class="sd">    :returns: dictionary with starcheck content described above</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Keep the original kwarg from user for the caching key later</span>
+    <span class="n">mp_dir_kwarg</span> <span class="o">=</span> <span class="n">mp_dir</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">)</span> <span class="ow">in</span> <span class="n">OBS_CACHE</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">OBS_CACHE</span><span class="p">[</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">starcheck_db</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">starcheck_db</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">DEFAULT_CONFIG</span><span class="p">[</span><span class="s1">&#39;starcheck_db&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">timelines_db</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">timelines_db</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">DEFAULT_CONFIG</span><span class="p">[</span><span class="s1">&#39;timelines_db&#39;</span><span class="p">])</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">mp_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mp_dir</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">obs_date</span> <span class="o">=</span> <span class="n">get_mp_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="n">starcheck_db</span><span class="p">,</span> <span class="n">timelines_db</span><span class="o">=</span><span class="n">timelines_db</span><span class="p">)</span>
+
+    <span class="c1"># if it is still none, there&#39;s nothing to try here</span>
+    <span class="k">if</span> <span class="n">mp_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># mp_dir is in the standard short-form &quot;MAY3018A&quot;.  Translate to</span>
+    <span class="c1"># &#39;/2018/MAY3018/oflsa/&#39;</span>
+    <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[A-Z]</span><span class="si">{3}</span><span class="s1">\d</span><span class="si">{4}</span><span class="s1">[A-Z]$&#39;</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">):</span>
+        <span class="n">load_version</span> <span class="o">=</span> <span class="n">mp_dir</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">load_year</span> <span class="o">=</span> <span class="s1">&#39;20&#39;</span> <span class="o">+</span> <span class="n">mp_dir</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="mi">7</span><span class="p">]</span>
+        <span class="n">load_name</span> <span class="o">=</span> <span class="n">mp_dir</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span>
+        <span class="n">mp_dir</span> <span class="o">=</span> <span class="s1">&#39;/</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">/ofls</span><span class="si">{}</span><span class="s1">/&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">load_year</span><span class="p">,</span> <span class="n">load_name</span><span class="p">,</span> <span class="n">load_version</span><span class="p">)</span>
+
+    <span class="n">db</span> <span class="o">=</span> <span class="n">starcheck_db</span> <span class="c1"># shorthand for the rest of the routine</span>
+    <span class="n">sc_id</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchone</span><span class="p">(</span><span class="s2">&quot;select id from starcheck_id &quot;</span>
+                                  <span class="s2">&quot;where dir = &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">mp_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sc_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">sc_id</span> <span class="o">=</span> <span class="n">sc_id</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+    <span class="n">sc</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;mp_dir&#39;</span><span class="p">:</span> <span class="n">mp_dir</span><span class="p">,</span>
+          <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="n">status</span><span class="p">}</span>
+    <span class="n">sc</span><span class="p">[</span><span class="s1">&#39;obs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchone</span><span class="p">(</span><span class="s2">&quot;select * from starcheck_obs where obsid = </span><span class="si">{}</span><span class="s2"> and sc_id = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">obsid</span><span class="p">,</span> <span class="n">sc_id</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;manvr&#39;</span><span class="p">,</span> <span class="s1">&#39;catalog&#39;</span><span class="p">,</span> <span class="s1">&#39;warnings&#39;</span><span class="p">]:</span>
+        <span class="n">table_entries</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+            <span class="s2">&quot;select * from starcheck_</span><span class="si">%s</span><span class="s2"> where obsid = </span><span class="si">%d</span><span class="s2"> and sc_id = </span><span class="si">%d</span><span class="s2">&quot;</span>
+            <span class="o">%</span> <span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">obsid</span><span class="p">,</span> <span class="n">sc_id</span><span class="p">))</span>
+        <span class="n">sc</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">table_entries</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table_entries</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="n">sc</span><span class="p">[</span><span class="s1">&#39;cat&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sc</span><span class="p">[</span><span class="s1">&#39;catalog&#39;</span><span class="p">]</span>
+    <span class="k">del</span> <span class="n">sc</span><span class="p">[</span><span class="s1">&#39;catalog&#39;</span><span class="p">]</span>
+    <span class="n">pred_temp</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchone</span><span class="p">(</span><span class="s2">&quot;select pred_ccd_temp from starcheck_pred_temp &quot;</span>
+                            <span class="s2">&quot;where sc_id = </span><span class="si">{}</span><span class="s2"> and obsid = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">sc_id</span><span class="p">,</span> <span class="n">obsid</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">pred_temp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s1">&#39;pred_ccd_temp&#39;</span> <span class="ow">in</span> <span class="n">pred_temp</span><span class="p">:</span>
+        <span class="n">sc</span><span class="p">[</span><span class="s1">&#39;pred_temp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pred_temp</span><span class="p">[</span><span class="s1">&#39;pred_ccd_temp&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Cache result for later re-use (use whatever user supplied as mp_dir kwarg)</span>
+    <span class="c1"># since mp_dir gets munged in the meantime.</span>
+    <span class="n">OBS_CACHE</span><span class="p">[</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir_kwarg</span><span class="p">]</span> <span class="o">=</span> <span class="n">sc</span>
+
+    <span class="k">return</span> <span class="n">sc</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+
+
+<form action="../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right"> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

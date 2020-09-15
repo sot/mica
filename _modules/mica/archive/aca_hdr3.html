@@ -1,0 +1,703 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mica.archive.aca_hdr3 &#8212; mica 4.21.3.dev26+g8fbfc7e documentation</title>
+    <link rel="stylesheet" href="../../../_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script type="text/javascript" src="../../../_static/sidebar.js"></script>
+    <script type="text/javascript" src="../../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="../../../index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="">
+        <span id="logotext1"></span><span id="logotext2"></span>
+    </a></li>
+    <li><a title="General Index" href="../../../genindex.html">Index</a></li>
+    <li><a title="Module Index" href="../../../py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li>
+	<a href="../../../index.html">mica 4.21.3.dev26+g8fbfc7e documentation</a>
+	 &#187;
+      </li>
+      <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+      
+       
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for mica.archive.aca_hdr3</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Experimental/alpha code to work with ACA L0 Header 3 data</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">numpy.ma</span> <span class="k">as</span> <span class="nn">ma</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
+<span class="kn">from</span> <span class="nn">Chandra.Time</span> <span class="kn">import</span> <span class="n">DateTime</span>
+<span class="kn">from</span> <span class="nn">Ska.Numpy</span> <span class="kn">import</span> <span class="n">search_both_sorted</span>
+
+<span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_l0</span>
+<span class="kn">from</span> <span class="nn">mica.common</span> <span class="kn">import</span> <span class="n">MissingDataError</span>
+
+
+<span class="c1">#In case it isn&#39;t obvious, for an MSID of HD3TLM&lt;I&gt;&lt;W&gt; in ACA image data</span>
+<span class="c1">#for slot &lt;S&gt;, that maps to table 11.1 like:</span>
+<span class="c1"># Image No.   = &lt;S&gt;</span>
+<span class="c1"># Image type  = &lt;I&gt;</span>
+<span class="c1"># Hdr 3 Word  = &lt;W&gt;</span>
+
+
+<span class="k">def</span> <span class="nf">two_byte_sum</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">slot_data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">((</span><span class="n">slot_data</span><span class="p">[</span><span class="n">byte_msids</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">7</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="mi">65535</span><span class="p">)</span>
+                <span class="o">+</span> <span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="n">byte_msids</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span>
+                <span class="o">+</span> <span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="n">byte_msids</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">)))</span> <span class="o">*</span> <span class="n">scale</span>
+    <span class="k">return</span> <span class="n">func</span>
+
+
+<span class="c1"># 8x8 header values (largest possible ACA0 header set)</span>
+<span class="n">ACA_DTYPE</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;TIME&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;f8&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;QUALITY&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;i4&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;IMGSIZE&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;i4&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;HD3TLM62&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;HD3TLM63&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;HD3TLM64&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;HD3TLM65&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;HD3TLM66&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;HD3TLM67&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;HD3TLM72&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;HD3TLM73&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;HD3TLM74&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;HD3TLM75&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;HD3TLM76&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;HD3TLM77&#39;</span><span class="p">,</span> <span class="s1">&#39;|u1&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;FILENAME&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;U128&#39;</span><span class="p">)</span>
+             <span class="p">]</span>
+
+<span class="n">ACA_DTYPE_NAMES</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ACA_DTYPE</span><span class="p">]</span>
+
+
+<span class="n">a_to_d</span> <span class="o">=</span> <span class="p">[</span>
+<span class="p">(</span><span class="s1">&#39;3D70&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">40</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;3C9E&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">35</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;3B98&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">30</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;3A55&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">25</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;38CD&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">20</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;36FD&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">15</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;34E1&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;3279&#39;</span><span class="p">,</span>  <span class="o">-</span><span class="mi">5</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;2FCB&#39;</span><span class="p">,</span>   <span class="mi">0</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;2CDF&#39;</span><span class="p">,</span>   <span class="mi">5</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;29C5&#39;</span><span class="p">,</span>  <span class="mi">10</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;2688&#39;</span><span class="p">,</span>  <span class="mi">15</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;2340&#39;</span><span class="p">,</span>  <span class="mi">20</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;2000&#39;</span><span class="p">,</span>  <span class="mi">25</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;1CD3&#39;</span><span class="p">,</span>  <span class="mi">30</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;19CC&#39;</span><span class="p">,</span>  <span class="mi">35</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;16F4&#39;</span><span class="p">,</span>  <span class="mi">40</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;1454&#39;</span><span class="p">,</span>  <span class="mi">45</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;11EF&#39;</span><span class="p">,</span>  <span class="mi">50</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;0FC5&#39;</span><span class="p">,</span>  <span class="mi">55</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;0DD8&#39;</span><span class="p">,</span>  <span class="mi">60</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;0C22&#39;</span><span class="p">,</span>  <span class="mi">65</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;0A9F&#39;</span><span class="p">,</span>  <span class="mi">70</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;094D&#39;</span><span class="p">,</span>  <span class="mi">75</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;0825&#39;</span><span class="p">,</span>  <span class="mi">80</span><span class="p">)]</span>
+
+<span class="c1"># reverse this end up with increasing hex values</span>
+<span class="n">a_to_d</span> <span class="o">=</span> <span class="n">a_to_d</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">a_to_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rec</span><span class="o">.</span><span class="n">fromrecords</span><span class="p">(</span><span class="n">a_to_d</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;hex&#39;</span><span class="p">,</span> <span class="s1">&#39;tempC&#39;</span><span class="p">])</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">a_to_d</span><span class="p">[</span><span class="s1">&#39;hex&#39;</span><span class="p">]])</span>
+<span class="n">ad_func</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a_to_d</span><span class="p">[</span><span class="s1">&#39;tempC&#39;</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;cubic&#39;</span><span class="p">,</span> <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">ad_temp</span><span class="p">(</span><span class="n">msids</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">slot_data</span><span class="p">):</span>
+        <span class="nb">sum</span> <span class="o">=</span> <span class="n">two_byte_sum</span><span class="p">(</span><span class="n">msids</span><span class="p">)(</span><span class="n">slot_data</span><span class="p">)</span>
+        <span class="c1"># As of scipy 0.17 cannot interpolate a masked array.  In this</span>
+        <span class="c1"># case we can temporarily fill with some value that will always</span>
+        <span class="c1"># be in the range, then re-mask afterward.</span>
+        <span class="n">masked</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">masked</span><span class="p">:</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="nb">sum</span><span class="o">.</span><span class="n">mask</span>
+            <span class="nb">sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="o">.</span><span class="n">filled</span><span class="p">(</span><span class="mi">16000</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">ad_func</span><span class="p">(</span><span class="nb">sum</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">masked</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="k">return</span> <span class="n">func</span>
+
+<span class="c1"># dictionary that defines the header 3 &#39;MSID&#39;s.</span>
+<span class="c1"># Also includes a value key that describes how to determine the value</span>
+<span class="c1"># of the MSID</span>
+
+<span class="n">HDR3_DEF</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;062&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;AC status word&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ac_status_word&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">AC status word.  A status word read from the AC.  The bits in the word are</span>
+<span class="s2">defined as follows:</span>
+
+<span class="s2">xxxx xxrr rrtt eccp</span>
+
+<span class="s2">X = spare bits</span>
+<span class="s2">R = CCD readout mode</span>
+<span class="s2">   1 =&gt; S/H input is grounded during pixel readout</span>
+<span class="s2">   2 =&gt; CCD reset is pulsed during column flush</span>
+<span class="s2">   4 =&gt; CCD reset/sw is pulsed during row shifts</span>
+<span class="s2">   8 =&gt; MUX is switched to ground when A/D not in use</span>
+<span class="s2">T = Test signal select (test signals not available in flight)</span>
+<span class="s2">E = Cmd error.  AC cmd input buffer was overwritten</span>
+<span class="s2">C = Clock period for parallel shifts</span>
+<span class="s2">   0 =&gt; 6 microsec</span>
+<span class="s2">   1 =&gt; 12 microsec</span>
+<span class="s2">   2 =&gt; 24 microsec</span>
+<span class="s2">   3 =&gt; 48 microsec</span>
+<span class="s2">P = PromWrite? flag: true when AC EEPROM is in the write mode.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;064&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;Misc status bits&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;misc_status_bits&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Miscellaneous status bits showing the status of the following 16 flag variables</span>
+<span class="s2">starting with the LSB and ending with the MSB:</span>
+
+<span class="s2">bit 0 (LSB): AcSendTimeOut?</span>
+<span class="s2">bit 1: AcIdleTimeOut?</span>
+<span class="s2">bit 2: TecActive?</span>
+<span class="s2">bit 3: TecHeat?</span>
+<span class="s2">bit 4: DecAcTable?</span>
+<span class="s2">bit 5: AcTableCkSumOK?</span>
+<span class="s2">bit 6: StackError?</span>
+<span class="s2">bit 7: WarmBoot?</span>
+<span class="s2">bit 8: IdleCode LSB</span>
+<span class="s2">bit 9: CalMode?</span>
+<span class="s2">bit 10: CalModePending?</span>
+<span class="s2">bit 11: IuData?</span>
+<span class="s2">bit 12: IuDataPending?</span>
+<span class="s2">bit 13: DsnFixed?</span>
+<span class="s2">bit 14: InitialCalFillOK?</span>
+<span class="s2">bit 15 (MSB): IoUpdTimeout?</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;066&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D CCD molyb therm 1&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ccd_molyb_therm_1&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM66&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM67&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the CCD moly base thermistor number 1</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;072&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D CCD molyb therm 2&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ccd_molyb_therm_2&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM72&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM73&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the CCD moly base thermistor number 2</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;074&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D CCD detector therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ccd_det_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM74&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM75&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the CCD detector thermistor</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;076&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D +5 volt PS&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_5v_ps&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM76&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM77&#39;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.20518</span><span class="p">),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the +5 volt power supply; 1 LSB=0.30518 mv</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;162&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D +15 volt PS&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_15v_ps&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM62&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM63&#39;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.61035</span><span class="p">),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the +15 volt power supply; 1 LSB=0.61035 mv</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;164&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D -15 volt PS&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_m15v_ps&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM64&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM65&#39;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.61035</span><span class="p">),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the -15 volt power supply; 1 LSB=0.61035 mv</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;166&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D +27 volt PS&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_27v_ps&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM66&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM67&#39;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.04597</span><span class="p">),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the +27 volt power supply; 1 LSB=1.04597 mv</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;172&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D analog ground&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_analog_gnd&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM72&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM73&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for analog ground; 1 LSB=0.30518 mv</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;174&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D for A/D convertor therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_converter_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM74&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM75&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the A/D converter thermistor.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;176&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D secondary mirror therm. HRMA side&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_smhs_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM76&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM77&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the secondary mirror thermistor, HRMA side</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;262&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D secondary mirror therm. Opp HRMA side&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_smohs_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM62&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM63&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the secondary mirror thermistor, Opposite from the</span>
+<span class="s2">HRMA side</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;264&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D primary mirror therm. HRMA side&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_pmhs_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM64&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM65&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the primary mirror thermistor, HRMA side</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;266&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D primary mirror therm. Opp HRMA side&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_pmohs_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM66&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM67&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the primary mirror thermistor, opposite from the</span>
+<span class="s2">HRMA side</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;272&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D AC housing therm.  HRMA side&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_achhs_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM72&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM73&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the AC housing thermistor, HRMA side</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;274&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D AC housing therm.  Opp HRMA side&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_achohs_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM74&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM75&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the AC housing thermistor, opposite HRMA side</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;276&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;A/D lens cell therm.&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ad_lc_therm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s1">&#39;HD3TLM76&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM77&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A/D converter reading for the lens cell thermistor</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;362&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;Processor stack pointer and telem update counter&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;proc_stack_telem_ctr&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A word containing the processor data stack pointer in the high byte, and</span>
+<span class="s2">an update counter in the low byte that increments once for every 1.025</span>
+<span class="s2">second telemetry update.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;364&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;Science header pulse period&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;sci_hdr_pulse_period&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">The science header pulse period, as measured by the PEA; 1 LSB = 2 microseconds</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>
+
+    <span class="s1">&#39;372&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;16-bit zero offset for pixels from CCD quad A&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;zero_off16_quad_a&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 16-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 1 A/D</span>
+<span class="s2">converter count (nominally 5 electrons)</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;374&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;16-bit zero offset for pixels from CCD quad B&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;zero_off16_quad_b&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 16-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 1 A/D</span>
+<span class="s2">converter count (nominally 5 electrons)</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;376&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;16-bit zero offset for pixels from CCD quad C&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;zero_off16_quad_c&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 16-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 1 A/D</span>
+<span class="s2">converter count (nominally 5 electrons)</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;462&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;16-bit zero offset for pixels from CCD quad D&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;zero_off16_quad_d&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 16-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 1 A/D</span>
+<span class="s2">converter count (nominally 5 electrons)</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;464&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;32-bit zero offset for pixels from CCD quad A&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;zero_off32_quad_a&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 32-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 2^-16</span>
+<span class="s2">A/D converter counts</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>
+
+    <span class="s1">&#39;472&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;32-bit zero offset for pixels from CCD quad B&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;zero_off32_quad_b&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 32-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 2^-16</span>
+<span class="s2">A/D converter counts</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>
+
+    <span class="s1">&#39;476&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;32-bit zero offset for pixels from CCD quad C&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;zero_off32_quad_c&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 32-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 2^-16</span>
+<span class="s2">A/D converter counts</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>
+
+    <span class="s1">&#39;564&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;32-bit zero offset for pixels from CCD quad D&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;zero_off32_quad_d&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 32-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 2^-16</span>
+<span class="s2">A/D converter counts</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>
+
+    <span class="s1">&#39;572&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;last CCD flush duration&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ccd_flush_dur&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">The time required for the most recent flush of the CCD; 1 LSB=2 microseconds</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;574&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;CCD row shift clock period&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ccd_row_shift_period&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">The CCD row shift clock period currently in effect; 1 LSB = 1 microsecond</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;576&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;average backround reading&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;avg_bkg&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">An overall average background reading derived from the most recent CCD readout.</span>
+<span class="s2">This is an average from all tracked images and from all search readout</span>
+<span class="s2">segments. One LSB = 1 A/D converter count (nominally 5 electrons).</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM76&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM77&#39;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mi">5</span><span class="p">)},</span>
+
+    <span class="s1">&#39;662&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;Header 1 for DSN records&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;dsn_hdr1&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Header 1 for Deep Space Network record.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">},</span>
+
+    <span class="s1">&#39;672&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;record counter and Header 2 for DSN&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;dsn_hdr2&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">The record counter and Header 2 for Deep Space Network records.</span>
+<span class="s2">The record counter occupies the three high order bytes, and Header 2</span>
+<span class="s2">occupies the low order byte.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">},</span>
+
+    <span class="s1">&#39;676&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;CCD temperature&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ccd_temp&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CCD temperature.  1 LSB=0.01/(2^16) degrees C.  The high order 16 bits give the</span>
+<span class="s2">CCD temperature in units of 1 LSB = 0.01 degrees C.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM76&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM77&#39;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)},</span>
+
+    <span class="s1">&#39;764&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;CCD setpoint&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;ccd_setpoint&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">The CCD temperature control setpoint; 1 LSB=0.01 degrees C</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM64&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM65&#39;</span><span class="p">])},</span>
+
+    <span class="s1">&#39;766&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;temperature for position/angle cal&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;aca_temp&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">The temperature used in the angle calibration equations that convert star</span>
+<span class="s2">positions from CCD row and column coordinates to Y and Z angles for OBC</span>
+<span class="s2">telemetry; 1 LSB = 1/256 degrees C.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;nbytes&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM72&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM73&#39;</span><span class="p">],</span>
+                                  <span class="n">scale</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="mf">256.</span><span class="p">)},</span>
+    <span class="s1">&#39;774&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;RAM address of last write-read test failure&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;last_ram_fail_addr&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">The address in RAM of the failure most recently detected by the RAM</span>
+<span class="s2">write-and-read test</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">},</span>
+
+    <span class="s1">&#39;776&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="s1">&#39;TEC DAC number&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;msid&#39;</span><span class="p">:</span> <span class="s1">&#39;dac&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s1">&#39;HD3TLM76&#39;</span><span class="p">,</span> <span class="s1">&#39;HD3TLM77&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">The number most recently written to the TEC power control DAC.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">}}</span>
+
+<span class="n">MSID_ALIASES</span> <span class="o">=</span> <span class="p">{</span><span class="n">HDR3_DEF</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s1">&#39;msid&#39;</span><span class="p">]:</span> <span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">HDR3_DEF</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="MSID"><a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSID">[docs]</a><span class="k">class</span> <span class="nc">MSID</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ACA header 3 data object to work with header 3 data from</span>
+<span class="sd">    available 8x8 ACA L0 telemetry::</span>
+
+<span class="sd">      &gt;&gt;&gt; from mica.archive import aca_hdr3</span>
+<span class="sd">      &gt;&gt;&gt; ccd_temp = aca_hdr3.MSID(&#39;ccd_temp&#39;, &#39;2012:001&#39;, &#39;2012:020&#39;)</span>
+<span class="sd">      &gt;&gt;&gt; type(ccd_temp.vals)</span>
+<span class="sd">      &#39;numpy.ma.core.MaskedArray&#39;</span>
+
+<span class="sd">    When given an ``msid`` and ``start`` and ``stop`` range, the object will</span>
+<span class="sd">    query the ACA L0 archive to populate the object, which includes the MSID</span>
+<span class="sd">    values (``vals``) at the given times (``times``).</span>
+
+<span class="sd">    The parameter ``msid_data`` is used to create an MSID object from</span>
+<span class="sd">    the data of another MSID object.</span>
+
+<span class="sd">    When ``filter_bad`` is supplied then only valid data values are stored</span>
+<span class="sd">    and the ``vals`` and ``times`` attributes are `np.ndarray` instead of</span>
+<span class="sd">    `ma.MaskedArray`.</span>
+
+<span class="sd">    :param msid: MSID name</span>
+<span class="sd">    :param start: Chandra.Time compatible start time</span>
+<span class="sd">    :param stop: Chandra.Time compatible stop time</span>
+<span class="sd">    :param msid_data: data dictionary or object from another MSID object</span>
+<span class="sd">    :param filter_bad: remove missing values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">msid_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filter_bad</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">msid_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msid_data</span> <span class="o">=</span> <span class="n">MSIDset</span><span class="p">([</span><span class="n">msid</span><span class="p">],</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)[</span><span class="n">msid</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msid</span> <span class="o">=</span> <span class="n">msid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tstart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
+        <span class="c1"># msid_data may be dictionary or object with these</span>
+        <span class="c1"># attributes</span>
+        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;hdr3_msid&#39;</span><span class="p">,</span> <span class="s1">&#39;vals&#39;</span><span class="p">,</span> <span class="s1">&#39;times&#39;</span><span class="p">,</span> <span class="s1">&#39;desc&#39;</span><span class="p">,</span> <span class="s1">&#39;longdesc&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">msid_data</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">msid_data</span><span class="p">,</span> <span class="n">attr</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">msid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr</span><span class="p">))</span>
+
+        <span class="c1"># If requested filter out bad values and set self.bad = None</span>
+        <span class="k">if</span> <span class="n">filter_bad</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter_bad</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+        <span class="k">return</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MSID.filter_bad"><a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSID.filter_bad">[docs]</a>    <span class="k">def</span> <span class="nf">filter_bad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Filter out any missing values.</span>
+
+<span class="sd">        After applying this method the ``vals`` attributes will be a</span>
+<span class="sd">        plain np.ndarray object instead of a masked array.</span>
+
+<span class="sd">        :param copy: return a copy of MSID object with bad values filtered</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="n">copy</span> <span class="k">else</span> <span class="bp">self</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">vals</span><span class="p">,</span> <span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span><span class="p">):</span>
+            <span class="n">obj</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="o">~</span><span class="n">obj</span><span class="o">.</span><span class="n">vals</span><span class="o">.</span><span class="n">mask</span><span class="p">]</span>
+            <span class="n">obj</span><span class="o">.</span><span class="n">vals</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">vals</span><span class="o">.</span><span class="n">compressed</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">copy</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">obj</span></div></div>
+
+
+<span class="k">class</span> <span class="nc">Msid</span><span class="p">(</span><span class="n">MSID</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ACA header 3 data object to work with header 3 data from available 8x8 ACA L0</span>
+<span class="sd">    telemetry.</span>
+
+<span class="sd">    &gt;&gt;&gt; from mica.archive import aca_hdr3</span>
+<span class="sd">    &gt;&gt;&gt; ccd_temp = aca_hdr3.Msid(&#39;ccd_temp&#39;, &#39;2012:001&#39;, &#39;2012:020&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; type(ccd_temp.vals)</span>
+<span class="sd">    &#39;numpy.ndarray&#39;</span>
+
+<span class="sd">    When given an ``msid`` and ``start`` and ``stop`` range, the object will</span>
+<span class="sd">    query the ACA L0 archive to populate the object, which includes the MSID</span>
+<span class="sd">    values (``vals``) at the given times (``times``).  Only valid data values</span>
+<span class="sd">    are returned.</span>
+
+<span class="sd">    :param msid: MSID</span>
+<span class="sd">    :param start: Chandra.Time compatible start time</span>
+<span class="sd">    :param stop: Chandra.Time compatible stop time</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Msid</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">filter_bad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">confirm_msid</span><span class="p">(</span><span class="n">req_msid</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check to see if the &#39;MSID&#39; is an alias or is in the HDR3_DEF</span>
+<span class="sd">    dictionary.  If in the aliases, return the unaliased value.</span>
+<span class="sd">    :param req_msid: requested msid</span>
+<span class="sd">    :return: hdr3_def MSID name</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">req_msid</span> <span class="ow">in</span> <span class="n">MSID_ALIASES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">MSID_ALIASES</span><span class="p">[</span><span class="n">req_msid</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">req_msid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">HDR3_DEF</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDataError</span><span class="p">(</span><span class="s2">&quot;msid </span><span class="si">%s</span><span class="s2"> not found&quot;</span> <span class="o">%</span> <span class="n">req_msid</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">req_msid</span>
+
+
+<span class="k">def</span> <span class="nf">slot_for_msid</span><span class="p">(</span><span class="n">msid</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    For a given &#39;MSID&#39; return the slot number that contains those data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mmatch</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\d)\d\d&#39;</span><span class="p">,</span> <span class="n">msid</span><span class="p">)</span>
+    <span class="n">slot</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mmatch</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">slot</span>
+
+
+<div class="viewcode-block" id="MSIDset"><a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSIDset">[docs]</a><span class="k">class</span> <span class="nc">MSIDset</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">OrderedDict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ACA header 3 data object to work with header 3 data from</span>
+<span class="sd">    available 8x8 ACA L0 telemetry.  An MSIDset works with multiple</span>
+<span class="sd">    MSIDs simultaneously.</span>
+
+<span class="sd">    &gt;&gt;&gt; from mica.archive import aca_hdr3</span>
+<span class="sd">    &gt;&gt;&gt; perigee_data = aca_hdr3.MSIDset([&#39;ccd_temp&#39;, &#39;aca_temp&#39;, &#39;dac&#39;],</span>
+<span class="sd">    ...                                 &#39;2012:001&#39;, &#39;2012:030&#39;)</span>
+
+<span class="sd">    :param msids: list of MSIDs</span>
+<span class="sd">    :param start: Chandra.Time compatible start time</span>
+<span class="sd">    :param stop: Chandra.Time compatible stop time</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msids</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MSIDset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tstart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
+        <span class="n">slot_datas</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">slots</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">slot_for_msid</span><span class="p">(</span><span class="n">confirm_msid</span><span class="p">(</span><span class="n">msid</span><span class="p">))</span> <span class="k">for</span> <span class="n">msid</span> <span class="ow">in</span> <span class="n">msids</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">slot</span> <span class="ow">in</span> <span class="n">slots</span><span class="p">:</span>
+            <span class="c1"># get the 8x8 data</span>
+            <span class="n">tstop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span> <span class="o">+</span> <span class="mf">33.0</span>  <span class="c1"># Major frame of padding</span>
+            <span class="n">slot_data</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_slot_data</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">,</span> <span class="n">tstop</span><span class="p">,</span> <span class="n">slot</span><span class="p">,</span>
+                <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="n">ACA_DTYPE_NAMES</span><span class="p">)</span>
+
+            <span class="c1"># Find samples where the time stamp changes by a value other than 4.1 secs</span>
+            <span class="c1"># (which is the value for 8x8 readouts).  In that case there must have been a</span>
+            <span class="c1"># break in L0 decom, typically due to a change to 4x4 or 6x6 data.</span>
+            <span class="c1">#  t[0] = 1.0</span>
+            <span class="c1">#  t[1] = 5.1   &lt;= This record could be bad, as indicated by the gap afterward</span>
+            <span class="c1">#  t[2, 3] = 17.4, 21.5</span>
+            <span class="c1"># To form the time diffs first add `tstop` to the end so that if 8x8 data</span>
+            <span class="c1"># does not extend through `tstop` then the last record gets chopped.</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">slot_data</span><span class="p">[</span><span class="s1">&#39;TIME&#39;</span><span class="p">],</span> <span class="p">[</span><span class="n">tstop</span><span class="p">]]))</span>
+            <span class="n">bad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dt</span> <span class="o">-</span> <span class="mf">4.1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e-3</span>
+            <span class="n">slot_data</span><span class="p">[</span><span class="n">bad</span><span class="p">]</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">masked</span>
+
+            <span class="c1"># Chop off the padding</span>
+            <span class="n">i_stop</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="s1">&#39;TIME&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+            <span class="n">slot_data</span> <span class="o">=</span> <span class="n">slot_data</span><span class="p">[:</span><span class="n">i_stop</span><span class="p">]</span>
+
+            <span class="c1"># explicitly unmask useful columns</span>
+            <span class="n">slot_data</span><span class="p">[</span><span class="s1">&#39;TIME&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">nomask</span>
+            <span class="n">slot_data</span><span class="p">[</span><span class="s1">&#39;IMGSIZE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">nomask</span>
+            <span class="n">slot_data</span><span class="p">[</span><span class="s1">&#39;FILENAME&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">nomask</span>
+            <span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span> <span class="o">=</span> <span class="n">slot_data</span>
+        <span class="c1"># make a shared time ndarray that is the union of the time sets in the</span>
+        <span class="c1"># slots.  The ACA L0 telemetry has the same timestamps across slots,</span>
+        <span class="c1"># so the only differences here are caused by different times in</span>
+        <span class="c1"># non-TRAK across the slots (usually SRCH differences at the beginning</span>
+        <span class="c1"># of the observation)</span>
+        <span class="n">shared_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span>
+            <span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">][</span><span class="s1">&#39;TIME&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="k">for</span> <span class="n">slot</span> <span class="ow">in</span> <span class="n">slots</span><span class="p">]))</span>
+        <span class="k">for</span> <span class="n">msid</span> <span class="ow">in</span> <span class="n">msids</span><span class="p">:</span>
+            <span class="n">hdr3_msid</span> <span class="o">=</span> <span class="n">confirm_msid</span><span class="p">(</span><span class="n">msid</span><span class="p">)</span>
+            <span class="n">slot</span> <span class="o">=</span> <span class="n">slot_for_msid</span><span class="p">(</span><span class="n">hdr3_msid</span><span class="p">)</span>
+            <span class="n">full_data</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shared_time</span><span class="p">),</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">full_data</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">masked</span>
+            <span class="n">fd_idx</span> <span class="o">=</span> <span class="n">search_both_sorted</span><span class="p">(</span><span class="n">shared_time</span><span class="p">,</span>
+                                        <span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">][</span><span class="s1">&#39;TIME&#39;</span><span class="p">])</span>
+            <span class="n">full_data</span><span class="p">[</span><span class="n">fd_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span>
+            <span class="c1"># make a data dictionary to feed to the MSID constructor</span>
+            <span class="n">slot_data</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;vals&#39;</span><span class="p">:</span> <span class="n">HDR3_DEF</span><span class="p">[</span><span class="n">hdr3_msid</span><span class="p">][</span><span class="s1">&#39;value&#39;</span><span class="p">](</span><span class="n">full_data</span><span class="p">),</span>
+                         <span class="s1">&#39;desc&#39;</span><span class="p">:</span> <span class="n">HDR3_DEF</span><span class="p">[</span><span class="n">hdr3_msid</span><span class="p">][</span><span class="s1">&#39;desc&#39;</span><span class="p">],</span>
+                         <span class="s1">&#39;longdesc&#39;</span><span class="p">:</span> <span class="n">HDR3_DEF</span><span class="p">[</span><span class="n">hdr3_msid</span><span class="p">][</span><span class="s1">&#39;longdesc&#39;</span><span class="p">],</span>
+                         <span class="s1">&#39;times&#39;</span><span class="p">:</span> <span class="n">shared_time</span><span class="p">,</span>
+                         <span class="s1">&#39;hdr3_msid&#39;</span><span class="p">:</span> <span class="n">hdr3_msid</span><span class="p">}</span>
+            <span class="bp">self</span><span class="p">[</span><span class="n">msid</span><span class="p">]</span> <span class="o">=</span> <span class="n">MSID</span><span class="p">(</span><span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">slot_data</span><span class="p">)</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+
+
+<form action="../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right"> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,198 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-facto aspect V&amp;V &#8212; mica 4.21.3.dev26+g8fbfc7e documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Acquisition star statistics" href="acq_stats.html" />
+    <link rel="prev" title="ACA diagnostic telemetry" href="aca_diagnostic_telemetry.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="">
+        <span id="logotext1"></span><span id="logotext2"></span>
+    </a></li>
+    <li><a title="General Index" href="genindex.html">Index</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li class="right">
+	<a href="acq_stats.html" title="Acquisition star statistics">
+	  next &raquo;
+	</a>
+      </li>
+      <li class="right">
+	<a href="aca_diagnostic_telemetry.html" title="ACA diagnostic telemetry">
+	  &laquo; previous
+	</a>
+	 |
+      </li>
+      <li>
+	<a href="index.html">mica 4.21.3.dev26+g8fbfc7e documentation</a>
+	 &#187;
+      </li>
+      
+      <li>Post-facto aspect V&amp;V</li> 
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="post-facto-aspect-v-v">
+<span id="vv-label"></span><h1>Post-facto aspect V&amp;V<a class="headerlink" href="#post-facto-aspect-v-v" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="api.html#module-mica.vv" title="mica.vv"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code></a> module provides tools to create and inspect V&amp;V-type data.</p>
+<div class="section" id="access-mica-v-v-data">
+<h2>Access Mica V&amp;V Data<a class="headerlink" href="#access-mica-v-v-data" title="Permalink to this headline">¶</a></h2>
+<p>Locate mica v&amp;v products:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.vv</span> <span class="kn">import</span> <span class="n">get_vv_dir</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">get_vv_dir</span><span class="p">(</span><span class="mi">16504</span><span class="p">)</span>
+<span class="go">&#39;/data/aca/archive/vv/16/16504_v01&#39;</span>
+</pre></div>
+</div>
+<p>List files:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.vv</span> <span class="kn">import</span> <span class="n">get_vv_files</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">get_vv_files</span><span class="p">(</span><span class="mi">16504</span><span class="p">)</span>
+<span class="go">[&#39;/data/aca/archive/vv/16/16504_v01/vv_report.json&#39;,</span>
+<span class="go"> &#39;/data/aca/archive/vv/16/16504_v01/vv_slot.pkl&#39;,</span>
+<span class="go"> &#39;/data/aca/archive/vv/16/16504_v01/vv_report.pkl&#39;,</span>
+<span class="go"> &#39;/data/aca/archive/vv/16/16504_v01/slot_0_yz.png&#39;,</span>
+<span class="go"> ...</span>
+</pre></div>
+</div>
+<p>Retrieve all residuals:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.vv</span> <span class="kn">import</span> <span class="n">get_rms_data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">get_rms_data</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">16505</span><span class="p">][</span><span class="s1">&#39;dz_rms&#39;</span><span class="p">]</span>
+<span class="go">array([  2.62251067e-05,   5.16913551e-02,   5.32668958e-02,</span>
+<span class="go">         4.78861857e-02])</span>
+</pre></div>
+</div>
+<p>Retrieve mica v&amp;v values for an already-mica-processed obsid.  The dictionaries of
+values still need more documentation at this time.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.vv</span> <span class="kn">import</span> <span class="n">get_vv</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obs</span> <span class="o">=</span> <span class="n">get_vv</span><span class="p">(</span><span class="mi">16504</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;slots&#39;</span><span class="p">][</span><span class="s1">&#39;7&#39;</span><span class="p">][</span><span class="s1">&#39;dz_rms&#39;</span><span class="p">]</span>
+<span class="go">0.11610256063309182</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="run-mica-v-v-tools-directly">
+<h2>Run mica V&amp;V tools directly<a class="headerlink" href="#run-mica-v-v-tools-directly" title="Permalink to this headline">¶</a></h2>
+<p>Using the mica-archived aspect solution and obspar, run the mica obsid tools</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.vv</span> <span class="kn">import</span> <span class="n">get_arch_vv</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obi</span> <span class="o">=</span> <span class="n">get_arch_vv</span><span class="p">(</span><span class="mi">2121</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Plot slot 4 residuals</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">obi</span><span class="o">.</span><span class="n">plot_slot</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Look at the SIM drift values</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">obi</span><span class="o">.</span><span class="n">info</span><span class="p">()[</span><span class="s1">&#39;sim&#39;</span><span class="p">]</span>
+<span class="go">{&#39;max_d_dy&#39;: 0.002197265625,</span>
+<span class="go"> &#39;max_d_dz&#39;: 0.0018472671508789062,</span>
+<span class="go"> &#39;max_medf_dy&#39;: 3.3234403133392334,</span>
+<span class="go"> &#39;max_medf_dz&#39;: 7.3717021942138672,</span>
+<span class="go"> &#39;min_medf_dy&#39;: 3.0496618747711182,</span>
+<span class="go"> &#39;min_medf_dz&#39;: 6.3389387130737305}</span>
+</pre></div>
+</div>
+<p>The Obi class can also be called directly on data that isn’t in the mica archive. For
+example, on c3po-v, something like this could be used to plot residuals on un-ingested
+data (these directories will likely not exist to run this example in the future):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">proc_dir</span> <span class="o">=</span> <span class="s1">&#39;/dsops/ap/sdp.10/opus/prs_run/done/ASP_L1____502323245n674/&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">aspect_dir</span> <span class="o">=</span> <span class="n">proc_dir</span>  <span class="o">+</span> <span class="s1">&#39;output&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obspar</span> <span class="o">=</span> <span class="n">proc_dir</span> <span class="o">+</span> <span class="s1">&#39;input/axaff14565_000N001_obs0a.par&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">mica.vv</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obi</span> <span class="o">=</span> <span class="n">mica</span><span class="o">.</span><span class="n">vv</span><span class="o">.</span><span class="n">Obi</span><span class="p">(</span><span class="n">obspar</span><span class="p">,</span> <span class="n">aspect_dir</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">Post-facto aspect V&amp;V</a><ul>
+<li><a class="reference internal" href="#access-mica-v-v-data">Access Mica V&amp;V Data</a></li>
+<li><a class="reference internal" href="#run-mica-v-v-tools-directly">Run mica V&amp;V tools directly</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="aca_diagnostic_telemetry.html"
+                        title="previous chapter">ACA diagnostic telemetry</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="acq_stats.html"
+                        title="next chapter">Acquisition star statistics</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/aspect_vv.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right">
+    <a href="_sources/aspect_vv.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

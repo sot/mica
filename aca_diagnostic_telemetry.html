@@ -1,0 +1,228 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACA diagnostic telemetry &#8212; mica 4.21.3.dev26+g8fbfc7e documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Post-facto aspect V&amp;V" href="aspect_vv.html" />
+    <link rel="prev" title="Aspect L1 products" href="aspect_l1_products.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="">
+        <span id="logotext1"></span><span id="logotext2"></span>
+    </a></li>
+    <li><a title="General Index" href="genindex.html">Index</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li class="right">
+	<a href="aspect_vv.html" title="Post-facto aspect V&amp;V">
+	  next &raquo;
+	</a>
+      </li>
+      <li class="right">
+	<a href="aspect_l1_products.html" title="Aspect L1 products">
+	  &laquo; previous
+	</a>
+	 |
+      </li>
+      <li>
+	<a href="index.html">mica 4.21.3.dev26+g8fbfc7e documentation</a>
+	 &#187;
+      </li>
+      
+      <li>ACA diagnostic telemetry</li> 
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="aca-diagnostic-telemetry">
+<h1>ACA diagnostic telemetry<a class="headerlink" href="#aca-diagnostic-telemetry" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="api.html#module-mica.archive.aca_hdr3" title="mica.archive.aca_hdr3"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_hdr3</span></code></a> module works with Header 3 data
+(extended ACA diagnostic telemetry) available in 8x8 ACA
+L0 image data.  The module provies an MSID class and MSIDset class to fetch
+these data as “pseudo-MSIDs” and return masked array data structures.
+See <a class="reference internal" href="#aca-hdr3-pseudo-msids">ACA HDR3 Pseudo-MSIDS</a> for the list of available pseudo-MSIDs.</p>
+<blockquote>
+<div><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_hdr3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ccd_temp</span> <span class="o">=</span> <span class="n">aca_hdr3</span><span class="o">.</span><span class="n">MSID</span><span class="p">(</span><span class="s1">&#39;ccd_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:020&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">(</span><span class="n">ccd_temp</span><span class="o">.</span><span class="n">vals</span><span class="p">)</span>
+<span class="go">&#39;numpy.ma.core.MaskedArray&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">Ska.Matplotlib</span> <span class="kn">import</span> <span class="n">plot_cxctime</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mf">3.5</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plot_cxctime</span><span class="p">(</span><span class="n">ccd_temp</span><span class="o">.</span><span class="n">times</span><span class="p">,</span> <span class="n">ccd_temp</span><span class="o">.</span><span class="n">vals</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/plot_cxctime_ccd_temp.png" src="_images/plot_cxctime_ccd_temp.png" />
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">perigee_data</span> <span class="o">=</span> <span class="n">aca_hdr3</span><span class="o">.</span><span class="n">MSIDset</span><span class="p">([</span><span class="s1">&#39;ccd_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;aca_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;dac&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                                <span class="s1">&#39;2012:125&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:155&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mf">3.5</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plot</span><span class="p">(</span><span class="n">perigee_data</span><span class="p">[</span><span class="s1">&#39;aca_temp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">vals</span> <span class="o">-</span> <span class="n">perigee_data</span><span class="p">[</span><span class="s1">&#39;ccd_temp&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">vals</span><span class="p">,</span>
+<span class="gp">... </span>     <span class="n">perigee_data</span><span class="p">[</span><span class="s1">&#39;dac&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">vals</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="mf">0.15</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;TEC DAC Control Level&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;ACA temp - CCD temp (C)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/dac_vs_tempdiff.png" src="_images/dac_vs_tempdiff.png" />
+</div></blockquote>
+<p>Retrieving pseudo-MSIDs with this module will be slower than
+Ska.engarchive fetches of similar telemetry, as the aca_hdr3 module
+reads from each of the collection of original fits.gz files for a specified
+time range.  Ska.engarchive, in contrast, reads from HDF5 files (per
+MSID) optimized for fast reads.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">In</span> <span class="p">[</span><span class="mi">3</span><span class="p">]:</span> <span class="o">%</span><span class="n">time</span> <span class="n">ccd_temp</span> <span class="o">=</span> <span class="n">aca_hdr3</span><span class="o">.</span><span class="n">MSID</span><span class="p">(</span><span class="s1">&#39;ccd_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:020&#39;</span><span class="p">)</span>
+<span class="n">CPU</span> <span class="n">times</span><span class="p">:</span> <span class="n">user</span> <span class="mf">5.18</span> <span class="n">s</span><span class="p">,</span> <span class="n">sys</span><span class="p">:</span> <span class="mf">0.12</span> <span class="n">s</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="mf">5.29</span> <span class="n">s</span>
+<span class="n">Wall</span> <span class="n">time</span><span class="p">:</span> <span class="mf">7.46</span> <span class="n">s</span>
+
+<span class="n">In</span> <span class="p">[</span><span class="mi">9</span><span class="p">]:</span> <span class="o">%</span><span class="n">time</span> <span class="n">quick_ccd</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">engarchive</span><span class="o">.</span><span class="n">fetch</span><span class="o">.</span><span class="n">MSID</span><span class="p">(</span><span class="s1">&#39;AACCCDPT&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:020&#39;</span><span class="p">)</span>
+<span class="n">CPU</span> <span class="n">times</span><span class="p">:</span> <span class="n">user</span> <span class="mf">0.02</span> <span class="n">s</span><span class="p">,</span> <span class="n">sys</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="mf">0.03</span> <span class="n">s</span>
+<span class="n">Wall</span> <span class="n">time</span><span class="p">:</span> <span class="mf">0.81</span> <span class="n">s</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="aca-hdr3-pseudo-msids">
+<h1>ACA HDR3 Pseudo-MSIDS<a class="headerlink" href="#aca-hdr3-pseudo-msids" title="Permalink to this headline">¶</a></h1>
+<table border="1"><tr><th>MSID</th><th>Description</th></tr><tr><td><pre style="font-family:serif">ac_status_word</pre></td><td><pre style="font-family:serif">AC status word.  A status word read from the AC.  The bits in the word are
+defined as follows:
+
+xxxx xxrr rrtt eccp
+
+X = spare bits
+R = CCD readout mode
+   1 => S/H input is grounded during pixel readout
+   2 => CCD reset is pulsed during column flush
+   4 => CCD reset/sw is pulsed during row shifts
+   8 => MUX is switched to ground when A/D not in use
+T = Test signal select (test signals not available in flight)
+E = Cmd error.  AC cmd input buffer was overwritten
+C = Clock period for parallel shifts
+   0 => 6 microsec
+   1 => 12 microsec
+   2 => 24 microsec
+   3 => 48 microsec
+P = PromWrite? flag: true when AC EEPROM is in the write mode.</pre></td></tr><tr><td><pre style="font-family:serif">misc_status_bits</pre></td><td><pre style="font-family:serif">Miscellaneous status bits showing the status of the following 16 flag variables
+starting with the LSB and ending with the MSB:
+
+bit 0 (LSB): AcSendTimeOut?
+bit 1: AcIdleTimeOut?
+bit 2: TecActive?
+bit 3: TecHeat?
+bit 4: DecAcTable?
+bit 5: AcTableCkSumOK?
+bit 6: StackError?
+bit 7: WarmBoot?
+bit 8: IdleCode LSB
+bit 9: CalMode?
+bit 10: CalModePending?
+bit 11: IuData?
+bit 12: IuDataPending?
+bit 13: DsnFixed?
+bit 14: InitialCalFillOK?
+bit 15 (MSB): IoUpdTimeout?</pre></td></tr><tr><td><pre style="font-family:serif">ccd_molyb_therm_1</pre></td><td><pre style="font-family:serif">A/D converter reading for the CCD moly base thermistor number 1</pre></td></tr><tr><td><pre style="font-family:serif">ccd_molyb_therm_2</pre></td><td><pre style="font-family:serif">A/D converter reading for the CCD moly base thermistor number 2</pre></td></tr><tr><td><pre style="font-family:serif">ccd_det_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the CCD detector thermistor</pre></td></tr><tr><td><pre style="font-family:serif">ad_5v_ps</pre></td><td><pre style="font-family:serif">A/D converter reading for the +5 volt power supply; 1 LSB=0.30518 mv</pre></td></tr><tr><td><pre style="font-family:serif">ad_15v_ps</pre></td><td><pre style="font-family:serif">A/D converter reading for the +15 volt power supply; 1 LSB=0.61035 mv</pre></td></tr><tr><td><pre style="font-family:serif">ad_m15v_ps</pre></td><td><pre style="font-family:serif">A/D converter reading for the -15 volt power supply; 1 LSB=0.61035 mv</pre></td></tr><tr><td><pre style="font-family:serif">ad_27v_ps</pre></td><td><pre style="font-family:serif">A/D converter reading for the +27 volt power supply; 1 LSB=1.04597 mv</pre></td></tr><tr><td><pre style="font-family:serif">ad_analog_gnd</pre></td><td><pre style="font-family:serif">A/D converter reading for analog ground; 1 LSB=0.30518 mv</pre></td></tr><tr><td><pre style="font-family:serif">ad_converter_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the A/D converter thermistor.</pre></td></tr><tr><td><pre style="font-family:serif">ad_smhs_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the secondary mirror thermistor, HRMA side</pre></td></tr><tr><td><pre style="font-family:serif">ad_smohs_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the secondary mirror thermistor, Opposite from the
+HRMA side</pre></td></tr><tr><td><pre style="font-family:serif">ad_pmhs_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the primary mirror thermistor, HRMA side</pre></td></tr><tr><td><pre style="font-family:serif">ad_pmohs_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the primary mirror thermistor, opposite from the
+HRMA side</pre></td></tr><tr><td><pre style="font-family:serif">ad_achhs_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the AC housing thermistor, HRMA side</pre></td></tr><tr><td><pre style="font-family:serif">ad_achohs_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the AC housing thermistor, opposite HRMA side</pre></td></tr><tr><td><pre style="font-family:serif">ad_lc_therm</pre></td><td><pre style="font-family:serif">A/D converter reading for the lens cell thermistor</pre></td></tr><tr><td><pre style="font-family:serif">proc_stack_telem_ctr</pre></td><td><pre style="font-family:serif">A word containing the processor data stack pointer in the high byte, and
+an update counter in the low byte that increments once for every 1.025
+second telemetry update.</pre></td></tr><tr><td><pre style="font-family:serif">sci_hdr_pulse_period</pre></td><td><pre style="font-family:serif">The science header pulse period, as measured by the PEA; 1 LSB = 2 microseconds</pre></td></tr><tr><td><pre style="font-family:serif">zero_off16_quad_a</pre></td><td><pre style="font-family:serif">A 16-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 1 A/D
+converter count (nominally 5 electrons)</pre></td></tr><tr><td><pre style="font-family:serif">zero_off16_quad_b</pre></td><td><pre style="font-family:serif">A 16-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 1 A/D
+converter count (nominally 5 electrons)</pre></td></tr><tr><td><pre style="font-family:serif">zero_off16_quad_c</pre></td><td><pre style="font-family:serif">A 16-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 1 A/D
+converter count (nominally 5 electrons)</pre></td></tr><tr><td><pre style="font-family:serif">zero_off16_quad_d</pre></td><td><pre style="font-family:serif">A 16-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 1 A/D
+converter count (nominally 5 electrons)</pre></td></tr><tr><td><pre style="font-family:serif">zero_off32_quad_a</pre></td><td><pre style="font-family:serif">A 32-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 2^-16
+A/D converter counts</pre></td></tr><tr><td><pre style="font-family:serif">zero_off32_quad_b</pre></td><td><pre style="font-family:serif">A 32-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 2^-16
+A/D converter counts</pre></td></tr><tr><td><pre style="font-family:serif">zero_off32_quad_c</pre></td><td><pre style="font-family:serif">A 32-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 2^-16
+A/D converter counts</pre></td></tr><tr><td><pre style="font-family:serif">zero_off32_quad_d</pre></td><td><pre style="font-family:serif">A 32-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 2^-16
+A/D converter counts</pre></td></tr><tr><td><pre style="font-family:serif">ccd_flush_dur</pre></td><td><pre style="font-family:serif">The time required for the most recent flush of the CCD; 1 LSB=2 microseconds</pre></td></tr><tr><td><pre style="font-family:serif">ccd_row_shift_period</pre></td><td><pre style="font-family:serif">The CCD row shift clock period currently in effect; 1 LSB = 1 microsecond</pre></td></tr><tr><td><pre style="font-family:serif">avg_bkg</pre></td><td><pre style="font-family:serif">An overall average background reading derived from the most recent CCD readout.
+This is an average from all tracked images and from all search readout
+segments. One LSB = 1 A/D converter count (nominally 5 electrons).</pre></td></tr><tr><td><pre style="font-family:serif">dsn_hdr1</pre></td><td><pre style="font-family:serif">Header 1 for Deep Space Network record.</pre></td></tr><tr><td><pre style="font-family:serif">dsn_hdr2</pre></td><td><pre style="font-family:serif">The record counter and Header 2 for Deep Space Network records.
+The record counter occupies the three high order bytes, and Header 2
+occupies the low order byte.</pre></td></tr><tr><td><pre style="font-family:serif">ccd_temp</pre></td><td><pre style="font-family:serif">CCD temperature.  1 LSB=0.01/(2^16) degrees C.  The high order 16 bits give the
+CCD temperature in units of 1 LSB = 0.01 degrees C.</pre></td></tr><tr><td><pre style="font-family:serif">ccd_setpoint</pre></td><td><pre style="font-family:serif">The CCD temperature control setpoint; 1 LSB=0.01 degrees C</pre></td></tr><tr><td><pre style="font-family:serif">aca_temp</pre></td><td><pre style="font-family:serif">The temperature used in the angle calibration equations that convert star
+positions from CCD row and column coordinates to Y and Z angles for OBC
+telemetry; 1 LSB = 1/256 degrees C.</pre></td></tr><tr><td><pre style="font-family:serif">last_ram_fail_addr</pre></td><td><pre style="font-family:serif">The address in RAM of the failure most recently detected by the RAM
+write-and-read test</pre></td></tr><tr><td><pre style="font-family:serif">dac</pre></td><td><pre style="font-family:serif">The number most recently written to the TEC power control DAC.</pre></td></tr></table></div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">ACA diagnostic telemetry</a></li>
+<li><a class="reference internal" href="#aca-hdr3-pseudo-msids">ACA HDR3 Pseudo-MSIDS</a></li>
+</ul>
+
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="aspect_l1_products.html"
+                        title="previous chapter">Aspect L1 products</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="aspect_vv.html"
+                        title="next chapter">Post-facto aspect V&amp;V</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/aca_diagnostic_telemetry.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right">
+    <a href="_sources/aca_diagnostic_telemetry.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

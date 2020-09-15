@@ -1,0 +1,902 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mica.archive.obsid_archive &#8212; mica 4.21.3.dev26+g8fbfc7e documentation</title>
+    <link rel="stylesheet" href="../../../_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script type="text/javascript" src="../../../_static/sidebar.js"></script>
+    <script type="text/javascript" src="../../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="../../../index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="">
+        <span id="logotext1"></span><span id="logotext2"></span>
+    </a></li>
+    <li><a title="General Index" href="../../../genindex.html">Index</a></li>
+    <li><a title="Module Index" href="../../../py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li>
+	<a href="../../../index.html">mica 4.21.3.dev26+g8fbfc7e documentation</a>
+	 &#187;
+      </li>
+      <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+      
+       
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for mica.archive.obsid_archive</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Generalized module for fetching and archiving obsid-organized</span>
+<span class="sd">telemetry such as asp_l1 and obspar products.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">astropy.io.fits</span> <span class="k">as</span> <span class="nn">pyfits</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span> <span class="nn">Ska.arc5gl</span>
+<span class="kn">import</span> <span class="nn">Ska.DBI</span>
+<span class="kn">from</span> <span class="nn">Chandra.Time</span> <span class="kn">import</span> <span class="n">DateTime</span>
+<span class="kn">import</span> <span class="nn">Ska.File</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="kn">import</span> <span class="nn">mica</span>
+
+
+<span class="c1"># borrowed from telem_archive</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+
+<span class="k">def</span> <span class="nf">parse_obspar</span><span class="p">(</span><span class="n">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the rows of an IRAF formatted obspar as a dictionary.</span>
+
+<span class="sd">    :param file: obspar file</span>
+
+<span class="sd">    :returns: row of obspar</span>
+<span class="sd">    :rtype: dictionary generator</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">convert</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;i&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="s1">&#39;r&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+               <span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rt&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf8&#39;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rt&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf8&#39;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="n">obs_read</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span>
+                              <span class="n">fieldnames</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;hidden&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">,</span>
+                                          <span class="s1">&#39;def1&#39;</span><span class="p">,</span> <span class="s1">&#39;def2&#39;</span><span class="p">,</span> <span class="s1">&#39;descr&#39;</span><span class="p">),</span>
+                              <span class="n">dialect</span><span class="o">=</span><span class="s1">&#39;excel&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">obs_read</span><span class="p">:</span>
+        <span class="c1"># this empty-string &#39;&#39; hack is not present in the original</span>
+        <span class="k">if</span> <span class="p">((</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="p">((</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;i&#39;</span><span class="p">))):</span>
+            <span class="n">row</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">row</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">convert</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]](</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">])</span>
+        <span class="n">row</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">row</span>
+
+    <span class="k">return</span>
+
+
+<span class="k">def</span> <span class="nf">get_obspar</span><span class="p">(</span><span class="n">obsparfile</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get the obspar for obsid starting at tstart.  Return as a dict.&quot;&quot;&quot;</span>
+    <span class="n">obspar</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">parse_obspar</span><span class="p">(</span><span class="n">obsparfile</span><span class="p">):</span>
+        <span class="n">obspar</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]})</span>
+    <span class="k">return</span> <span class="n">obspar</span>
+
+
+<span class="k">class</span> <span class="nc">ProductVersionError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="ObsArchive"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive">[docs]</a><span class="k">class</span> <span class="nc">ObsArchive</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Object to store configuration, logging, and processing tasks</span>
+<span class="sd">    to fetch obsid telemetry from the CXC archive and store in a Ska</span>
+<span class="sd">    file archive, while logging the archive files to a file lookup</span>
+<span class="sd">    database.</span>
+
+<span class="sd">    The configuration dictionary ``config`` may have these key/values:</span>
+
+<span class="sd">    * data_root: directory for products</span>
+<span class="sd">                (example /proj/sot/ska/data/mica/archive/asp1)</span>
+<span class="sd">    * temp_root: directory for temporary storage of fetched</span>
+<span class="sd">                telemetry</span>
+<span class="sd">    * bad_obsids: file containing list of obsids that should be</span>
+<span class="sd">                ignored when in regular update mode</span>
+<span class="sd">    * cols: headers that will be included in file lookup table</span>
+<span class="sd">    * sql_def: sql file to build file lookup archfiles table</span>
+<span class="sd">    * apstat_table: axafapstat database table from which to find</span>
+<span class="sd">                   new processing (by id)</span>
+<span class="sd">    * apstat_id: field in apstat_table to use as unique CXCDS</span>
+<span class="sd">                processing id</span>
+<span class="sd">    * label: label of product type for log messages</span>
+<span class="sd">    * small: arc5gl keyword/filetype for small file from products</span>
+<span class="sd">            (example asp1{fidprops}).  This will be retrieved with</span>
+<span class="sd">            &quot;get %s&quot; % config[&#39;small&#39;] and the retrieved files will</span>
+<span class="sd">            be used to determine product version.</span>
+<span class="sd">    * small_glob: glob to match files retrieved by</span>
+<span class="sd">                 &quot;get %s&quot; % config[small]</span>
+<span class="sd">                 (example &#39;*fidpr*&#39;)</span>
+<span class="sd">    * small_ver_regex: regular expression to search for version from</span>
+<span class="sd">                     retrieved files (example &#39;pcadf\\d+N(\\d{3})_&#39;)</span>
+<span class="sd">    * full: arc5gl keyword for products (example &#39;asp1&#39;)</span>
+<span class="sd">    * rebuild: If True/set, allow update mode to rebuild the database</span>
+<span class="sd">               from obsid 1.</span>
+
+<span class="sd">    :param config: configuration dictionary</span>
+<span class="sd">    :returns: ObsArchive instance</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;ObsArchive&#39;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">logger</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span>
+
+<div class="viewcode-block" id="ObsArchive.set_env"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.set_env">[docs]</a>    <span class="k">def</span> <span class="nf">set_env</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set environment included an arc5gl handle and</span>
+<span class="sd">        and a handle to the axafapstat database</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_arc5</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">arc5gl</span><span class="o">.</span><span class="n">Arc5gl</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_apstat</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s1">&#39;sybase&#39;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="s1">&#39;sqlsao&#39;</span><span class="p">,</span>
+                            <span class="n">database</span><span class="o">=</span><span class="s1">&#39;axafapstat&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_aca_db</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s1">&#39;sybase&#39;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="s1">&#39;sybase&#39;</span><span class="p">,</span>
+                                   <span class="n">user</span><span class="o">=</span><span class="s1">&#39;aca_read&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+        <span class="n">db_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">]),</span>
+                               <span class="s1">&#39;archfiles.db3&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">db_file</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">db_file</span><span class="p">)</span><span class="o">.</span><span class="n">st_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">]):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;creating archfiles db from </span><span class="si">%s</span><span class="s2">&quot;</span>
+                             <span class="o">%</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;sql_def&#39;</span><span class="p">])</span>
+            <span class="n">db_sql</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;sql_def&#39;</span><span class="p">]</span>
+            <span class="n">db_init_cmds</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">db_sql</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+            <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s1">&#39;sqlite&#39;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="n">db_file</span><span class="p">,</span>
+                             <span class="n">autocommit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+                <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">db_init_cmds</span><span class="p">,</span> <span class="n">commit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s1">&#39;sqlite&#39;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="n">db_file</span><span class="p">,</span>
+              <span class="n">autocommit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_archfiles_db</span> <span class="o">=</span> <span class="n">db</span></div>
+
+<div class="viewcode-block" id="ObsArchive.set_read_env"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.set_read_env">[docs]</a>    <span class="k">def</span> <span class="nf">set_read_env</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set environment included an arc5gl handle and</span>
+<span class="sd">        and a handle to the axafapstat database</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+        <span class="n">db_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">]),</span>
+                               <span class="s1">&#39;archfiles.db3&#39;</span><span class="p">)</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s1">&#39;sqlite&#39;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="n">db_file</span><span class="p">,</span>
+              <span class="n">autocommit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_archfiles_db</span> <span class="o">=</span> <span class="n">db</span></div>
+
+
+<div class="viewcode-block" id="ObsArchive.get_all_obspar_info"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_all_obspar_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_obspar_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read obspar and add &#39;obsid&#39; and &#39;filename&#39; keys to the dictionary</span>
+<span class="sd">        i and archfiles are just passed to make the logging prettier.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Reading (</span><span class="si">%d</span><span class="s1"> / </span><span class="si">%d</span><span class="s1">) </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">archfiles</span><span class="p">),</span> <span class="n">filename</span><span class="p">))</span>
+        <span class="n">obspar</span> <span class="o">=</span> <span class="n">get_obspar</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">obspar</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obspar</span><span class="p">[</span><span class="s1">&#39;obs_id&#39;</span><span class="p">]</span>
+        <span class="n">obspar</span><span class="p">[</span><span class="s1">&#39;filename&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="k">return</span> <span class="n">obspar</span></div>
+
+    <span class="k">def</span> <span class="nf">get_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">data_root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">obsid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">stop</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Must supply either obsid or start and stop&quot;</span><span class="p">)</span>
+        <span class="n">file_records</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_file_records</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="n">obsid</span><span class="p">,</span>
+                                              <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span>
+                                              <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">,</span>
+                                              <span class="n">content</span><span class="o">=</span><span class="n">content</span><span class="p">)</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_root</span><span class="p">,</span>
+                              <span class="p">(</span><span class="s2">&quot;</span><span class="si">%05d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span>
+                              <span class="s2">&quot;</span><span class="si">%05d</span><span class="s2">_v</span><span class="si">%02d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="n">f</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]),</span>
+                              <span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;filename&#39;</span><span class="p">]))</span>
+                 <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">file_records</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">files</span>
+
+    <span class="k">def</span> <span class="nf">_get_file_records</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                          <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_read_env</span><span class="p">()</span>
+        <span class="n">tstart_pad</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">86400</span>
+        <span class="k">if</span> <span class="n">content</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;content_types&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">content</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="p">[</span><span class="n">content</span><span class="p">]</span>
+        <span class="n">content_str</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">content</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">obsid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">stop</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Must supply either obsid or start and stop&quot;</span><span class="p">)</span>
+            <span class="n">tstart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
+            <span class="n">tstop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
+            <span class="n">db_query</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;SELECT * from archfiles &quot;</span>
+                        <span class="s2">&quot;WHERE tstart &gt;= </span><span class="si">%f</span><span class="s2"> - </span><span class="si">%f</span><span class="s2"> &quot;</span>
+                        <span class="s2">&quot;AND tstart &lt; </span><span class="si">%f</span><span class="s2"> &quot;</span>
+                        <span class="s2">&quot;AND tstop &gt; </span><span class="si">%f</span><span class="s2"> &quot;</span>
+                        <span class="s2">&quot;AND content in (</span><span class="si">%s</span><span class="s2">) &quot;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">tstart</span><span class="p">,</span> <span class="n">tstart_pad</span><span class="p">,</span> <span class="n">tstop</span><span class="p">,</span> <span class="n">tstart</span><span class="p">,</span> <span class="n">content_str</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">db_query</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;SELECT * from archfiles &#39;</span>
+                        <span class="s1">&#39;WHERE obsid = </span><span class="si">%d</span><span class="s1"> &#39;</span>
+                        <span class="s1">&#39;AND content in (</span><span class="si">%s</span><span class="s1">) &#39;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">content_str</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">revision</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">db_query</span> <span class="o">+=</span> <span class="s1">&#39;AND isdefault = 1 &#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">revision</span> <span class="o">==</span> <span class="s1">&#39;last&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">obsid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">db_query</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;AND revision in</span>
+<span class="s2">                               (SELECT max(revision) from archfiles</span>
+<span class="s2">                                WHERE obsid = </span><span class="si">%d</span><span class="s2">)&quot;&quot;&quot;</span> <span class="o">%</span> <span class="n">obsid</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># The no-obsid case is handled below.  The has-obsid case</span>
+                    <span class="c1"># could probably be pushed down there too, but the db filter is OK.</span>
+                    <span class="k">pass</span>
+            <span class="k">elif</span> <span class="n">revision</span> <span class="o">==</span> <span class="s1">&#39;all&#39;</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">db_query</span> <span class="o">+=</span> <span class="s1">&#39;AND revision = </span><span class="si">%d</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="n">revision</span>
+        <span class="n">db_query</span> <span class="o">+=</span> <span class="s2">&quot;order by tstart&quot;</span>
+        <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_archfiles_db</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span><span class="n">db_query</span><span class="p">)</span>
+        <span class="c1"># For the special case of &quot;revision = last&quot; without obsid, filter the results one a per-file</span>
+        <span class="c1"># basis by obsid (could be multiple obsids in the date range)</span>
+        <span class="k">if</span> <span class="n">revision</span> <span class="o">==</span> <span class="s1">&#39;last&#39;</span> <span class="ow">and</span> <span class="n">obsid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">max_rev</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">obsid</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]):</span>
+                <span class="n">ok</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">obsid</span>
+                <span class="n">max_rev</span><span class="p">[</span><span class="n">obsid</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="n">ok</span><span class="p">][</span><span class="s1">&#39;revision&#39;</span><span class="p">])</span>
+            <span class="n">rev_ok</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">max_rev</span><span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rev_ok</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">files</span>
+
+<div class="viewcode-block" id="ObsArchive.get_dir"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_dir">[docs]</a>    <span class="k">def</span> <span class="nf">get_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obsid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the latest released directory for an obsid</span>
+<span class="sd">        Return None if there are no &#39;default&#39; / released products.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dirmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obs_dirs</span><span class="p">(</span><span class="n">obsid</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;default&#39;</span> <span class="ow">in</span> <span class="n">dirmap</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">dirmap</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="ObsArchive.get_obs_dirs"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_obs_dirs">[docs]</a>    <span class="k">def</span> <span class="nf">get_obs_dirs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obsid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a dictionary of the directories available for an obsid.</span>
+<span class="sd">        This is just done with a glob in the data directories.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data_root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">]</span>
+        <span class="n">strobs</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%05d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obsid</span>
+        <span class="n">chunk_dir</span> <span class="o">=</span> <span class="n">strobs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">topdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_root</span><span class="p">,</span> <span class="n">chunk_dir</span><span class="p">)</span>
+        <span class="n">dirmap</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">revisions</span><span class="o">=</span><span class="p">[])</span>
+        <span class="n">verdirs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">topdir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_v*&quot;</span> <span class="o">%</span> <span class="n">strobs</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">verdirs</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">verdirs</span><span class="p">:</span>
+            <span class="n">nmatch</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_v(\d</span><span class="si">{2}</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">strobs</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">nmatch</span><span class="p">:</span>
+                <span class="n">dirmap</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">nmatch</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span> <span class="o">=</span> <span class="n">v</span>
+                <span class="n">dirmap</span><span class="p">[</span><span class="s1">&#39;revisions&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">nmatch</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
+        <span class="n">lastdirs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">topdir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_last&quot;</span> <span class="o">%</span> <span class="n">strobs</span><span class="p">))</span>
+        <span class="n">defdirs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">topdir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">strobs</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">defdirs</span><span class="p">:</span>
+            <span class="n">dirmap</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">defdirs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">lastdirs</span><span class="p">:</span>
+            <span class="n">dirmap</span><span class="p">[</span><span class="s1">&#39;last&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lastdirs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">defdirs</span><span class="p">:</span>
+                <span class="n">dirmap</span><span class="p">[</span><span class="s1">&#39;last&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">defdirs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">dirmap</span></div>
+
+<div class="viewcode-block" id="ObsArchive.get_file_ver"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_file_ver">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_file_ver</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span> <span class="n">fileglob</span><span class="p">,</span> <span class="n">ver_regex</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determine the version/revision of a set of archived files from</span>
+<span class="sd">        their file names.</span>
+
+<span class="sd">        :param tempdir: directory containing files</span>
+<span class="sd">        :param fileglob: glob to match files in question</span>
+<span class="sd">        :param ver_regex: regular expression to pull out version</span>
+<span class="sd">                          from the set of files</span>
+
+<span class="sd">        :returns: version number</span>
+<span class="sd">        :rtype: integer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span> <span class="n">fileglob</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">versions</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="n">fmatch</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">ver_regex</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fmatch</span><span class="p">:</span>
+                <span class="n">versions</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">fmatch</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">versions</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Different version files in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">tempdir</span><span class="p">)</span>
+        <span class="c1"># update version to number</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">versions</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">version</span></div>
+
+<div class="viewcode-block" id="ObsArchive.get_ver_num"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_ver_num">[docs]</a>    <span class="k">def</span> <span class="nf">get_ver_num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determine the version number associated with the current released</span>
+<span class="sd">        products or with the products referenced by &quot;version=last&quot;.</span>
+
+<span class="sd">        :param obsid: obsid</span>
+<span class="sd">        :param version: version string (&#39;default&#39;|&#39;last&#39;)</span>
+
+<span class="sd">        :returns: version</span>
+<span class="sd">        :rtype: integer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">arc5</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_arc5</span>
+        <span class="n">apstat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apstat</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+        <span class="c1"># this is obi agnostic, all obis should be same</span>
+        <span class="c1"># version anyway...u</span>
+        <span class="n">tempdir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+        <span class="c1"># if multi-obi, we&#39;ll need to be specific</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;reset&quot;</span><span class="p">)</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;cd </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">tempdir</span><span class="p">)</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;obsid=</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">apstat</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+            <span class="n">obis</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+                <span class="s2">&quot;select distinct obi from obidet_0_5 where obsid = </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">obis</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">minobi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">obis</span><span class="p">[</span><span class="s1">&#39;obi&#39;</span><span class="p">])</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;limiting arc5gl to obi </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">minobi</span><span class="p">)</span>
+            <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;obi=</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">minobi</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">version</span> <span class="o">!=</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span>
+            <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;version=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">version</span><span class="p">)</span>
+        <span class="c1"># just get a small file</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;get </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;small&#39;</span><span class="p">])</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_file_ver</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span>
+                                    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;small_glob&#39;</span><span class="p">],</span>
+                                    <span class="n">config</span><span class="p">[</span><span class="s1">&#39;small_ver_regex&#39;</span><span class="p">],</span>
+                                    <span class="p">)</span>
+        <span class="k">for</span> <span class="n">afile</span> <span class="ow">in</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">)):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">afile</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">removedirs</span><span class="p">(</span><span class="n">tempdir</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">version</span></div>
+
+<div class="viewcode-block" id="ObsArchive.get_fits_info"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_fits_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_fits_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read FITS file ``f`` with index ``i`` (position within list of</span>
+<span class="sd">        filenames ``archfiles``) and get dictionary of values to store</span>
+<span class="sd">        in file lookup database.  This values include all header key/value</span>
+<span class="sd">        pairs with keys in ``config[cols]`` plus the header checksum,</span>
+<span class="sd">        the filename, the year, and day-of-year.</span>
+
+<span class="sd">        :param i: index of file f within list of files archfiles</span>
+<span class="sd">        :param f: filename</span>
+<span class="sd">        :param archfiles: list of filenames for this batch</span>
+
+<span class="sd">        :returns: info for a file</span>
+<span class="sd">        :rtype: dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Reading (</span><span class="si">%d</span><span class="s1"> / </span><span class="si">%d</span><span class="s1">) </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">archfiles</span><span class="p">),</span> <span class="n">filename</span><span class="p">))</span>
+        <span class="n">hdus</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">hdu</span> <span class="o">=</span> <span class="n">hdus</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Accumulate relevant info about archfile that will be ingested</span>
+        <span class="n">archfiles_row</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">hdu</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">upper</span><span class="p">()))</span>
+                             <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;cols&#39;</span><span class="p">])</span>
+        <span class="n">archfiles_row</span><span class="p">[</span><span class="s1">&#39;checksum&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hdu</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;checksum&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">hdu</span><span class="o">.</span><span class="n">_checksum</span>
+        <span class="n">archfiles_row</span><span class="p">[</span><span class="s1">&#39;filename&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="n">archfiles_row</span><span class="p">[</span><span class="s1">&#39;filetime&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+            <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\d+)&#39;</span><span class="p">,</span> <span class="n">archfiles_row</span><span class="p">[</span><span class="s1">&#39;filename&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">filedate</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">archfiles_row</span><span class="p">[</span><span class="s1">&#39;filetime&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">date</span>
+        <span class="n">year</span><span class="p">,</span> <span class="n">doy</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span>
+            <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\d\d\d\d):(\d\d\d)&#39;</span><span class="p">,</span> <span class="n">filedate</span><span class="p">)</span><span class="o">.</span><span class="n">groups</span><span class="p">())</span>
+        <span class="n">archfiles_row</span><span class="p">[</span><span class="s1">&#39;year&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">year</span>
+        <span class="n">archfiles_row</span><span class="p">[</span><span class="s1">&#39;doy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doy</span>
+        <span class="n">hdus</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">archfiles_row</span></div>
+
+<div class="viewcode-block" id="ObsArchive.get_obspar_info"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_obspar_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_obspar_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Wrap get_all_obspar_info() and just include columns in config[&#39;cols&#39;]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obspar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_all_obspar_info</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="n">obspar</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;cols&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">obspar</span><span class="p">}</span></div>
+
+<div class="viewcode-block" id="ObsArchive.get_arch_info"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_arch_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_arch_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get information for a file for the file lookup table/database.</span>
+<span class="sd">        For obspars, call the get_obspar_info() method.</span>
+<span class="sd">        For FITS files, call get_fits_info() method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;obspar&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obspar_info</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_fits_info</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ObsArchive.get_arch"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_arch">[docs]</a>    <span class="k">def</span> <span class="nf">get_arch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;last&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve telemetry for an observation from the CXC archive and</span>
+<span class="sd">        store in the Ska file archive.</span>
+
+<span class="sd">        :param obsid: obsid</span>
+<span class="sd">        :param version: &#39;default&#39;, &#39;last&#39;, or revision/version number</span>
+<span class="sd">        :returns: obsid directory in Ska file archive</span>
+<span class="sd">        :rtype: directory string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">arc5</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_arc5</span>
+        <span class="n">apstat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apstat</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+        <span class="n">temp_root</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;temp_root&#39;</span><span class="p">]</span>
+
+
+        <span class="c1"># get a numeric version</span>
+        <span class="c1"># do this even if passed a numeric version, as this will</span>
+        <span class="c1"># check to see if the version is available</span>
+        <span class="n">n_version</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ver_num</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n_version</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ProductVersionError</span><span class="p">(</span><span class="s2">&quot;No </span><span class="si">%s</span><span class="s2"> data for ver </span><span class="si">%s</span><span class="s2">&quot;</span>
+                                      <span class="o">%</span> <span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">],</span> <span class="n">version</span><span class="p">))</span>
+        <span class="c1"># use the numeric version instead of &#39;last&#39; or &#39;default&#39;</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="n">n_version</span>
+
+        <span class="c1"># set up directory for data</span>
+        <span class="n">strobs</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%05d</span><span class="s2">_v</span><span class="si">%02d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span>
+        <span class="n">chunk_dir</span> <span class="o">=</span> <span class="n">strobs</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">obs_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">],</span> <span class="n">chunk_dir</span><span class="p">,</span> <span class="n">strobs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">obs_dir</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;making directory </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obs_dir</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">obs_dir</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;obsid dir </span><span class="si">%s</span><span class="s2"> already exists&quot;</span> <span class="o">%</span> <span class="n">obs_dir</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;filecheck&#39;</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="n">obs_dir</span>
+
+        <span class="c1"># get data</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">temp_root</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">temp_root</span><span class="p">)</span>
+        <span class="n">tempdirobj</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">File</span><span class="o">.</span><span class="n">TempDir</span><span class="p">(</span><span class="nb">dir</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">temp_root</span><span class="p">))</span>
+        <span class="n">tempdir</span> <span class="o">=</span> <span class="n">tempdirobj</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;reset&quot;</span><span class="p">)</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;cd </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">tempdir</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;retrieving data for </span><span class="si">%d</span><span class="s2"> in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">tempdir</span><span class="p">))</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;obsid=</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)</span>
+        <span class="c1"># if multi-obi, limit to just the first obi</span>
+        <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">apstat</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+            <span class="n">obis</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+                <span class="s2">&quot;select distinct obi from obidet_0_5 where obsid = </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">obis</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">minobi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">obis</span><span class="p">[</span><span class="s1">&#39;obi&#39;</span><span class="p">])</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;limiting arc5gl to obi </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">minobi</span><span class="p">)</span>
+            <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;obi=</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">minobi</span><span class="p">)</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;version=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">version</span><span class="p">)</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;get </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">])</span>
+        <span class="c1"># get the log too</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;dataset=pipelog&quot;</span><span class="p">)</span>
+        <span class="n">arc5</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;go&quot;</span><span class="p">)</span>
+        <span class="n">archfiles</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">archfiles</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Retrieved no files&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_archfiles_db</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+            <span class="n">existing</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+                <span class="s2">&quot;select * from archfiles where obsid = </span><span class="si">%d</span><span class="s2"> and revision = &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span>
+                <span class="o">%</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">archfiles</span><span class="p">):</span>
+                <span class="c1"># just copy the log files without inserting in db</span>
+                <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;.+log.gz&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mo">0o775</span><span class="p">)</span>
+                    <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">obs_dir</span><span class="p">)</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="n">arch_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_arch_info</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">)</span>
+                <span class="n">arch_info</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obsid</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">existing</span><span class="p">)</span>
+                        <span class="ow">and</span> <span class="n">arch_info</span><span class="p">[</span><span class="s1">&#39;filename&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">existing</span><span class="p">[</span><span class="s1">&#39;filename&#39;</span><span class="p">]):</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;skipping </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">f</span><span class="p">)</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                    <span class="k">continue</span>
+
+                <span class="n">db</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">arch_info</span><span class="p">,</span> <span class="s1">&#39;archfiles&#39;</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mo">0o775</span><span class="p">)</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">obs_dir</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">obs_dir</span></div>
+
+    <span class="c1"># this needs help</span>
+<div class="viewcode-block" id="ObsArchive.update_link"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.update_link">[docs]</a>    <span class="k">def</span> <span class="nf">update_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obsid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create links in the obsid data directories to make it easy to find</span>
+<span class="sd">        the current &#39;default&#39;/released data, all versions that have been</span>
+<span class="sd">        archived, and the &#39;last&#39;/unreleased/provisional data if available.</span>
+
+<span class="sd">        This is designed so that if obsid 5 has released data in version 1</span>
+<span class="sd">        and provisional data in version 2, that the directories and links</span>
+<span class="sd">        will look like:</span>
+
+<span class="sd">        directory 00005_v01</span>
+<span class="sd">        directory 00005_v02</span>
+<span class="sd">        link      00005 -&gt; 00005_v01</span>
+<span class="sd">        link      00005_last -&gt; 00005_v02</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+        <span class="n">archive_dir</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">]</span>
+
+        <span class="c1"># for the obsid get the default and last version numbers</span>
+        <span class="n">default_ver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ver_num</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">)</span>
+        <span class="n">last_ver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ver_num</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="s1">&#39;last&#39;</span><span class="p">)</span>
+
+        <span class="c1"># directories for this obsid are in &#39;chunk_dir&#39;</span>
+        <span class="n">chunk_dir</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;</span><span class="si">%05d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">chunk_dir_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="n">chunk_dir</span><span class="p">)</span>
+        <span class="n">obs_ln</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="n">chunk_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%05d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)</span>
+        <span class="n">obs_ln_last</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="n">chunk_dir</span><span class="p">,</span>
+                                   <span class="s2">&quot;</span><span class="si">%05d</span><span class="s2">_last&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_archfiles_db</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">default_ver</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">def_ver_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="n">chunk_dir</span><span class="p">,</span>
+                                           <span class="s1">&#39;</span><span class="si">%05d</span><span class="s1">_v</span><span class="si">%02d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">default_ver</span><span class="p">))</span>
+                <span class="c1"># link the default version</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;linking </span><span class="si">%s</span><span class="s2"> -&gt; </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">def_ver_dir</span><span class="p">,</span> <span class="n">chunk_dir_path</span><span class="p">),</span>
+                    <span class="n">obs_ln</span><span class="p">))</span>
+                <span class="c1"># don&#39;t use os.path.exists here because if we have a broken</span>
+                <span class="c1"># link we want to remove it too</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">islink</span><span class="p">(</span><span class="n">obs_ln</span><span class="p">):</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">obs_ln</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">symlink</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">def_ver_dir</span><span class="p">,</span> <span class="n">chunk_dir_path</span><span class="p">),</span>
+                    <span class="n">obs_ln</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;updating archfiles default rev to </span><span class="si">%d</span><span class="s2"> for </span><span class="si">%d</span><span class="s2">&quot;</span>
+                            <span class="o">%</span> <span class="p">(</span><span class="n">default_ver</span><span class="p">,</span> <span class="n">obsid</span><span class="p">))</span>
+                <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;UPDATE archfiles SET isdefault = 1</span>
+<span class="s2">                              WHERE obsid = </span><span class="si">%d</span><span class="s2"> and revision = </span><span class="si">%d</span><span class="s2">&quot;&quot;&quot;</span>
+                           <span class="o">%</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">default_ver</span><span class="p">))</span>
+                <span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;UPDATE archfiles SET isdefault = NULL</span>
+<span class="s2">                              WHERE obsid = </span><span class="si">%d</span><span class="s2"> and revision != </span><span class="si">%d</span><span class="s2">&quot;&quot;&quot;</span>
+                           <span class="o">%</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">default_ver</span><span class="p">))</span>
+                <span class="n">db</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="c1"># nothing to do if last_ver undefined</span>
+        <span class="k">if</span> <span class="n">last_ver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">last_ver_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="n">chunk_dir</span><span class="p">,</span>
+                                    <span class="s1">&#39;</span><span class="si">%05d</span><span class="s1">_v</span><span class="si">%02d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">last_ver</span><span class="p">))</span>
+        <span class="c1"># if last and default are different, and we have last data,</span>
+        <span class="c1"># make a link to it</span>
+        <span class="k">if</span> <span class="n">last_ver</span> <span class="o">!=</span> <span class="n">default_ver</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">last_ver_dir</span><span class="p">):</span>
+                <span class="n">obs_ln_last</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="n">chunk_dir</span><span class="p">,</span>
+                                           <span class="s2">&quot;</span><span class="si">%05d</span><span class="s2">_last&quot;</span> <span class="o">%</span> <span class="n">obsid</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;linking </span><span class="si">%s</span><span class="s2"> -&gt; </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">last_ver_dir</span><span class="p">,</span> <span class="n">chunk_dir_path</span><span class="p">),</span>
+                    <span class="n">obs_ln_last</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">islink</span><span class="p">(</span><span class="n">obs_ln_last</span><span class="p">):</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">obs_ln_last</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">symlink</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">last_ver_dir</span><span class="p">,</span> <span class="n">chunk_dir_path</span><span class="p">),</span>
+                    <span class="n">obs_ln_last</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># if default and last are now the same, delete last link</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">obs_ln_last</span><span class="p">):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;removing outdated link </span><span class="si">%s</span><span class="s2">&quot;</span>
+                            <span class="o">%</span> <span class="n">obs_ln_last</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">obs_ln_last</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ObsArchive.get_todo_from_links"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.get_todo_from_links">[docs]</a>    <span class="k">def</span> <span class="nf">get_todo_from_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">archive_dir</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a list of all of the \\*_last directories in the file archive</span>
+<span class="sd">        (and specify revision=default to attempt to get new released products</span>
+<span class="sd">        for them).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Checking for updates to obsids with provisional data&quot;</span><span class="p">)</span>
+        <span class="n">chunk_dirs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="s2">&quot;??&quot;</span><span class="p">))</span>
+        <span class="n">todo_obs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># get the obsids that have provisional data</span>
+        <span class="k">for</span> <span class="n">cdir</span> <span class="ow">in</span> <span class="n">chunk_dirs</span><span class="p">:</span>
+            <span class="n">last_links</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cdir</span><span class="p">,</span> <span class="s2">&quot;?????_last&quot;</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="n">last_links</span><span class="p">:</span>
+                <span class="n">target</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+                <span class="n">lmatch</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\d</span><span class="si">{5}</span><span class="s1">)_v(\d+)$&#39;</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">lmatch</span><span class="p">:</span>
+                    <span class="n">obs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">lmatch</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span>
+                               <span class="n">revision</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">lmatch</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
+                    <span class="n">todo_obs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+        <span class="c1"># exclude bad obsids if there is such a list</span>
+        <span class="n">bad_obsids</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;bad_obsids&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+            <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;bad_obsids&#39;</span><span class="p">])):</span>
+            <span class="c1"># If there is a table of bad obsids for this type, exclude them</span>
+            <span class="n">bad_obsids</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;bad_obsids&#39;</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;ascii&#39;</span><span class="p">)[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span>
+        <span class="n">ok_redo</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obs</span> <span class="ow">in</span> <span class="n">todo_obs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bad_obsids</span><span class="p">:</span>
+                <span class="n">ok_redo</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Skipping obsid </span><span class="si">{}</span><span class="s2">; in </span><span class="si">{}</span><span class="s2"> &#39;bad_obsid&#39; table&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">],</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]))</span>
+        <span class="c1"># Check to see if there actually is any newer data for the obsids</span>
+        <span class="n">has_new</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obs</span> <span class="ow">in</span> <span class="n">ok_redo</span><span class="p">:</span>
+            <span class="n">def_ver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ver_num</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="s1">&#39;default&#39;</span><span class="p">)</span>
+            <span class="n">last_ver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_ver_num</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="s1">&#39;last&#39;</span><span class="p">)</span>
+            <span class="c1"># if the last version is now the default version</span>
+            <span class="c1"># or if the last version is now different from what</span>
+            <span class="c1"># we have</span>
+            <span class="k">if</span> <span class="p">((</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">def_ver</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">last_ver</span><span class="p">)):</span>
+                <span class="n">has_new</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">has_new</span></div>
+
+
+<div class="viewcode-block" id="ObsArchive.update"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.ObsArchive.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run the update process using the config already passed to the object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_env</span><span class="p">()</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span>
+        <span class="n">logger</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span>
+        <span class="n">archive_dir</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;data_root&#39;</span><span class="p">]</span>
+        <span class="n">apstat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apstat</span>
+        <span class="n">updated_obsids</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">last_id_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="s1">&#39;last_id.txt&#39;</span><span class="p">)</span>
+        <span class="c1"># if an obsid is requested, just do that</span>
+        <span class="k">if</span> <span class="s1">&#39;obsid&#39;</span> <span class="ow">in</span> <span class="n">config</span> <span class="ow">and</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">get_arch</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_link</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="n">ProductVersionError</span> <span class="k">as</span> <span class="n">ve</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">ve</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Could not determine link versions for </span><span class="si">%d</span><span class="s2">&quot;</span>
+                            <span class="o">%</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]]</span>
+
+        <span class="c1"># if no obsid specified, try to retrieve all data</span>
+        <span class="c1"># since tool last run</span>
+        <span class="c1"># use saved id from the apstat table as a reference</span>
+        <span class="n">last_id</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">last_id_file</span><span class="p">):</span>
+            <span class="n">last_id_fh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">last_id_file</span><span class="p">)</span>
+            <span class="n">last_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">last_id_fh</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">())</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;using </span><span class="si">%d</span><span class="s2"> for last_id&quot;</span> <span class="o">%</span> <span class="n">last_id</span><span class="p">)</span>
+            <span class="n">last_id_fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rebuild&#39;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;last_id.txt not found.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                                 <span class="o">+</span> <span class="s2">&quot;To rebuild archive from obsid 1, &quot;</span>
+                                 <span class="o">+</span> <span class="s2">&quot;set rebuild=True in configuration&quot;</span><span class="p">)</span>
+        <span class="n">query_vars</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;apstat_table&#39;</span><span class="p">:</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;apstat_table&#39;</span><span class="p">],</span>
+                      <span class="s1">&#39;apstat_id&#39;</span><span class="p">:</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;apstat_id&#39;</span><span class="p">],</span>
+                      <span class="s1">&#39;last_id&#39;</span><span class="p">:</span> <span class="n">last_id</span><span class="p">}</span>
+        <span class="n">apstat_query</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;&quot;&quot;select * from </span><span class="si">%(apstat_table)s</span><span class="s2"></span>
+<span class="s2">                                  where </span><span class="si">%(apstat_id)s</span><span class="s2"> &gt; </span><span class="si">%(last_id)d</span><span class="s2"></span>
+<span class="s2">                                  order by </span><span class="si">%(apstat_id)s</span><span class="s2">&quot;&quot;&quot;</span>
+                        <span class="o">%</span> <span class="n">query_vars</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">apstat_query</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">apstat</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+            <span class="n">todo</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span><span class="n">apstat_query</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">obs</span> <span class="ow">in</span> <span class="n">todo</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;running get_arch for obsid </span><span class="si">%d</span><span class="s2"> run on </span><span class="si">%s</span><span class="s2">&quot;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;ap_date&#39;</span><span class="p">]))</span>
+            <span class="n">get_rev</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]</span>
+            <span class="c1"># firstrun was the mode to initially populate the</span>
+            <span class="c1"># file archive</span>
+            <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;firstrun&#39;</span><span class="p">]:</span>
+                <span class="c1"># if I&#39;ve already got a later version, skip this</span>
+                <span class="c1"># obsid</span>
+                <span class="n">have</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obs_dirs</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">have</span><span class="p">:</span>
+                    <span class="n">max_rev</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">have</span><span class="p">[</span><span class="s1">&#39;revisions&#39;</span><span class="p">])</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%d</span><span class="s2"> vs </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">max_rev</span><span class="p">,</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]))</span>
+                    <span class="k">if</span> <span class="n">max_rev</span> <span class="o">&gt;=</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                            <span class="s2">&quot;skipping </span><span class="si">%d</span><span class="s2">, firstrun and already have newer rev&quot;</span>
+                            <span class="o">%</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+                        <span class="k">continue</span>
+                <span class="c1"># otherwise override the revision from the apstat</span>
+                <span class="c1"># table and just get the current &#39;default&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">get_rev</span> <span class="o">=</span> <span class="s1">&#39;default&#39;</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_arch</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="n">get_rev</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_link</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="n">ProductVersionError</span> <span class="k">as</span> <span class="n">ve</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;skipping </span><span class="si">%d</span><span class="s2">, default ver not available&quot;</span>
+                            <span class="o">%</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">ve</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="c1"># update the file that stores the last id from the apstat table</span>
+            <span class="n">last_id_fh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">last_id_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">last_id_fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obs</span><span class="p">[</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;apstat_id&#39;</span><span class="p">]])</span>
+            <span class="n">last_id_fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;asp_l1&#39;</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">mica.archive.asp_l1_proc</span>
+                <span class="n">mica</span><span class="o">.</span><span class="n">archive</span><span class="o">.</span><span class="n">asp_l1_proc</span><span class="o">.</span><span class="n">update</span><span class="p">([</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]])</span>
+            <span class="n">updated_obsids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">todo</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;No new data&quot;</span><span class="p">)</span>
+
+        <span class="c1"># look for all previous &quot;provisional&quot; aspect solutions</span>
+        <span class="c1"># and broken links and and update if possible</span>
+        <span class="n">prov_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_todo_from_links</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">obs</span> <span class="ow">in</span> <span class="n">prov_data</span><span class="p">:</span>
+            <span class="c1"># check again for multi-obis and limit to first one</span>
+            <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">apstat</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+                <span class="n">obis</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+                    <span class="s2">&quot;select distinct obi from obidet_0_5 where obsid = </span><span class="si">%d</span><span class="s2">&quot;</span>
+                    <span class="o">%</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+            <span class="n">minobi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">obis</span><span class="p">[</span><span class="s1">&#39;obi&#39;</span><span class="p">])</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;checking database status for obsid </span><span class="si">%d</span><span class="s2"> obi </span><span class="si">%d</span><span class="s2"> ver </span><span class="si">%s</span><span class="s2">, &quot;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="n">minobi</span><span class="p">,</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]),</span> <span class="p">)</span>
+            <span class="n">query_vars</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;apstat_table&#39;</span><span class="p">:</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;apstat_table&#39;</span><span class="p">],</span>
+                          <span class="s1">&#39;apstat_id&#39;</span><span class="p">:</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;apstat_id&#39;</span><span class="p">],</span>
+                          <span class="s1">&#39;obsid&#39;</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span>
+                          <span class="s1">&#39;obi&#39;</span><span class="p">:</span> <span class="n">minobi</span><span class="p">,</span>
+                          <span class="s1">&#39;revision&#39;</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]}</span>
+            <span class="n">apstat_query</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;&quot;&quot;select * from </span><span class="si">%(apstat_table)s</span><span class="s2"></span>
+<span class="s2">                               where obsid = </span><span class="si">%(obsid)d</span><span class="s2"> and obi = </span><span class="si">%(obi)d</span><span class="s2"></span>
+<span class="s2">                               and revision = </span><span class="si">%(revision)d</span><span class="s2">&quot;&quot;&quot;</span>
+                            <span class="o">%</span> <span class="n">query_vars</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">apstat_query</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">apstat</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+                <span class="n">current_status</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span><span class="n">apstat_query</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_status</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">&quot;warning: obsid </span><span class="si">%(obsid)d</span><span class="s2"> revision </span><span class="si">%(revision)d</span><span class="s2"> not in </span><span class="si">%(apstat_table)s</span><span class="s2">&quot;</span>
+                    <span class="o">%</span> <span class="n">query_vars</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_status</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">&quot;warning: obsid </span><span class="si">%(obsid)d</span><span class="s2"> revision </span><span class="si">%(revision)d</span><span class="s2"> multiple entries in </span><span class="si">%(apstat_table)s</span><span class="s2">&quot;</span>
+                    <span class="o">%</span> <span class="n">query_vars</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="c1"># a query to get the quality from the max science_2 data that</span>
+            <span class="c1"># used this aspect_solution.  Ugh.</span>
+            <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;apstat_table&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;aspect_1&#39;</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">apstat</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+                    <span class="n">science_qual</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
+                        <span class="sd">&quot;&quot;&quot;select quality from science_2 where science_2_id in (</span>
+<span class="sd">                         select science_2_id from science_2_obi where science_1_id in (</span>
+<span class="sd">                         select science_1_id from science_1 where aspect_1_id in (</span>
+<span class="sd">                         select aspect_1_id from aspect_1</span>
+<span class="sd">                         where obsid = {obsid} and obi = {obi}</span>
+<span class="sd">                         and revision = {revision})))&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">query_vars</span><span class="p">))</span>
+                <span class="c1"># if any of the science_2 data associated with this obsid is</span>
+                <span class="c1"># now not pending, set the quality to an arbitrary value &#39;X&#39;</span>
+                <span class="c1"># and try to update the obsid</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">science_qual</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">science_qual</span><span class="p">[</span><span class="s1">&#39;quality&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;P&#39;</span><span class="p">):</span>
+                        <span class="n">current_status</span><span class="p">[</span><span class="s1">&#39;quality&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;X&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># if there are no science_2 entries at all for the obsid</span>
+                    <span class="c1"># see if it is discarded</span>
+                    <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s1">&#39;sybase&#39;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="s1">&#39;sqlsao&#39;</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="s1">&#39;axafocat&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
+                        <span class="n">target_status</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchone</span><span class="p">(</span>
+                            <span class="s2">&quot;select status from target where obsid = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]))</span>
+                        <span class="k">if</span> <span class="n">target_status</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;discarded&#39;</span><span class="p">:</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Skipping </span><span class="si">{}</span><span class="s2">, obsid &#39;discarded&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                    <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]))</span>
+                            <span class="k">continue</span>
+                    <span class="c1"># otherwise, set to &#39;X&#39; as an unknown status and try it anyway</span>
+                    <span class="n">current_status</span><span class="p">[</span><span class="s1">&#39;quality&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;X&#39;</span>
+            <span class="k">if</span> <span class="n">current_status</span><span class="p">[</span><span class="s1">&#39;quality&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;P&#39;</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">get_arch</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">],</span> <span class="s1">&#39;default&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="n">ProductVersionError</span> <span class="k">as</span> <span class="n">ve</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;skipping </span><span class="si">%d</span><span class="s2">, default ver not available&quot;</span>
+                                <span class="o">%</span> <span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">ve</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_link</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;asp_l1&#39;</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">mica.archive.asp_l1_proc</span>
+                <span class="n">mica</span><span class="o">.</span><span class="n">archive</span><span class="o">.</span><span class="n">asp_l1_proc</span><span class="o">.</span><span class="n">update</span><span class="p">([</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]])</span>
+            <span class="n">updated_obsids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">updated_obsids</span></div></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+
+
+<form action="../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right"> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,424 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide star statistics &#8212; mica 4.21.3.dev26+g8fbfc7e documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Observation parameters" href="observation_parameters.html" />
+    <link rel="prev" title="Acquisition star statistics" href="acq_stats.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="">
+        <span id="logotext1"></span><span id="logotext2"></span>
+    </a></li>
+    <li><a title="General Index" href="genindex.html">Index</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li class="right">
+	<a href="observation_parameters.html" title="Observation parameters">
+	  next &raquo;
+	</a>
+      </li>
+      <li class="right">
+	<a href="acq_stats.html" title="Acquisition star statistics">
+	  &laquo; previous
+	</a>
+	 |
+      </li>
+      <li>
+	<a href="index.html">mica 4.21.3.dev26+g8fbfc7e documentation</a>
+	 &#187;
+      </li>
+      
+      <li>Guide star statistics</li> 
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="guide-star-statistics">
+<h1>Guide star statistics<a class="headerlink" href="#guide-star-statistics" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="api.html#module-mica.stats.guide_stats" title="mica.stats.guide_stats"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.stats.guide_stats</span></code></a> module
+includes code to gather acquisition and guide statistics data for each observation and
+return those data to the user.</p>
+<p>To get the whole guide stats data table:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.stats.guide_stats</span> <span class="kn">import</span> <span class="n">get_stats</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span> <span class="o">=</span> <span class="n">get_stats</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="p">[(</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">5438</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;slot&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;dy_std&#39;</span><span class="p">]</span>
+<span class="go">0.18406899294435713</span>
+</pre></div>
+</div>
+<p>The hdf5 in-kernel searches may be faster working with the table directly for some
+operations.</p>
+<div class="section" id="data-table-fields">
+<h2>Data table fields<a class="headerlink" href="#data-table-fields" title="Permalink to this headline">¶</a></h2>
+<p>The guide statistics data table contains the following columns:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Column</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>obsid</p></td>
+<td><p>obsid</p></td>
+</tr>
+<tr class="row-odd"><td><p>obi</p></td>
+<td><p>observation interval number</p></td>
+</tr>
+<tr class="row-even"><td><p>kalman_tstart</p></td>
+<td><p>Kalman transition tstart from kadi event</p></td>
+</tr>
+<tr class="row-odd"><td><p>kalman_datestart</p></td>
+<td><p>Kalman transition datestart from kadi event</p></td>
+</tr>
+<tr class="row-even"><td><p>npnt_tstop</p></td>
+<td><p>tstop for end of NPNT dwell for this observation</p></td>
+</tr>
+<tr class="row-odd"><td><p>npnt_datestop</p></td>
+<td><p>datestop for end of NPNT dwell for this observation</p></td>
+</tr>
+<tr class="row-even"><td><p>revision</p></td>
+<td><p>revision string representing the software version</p></td>
+</tr>
+<tr class="row-odd"><td><p>slot</p></td>
+<td><p>ACA readout slot id</p></td>
+</tr>
+<tr class="row-even"><td><p>idx</p></td>
+<td><p>starcheck star catalog index id</p></td>
+</tr>
+<tr class="row-odd"><td><p>type</p></td>
+<td><p>star catalog type (BOT or GUI)</p></td>
+</tr>
+<tr class="row-even"><td><p>yang</p></td>
+<td><p>commanded y-angle position for center of readout window (arcsec)</p></td>
+</tr>
+<tr class="row-odd"><td><p>zang</p></td>
+<td><p>commanded z-angle position for center of readout window (arcsec)</p></td>
+</tr>
+<tr class="row-even"><td><p>sz</p></td>
+<td><p>image readout window size</p></td>
+</tr>
+<tr class="row-odd"><td><p>mag</p></td>
+<td><p>catalog MAG_ACA of acquisition star</p></td>
+</tr>
+<tr class="row-even"><td><p>n_samples</p></td>
+<td><p>number of telemetry samples in Kalman (only samples with good telem quality)</p></td>
+</tr>
+<tr class="row-odd"><td><p>n_track</p></td>
+<td><p>number of samples with AOACFCT == ‘TRAK’</p></td>
+</tr>
+<tr class="row-even"><td><p>f_track</p></td>
+<td><p>fraction of samples with AOACFCT == ‘TRAK’</p></td>
+</tr>
+<tr class="row-odd"><td><p>f_racq</p></td>
+<td><p>fraction samples AOACFCT == ‘RACQ’</p></td>
+</tr>
+<tr class="row-even"><td><p>f_srch</p></td>
+<td><p>fraction samples AOACFCT == ‘SRCH’</p></td>
+</tr>
+<tr class="row-odd"><td><p>f_none</p></td>
+<td><p>fraction samples AOACFCT == ‘NONE’</p></td>
+</tr>
+<tr class="row-even"><td><p>n_kalman</p></td>
+<td><p>number of tracked samples with no (modern) bad status flags set (no IR, SP)</p></td>
+</tr>
+<tr class="row-odd"><td><p>no_track</p></td>
+<td><p>fraction of no track samples (n_samples - n_track / n_samples)</p></td>
+</tr>
+<tr class="row-even"><td><p>f_within_0.3</p></td>
+<td><p>fraction of tracked samples with 0.3 arcsecs of expected position</p></td>
+</tr>
+<tr class="row-odd"><td><p>f_within_1</p></td>
+<td><p>fraction of tracked samples with 1 arcsecs of expected position</p></td>
+</tr>
+<tr class="row-even"><td><p>f_within_5</p></td>
+<td><p>fraction of tracked samples with 5 arcsecs of expected position</p></td>
+</tr>
+<tr class="row-odd"><td><p>f_outside_5</p></td>
+<td><p>fraction of tracked samples outside 5 arcsecs of expected position</p></td>
+</tr>
+<tr class="row-even"><td><p>f_obc_bad</p></td>
+<td><p>fraction of tracked samples with modern bad status flags set (IR, SP)</p></td>
+</tr>
+<tr class="row-odd"><td><p>f_common_col</p></td>
+<td><p>fraction of tracked samples with AOACICC flag set to ERR</p></td>
+</tr>
+<tr class="row-even"><td><p>f_quad_bound</p></td>
+<td><p>fraction of tracked samples with AOACIQB flag set to ERR</p></td>
+</tr>
+<tr class="row-odd"><td><p>f_sat_pix</p></td>
+<td><p>fraction of tracked samples with AOACISP flag set to ERR</p></td>
+</tr>
+<tr class="row-even"><td><p>f_def_pix</p></td>
+<td><p>fraction of tracked samples with AOACIDP flag set to ERR</p></td>
+</tr>
+<tr class="row-odd"><td><p>f_ion_rad</p></td>
+<td><p>fraction of tracked samples with AOACIIR flag set to ERR</p></td>
+</tr>
+<tr class="row-even"><td><p>f_mult_star</p></td>
+<td><p>fraction of tracked samples with AOACIMS flag set to ERR</p></td>
+</tr>
+<tr class="row-odd"><td><p>aoacmag_min</p></td>
+<td><p>min magnitude over interval</p></td>
+</tr>
+<tr class="row-even"><td><p>aoacmag_mean</p></td>
+<td><p>mean magnitude over interval</p></td>
+</tr>
+<tr class="row-odd"><td><p>aoacmag_max</p></td>
+<td><p>max magnitude over interval</p></td>
+</tr>
+<tr class="row-even"><td><p>aoacmag_std</p></td>
+<td><p>std of magnitude over interval</p></td>
+</tr>
+<tr class="row-odd"><td><p>aoacyan_mean</p></td>
+<td><p>mean AOACYAN</p></td>
+</tr>
+<tr class="row-even"><td><p>aoaczan_mean</p></td>
+<td><p>mean AOACZAN</p></td>
+</tr>
+<tr class="row-odd"><td><p>dy_min</p></td>
+<td><p>dy min (see notes on residuals)</p></td>
+</tr>
+<tr class="row-even"><td><p>dy_mean</p></td>
+<td><p>dy max (see notes on residuals)</p></td>
+</tr>
+<tr class="row-odd"><td><p>dy_std</p></td>
+<td><p>dy std (see notes on residuals)</p></td>
+</tr>
+<tr class="row-even"><td><p>dy_max</p></td>
+<td><p>dy max (see notes on residuals)</p></td>
+</tr>
+<tr class="row-odd"><td><p>dz_min</p></td>
+<td><p>dz min (see notes on residuals)</p></td>
+</tr>
+<tr class="row-even"><td><p>dz_mean</p></td>
+<td><p>dz max (see notes on residuals)</p></td>
+</tr>
+<tr class="row-odd"><td><p>dz_std</p></td>
+<td><p>dz std (see notes on residuals)</p></td>
+</tr>
+<tr class="row-even"><td><p>dz_max</p></td>
+<td><p>dz max (see notes on residuals)</p></td>
+</tr>
+<tr class="row-odd"><td><p>dr_min</p></td>
+<td><p>dr min (see notes on residuals)</p></td>
+</tr>
+<tr class="row-even"><td><p>dr_mean</p></td>
+<td><p>dr max (see notes on residuals)</p></td>
+</tr>
+<tr class="row-odd"><td><p>dr_std</p></td>
+<td><p>dr std (see notes on residuals)</p></td>
+</tr>
+<tr class="row-even"><td><p>dr_5th</p></td>
+<td><p>dr 5th percentile value</p></td>
+</tr>
+<tr class="row-odd"><td><p>dr_95th</p></td>
+<td><p>dr 95th percentile value</p></td>
+</tr>
+<tr class="row-even"><td><p>dr_max</p></td>
+<td><p>dr max (see notes on residuals)</p></td>
+</tr>
+<tr class="row-odd"><td><p>n_track_interv</p></td>
+<td><p>number of intervals of continuous track</p></td>
+</tr>
+<tr class="row-even"><td><p>n_long_track_interv</p></td>
+<td><p>number of intervals of continuous track with &gt; 60 samples</p></td>
+</tr>
+<tr class="row-odd"><td><p>n_long_no_track_interv</p></td>
+<td><p>number of intervals of continuous loss of track with &gt; 60 samples</p></td>
+</tr>
+<tr class="row-even"><td><p>n_racq_interv</p></td>
+<td><p>number of intervals during Kalman when RACQ was set for the slot</p></td>
+</tr>
+<tr class="row-odd"><td><p>n_srch_interv</p></td>
+<td><p>number of intervals during Kalman when SRCH was set</p></td>
+</tr>
+<tr class="row-even"><td><p>agasc_id</p></td>
+<td><p>AGASC (catalog) id</p></td>
+</tr>
+<tr class="row-odd"><td><p>color1</p></td>
+<td><p>AGASC COLOR1, estimated B-V color</p></td>
+</tr>
+<tr class="row-even"><td><p>ra</p></td>
+<td><p>Right Ascension, corrected for proper motion at obs time (degrees)</p></td>
+</tr>
+<tr class="row-odd"><td><p>dec</p></td>
+<td><p>Declination, corrected for proper motion at obs time (degrees)</p></td>
+</tr>
+<tr class="row-even"><td><p>epoch</p></td>
+<td><p>AGASC EPOCH</p></td>
+</tr>
+<tr class="row-odd"><td><p>pm_ra</p></td>
+<td><p>AGASC PM_RA, proper motion in ra (milli-arcsec/year)</p></td>
+</tr>
+<tr class="row-even"><td><p>pm_dec</p></td>
+<td><p>AGASC PM_DEC, proper motion in dec (milli-arsec/year)</p></td>
+</tr>
+<tr class="row-odd"><td><p>var</p></td>
+<td><p>AGASC VAR, known or suspected variable star</p></td>
+</tr>
+<tr class="row-even"><td><p>pos_err</p></td>
+<td><p>AGASC POS_ERR, position error (milli-arcsec)</p></td>
+</tr>
+<tr class="row-odd"><td><p>mag_aca</p></td>
+<td><p>AGASC MAG_ACA, ACA mag</p></td>
+</tr>
+<tr class="row-even"><td><p>mag_err</p></td>
+<td><p>AGASC MAG_ERR, (to be fixed, this should have been MAG_ACA_ERR)</p></td>
+</tr>
+<tr class="row-odd"><td><p>mag_band</p></td>
+<td><p>AGASC MAG_BAND, integer code for spectral band</p></td>
+</tr>
+<tr class="row-even"><td><p>pos_catid</p></td>
+<td><p>AGASC POS_CATID, integer code for position catalog</p></td>
+</tr>
+<tr class="row-odd"><td><p>aspq1</p></td>
+<td><p>AGASC ASPQ1, integer spoiler code</p></td>
+</tr>
+<tr class="row-even"><td><p>aspq2</p></td>
+<td><p>AGASC ASPQ2, integer proper motion flag</p></td>
+</tr>
+<tr class="row-odd"><td><p>aspq3</p></td>
+<td><p>AGASC ASPQ3, integer dist in 100m-arcsec to nearest Tycho2 star</p></td>
+</tr>
+<tr class="row-even"><td><p>acqq1</p></td>
+<td><p>AGASC ACQQ1, mag diff to brightest star within 53.3” (0.01mags)</p></td>
+</tr>
+<tr class="row-odd"><td><p>acqq2</p></td>
+<td><p>AGASC ACQQ2, mag diff to brightest star within 107” (0.01mags)</p></td>
+</tr>
+<tr class="row-even"><td><p>acqq4</p></td>
+<td><p>AGASC ACQQ4, mag diff to brightest star within 267.5” (0.01mags)</p></td>
+</tr>
+<tr class="row-odd"><td><p>n100_warm_frac</p></td>
+<td><p>estimated n100 fraction of CCD pixels for this observation</p></td>
+</tr>
+<tr class="row-even"><td><p>tccd_mean</p></td>
+<td><p>mean CCD temperature over Kalman interval</p></td>
+</tr>
+<tr class="row-odd"><td><p>tccd_max</p></td>
+<td><p>max CCD temperature over Kalman interval</p></td>
+</tr>
+<tr class="row-even"><td><p>known_bad</p></td>
+<td><p>ignore this star in standard processing (boolean)</p></td>
+</tr>
+<tr class="row-odd"><td><p>bad_comment</p></td>
+<td><p>reason to ignore a “known_bad” star</p></td>
+</tr>
+</tbody>
+</table>
+<p>Notes on residuals:</p>
+<ul class="simple">
+<li><p>The dy, dz, dr values are residuals calculated by subtracting the
+expected star position from the telemetered star position (AOACYAN AOACZAN).</p></li>
+<li><p>The expected star position has been calculated using the onboard estimated attitude (AOATTQT*) and the
+AGASC RA/Dec for the commanded star.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dr</span></code> is defined as <code class="docutils literal notranslate"><span class="pre">sqrt(dy**2</span> <span class="pre">+</span> <span class="pre">dz**2)</span></code></p></li>
+</ul>
+</div>
+<div class="section" id="processing">
+<h2>Processing<a class="headerlink" href="#processing" title="Permalink to this headline">¶</a></h2>
+<p>For each observation, after the observation has run and telemetry is available, the guide
+stats process does the following:</p>
+<ul class="simple">
+<li><p>Fetches the AGASC information for each star in the catalog</p></li>
+<li><p>Fetches the PCAD data for the Kalman interval</p></li>
+<li><p>For each guide star in the Kalman interval star calculates statistics on metrics for
+that star over the interval.</p></li>
+</ul>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">Guide star statistics</a><ul>
+<li><a class="reference internal" href="#data-table-fields">Data table fields</a></li>
+<li><a class="reference internal" href="#processing">Processing</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="acq_stats.html"
+                        title="previous chapter">Acquisition star statistics</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="observation_parameters.html"
+                        title="next chapter">Observation parameters</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/guide_stats.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right">
+    <a href="_sources/guide_stats.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

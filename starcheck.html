@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starcheck products &#8212; mica 4.21.3.dev26+g8fbfc7e documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="mica.archive.aca_dark" href="api.html" />
+    <link rel="prev" title="Observation parameters" href="observation_parameters.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="">
+        <span id="logotext1"></span><span id="logotext2"></span>
+    </a></li>
+    <li><a title="General Index" href="genindex.html">Index</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li class="right">
+	<a href="api.html" title="mica.archive.aca_dark">
+	  next &raquo;
+	</a>
+      </li>
+      <li class="right">
+	<a href="observation_parameters.html" title="Observation parameters">
+	  &laquo; previous
+	</a>
+	 |
+      </li>
+      <li>
+	<a href="index.html">mica 4.21.3.dev26+g8fbfc7e documentation</a>
+	 &#187;
+      </li>
+      
+      <li>Starcheck products</li> 
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="starcheck-products">
+<span id="starcheck-label"></span><h1>Starcheck products<a class="headerlink" href="#starcheck-products" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="api.html#module-mica.starcheck" title="mica.starcheck"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.starcheck</span></code></a> module provides tools to update a database of starcheck products
+and methods to retrieve content from that database.  The <cite>mica.starcheck</cite> database
+inherits much of the structure of the original Sybase starcheck_database project which
+organized the per-obsid data into these tables:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>starcheck_obs</p></li>
+<li><p>starcheck_manvr</p></li>
+<li><p>starcheck_warnings</p></li>
+<li><p>starcheck_catalog</p></li>
+</ul>
+</div></blockquote>
+<p>That Sybase database was updated for new obsids as they became available in the CXCDS
+archive and is intended to contain only records for observations in their final/observed
+form. When developing the <cite>mica.report</cite> system, we had a new driver to be able to track
+observations in the planning stages, so a new database of starcheck products, this
+<cite>mica.starcheck</cite> database, was developed which contains entries that include observations
+in released schedules that have not yet been observed.  The <cite>mica.starcheck</cite> database
+includes all versions of observations that came out in released products and does not
+attempt to pre-filter on final/observed configuration on ingest.  These distinctions may
+be useful for developers who wish to use the database directly.  For most users, the
+included methods filter the records available in the database to return useful values.</p>
+<p>The <cite>mica.starcheck</cite> sqlite3 database, as mentioned inherits most of the per-obsid tables,
+but adds to each an id <cite>sc_id</cite> that maps the entry back to a new <cite>starcheck_id</cite> table
+which has one record for each directory that has been ingested (each directory is assumed
+to have a single starcheck.txt file as the source for that entry).  A new table,
+<cite>starcheck_pred_temp</cite> has also been added which includes the ACA CCD temperature
+prediction that was written directly into starcheck.txt at the time of review (when applicable).</p>
+<div class="section" id="get-catalog-data">
+<h2>Get catalog data<a class="headerlink" href="#get-catalog-data" title="Permalink to this headline">¶</a></h2>
+<p>The <cite>get_starcheck_catalog</cite> and <cite>get_starcheck_catalog_at_date</cite> methods return
+dictionaries of the content of the starcheck database tables.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.starcheck</span> <span class="kn">import</span> <span class="n">get_starcheck_catalog</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obsid_starcheck</span> <span class="o">=</span> <span class="n">get_starcheck_catalog</span><span class="p">(</span><span class="mi">5438</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obsid_starcheck</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+<span class="go">[&#39;status&#39;, &#39;warnings&#39;, &#39;cat&#39;, &#39;mp_dir&#39;, &#39;obs&#39;, &#39;manvr&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obsid_starcheck</span><span class="p">[</span><span class="s1">&#39;cat&#39;</span><span class="p">]</span>
+<span class="go">&lt;Table masked=False length=11&gt;</span>
+<span class="go">sc_id obsid obs_idx    mp_starcat_time    ...  res  halfw    pass    notes</span>
+<span class="go">int64 int64  int64        unicode672      ... int64 int64 unicode128 object</span>
+<span class="go">----- ----- ------- --------------------- ... ----- ----- ---------- ------</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1    25              None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1    25              None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1    25              None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1   120       a2g2   None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1   120       a2g2   None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1   120         a3   None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1   120       a2g3   None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1   120              None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1   120         a2   None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1   120         a2   None</span>
+<span class="go">  941  5438       2 2005:282:18:53:05.394 ...     1   120         a3   None</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obsid_starcheck</span><span class="p">[</span><span class="s1">&#39;cat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">colnames</span>
+<span class="go">[&#39;sc_id&#39;, &#39;obsid&#39;, &#39;obs_idx&#39;, &#39;mp_starcat_time&#39;, &#39;idx&#39;, &#39;slot&#39;, &#39;id&#39;, &#39;idnote&#39;, &#39;type&#39;,</span>
+<span class="go">&#39;sz&#39;, &#39;minmag&#39;, &#39;mag&#39;, &#39;maxmag&#39;, &#39;yang&#39;, &#39;zang&#39;, &#39;dim&#39;, &#39;res&#39;, &#39;halfw&#39;, &#39;pass&#39;,</span>
+<span class="go">&#39;notes&#39;]</span>
+</pre></div>
+</div>
+<p>The <cite>get_starcheck_catalog_at_date</cite> routine is designed to retrieve the catalog that would
+apply at the given date.  “Apply” in this context isn’t quite the “onboard catalog at the
+time” but instead, if the given date is during NMM is the catalog that was commanded
+during that NMM, or if the date is in NPNT, the catalog is the catalog that was commanded
+in the previous NMM (that should be tracked during the NPNT interval).</p>
+<p><cite>get_starcheck_catalog_at_date</cite> is intended both to help with larger scale processing (to
+get the “right” catalog for a whole bunch of kadi dwells) and for some special cases. For
+example, it will get the commanded catalog during a vehicle-only period of time on the
+spacecraft.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.starcheck</span> <span class="kn">import</span> <span class="n">get_starcheck_catalog_at_date</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">catalog_by_date</span> <span class="o">=</span> <span class="n">get_starcheck_catalog_by_date</span><span class="p">(</span><span class="s1">&#39;2015:174:01:25:30.068&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">catalog_by_date</span><span class="p">[</span><span class="s1">&#39;obs&#39;</span><span class="p">][</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span>
+<span class="go">16689</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">kadi</span> <span class="kn">import</span> <span class="n">events</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dwells</span> <span class="o">=</span> <span class="n">events</span><span class="o">.</span><span class="n">dwells</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="s1">&#39;2015:174:01:25:30.068&#39;</span><span class="p">,</span> <span class="s1">&#39;2015:174:01:25:30.068&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dwells</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_obsid</span><span class="p">()</span>
+<span class="go">17696</span>
+</pre></div>
+</div>
+<p>This is an example of a time in which the commanded obsid (COBSQID) was not updated due to
+SCS107, so a fetch of the catalog for obsid 17696 will not give the right star positions
+if one desires to calculate residuals during the dwell.</p>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">Starcheck products</a><ul>
+<li><a class="reference internal" href="#get-catalog-data">Get catalog data</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="observation_parameters.html"
+                        title="previous chapter">Observation parameters</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="api.html"
+                        title="next chapter"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark</span></code></a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/starcheck.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right">
+    <a href="_sources/starcheck.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>
