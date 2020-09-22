@@ -23,7 +23,7 @@ access to a comprehensive set of information related to Chandra aspect:
    starcheck
 
 API docs
-========
+--------
 
 .. toctree::
    :maxdepth: 1
