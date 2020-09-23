@@ -1179,7 +1179,7 @@ class AspectInterval(object):
                                             )
 
     def _calc_guide_deltas(self):
-        from mica.quaternion import Quat
+        from Quaternion import Quat
         self.deltas = {}
         asol = self.asol
         cen = self.cen
@@ -1200,7 +1200,7 @@ class AspectInterval(object):
             logger.debug('Found %d centroids ' % len(ceni))
             if len(ceni) < 2:
                 continue
-            q_atts = Quat(q_att[ok])
+            q_atts = Quat(q=q_att[ok])
             Ts = q_atts.transform
             # use ang_y or ang_y_sm?
             #inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)

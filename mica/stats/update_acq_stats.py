@@ -11,10 +11,10 @@ import mica.archive.obspar
 from mica.starcheck import get_starcheck_catalog, get_starcheck_catalog_at_date
 import tables
 import numpy as np
-import Ska.quatutil
 import Ska.astro
-from mica.quaternion import Quat
+from Quaternion import Quat
 from chandra_aca import dark_model
+from chandra_aca.transform import radec_to_eci, yagzag_to_radec
 import logging
 import smtplib
 from email.mime.text import MIMEText
@@ -128,10 +128,10 @@ def get_options():
 def _deltas_vs_obc_quat(vals, times, catalog):
     # Ignore misalign
     aca_misalign = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    q_att = Quat(np.array([vals['AOATTQT1'],
-                           vals['AOATTQT2'],
-                           vals['AOATTQT3'],
-                           vals['AOATTQT4']]).transpose())
+    q_att = Quat(q=np.array([vals['AOATTQT1'],
+                             vals['AOATTQT2'],
+                             vals['AOATTQT3'],
+                             vals['AOATTQT4']]).transpose())
     Ts = q_att.transform
     acqs = catalog
 
@@ -155,7 +155,7 @@ def _deltas_vs_obc_quat(vals, times, catalog):
             continue
         ra = star['RA_PMCORR']
         dec = star['DEC_PMCORR']
-        star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
+        star_pos_eci = radec_to_eci(ra, dec)
         d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
                        star_pos_eci).transpose()
         yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
@@ -205,7 +205,7 @@ def q_mult(q1, q2):
                   + q1[:, 3] * q2[:, 2] + q1[:, 2] * q2[:, 3])
     mult[:, 3] = (-q1[:, 0] * q2[:, 0] - q1[:, 1] * q2[:, 1]
                   - q1[:, 2] * q2[:, 2] + q1[:, 3] * q2[:, 3])
-    return Quat(mult)
+    return Quat(q=mult)
 
 
 def search_agasc(yang, zang, field_agasc, q_aca):
@@ -221,7 +221,7 @@ def search_agasc(yang, zang, field_agasc, q_aca):
     """
 
     for agasc_star in field_agasc:
-        ra, dec = Ska.quatutil.yagzag2radec(
+        ra, dec = yagzag_to_radec(
             yang * 1.0 / 3600,
             zang * 1.0 / 3600,
             q_aca)
@@ -301,10 +301,10 @@ def get_modern_data(manvr, dwell, starcheck):
     # corrected by the one-shot delta
     corr_eng_data = eng_data.copy()
     uncorr_times = (times['time'] < DateTime(manvr.guide_start).secs + 1.0)
-    q_orig = Quat(np.array([eng_data[uncorr_times]['AOATTQT1'],
-                            eng_data[uncorr_times]['AOATTQT2'],
-                            eng_data[uncorr_times]['AOATTQT3'],
-                            eng_data[uncorr_times]['AOATTQT4']]).transpose())
+    q_orig = Quat(q=np.array([eng_data[uncorr_times]['AOATTQT1'],
+                              eng_data[uncorr_times]['AOATTQT2'],
+                              eng_data[uncorr_times]['AOATTQT3'],
+                              eng_data[uncorr_times]['AOATTQT4']]).transpose())
     q_corr = q_mult(delta_quat.q, q_orig.q)
     corr_eng_data['AOATTQT1'][uncorr_times] = q_corr.q.transpose()[0]
     corr_eng_data['AOATTQT2'][uncorr_times] = q_corr.q.transpose()[1]

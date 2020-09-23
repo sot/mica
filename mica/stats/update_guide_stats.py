@@ -16,10 +16,10 @@ from kadi import events
 from Ska.engarchive import fetch, fetch_sci
 import mica.archive.obspar
 from mica.starcheck.starcheck import get_starcheck_catalog_at_date
-import Ska.quatutil
 import Ska.astro
-from mica.quaternion import Quat
+from Quaternion import Quat
 from chandra_aca import dark_model
+from chandra_aca.transform import radec_to_eci
 
 # Ignore known numexpr.necompiler and table.conditions warning
 warnings.filterwarnings(
@@ -156,10 +156,10 @@ def get_options():
 def _deltas_vs_obc_quat(vals, times, catalog):
     # Misalign is the identity matrix because this is the OBC quaternion
     aca_misalign = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    q_att = Quat(np.array([vals['AOATTQT1'],
-                           vals['AOATTQT2'],
-                           vals['AOATTQT3'],
-                           vals['AOATTQT4']]).transpose())
+    q_att = Quat(q=np.array([vals['AOATTQT1'],
+                             vals['AOATTQT2'],
+                             vals['AOATTQT3'],
+                             vals['AOATTQT4']]).transpose())
     Ts = q_att.transform
     acqs = catalog
 
@@ -186,7 +186,7 @@ def _deltas_vs_obc_quat(vals, times, catalog):
             continue
         ra = star['RA_PMCORR']
         dec = star['DEC_PMCORR']
-        star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
+        star_pos_eci = radec_to_eci(ra, dec)
         d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
                        star_pos_eci).transpose()
         yag[slot] = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
