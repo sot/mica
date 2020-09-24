@@ -5,7 +5,7 @@ from multiprocessing import Pool
 from mica.stats.mag_stats import update_mag_stats, mag_stats
 
 
-def get_agasc_id_stats(agasc_ids, excluded_observations={}, batch_size=100, tstop=None):
+def get_agasc_id_stats(agasc_ids, obs_status_override={}, batch_size=100, tstop=None):
     """
     Call update_mag_stats.get_agasc_id_stats multiple times using a multiprocessing.Pool
 
@@ -28,7 +28,7 @@ def get_agasc_id_stats(agasc_ids, excluded_observations={}, batch_size=100, tsto
     with Pool() as pool:
         for arg in args:
             jobs.append(pool.apply_async(update_mag_stats.get_agasc_id_stats,
-                                         [arg, excluded_observations, tstop]))
+                                         [arg, obs_status_override, tstop]))
         start = datetime.datetime.now()
         now = None
         while finished < len(jobs):

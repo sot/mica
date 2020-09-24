@@ -28,7 +28,7 @@ def level0_archive_time_range():
         return CxoTime(t_stop).date, CxoTime(t_start).date
 
 
-def get_agasc_id_stats(agasc_ids, excluded_observations={}, tstop=None):
+def get_agasc_id_stats(agasc_ids, obs_status_override={}, tstop=None):
     """
     Call mag_stats.get_agasc_id_stats for each AGASC ID
 
@@ -46,7 +46,7 @@ def get_agasc_id_stats(agasc_ids, excluded_observations={}, tstop=None):
         try:
             agasc_stat, obsid_stat, obs_fail = \
                 mag_stats.get_agasc_id_stats(agasc_id=agasc_id,
-                                             excluded_observations=excluded_observations,
+                                             obs_status_override=obs_status_override,
                                              tstop=tstop)
             agasc_stats.append(agasc_stat)
             obsid_stats.append(obsid_stat)
@@ -119,7 +119,7 @@ def update_mag_stats(obsid_stats, agasc_stats, fails, outdir='.'):
             pickle.dump(fails, out)
 
 
-def update_supplement(agasc_stats, filename, include_all=True):
+def update_supplement(agasc_stats, filename, obs_status=None, include_all=True):
     """
     Update the magnitude table of the AGASC supplement.
 
@@ -183,11 +183,18 @@ def update_supplement(agasc_stats, filename, include_all=True):
         updated_stars = np.array([], dtype=[('agasc_id', np.int64), ('mag_aca', np.float64),
                                             ('mag_aca_err', np.float64)])
 
+    t = list(zip(*[[oi, ai, obs_status[(oi, ai)]['ok'], obs_status[(oi, ai)]['comments']]
+                   for oi, ai in obs_status]))
+    obs_status = table.Table(t, names=['obsid', 'agasc_id', 'ok', 'comments']).as_array()
+
     mode = 'r+' if os.path.exists(filename) else 'w'
     with tables.File(filename, mode) as h5:
         if 'mags' in h5.root:
             h5.remove_node('/mags')
         h5.create_table('/', 'mags', outliers)
+        if 'obs_status' in h5.root:
+            h5.remove_node('/obs_status')
+        h5.create_table('/', 'obs_status', obs_status)
 
     return new_stars, updated_stars
 
@@ -197,7 +204,7 @@ def parser():
     parse.add_argument('--agasc-id-file')
     parse.add_argument('--start')
     parse.add_argument('--stop')
-    parse.add_argument('--excluded-observations')
+    parse.add_argument('--obs-status-override')
     parse.add_argument('--report', action='store_true', default=False)
     return parse
 
@@ -233,20 +240,11 @@ def do(get_stats=get_agasc_id_stats):
     if args.stop is None:
         args.stop = CxoTime(stars_obs['mp_starcat_time']).max().date
 
-    # exclude an ad-hoc list of observations
-    excluded_observations = {}
-    if args.excluded_observations:
-        with open(args.excluded_observations) as f:
-            exclude = yaml.load(f, Loader=yaml.FullLoader)
-            for k in exclude:
-                for obsid in exclude[k]:
-                    if obsid not in excluded_observations:
-                        excluded_observations[obsid] = ''
-                    excluded_observations[obsid] += k
 
     # if supplement exists, get the latest observation for each agasc_id in stars_obs,
     # find the ones already in the supplement, and drop the ones for which supplement.last_obs_time
     # is equal or larger than stars_obs.mp_starcat_time
+    obs_status = {}
     if os.path.exists(filename):
         with tables.File(filename, 'r+') as h5:
             outliers_current = h5.root.mags[:]
@@ -266,10 +264,32 @@ def do(get_stats=get_agasc_id_stats):
             agasc_ids = np.sort(np.unique(stars_obs['agasc_id']))
             print(f'Skipping {len(update) - np.sum(update)} stars (already in the supplement)')
 
+            if 'obs' in h5.root:
+                obs_status = {
+                    (r['obsid'], r['agasc_id']): {'ok': r['ok'], 'comments': r['comments']}
+                    for r in h5.root.obs_status[:]
+                }
+
+    # exclude/include an ad-hoc list of observations
+    if args.obs_status_override:
+        with open(args.obs_status_override) as f:
+            obs_status_override = yaml.load(f, Loader=yaml.FullLoader)
+        for obs in obs_status_override:
+            if 'agasc_id' not in obs_status_override[obs]:
+                obs_status_override[obs]['agasc_id'] = list(
+                    catalogs.STARS_OBS[catalogs.STARS_OBS['obsid'] == obs]['agasc_id'])
+        obs_status_override = {
+            (obs, agasc_id): {
+                'ok': obs_status_override[obs]['ok'],
+                'comments': obs_status_override[obs]['comments']
+            }
+            for obs in obs_status_override for agasc_id in obs_status_override[obs]['agasc_id']}
+        obs_status.update(obs_status_override)
+
     # do the processing
     print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
     obsid_stats, agasc_stats, fails = \
-        get_stats(agasc_ids, tstop=args.stop, excluded_observations=excluded_observations)
+        get_stats(agasc_ids, tstop=args.stop, obs_status_override=obs_status)
 
     failed_global = [f for f in fails if not f['agasc_id'] and not f['obsid']]
     failed_stars = [f for f in fails if f['agasc_id'] and not f['obsid']]
@@ -282,7 +302,8 @@ def do(get_stats=get_agasc_id_stats):
           f'  {len(failed_global)} global errors')
     if len(agasc_stats):
         update_mag_stats(obsid_stats, agasc_stats, fails)
-        new_stars, updated_stars = update_supplement(agasc_stats, filename=filename)
+        new_stars, updated_stars = update_supplement(agasc_stats,
+                                                     filename=filename, obs_status=obs_status)
 
         print(f'  {len(new_stars)} new stars, {len(updated_stars)} updated stars')
         if args.report:
