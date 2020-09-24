@@ -240,6 +240,21 @@ def do(get_stats=get_agasc_id_stats):
     if args.stop is None:
         args.stop = CxoTime(stars_obs['mp_starcat_time']).max().date
 
+    # exclude/include an ad-hoc list of observations
+    obs_status_override = {}
+    if args.obs_status_override:
+        with open(args.obs_status_override) as f:
+            obs_status_override = yaml.load(f, Loader=yaml.FullLoader)
+        for obs in obs_status_override:
+            if 'agasc_id' not in obs_status_override[obs]:
+                obs_status_override[obs]['agasc_id'] = list(
+                    catalogs.STARS_OBS[catalogs.STARS_OBS['obsid'] == obs]['agasc_id'])
+        obs_status_override = {
+            (obs, agasc_id): {
+                'ok': obs_status_override[obs]['ok'],
+                'comments': obs_status_override[obs]['comments']
+            }
+            for obs in obs_status_override for agasc_id in obs_status_override[obs]['agasc_id']}
 
     # if supplement exists, get the latest observation for each agasc_id in stars_obs,
     # find the ones already in the supplement, and drop the ones for which supplement.last_obs_time
@@ -260,6 +275,12 @@ def do(get_stats=get_agasc_id_stats):
                           (CxoTime(times['mp_starcat_time']).cxcsec > times['last_obs_time']).data))
             else:
                 update = (CxoTime(times['mp_starcat_time']).cxcsec > times['last_obs_time'])
+
+            # also update stars passed in the obs_status_override
+            override_agasc_ids = np.in1d(times['agasc_id'], [ai for _, ai in obs_status_override])
+            update += override_agasc_ids
+            print(f'Not skipping {np.sum(override_agasc_ids)} stars overridden explicitly')
+
             stars_obs = stars_obs[np.in1d(stars_obs['agasc_id'], times[update]['agasc_id'])]
             agasc_ids = np.sort(np.unique(stars_obs['agasc_id']))
             print(f'Skipping {len(update) - np.sum(update)} stars (already in the supplement)')
@@ -270,21 +291,7 @@ def do(get_stats=get_agasc_id_stats):
                     for r in h5.root.obs_status[:]
                 }
 
-    # exclude/include an ad-hoc list of observations
-    if args.obs_status_override:
-        with open(args.obs_status_override) as f:
-            obs_status_override = yaml.load(f, Loader=yaml.FullLoader)
-        for obs in obs_status_override:
-            if 'agasc_id' not in obs_status_override[obs]:
-                obs_status_override[obs]['agasc_id'] = list(
-                    catalogs.STARS_OBS[catalogs.STARS_OBS['obsid'] == obs]['agasc_id'])
-        obs_status_override = {
-            (obs, agasc_id): {
-                'ok': obs_status_override[obs]['ok'],
-                'comments': obs_status_override[obs]['comments']
-            }
-            for obs in obs_status_override for agasc_id in obs_status_override[obs]['agasc_id']}
-        obs_status.update(obs_status_override)
+    obs_status.update(obs_status_override)
 
     # do the processing
     print(f'Will process {len(agasc_ids)} stars on {len(stars_obs)} observations')
