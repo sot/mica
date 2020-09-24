@@ -278,8 +278,9 @@ def do(get_stats=get_agasc_id_stats):
 
             # also update stars passed in the obs_status_override
             override_agasc_ids = np.in1d(times['agasc_id'], [ai for _, ai in obs_status_override])
-            update += override_agasc_ids
-            print(f'Not skipping {np.sum(override_agasc_ids)} stars overridden explicitly')
+            if np.any(override_agasc_ids):
+                update += override_agasc_ids
+                print(f'Not skipping {np.sum(override_agasc_ids)} stars overridden explicitly')
 
             stars_obs = stars_obs[np.in1d(stars_obs['agasc_id'], times[update]['agasc_id'])]
             agasc_ids = np.sort(np.unique(stars_obs['agasc_id']))
