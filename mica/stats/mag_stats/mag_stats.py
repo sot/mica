@@ -17,6 +17,7 @@ from mica.archive import aca_l0
 from mica.archive.aca_dark.dark_cal import get_dark_cal_image
 from chandra_aca.transform import count_rate_to_mag, pixels_to_yagzag
 from cxotime import CxoTime
+from kadi import events
 
 version = mica.__version__
 
@@ -301,6 +302,11 @@ def get_telemetry(obs):
              f'AOACIIR{slot}', f'AOACISP{slot}', f'AOACMAG{slot}', f'AOACFCT{slot}',
              f'AOACZAN{slot}', f'AOACYAN{slot}'] + [f'AOATTQT{i}' for i in range(1, 5)]
     msids = fetch.MSIDset(names, times[0] - 4, times[-1] + 4)
+
+    for name in names:
+        msids[name].remove_intervals(events.normal_suns)
+        msids[name].remove_intervals(events.safe_suns)
+
     # the following just works...
     t = np.in1d(msids[names[0]].times, times)
     telem.update({n: msids[n].vals[t] for n in names})
