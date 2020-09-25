@@ -17,8 +17,6 @@ try:
 except Exception:
     if on_head_network() and not has_sybase():
         warn("On HEAD but no sybase access. Run ska_envs or define SYBASE/SYBASE_OCS")
-    if on_head_network() and has_sybase():
-        warn(f"{user} account probably doesn't have axafvv database access")
     HAS_SYBASE_ACCESS = False
 
 
