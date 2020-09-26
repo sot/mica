@@ -1,18 +1,17 @@
 #!/usr/bin/env python
 import os
 import pickle
-import argparse
 import yaml
 import numpy as np
 import tables
 import datetime
+from functools import partial
+from multiprocessing import Pool
 from astropy import table
 
 from mica.stats.mag_stats import catalogs, mag_stats, mag_stats_report as msr
 from cxotime import CxoTime
-
-
-np.seterr(all='ignore')
+from astropy import time, units as u
 
 
 def level0_archive_time_range():
@@ -66,6 +65,62 @@ def get_agasc_id_stats(agasc_ids, obs_status_override={}, tstop=None):
         # transform Exception to MagStatsException for standard book keeping
         fails.append(dict(mag_stats.MagStatsException(
             msg=f'Exception at end of get_agasc_id_stats: {str(e)}')))
+
+    return obsid_stats, agasc_stats, fails
+
+
+def get_agasc_id_stats_pool(agasc_ids, obs_status_override={}, batch_size=100, tstop=None):
+    """
+    Call update_mag_stats.get_agasc_id_stats multiple times using a multiprocessing.Pool
+
+    :param agasc_ids: list
+    :param batch_size: int
+    :return: astropy.table.Table, astropy.table.Table, list
+        obsid_stats, agasc_stats, fails, failed_jobs
+    """
+    import time
+    from astropy.table import vstack, Table
+
+    fmt = '%Y-%m-%d %H:%M'
+    jobs = []
+    n = len(agasc_ids)
+    args = []
+    progress = 0
+    finished = 0
+    for i in range(0, n, batch_size):
+        args.append(agasc_ids[i:i + batch_size])
+    with Pool() as pool:
+        for arg in args:
+            jobs.append(pool.apply_async(get_agasc_id_stats,
+                                         [arg, obs_status_override, tstop]))
+        start = datetime.datetime.now()
+        now = None
+        while finished < len(jobs):
+            finished = sum([f.ready() for f in jobs])
+            if now is None or 100*finished/len(jobs) - progress > 0.02:
+                now = datetime.datetime.now()
+                if finished == 0:
+                    eta = ''
+                else:
+                    dt1 = (now - start).total_seconds()
+                    dt = datetime.timedelta(seconds=(len(jobs)-finished) * dt1 / finished)
+                    eta = f'ETA: {(now + dt).strftime(fmt)}'
+                progress = 100*finished/len(jobs)
+                print(f'{progress:6.2f}% at {now.strftime(fmt)}, {eta}')
+            time.sleep(1)
+    fails = []
+    failed_agasc_ids = [i for arg, job in zip(args, jobs) if not job.successful() for i in arg]
+    for agasc_id in failed_agasc_ids:
+        fails.append(dict(mag_stats.MagStatsException(agasc_id=agasc_id, msg='Failed job')))
+
+    results = [job.get() for job in jobs if job.successful()]
+
+    # TODO: make sure nothing is skipped here
+    obsid_stats = [r[0] for r in results if r[0] is not None]
+    agasc_stats = [r[1] for r in results if r[1] is not None]
+    obsid_stats = vstack(obsid_stats) if obsid_stats else Table()
+    agasc_stats = vstack(agasc_stats) if agasc_stats else Table()
+    fails += sum([r[2] for r in results], [])
 
     return obsid_stats, agasc_stats, fails
 
@@ -185,7 +240,13 @@ def update_supplement(agasc_stats, filename, obs_status=None, include_all=True):
 
     t = list(zip(*[[oi, ai, obs_status[(oi, ai)]['ok'], obs_status[(oi, ai)]['comments']]
                    for oi, ai in obs_status]))
-    obs_status = table.Table(t, names=['obsid', 'agasc_id', 'ok', 'comments']).as_array()
+    if t:
+        obs_status = table.Table(t, names=['obsid', 'agasc_id', 'ok', 'comments']).as_array()
+    else:
+        obs_status = table.Table(dtype=[('obsid', int),
+                                        ('agasc_id', int),
+                                        ('ok', bool),
+                                        ('comments', '<U80')]).as_array()
 
     mode = 'r+' if os.path.exists(filename) else 'w'
     with tables.File(filename, mode) as h5:
@@ -199,20 +260,13 @@ def update_supplement(agasc_stats, filename, obs_status=None, include_all=True):
     return new_stars, updated_stars
 
 
-def parser():
-    parse = argparse.ArgumentParser()
-    parse.add_argument('--agasc-id-file')
-    parse.add_argument('--start')
-    parse.add_argument('--stop')
-    parse.add_argument('--obs-status-override')
-    parse.add_argument('--report', action='store_true', default=False)
-    return parse
-
-
-def do(get_stats=get_agasc_id_stats):
+def do(args):
     filename = f'agasc_supplement_{mag_stats.version}.h5'
 
-    args, _ = parser().parse_known_args()
+    if args.multi_process:
+        get_stats = partial(get_agasc_id_stats_pool, batch_size=10)
+    else:
+        get_stats = get_agasc_id_stats
     catalogs.load(args.stop)
 
     # first, get list of AGASC IDs from file, from start/stop or take all observations.
@@ -326,16 +380,24 @@ def do(get_stats=get_agasc_id_stats):
                 'title': 'Updated Stars',
                 'stars': updated_stars['agasc_id'] if len(updated_stars) else []
             }]
-            msr.multi_star_html_report(agasc_stats, obsid_stats, sections=sections,
-                                       updated_stars=updated_stars,
-                                       fails=fails, report_date=CxoTime.now().date,
-                                       tstart=args.start, tstop=args.stop, include_all_stars=True)
+
+            week = time.TimeDelta(7 * u.day)
+            t = CxoTime(args.stop)
+            nav_links = {
+                'previous': f'../{(t - week).date[:8]}/index.html',
+                'up': '..',
+                'next': f'../{(t + week).date[:8]}/index.html'
+            }
+            report = msr.MagStatsReport(agasc_stats, obsid_stats,
+                                        directory=os.path.join('weekly_reports', f'{t.date[:8]}'))
+            report.multi_star_html(filename='index.html',
+                                   sections=sections,
+                                   updated_stars=updated_stars,
+                                   fails=fails,
+                                   report_date=CxoTime.now().date,
+                                   tstart=args.start,
+                                   tstop=args.stop,
+                                   nav_links=nav_links,
+                                   include_all_stars=True)
     now = datetime.datetime.now()
     print(f"done at {now}")
-
-def main():
-    do()
-
-
-if __name__ == '__main__':
-    main()
