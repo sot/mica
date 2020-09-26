@@ -698,6 +698,9 @@ def get_agasc_id_stats(agasc_id, obs_status_override={}, tstop=None):
     stats = Table(stats)
     n_obsids = len(star_obs)
 
+    stats['w'] = np.nan
+    stats['mean_corrected'] = np.nan
+    stats['weighted_mean'] = np.nan
     stats['obsid_ok'] = (
         (stats['n'] > 10) &
         (stats['f_track'] > 0.3) &
@@ -793,9 +796,6 @@ def get_agasc_id_stats(agasc_id, obs_status_override={}, tstop=None):
     # combine measurements using a weighted mean
     obs_ok = stats['obsid_ok']
     min_std = max(0.1, stats[obs_ok]['std'].min())
-    stats['w'] = np.nan
-    stats['mean_corrected'] = np.nan
-    stats['weighted_mean'] = np.nan
     stats['w'][obs_ok] = np.where(stats['std'][obs_ok] != 0,
                                   1. / stats['std'][obs_ok],
                                   1. / min_std)
