@@ -1,4 +1,6 @@
-bad_obsids = [
+# Licensed under a 3-clause BSD sytle license - see LICENSE
+
+venus = [
 # Venus
     583,
     2411,
@@ -44,8 +46,9 @@ bad_obsids = [
     18693,
     18694,
     18695,
-    18696,
-# multi-obi catalogs
+    18696]
+
+multi_obi = [
     943,
     897,
     60879,
@@ -68,3 +71,17 @@ bad_obsids = [
     4175,
     3764,
 ]
+
+def bad_obsids():
+    """
+    Returns a list of the obsids that are reasonable to exclude from most trending applications.
+    The list includes observations of Venus and observations with multiple obis. The observations
+    of Venus are problematic for star trending.  The observations with multiple obis may have more
+    than one attitude for the same obsid.
+
+    The lists of each (venus, multi_obi) are maintained directly in the module and may be used
+    directly if needed.
+
+    :returns: list
+    """
+    return venus + multi_obi
