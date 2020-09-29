@@ -59,9 +59,3 @@ Note that the temperature assigned to a dark calibration is the mean of the temp
 for the invidivual dark replicas (typically 5).  These in turn use ACA hdr3 diagnostic
 telemetry for high-resolution temperature readouts which are available before and after
 (but not during) each replica.
-
-Processing
-^^^^^^^^^^^^^^
-
-This module updates the MICA ACA dark current archive when new dark current calibrations
-are completed.  For details see the API documentation at :ref:`api_update_aca_dark`.
