@@ -1,3 +1,7 @@
+"""
+Functions to estimate observed ACA magnitudes
+"""
+
 import collections
 import scipy.stats
 import scipy.special
@@ -70,7 +74,7 @@ class MagStatsException(Exception):
 
 def _magnitude_correction(time, mag_aca):
     """
-    Apply a time-dependent correction to mag_aca.
+    Get a time-dependent correction to AOACMAG (prior to dynamic background subtraction).
 
     :param time: Chandra.Time.DateTime
     :param mag_aca: np.array
@@ -91,34 +95,38 @@ def _magnitude_correction(time, mag_aca):
     return np.squeeze(dmag)
 
 
-def _responsivity(time):
+def get_responsivity(time):
     """
     ACA magnitude response over time.
 
     This was estimated with bright stars that were observed more than a hundred times during the
-    mission. More details in notebook:
+    mission. More details in the `responsivity notebook`_:
+
+    .. _responsivity notebook: https://nbviewer.jupyter.org/urls/cxc.cfa.harvard.edu/mta/ASPECT/jgonzalez/mag_stats/notebooks/03-high_mag_responsivity-fit.ipynb
 
     :param time: float
         Time in CXC seconds
     :return:
     """
-    a, b, c = [3.24323540e-02, 5.35475665e+08, 8.44499654e+07]
+    a, b, c = [3.19776750e-02, 5.35201479e+08, 8.49670756e+07]
     return - a*(1 + scipy.special.erf((time - b)/c))/2
 
 
-def _droop_systematic_shift(magnitude):
+def get_droop_systematic_shift(magnitude):
     """
     Difference between the magnitude determined from DC-subtracted image telemetry and
     the catalog ACA magnitude.
 
     The magnitude shift is time-independent. It depends only on the catalog magnitude and is zero
-    for bright stars. More details in notebook:
+    for bright stars. More details in the `droop notebook`_:
+
+    .. _droop notebook: https://nbviewer.jupyter.org/urls/cxc.cfa.harvard.edu/mta/ASPECT/jgonzalez/mag_stats/notebooks/04-DroopAfterSubtractionAndResponsivity-fit.ipynb
 
     :param magnitude: float
         Catalog ACA magnitude
     :return:
     """
-    a, b = [11.24808388,  0.54867984]
+    a, b = [11.25572, 0.59486369]
     return np.exp((magnitude - a) / b)
 
 
@@ -172,7 +180,7 @@ def _rolling_mean_(result, t, f, window, selection):
         result[i] = f_sum / n
 
 
-def get_star_position(star, slot, telem):
+def get_star_position(star, telem):
     """
     Residuals for a given AGASC record at a given slot/time.
 
@@ -326,10 +334,10 @@ def get_telemetry(obs):
 
     # etc...
     telem.update(get_mag_from_img(slot_data, start, ok))
-    telem.update(get_star_position(star=star, slot=obs['slot'], telem=telem))
+    telem.update(get_star_position(star=star, telem=telem))
 
-    droop_shift = _droop_systematic_shift(star['MAG_ACA'])
-    responsivity = _responsivity(start)
+    droop_shift = get_droop_systematic_shift(star['MAG_ACA'])
+    responsivity = get_responsivity(start)
     telem['mags'] = telem['mags_img'] - responsivity - droop_shift
     telem['mags'][~ok] = 0.
     telem['ok'] = ok
@@ -529,8 +537,8 @@ def get_obsid_stats(obs, telem=None):
 
     stats = {k: obs[k] for k in
              ['agasc_id', 'obsid', 'slot', 'type', 'mp_starcat_time', 'timeline_id']}
-    droop_shift = _droop_systematic_shift(star['MAG_ACA'])
-    responsivity = _responsivity(start)
+    droop_shift = get_droop_systematic_shift(star['MAG_ACA'])
+    responsivity = get_responsivity(start)
     stats.update({'tstart': start,
                   'tstop': stop,
                   'mag_correction': - responsivity - droop_shift,
