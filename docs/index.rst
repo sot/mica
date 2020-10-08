@@ -22,6 +22,7 @@ access to a comprehensive set of information related to Chandra aspect:
    guide_stats
    observation_parameters
    starcheck
+   mag_stats
 
 API docs
 --------

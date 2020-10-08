@@ -148,3 +148,20 @@ Functions
 
 .. autofunction:: get_stats
 
+:mod:`mica.stats.mag_stats`
+=============================
+
+.. automodule:: mica.stats.mag_stats.mag_stats
+
+Functions
+---------
+
+.. autofunction:: get_telemetry
+
+.. autofunction:: get_obsid_stats
+
+.. autofunction:: get_agasc_id_stats
+
+.. autofunction:: get_responsivity
+
+.. autofunction:: get_droop_systematic_shift
