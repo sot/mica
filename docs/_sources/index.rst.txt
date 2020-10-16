@@ -16,6 +16,7 @@ access to a comprehensive set of information related to Chandra aspect:
    aca_l0_telemetry
    aspect_l1_products
    aca_diagnostic_telemetry
+   bad_obsids
    aspect_vv
    acq_stats
    guide_stats

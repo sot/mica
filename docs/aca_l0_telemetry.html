@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACA L0 telemetry &#8212; mica 4.21.3.dev28+g2d2113c documentation</title>
+    <title>ACA L0 telemetry &#8212; mica 4.22.0 documentation</title>
     <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
@@ -60,7 +60,7 @@
 	 |
       </li>
       <li>
-	<a href="index.html">mica 4.21.3.dev28+g2d2113c documentation</a>
+	<a href="index.html">mica 4.22.0 documentation</a>
 	 &#187;
       </li>
       
@@ -76,7 +76,7 @@
             
   <div class="section" id="aca-l0-telemetry">
 <h1>ACA L0 telemetry<a class="headerlink" href="#aca-l0-telemetry" title="Permalink to this headline">¶</a></h1>
-<p>The <a class="reference internal" href="api.html#module-mica.archive.aca_l0" title="mica.archive.aca_l0"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_l0</span></code></a> module provides tools to build and fetch from
+<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_l0</span></code> module provides tools to build and fetch from
 a file archive of ACA L0 telemetry.  This telemetry is stored in
 directories by year and day-of-year, and ingested filenames are stored
 in a lookup table.</p>
@@ -112,7 +112,7 @@ data structures.</p>
 <p>The loop/plot above will break if the images aren’t filtered on
 “imgsize=[6, 8]”, as the ‘TEMPCCD’ columns is only available in 6x6
 and 8x8 data.  That’s one reason to use the convenience function
-<a class="reference internal" href="api.html#mica.archive.aca_l0.get_slot_data" title="mica.archive.aca_l0.get_slot_data"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_slot_data()</span></code></a>, as it places the values in a
+<code class="xref py py-func docutils literal notranslate"><span class="pre">get_slot_data()</span></code>, as it places the values in a
 masked array (masking, for example, TEMPCCD when in 4x4 mode or when
 the data is just not available).</p>
 <blockquote>
@@ -128,7 +128,7 @@ the data is just not available).</p>
 </div></blockquote>
 <p>(it is still wise to filter on imgsize in this example, as there is no
 advantage to reading each of the 4x4 files.)</p>
-<p>The <a class="reference internal" href="api.html#mica.archive.aca_l0.get_slot_data" title="mica.archive.aca_l0.get_slot_data"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_slot_data()</span></code></a> method will retrieve
+<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_slot_data()</span></code> method will retrieve
 all columns by default and the resulting data structure, as mentioned,
 will have masked columns where those values are not available
 (i.e. HD3TLM64 in 6x6 or 4x4 image data).  See <a class="reference internal" href="#aca-l0-msids-columns">ACA L0 MSIDs/columns</a>
@@ -161,7 +161,7 @@ plot of each readout.</p>
 <div class="section" id="get-l0-images">
 <h2>Get_l0_images()<a class="headerlink" href="#get-l0-images" title="Permalink to this headline">¶</a></h2>
 <p>An alternate way to access ACA L0 image is via the
-<a class="reference internal" href="api.html#mica.archive.aca_l0.get_l0_images" title="mica.archive.aca_l0.get_l0_images"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_l0_images()</span></code></a> function.  This returns a Python list of
+<code class="xref py py-func docutils literal notranslate"><span class="pre">get_l0_images()</span></code> function.  This returns a Python list of
 <code class="docutils literal notranslate"><span class="pre">ACAImage</span></code> objects (see the <code class="docutils literal notranslate"><span class="pre">chandra_aca.aca_image</span></code> docs for details).  Each of these
 objects contains the image along with relevant meta-data for each readout:: <code class="docutils literal notranslate"><span class="pre">['TIME',</span>
 <span class="pre">'IMGROW0',</span> <span class="pre">'IMGCOL0',</span> <span class="pre">'BGDAVG',</span> <span class="pre">'IMGSTAT',</span> <span class="pre">'IMGFUNC1',</span> <span class="pre">'IMGSIZE',</span> <span class="pre">'INTEG']</span></code>.</p>

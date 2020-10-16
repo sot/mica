@@ -76,6 +76,16 @@ Functions
 .. autofunction:: get_obs_dirs
 .. autofunction:: get_obspar
 
+:mod:`mica.bad_obsids`
+======================
+
+.. automodule:: mica.bad_obsids
+
+Functions
+---------
+
+.. autofunction:: bad_obsids
+
 
 :mod:`mica.vv`
 ==============

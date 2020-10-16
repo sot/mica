@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mica.bad_obsids &#8212; mica 4.22.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script type="text/javascript" src="../../_static/sidebar.js"></script>
+    <script type="text/javascript" src="../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="../../index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="https://cxc.cfa.harvard.edu/mta/ASPECT/tool_doc">
+        <span id="logotext1">ska</span><span id="logotext2">tools</span>
+    </a></li>
+    <li><a title="General Index" href="../../genindex.html">Index</a></li>
+    <li><a title="Module Index" href="../../py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li>
+	<a href="../../index.html">mica 4.22.0 documentation</a>
+	 &#187;
+      </li>
+      <li><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+      
+       
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for mica.bad_obsids</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD sytle license - see LICENSE</span>
+
+<span class="n">venus</span> <span class="o">=</span> <span class="p">[</span>
+<span class="c1"># Venus</span>
+    <span class="mi">583</span><span class="p">,</span>
+    <span class="mi">2411</span><span class="p">,</span>
+    <span class="mi">2414</span><span class="p">,</span>
+    <span class="mi">6395</span><span class="p">,</span>
+    <span class="mi">7306</span><span class="p">,</span>
+    <span class="mi">7307</span><span class="p">,</span>
+    <span class="mi">7308</span><span class="p">,</span>
+    <span class="mi">7309</span><span class="p">,</span>
+    <span class="mi">7310</span><span class="p">,</span>
+    <span class="mi">7311</span><span class="p">,</span>
+    <span class="mi">7312</span><span class="p">,</span>
+    <span class="mi">7313</span><span class="p">,</span>
+    <span class="mi">7314</span><span class="p">,</span>
+    <span class="mi">7315</span><span class="p">,</span>
+    <span class="mi">7316</span><span class="p">,</span>
+    <span class="mi">7406</span><span class="p">,</span>
+    <span class="mi">9741</span><span class="p">,</span>
+    <span class="mi">9742</span><span class="p">,</span>
+    <span class="mi">9743</span><span class="p">,</span>
+    <span class="mi">9744</span><span class="p">,</span>
+    <span class="mi">9745</span><span class="p">,</span>
+    <span class="mi">9746</span><span class="p">,</span>
+    <span class="mi">9747</span><span class="p">,</span>
+    <span class="mi">9748</span><span class="p">,</span>
+    <span class="mi">9749</span><span class="p">,</span>
+    <span class="mi">9752</span><span class="p">,</span>
+    <span class="mi">9753</span><span class="p">,</span>
+    <span class="mi">7316</span><span class="p">,</span>
+    <span class="mi">15292</span><span class="p">,</span>
+    <span class="mi">16499</span><span class="p">,</span>
+    <span class="mi">16500</span><span class="p">,</span>
+    <span class="mi">16501</span><span class="p">,</span>
+    <span class="mi">16502</span><span class="p">,</span>
+    <span class="mi">16503</span><span class="p">,</span>
+    <span class="mi">16504</span><span class="p">,</span>
+    <span class="mi">16505</span><span class="p">,</span>
+    <span class="mi">16506</span><span class="p">,</span>
+    <span class="mi">17439</span><span class="p">,</span>
+    <span class="mi">18690</span><span class="p">,</span>
+    <span class="mi">18691</span><span class="p">,</span>
+    <span class="mi">18692</span><span class="p">,</span>
+    <span class="mi">18693</span><span class="p">,</span>
+    <span class="mi">18694</span><span class="p">,</span>
+    <span class="mi">18695</span><span class="p">,</span>
+    <span class="mi">18696</span><span class="p">]</span>
+
+<span class="n">multi_obi</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="mi">943</span><span class="p">,</span>
+    <span class="mi">897</span><span class="p">,</span>
+    <span class="mi">60879</span><span class="p">,</span>
+    <span class="mi">2042</span><span class="p">,</span>
+    <span class="mi">60881</span><span class="p">,</span>
+    <span class="mi">800</span><span class="p">,</span>
+    <span class="mi">1900</span><span class="p">,</span>
+    <span class="mi">2365</span><span class="p">,</span>
+    <span class="mi">906</span><span class="p">,</span>
+    <span class="mi">2010</span><span class="p">,</span>
+    <span class="mi">3182</span><span class="p">,</span>
+    <span class="mi">2547</span><span class="p">,</span>
+    <span class="mi">380</span><span class="p">,</span>
+    <span class="mi">3057</span><span class="p">,</span>
+    <span class="mi">2077</span><span class="p">,</span>
+    <span class="mi">60880</span><span class="p">,</span>
+    <span class="mi">2783</span><span class="p">,</span>
+    <span class="mi">1578</span><span class="p">,</span>
+    <span class="mi">1561</span><span class="p">,</span>
+    <span class="mi">4175</span><span class="p">,</span>
+    <span class="mi">3764</span><span class="p">,</span>
+<span class="p">]</span>
+
+<div class="viewcode-block" id="bad_obsids"><a class="viewcode-back" href="../../api.html#mica.bad_obsids.bad_obsids">[docs]</a><span class="k">def</span> <span class="nf">bad_obsids</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of the obsids that are reasonable to exclude from most trending applications.</span>
+<span class="sd">    The list includes observations of Venus and observations with multiple obis. The observations</span>
+<span class="sd">    of Venus are problematic for star trending.  The observations with multiple obis may have more</span>
+<span class="sd">    than one attitude for the same obsid.</span>
+
+<span class="sd">    The lists of each (venus, multi_obi) are maintained directly in the module and may be used</span>
+<span class="sd">    directly if needed.</span>
+
+<span class="sd">    :returns: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">venus</span> <span class="o">+</span> <span class="n">multi_obi</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+
+
+<form action="../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right"> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

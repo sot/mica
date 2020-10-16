@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACA dark current &#8212; mica 4.21.3.dev28+g2d2113c documentation</title>
+    <title>ACA dark current &#8212; mica 4.22.0 documentation</title>
     <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
@@ -60,7 +60,7 @@
 	 |
       </li>
       <li>
-	<a href="index.html">mica 4.21.3.dev28+g2d2113c documentation</a>
+	<a href="index.html">mica 4.22.0 documentation</a>
 	 &#187;
       </li>
       
@@ -81,22 +81,22 @@
 <div><ul class="simple">
 <li><p><a class="reference internal" href="#dark-current-calibrations">Dark current calibrations</a></p></li>
 <li><p><a href="#id1"><span class="problematic" id="id2">`Dark current modeling`_</span></a></p></li>
-<li><p><a class="reference internal" href="#processing">Processing</a></p></li>
+<li><p><a href="#id3"><span class="problematic" id="id4">`Processing`_</span></a></p></li>
 </ul>
 </div></blockquote>
 <div class="section" id="dark-current-calibrations">
 <h2>Dark current calibrations<a class="headerlink" href="#dark-current-calibrations" title="Permalink to this headline">¶</a></h2>
-<p>The <a class="reference internal" href="api.html#module-mica.archive.aca_dark.dark_cal" title="mica.archive.aca_dark.dark_cal"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark.dark_cal</span></code></a> module provides functions for retrieving
+<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark.dark_cal</span></code> module provides functions for retrieving
 data for the ACA full-frame dark current calibrations which occur about four
 times per year (see the <a class="reference external" href="http://occweb.cfa.harvard.edu/twiki/Aspect/AcaDarkCal">ACA dark calibrations TWiki page</a>).</p>
 <p>The functions available are documented in the <a class="reference internal" href="api.html#api-aca-dark"><span class="std std-ref">mica.archive.aca_dark</span></a> section, but the most useful are:</p>
 <blockquote>
 <div><ul class="simple">
 <li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">dark_temp_scale()</span></code>: get the temperature scaling correction</p></li>
-<li><p><a class="reference internal" href="api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_dirs" title="mica.archive.aca_dark.dark_cal.get_dark_cal_dirs"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_dirs()</span></code></a>: get an ordered dict of dark cal identifer and directory</p></li>
-<li><p><a class="reference internal" href="api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_image" title="mica.archive.aca_dark.dark_cal.get_dark_cal_image"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_image()</span></code></a>: get a single dark cal image</p></li>
-<li><p><a class="reference internal" href="api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_props" title="mica.archive.aca_dark.dark_cal.get_dark_cal_props"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_props()</span></code></a>: get properties (e.g. date, temperature) of a dark cal</p></li>
-<li><p><a class="reference internal" href="api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_props_table" title="mica.archive.aca_dark.dark_cal.get_dark_cal_props_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_props_table()</span></code></a>: get properties of dark cals over a time range as a table</p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_dirs()</span></code>: get an ordered dict of dark cal identifer and directory</p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_image()</span></code>: get a single dark cal image</p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_props()</span></code>: get properties (e.g. date, temperature) of a dark cal</p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_props_table()</span></code>: get properties of dark cals over a time range as a table</p></li>
 </ul>
 </div></blockquote>
 <p>As an example, let’s plot the raw and corrected warm pixel fraction over the mission.  The correction in this case is done to a reference temperature of -15 C:</p>
@@ -135,11 +135,6 @@ for the invidivual dark replicas (typically 5).  These in turn use ACA hdr3 diag
 telemetry for high-resolution temperature readouts which are available before and after
 (but not during) each replica.</p>
 </div>
-<div class="section" id="processing">
-<h2>Processing<a class="headerlink" href="#processing" title="Permalink to this headline">¶</a></h2>
-<p>This module updates the MICA ACA dark current archive when new dark current calibrations
-are completed.  For details see the API documentation at <span class="xref std std-ref">api_update_aca_dark</span>.</p>
-</div>
 </div>
 
 
@@ -152,7 +147,6 @@ are completed.  For details see the API documentation at <span class="xref std s
 <ul>
 <li><a class="reference internal" href="#">ACA dark current</a><ul>
 <li><a class="reference internal" href="#dark-current-calibrations">Dark current calibrations</a></li>
-<li><a class="reference internal" href="#processing">Processing</a></li>
 </ul>
 </li>
 </ul>

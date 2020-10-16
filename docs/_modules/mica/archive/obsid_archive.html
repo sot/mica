@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mica.archive.obsid_archive &#8212; mica 4.21.3.dev28+g2d2113c documentation</title>
+    <title>mica.archive.obsid_archive &#8212; mica 4.22.0 documentation</title>
     <link rel="stylesheet" href="../../../_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     
@@ -47,7 +47,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.21.3.dev28+g2d2113c documentation</a>
+	<a href="../../../index.html">mica 4.22.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -125,12 +125,12 @@
     <span class="k">return</span>
 
 
-<span class="k">def</span> <span class="nf">get_obspar</span><span class="p">(</span><span class="n">obsparfile</span><span class="p">):</span>
+<div class="viewcode-block" id="get_obspar"><a class="viewcode-back" href="../../../api.html#mica.archive.obsid_archive.get_obspar">[docs]</a><span class="k">def</span> <span class="nf">get_obspar</span><span class="p">(</span><span class="n">obsparfile</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Get the obspar for obsid starting at tstart.  Return as a dict.&quot;&quot;&quot;</span>
     <span class="n">obspar</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">parse_obspar</span><span class="p">(</span><span class="n">obsparfile</span><span class="p">):</span>
         <span class="n">obspar</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]})</span>
-    <span class="k">return</span> <span class="n">obspar</span>
+    <span class="k">return</span> <span class="n">obspar</span></div>
 
 
 <span class="k">class</span> <span class="nc">ProductVersionError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>

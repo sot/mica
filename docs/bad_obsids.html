@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python Module Index &#8212; mica 4.22.0 documentation</title>
+    <title>Mica.bad_obsids &#8212; mica 4.22.0 documentation</title>
     <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
@@ -18,10 +18,9 @@
     <script type="text/javascript" src="_static/copybutton.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-
+    <link rel="next" title="Post-facto aspect V&amp;V" href="aspect_vv.html" />
+    <link rel="prev" title="ACA diagnostic telemetry" href="aca_diagnostic_telemetry.html" />
     <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
-
-
 
   </head><body>
 <div class="topbar">
@@ -32,7 +31,7 @@
         <span id="logotext1">ska</span><span id="logotext2">tools</span>
     </a></li>
     <li><a title="General Index" href="genindex.html">Index</a></li>
-    <li><a title="Module Index" href="#">Modules</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
     <li>
       
       
@@ -49,12 +48,23 @@
 <div class="related">
     <h3>Navigation</h3>
     <ul>
+      <li class="right">
+	<a href="aspect_vv.html" title="Post-facto aspect V&amp;V">
+	  next &raquo;
+	</a>
+      </li>
+      <li class="right">
+	<a href="aca_diagnostic_telemetry.html" title="ACA diagnostic telemetry">
+	  &laquo; previous
+	</a>
+	 |
+      </li>
       <li>
 	<a href="index.html">mica 4.22.0 documentation</a>
 	 &#187;
       </li>
       
-       
+      <li>Mica.bad_obsids</li> 
     </ul>
 </div>
   
@@ -64,49 +74,14 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-
-   <h1>Python Module Index</h1>
-
-   <div class="modindex-jumpbox">
-   <a href="#cap-m"><strong>m</strong></a>
-   </div>
-
-   <table class="indextable modindextable">
-     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
-     <tr class="cap" id="cap-m"><td></td><td>
-       <strong>m</strong></td><td></td></tr>
-     <tr>
-       <td><img src="_static/minus.png" class="toggler"
-              id="toggle-1" style="display: none" alt="-" /></td>
-       <td>
-       <code class="xref">mica</code></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="api.html#module-mica.archive.obsid_archive"><code class="xref">mica.archive.obsid_archive</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="api.html#module-mica.bad_obsids"><code class="xref">mica.bad_obsids</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="api.html#module-mica.starcheck"><code class="xref">mica.starcheck</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="api.html#module-mica.stats.acq_stats"><code class="xref">mica.stats.acq_stats</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="api.html#module-mica.stats.guide_stats"><code class="xref">mica.stats.guide_stats</code></a></td><td>
-       <em></em></td></tr>
-   </table>
+  <div class="section" id="mica-bad-obsids">
+<span id="bad-obsids-label"></span><h1>Mica.bad_obsids<a class="headerlink" href="#mica-bad-obsids" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="api.html#module-mica.bad_obsids" title="mica.bad_obsids"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.bad_obsids</span></code></a> module includes a single function <cite>bad_obsids()</cite> which
+returns a list of the obsids that are reasonable to exclude from most trending applications.
+The list includes observations of Venus and observations with multiple obis.
+The observations of Venus are problematic for star trending.  The observations with multiple
+obis may have more than one attitude for the same obsid.</p>
+</div>
 
 
             <div class="clearer"></div>
@@ -115,8 +90,24 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">Mica.bad_obsids</a></li>
+</ul>
 
 
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="aca_diagnostic_telemetry.html"
+                        title="previous chapter">ACA diagnostic telemetry</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="aspect_vv.html"
+                        title="next chapter">Post-facto aspect V&amp;V</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/bad_obsids.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
 <form action="search.html" method="get">
   <input type="text" name="q" placeholder="Search" />
   <input type="hidden" name="check_keywords" value="yes" />
@@ -127,7 +118,9 @@
       <div class="clearer"></div>
     </div>
 <footer class="footer">
-  <p class="pull-right"> &nbsp;
+  <p class="pull-right">
+    <a href="_sources/bad_obsids.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
