@@ -1093,20 +1093,20 @@ Next Observation
 """
     string += f"""</table>
 
-<img src="crs_vis_{obsid}.png" width="490">
+<img src="crs_vis_{obsid}.png" width="490" height="490">
             </div>
         </div>
 
     </div>
 
     <div id="rightsmall" class="border" style="padding-top: 10px; margin-bottom: .5cm">
-        <img src="observed_drs_{obsid}.png" width="635">
+        <img src="observed_drs_{obsid}.png" width="635" height="198">
     </div>
     <div id="rightsmall" class="border" style="padding-top: 10px; margin-bottom: .5cm">
-        <img src="crs_time_{obsid}.png" width="635">
+        <img src="crs_time_{obsid}.png" width="635" height="556">
     </div>
     <div id="rightsmall" class="border" style="padding-top: 10px; margin-bottom: .5cm">
-        <img src="n_kalman_{obsid}.png" width="635">
+        <img src="n_kalman_{obsid}.png" width="635" height="198">
     </div>
 
 </div>
