@@ -197,6 +197,7 @@ def get_crs_per_obsid(obsid):
     :param obsid: obsid
     """
     crs = {'ground': {}, 'obc': {}}
+    att_sources = ['obc'] if int(obsid) > 40000 else ['ground', 'obc']
 
     cat = get_starcat(obsid)
 
@@ -209,8 +210,9 @@ def get_crs_per_obsid(obsid):
         crs['cat'] = cat[cols]
 
         slots = cat['slot']
+        crs['slots'] = np.array(slots)
 
-        for att_source in ['ground', 'obc']:
+        for att_source in att_sources:
             for slot in slots:
                 try:
                     cr = CentroidResiduals.for_slot(obsid=obsid,
@@ -513,10 +515,10 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
 
     fig = plt.figure(figsize=(8, 7))
 
-    n = len(crs_grnd)
+    n = len(crs['slots'])
     legend = False
 
-    for ii, slot in enumerate(crs_grnd.keys()):
+    for ii, slot in enumerate(crs['slots']):
 
         plt.subplot(n, 1, ii + 1)
 
@@ -524,7 +526,7 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
             resids_obc = getattr(crs_obc[slot], f'd{coord}s')
             times_obc = getattr(crs_obc[slot], f'{coord}_times')
 
-            if crs_grnd[slot] is None:
+            if slot not in crs_grnd or crs_grnd[slot] is None:
                 resids_ref = resids_obc
                 times_ref = times_obc
             else:
