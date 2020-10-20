@@ -592,7 +592,9 @@ def plot_n_kalman(obsid, plot_dir, save=False):
 
     t0 = n_kalman.times[0]
 
-    plot_cxctime(n_kalman.times, n_kalman.vals, color='k')
+    # The Kalman vals are strings, so these can be out of order on y axis
+    # if not handled as ints.
+    plot_cxctime(n_kalman.times, n_kalman.vals.astype(int), color='k')
     plot_cxctime([t0, t0 + 1000], [0.5, 0.5], lw=3, color='orange')
 
     plt.text(DateTime(t0).plotdate, 0.7, "1 ksec")
