@@ -718,6 +718,7 @@ def plot_observed_metrics(obsids, plot_dir, coord='dr', att_errors=None, factor=
     for obsid in list(obsids):
         kwargs = {'save': save, 'on_the_fly': on_the_fly}
         errs = plot_att_errors_per_obsid(obsid, coord=coord, att_errors=att_errors,
+                                         plot_dir=plot_dir,
                                          **kwargs)
         crs = errs['crs']
 
