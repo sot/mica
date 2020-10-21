@@ -879,10 +879,10 @@ def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, f
         # Build html page for this obsid
         make_html(row_obsid, row_slots, obs_dir)
 
-    # Update the 'per_obsid' table
-    if rows_obsid:
-        sort_cols = ['mean_date']
-        update_data_table(rows_obsid, dat_obsid_old, obsid_metrics_file, sort_cols)
+        # Update the 'per_obsid' table
+        if rows_obsid:
+            sort_cols = ['mean_date']
+            update_data_table(rows_obsid, dat_obsid_old, obsid_metrics_file, sort_cols)
 
         # Update the 'per_slot' table
         if rows_slots:
