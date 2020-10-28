@@ -227,8 +227,24 @@ def get_crs_per_obsid(obsid):
 
     return crs
 
+def get_ending_roll_err(obsid, metrics_file=None):
 
-def get_observed_metrics(obsid):
+    # Check for the value in the obsid file, otherwise recalculate
+    saved_metrics = []
+    if metrics_file is not None and os.path.exists(metrics_file):
+        saved_metrics = Table.read(metrics_file, format='ascii.ecsv')
+    if len(saved_metrics) and obsid in saved_metrics['obsid']:
+        logger.info(f"Getting ending roll for {obsid} from file")
+        return saved_metrics[saved_metrics['obsid'] == obsid][0]['ending_roll_err']
+    else:
+        att_errors = get_observed_att_errors(obsid, on_the_fly=True)
+        if att_errors is None:
+            return -9999
+        else:
+            return att_errors['dr'][-1]
+
+
+def get_observed_metrics(obsid, metrics_file=None):
     """
     Fetch manvr angle, one shot updates and aberration corrections,
     calculate centroid residuals and observed OBC roll error with
@@ -291,13 +307,8 @@ def get_observed_metrics(obsid):
     # Centroid residuals
     crs = att_errors['crs']
 
-    # Ending roll error prior to the manvr
-    att_errors_preceding = get_observed_att_errors(obsid_preceding, on_the_fly=True)
-
-    if att_errors_preceding is None:
-        ending_roll_err = -9999
-    else:
-        ending_roll_err = att_errors_preceding['dr'][-1]
+    ## Roll error at end of preceding observation
+    preceding_roll_err = get_ending_roll_err(obsid_preceding, metrics_file=metrics_file)
 
     # Aberration correction
     aber_flag = 0
@@ -344,7 +355,8 @@ def get_observed_metrics(obsid):
                  'one_shot_yaw': one_shot_yaw,
                  'manvr_angle': manvr_angle,
                  'obsid_preceding': obsid_preceding,
-                 'ending_roll_err': ending_roll_err,
+                 'ending_roll_err': att_errors['dr'][-1],
+                 'preceding_roll_err': preceding_roll_err,
                  'aber_y': aber_y,
                  'aber_z': aber_z,
                  'aber_flag': aber_flag,
@@ -811,7 +823,8 @@ def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, f
                     dat_slot_old.remove_rows(ok)
 
         try:
-            metrics_obsid, metrics_slot = get_observed_metrics(obsid)
+            metrics_obsid, metrics_slot = get_observed_metrics(obsid,
+                                                               metrics_file=obsid_metrics_file)
 
             if not metrics_obsid['dwell']:
                 logger.info(f'Skipping obsid {obsid}: not a dwell?')
@@ -853,7 +866,7 @@ def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, f
                       'aber_y', 'aber_z', 'aber_flag',
                       'one_shot_pitch', 'one_shot_yaw',
                       'one_shot', 'one_shot_aber_corrected',
-                      'manvr_angle', 'ending_roll_err',
+                      'manvr_angle', 'preceding_roll_err', 'ending_roll_err',
                       'obsid_preceding', 'obsid_next')
 
         row_obsid = {k: metrics_obsid[k] for k in keys_obsid}
@@ -922,6 +935,7 @@ def make_html(row_obsid, rows_slot, obs_dir):
     obsid_preceding = row_obsid['obsid_preceding']
     obsid_next = row_obsid['obsid_next']
     ending_roll_err = row_obsid['ending_roll_err']
+    preceding_roll_err = row_obsid['preceding_roll_err']
     one_shot_pitch = row_obsid['one_shot_pitch']
     one_shot_yaw = row_obsid['one_shot_yaw']
     one_shot = row_obsid['one_shot']
@@ -1037,10 +1051,12 @@ OBSID <a href="{MICA_PORTAL}{obsid}">{obsid}</a>         Mean date: {DateTime(me
   dr50 = {dr50:.2f} arcsec
   dr95 = {dr95:.2f} arcsec
 
+  Ending roll err = {ending_roll_err:.2f} arcsec
+
 Preceding Observation
 
   OBSID <a href="{MICA_PORTAL}{obsid_preceding}">{obsid_preceding}</a>
-  Ending roll error = {ending_roll_err:.2f} arcsec
+  Ending roll error = {preceding_roll_err:.2f} arcsec
 
 Next Observation
 
