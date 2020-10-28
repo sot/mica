@@ -116,11 +116,8 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
     or need to computed for the requested obsid
     """
 
-    try:
-        events.dwells.filter(obsid=obsid)[0]
-    except Exception as err:
-        logger.info(f'ERROR: {err}')
-        return None
+    if len(events.dwells.filter(obsid=obsid)) == 0:
+        raise NoDwellError(f"No dwell for obsid={obsid}")
 
     att_errors = {'dr': [], 'dy': [], 'dp': []}
 
@@ -253,10 +250,13 @@ def get_observed_metrics(obsid, metrics_file=None):
     the roll error, and log the preceding and next obsid.
 
     :param obsid: obsid
-    """
 
+    """
     # One shot
-    manvr = events.manvrs.filter(obsid=obsid)[0]
+    manvrs = events.manvrs.filter(obsid=obsid)
+    if len(manvrs) == 0:
+        raise NoManvrError(f"No manvr for obsid={obsid}")
+    manvr = manvrs[0]
     one_shot = manvr.one_shot
     one_shot_pitch = manvr.one_shot_pitch
     one_shot_yaw = manvr.one_shot_yaw
@@ -767,6 +767,11 @@ def read_metrics_from_file(filename):
 class NoObsidError(ValueError):
     pass
 
+class NoManvrError(ValueError):
+    pass
+
+class NoDwellError(ValueError):
+    pass
 
 def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, force=False,
                             factor=20, make_plots=False, save=False):
@@ -851,12 +856,11 @@ def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, f
                                       coord='dr',
                                       att_errors=metrics_obsid['att_errors'],
                                       **kwargs)
-
-        except NoObsidError:  # not yet in archive
-            logger.info(f'Skipping obsid {obsid}: not yet in archive')
+        except (NoObsidError, NoDwellError, NoManvrError) as err:
+            logger.info(f'Skipping obsid {obsid} missing data: {err}')
             continue
         except Exception as err:
-            logger.info(f'ERROR: {err}')
+            logger.warning(f'Skipping obsid {obsid} ERROR: {err}')
             continue
 
         # Process entries for 'per obsid' metrics
