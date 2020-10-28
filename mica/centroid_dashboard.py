@@ -153,18 +153,18 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
         ref_att_times = crs_ref[3].att_times
         obc_att_times = crs['obc'][3].att_times
 
-        ii = np.in1d(ref_att_times, obc_att_times)
-        ref_att_times_adjusted = ref_att_times[ii]
-        att_ref = crs_ref[3].atts[ii]
-
-        if len(ref_att_times_adjusted) == 0:
+        common_times, in_ref, in_obc = np.intersect1d(ref_att_times,
+                                                      obc_att_times,
+                                                      return_indices=True)
+        if len(common_times) == 0:
             # no common times for obc and grnd solutions
             flag = 2
             raise ValueError('No common time vals for obc and ground att times')
 
-        idx = list(obc_att_times).index(ref_att_times_adjusted[0])
-        obc_att_times_adjusted = obc_att_times[idx: len(ref_att_times_adjusted) + idx]
-        att_obc = crs['obc'][3].atts[idx: len(ref_att_times_adjusted) + idx]
+        ref_att_times_adjusted = ref_att_times[in_ref]
+        obc_att_times_adjusted = obc_att_times[in_obc]
+        att_ref = crs_ref[3].atts[in_ref]
+        att_obc = crs['obc'][3].atts[in_obc]
 
         if not np.all(obc_att_times_adjusted == ref_att_times_adjusted):
             flag = 3
