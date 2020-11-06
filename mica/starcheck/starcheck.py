@@ -32,7 +32,10 @@ def get_starcat(obsid, mp_dir=None):
     :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'
     :returns: astropy.Table of star catalog
     """
-    return get_starcheck_catalog(obsid, mp_dir)['cat']
+    try:
+        return get_starcheck_catalog(obsid, mp_dir)['cat']
+    except Exception:
+        return None
 
 
 def get_dither(obsid, mp_dir=None):
