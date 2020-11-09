@@ -108,12 +108,9 @@ def update(obsids, config=None):
                                     obspar_version=obspar_version,
                                     ap_date=str(aspect_1[0]['ap_date'])),
                                'aspect_1_proc')
-            isdefault = archrec[0]['isdefault']
-            if isdefault is not None:
-                proc_db.execute("""UPDATE aspect_1_proc SET isdefault = {isdefault}
-                                   WHERE obsid = {obsid}
-                                   AND revision = {revision}
-                                """.format(isdefault=archrec[0]['isdefault'],
-                                           obsid=obs,
-                                           revision=revision))
+            isdefault = 'NULL' if archrec[0]['isdefault'] is None else 1
+            proc_db.execute(f"""UPDATE aspect_1_proc SET isdefault = {isdefault}
+                                WHERE obsid = {obs}
+                                AND revision = {revision}
+                                """)
             logger.info("\tUpdated table for {}".format(obs))

@@ -477,6 +477,10 @@ class ObsArchive:
             arc5.sendline("obi=%d" % minobi)
         arc5.sendline("version=%s" % version)
         arc5.sendline("get %s" % config['full'])
+        if 'delete' in config:
+            for filetype in config['delete']:
+                for file in list(Path(tempdir).glob(f"*{filetype}*")):
+                    file.unlink()
         # get the log too
         arc5.sendline("dataset=pipelog")
         arc5.sendline("go")

@@ -977,10 +977,6 @@ class AspectInterval(object):
                 os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         self.integ_time = self.cenhdulist[1].header['INTGTIME']
 
-        logger.debug('Reading gyro data')
-        self.gdat = Table.read(glob(
-                os.path.join(datadir, "%s_gdat1.fits*" % aiid))[0])
-
 
         (self.gsprop, self.gspr_info, self.h_gspr) \
             = self._get_prop('guide', 'gspr')
