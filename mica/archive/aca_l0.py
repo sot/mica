@@ -61,6 +61,9 @@ ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
              ('IMGSIZE', '>i4'), ('FILENAME', '<U128'))
 
+ACA_DTYPE_8x8 = tuple((dt[0], dt[1], (8, 8)) if dt[0] == 'IMGRAW' else dt
+                      for dt in ACA_DTYPE)
+
 ACA_DTYPE_NAMES = tuple([k[0] for k in ACA_DTYPE])
 
 CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'aca0'),
@@ -97,6 +100,7 @@ def get_options():
 
 def get_slot_data(start, stop, slot, imgsize=None,
                   db=None, data_root=None, columns=None,
+                  centered_8x8=False
                   ):
     """
     For a the given parameters, retrieve telemetry and construct a
@@ -118,7 +122,8 @@ def get_slot_data(start, stop, slot, imgsize=None,
                       (for use when db handle not available)
     :param columns: list of desired columns in the ACA0 telemetry
                     (defaults to all in 8x8 telemetry)
-
+    :param centered_8x8: boolean flag to reshape the IMGRAW field to (-1, 8, 8)
+                         (defaults to False)
     :returns: data structure for slot
     :rtype: numpy masked recarray
     """
@@ -135,7 +140,9 @@ def get_slot_data(start, stop, slot, imgsize=None,
     data_files = _get_file_records(start, stop, slots=[slot],
                                     imgsize=imgsize, db=db,
                                     data_root=data_root)
-    dtype = [k for k in ACA_DTYPE if k[0] in columns]
+    aca_dtype = ACA_DTYPE_8x8 if centered_8x8 else ACA_DTYPE
+    dtype = [k for k in aca_dtype if k[0] in columns]
+
     if not len(data_files):
         # return an empty masked array
         return ma.zeros(0, dtype=dtype)
@@ -151,22 +158,31 @@ def get_slot_data(start, stop, slot, imgsize=None,
                           f['filename'])
         hdu = pyfits.open(fp)
         chunk = hdu[1].data
-        f_imgsize = int(np.sqrt(chunk[0].field('IMGRAW').size))
+        idx0, idx1 = rowcount, (rowcount + len(chunk))
+        f_imgsize = int(np.sqrt(chunk[0]['IMGRAW'].size))
         for fname in all_rows.dtype.names:
             if fname == 'IMGRAW' or fname == 'IMGSIZE':
                 continue
             if fname in chunk.dtype.names:
-                all_rows[fname][rowcount:(rowcount + len(chunk))] \
-                    = chunk.field(fname)
+                all_rows[fname][idx0: idx1] \
+                    = chunk[fname]
         if 'IMGSIZE' in columns:
-            all_rows['IMGSIZE'][rowcount:(rowcount + len(chunk))] = f_imgsize
+            all_rows['IMGSIZE'][idx0: idx1] = f_imgsize
         if 'FILENAME' in columns:
-            all_rows['FILENAME'][rowcount:(rowcount + len(chunk))] = f['filename']
+            all_rows['FILENAME'][idx0: idx1] = f['filename']
         if 'IMGRAW' in columns:
-            all_rows['IMGRAW'].reshape(rows, 8, 8)[
-                rowcount:(rowcount + len(chunk)), 0:f_imgsize, 0:f_imgsize] = (
-                chunk.field('IMGRAW').reshape(len(chunk),
-                                              f_imgsize, f_imgsize))
+            if centered_8x8:
+                if f_imgsize == 8:
+                    all_rows['IMGRAW'][idx0: idx1] = chunk['IMGRAW']
+                else:
+                    i = (8 - f_imgsize) // 2
+                    all_rows['IMGRAW'][idx0: idx1, i:-i, i:-i] = \
+                        chunk['IMGRAW']
+            else:
+                all_rows['IMGRAW'].reshape(rows, 8, 8)[
+                    idx0: idx1, 0:f_imgsize, 0:f_imgsize] = (
+                    chunk['IMGRAW'].reshape(len(chunk),
+                                                  f_imgsize, f_imgsize))
         rowcount += len(chunk)
 
     # just include the rows in the requested time range in the returned data
@@ -591,7 +607,7 @@ class Updater(object):
         archfiles_row = dict((x, hdu.header.get(x.upper()))
                              for x in ARCHFILES_HDR_COLS)
         archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
-        imgsize = hdu.data[0].field('IMGRAW').shape[0]
+        imgsize = hdu.data[0]['IMGRAW'].shape[0]
         archfiles_row['imgsize'] = int(imgsize)
         archfiles_row['slot'] = int(re.search(
                 r'acaf\d+N\d{3}_(\d)_img0.fits(\.gz)?',

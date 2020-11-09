@@ -75,3 +75,43 @@ def test_get_l0_images():
 
     assert np.all(np.abs(rcen - rcs) < 0.05)
     assert np.all(np.abs(ccen - ccs) < 0.05)
+
+
+@pytest.mark.skipif('not has_l0_2007_archive or not has_asp_l1', reason='Test requires 2007 L0 archive')
+def test_get_slot_data_8x8():
+    """
+    Do a validation test of get_l0_images:
+    - Get 20 mins of image data for slot 6 of obsid 8008 (very nice clean stars)
+    - Do first moment centroids in row and col
+    - Compare to aspect pipeline FM centroids for same slot data
+
+    This is a deep test that all the signs are right.  If not then everything
+    breaks badly because the star image doesn't move in sync with row0, col0.
+    """
+    start = '2007:002:06:00:00'
+    stop = '2007:002:06:20:00'
+
+    slot_data = aca_l0.get_slot_data(start, stop, slot=6, centered_8x8=True)
+
+    files = asp_l1.get_files(8008, content=['ACACENT'])
+    acen = Table.read(files[0])
+    # Pick FM centroids for slot 6
+    ok = (acen['alg'] == 1) & (acen['slot'] == 6)
+    acen = acen[ok]
+
+    # Row and col centroids
+    times = slot_data['TIME']
+
+    # Easy way to do FM centroids with mgrid
+    rw, cw = np.mgrid[0:8, 0:8]
+
+    img_raw = slot_data['IMGRAW']  # np.round(slot_data['IMGRAW']).astype(int)
+    norm = np.sum(img_raw, axis=(1, 2))
+    rcs = np.sum(img_raw * rw, axis=(1, 2)) / norm + slot_data['IMGROW0'] - 1
+    ccs = np.sum(img_raw * cw, axis=(1, 2)) / norm + slot_data['IMGCOL0'] - 1
+
+    rcen = interpolate(acen['cent_i'], acen['time'], times)
+    ccen = interpolate(acen['cent_j'], acen['time'], times)
+
+    assert np.all(np.abs(rcen - rcs) < 0.05)
+    assert np.all(np.abs(ccen - ccs) < 0.05)
