@@ -15,12 +15,12 @@ HAS_VV_TABLE = os.path.exists(vv.FILES['h5_file'])
 
 @pytest.mark.skipif('not HAS_VV_ARCHIVE', reason='Test requires vv archive')
 def test_get_vv_dir():
-    obsdir = vv.get_vv_dir(16504)
+    obsdir = vv.get_vv_dir(16504, version=1)
     assert obsdir == os.path.abspath(os.path.join(common.MICA_ARCHIVE, 'vv/16/16504_v01'))
 
 @pytest.mark.skipif('not HAS_VV_ARCHIVE', reason='Test requires vv archive')
 def test_get_vv_files():
-    obsfiles = vv.get_vv_files(16504)
+    obsfiles = vv.get_vv_files(16504, version=1)
     assert sorted(obsfiles)[-1] == os.path.abspath(os.path.join(common.MICA_ARCHIVE,
                                                                 'vv/16/16504_v01/vv_report.pkl'))
 
