@@ -147,8 +147,8 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
         # Adjust time axis if needed
         # TODO: what if slot 3 is not tracking a star?
 
-        ref_att_times = crs_ref[3].att_times
-        obc_att_times = crs['obc'][3].att_times
+        ref_att_times = np.round(crs_ref[3].att_times, decimals=2)
+        obc_att_times = np.round(crs['obc'][3].att_times, decimals=2)
 
         common_times, in_ref, in_obc = np.intersect1d(ref_att_times,
                                                       obc_att_times,
