@@ -225,6 +225,7 @@ def get_crs_per_obsid(obsid):
 
     return crs
 
+
 def get_ending_roll_err(obsid, metrics_file=None):
 
     # Check for the value in the obsid file, otherwise recalculate
@@ -308,7 +309,7 @@ def get_observed_metrics(obsid, metrics_file=None):
     # Centroid residuals
     crs = att_errors['crs']
 
-    ## Roll error at end of preceding observation
+    # Roll error at end of preceding observation
     preceding_roll_err = get_ending_roll_err(obsid_preceding, metrics_file=metrics_file)
 
     # Aberration correction
@@ -614,7 +615,7 @@ def plot_n_kalman(obsid, plot_dir, save=False):
     plot_cxctime([t0, t0 + 1000], [0.5, 0.5], lw=3, color='orange')
 
     plt.text(DateTime(t0).plotdate, 0.7, "1 ksec")
-    plt.ylabel(f'# Kalman stars')
+    plt.ylabel('# Kalman stars')
     ylims = plt.ylim()
     plt.ylim(-0.2, ylims[1] + 0.2)
     plt.grid(ls=':')
@@ -769,11 +770,14 @@ def read_metrics_from_file(filename):
 class NoObsidError(ValueError):
     pass
 
+
 class NoManvrError(ValueError):
     pass
 
+
 class NoDwellError(ValueError):
     pass
+
 
 def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, force=False,
                             factor=20, make_plots=False, save=False):
