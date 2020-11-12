@@ -115,6 +115,7 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
     on_the_fly determins whether centroids residuals are provided
     or need to computed for the requested obsid
     """
+    logger.info(f"Running get_observed_att_errors for {obsid}")
 
     if len(events.dwells.filter(obsid=obsid)) == 0:
         raise NoDwellError(f"No dwell for obsid={obsid}")
@@ -370,6 +371,7 @@ def get_observed_metrics(obsid, metrics_file=None):
 
     cat = crs['cat']
     d = events.dwells.filter(obsid=obsid)[0]
+    logger.info(f'Dwell at {d.start}')
 
     for slot in range(8):
         ok = cat['slot'] == slot
