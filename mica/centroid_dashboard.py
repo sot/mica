@@ -115,12 +115,10 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
     on_the_fly determins whether centroids residuals are provided
     or need to computed for the requested obsid
     """
+    logger.info(f"Running get_observed_att_errors for {obsid}")
 
-    try:
-        events.dwells.filter(obsid=obsid)[0]
-    except Exception as err:
-        logger.info(f'ERROR: {err}')
-        return None
+    if len(events.dwells.filter(obsid=obsid)) == 0:
+        raise NoDwellError(f"No dwell for obsid={obsid}")
 
     att_errors = {'dr': [], 'dy': [], 'dp': []}
 
@@ -150,21 +148,21 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
         # Adjust time axis if needed
         # TODO: what if slot 3 is not tracking a star?
 
-        ref_att_times = crs_ref[3].att_times
-        obc_att_times = crs['obc'][3].att_times
+        ref_att_times = np.round(crs_ref[3].att_times, decimals=2)
+        obc_att_times = np.round(crs['obc'][3].att_times, decimals=2)
 
-        ii = np.in1d(ref_att_times, obc_att_times)
-        ref_att_times_adjusted = ref_att_times[ii]
-        att_ref = crs_ref[3].atts[ii]
-
-        if len(ref_att_times_adjusted) == 0:
+        common_times, in_ref, in_obc = np.intersect1d(ref_att_times,
+                                                      obc_att_times,
+                                                      return_indices=True)
+        if len(common_times) == 0:
             # no common times for obc and grnd solutions
             flag = 2
             raise ValueError('No common time vals for obc and ground att times')
 
-        idx = list(obc_att_times).index(ref_att_times_adjusted[0])
-        obc_att_times_adjusted = obc_att_times[idx: len(ref_att_times_adjusted) + idx]
-        att_obc = crs['obc'][3].atts[idx: len(ref_att_times_adjusted) + idx]
+        ref_att_times_adjusted = ref_att_times[in_ref]
+        obc_att_times_adjusted = obc_att_times[in_obc]
+        att_ref = crs_ref[3].atts[in_ref]
+        att_obc = crs['obc'][3].atts[in_obc]
 
         if not np.all(obc_att_times_adjusted == ref_att_times_adjusted):
             flag = 3
@@ -197,6 +195,7 @@ def get_crs_per_obsid(obsid):
     :param obsid: obsid
     """
     crs = {'ground': {}, 'obc': {}}
+    att_sources = ['obc'] if int(obsid) > 40000 else ['ground', 'obc']
 
     cat = get_starcat(obsid)
 
@@ -209,8 +208,9 @@ def get_crs_per_obsid(obsid):
         crs['cat'] = cat[cols]
 
         slots = cat['slot']
+        crs['slots'] = np.array(slots)
 
-        for att_source in ['ground', 'obc']:
+        for att_source in att_sources:
             for slot in slots:
                 try:
                     cr = CentroidResiduals.for_slot(obsid=obsid,
@@ -226,7 +226,24 @@ def get_crs_per_obsid(obsid):
     return crs
 
 
-def get_observed_metrics(obsid):
+def get_ending_roll_err(obsid, metrics_file=None):
+
+    # Check for the value in the obsid file, otherwise recalculate
+    saved_metrics = []
+    if metrics_file is not None and os.path.exists(metrics_file):
+        saved_metrics = Table.read(metrics_file, format='ascii.ecsv')
+    if len(saved_metrics) and obsid in saved_metrics['obsid']:
+        logger.info(f"Getting ending roll for {obsid} from file")
+        return saved_metrics[saved_metrics['obsid'] == obsid][0]['ending_roll_err']
+    else:
+        att_errors = get_observed_att_errors(obsid, on_the_fly=True)
+        if att_errors is None:
+            return -9999
+        else:
+            return att_errors['dr'][-1]
+
+
+def get_observed_metrics(obsid, metrics_file=None):
     """
     Fetch manvr angle, one shot updates and aberration corrections,
     calculate centroid residuals and observed OBC roll error with
@@ -235,10 +252,13 @@ def get_observed_metrics(obsid):
     the roll error, and log the preceding and next obsid.
 
     :param obsid: obsid
-    """
 
+    """
     # One shot
-    manvr = events.manvrs.filter(obsid=obsid)[0]
+    manvrs = events.manvrs.filter(obsid=obsid)
+    if len(manvrs) == 0:
+        raise NoManvrError(f"No manvr for obsid={obsid}")
+    manvr = manvrs[0]
     one_shot = manvr.one_shot
     one_shot_pitch = manvr.one_shot_pitch
     one_shot_yaw = manvr.one_shot_yaw
@@ -289,13 +309,8 @@ def get_observed_metrics(obsid):
     # Centroid residuals
     crs = att_errors['crs']
 
-    # Ending roll error prior to the manvr
-    att_errors_preceding = get_observed_att_errors(obsid_preceding, on_the_fly=True)
-
-    if att_errors_preceding is None:
-        ending_roll_err = -9999
-    else:
-        ending_roll_err = att_errors_preceding['dr'][-1]
+    # Roll error at end of preceding observation
+    preceding_roll_err = get_ending_roll_err(obsid_preceding, metrics_file=metrics_file)
 
     # Aberration correction
     aber_flag = 0
@@ -342,7 +357,8 @@ def get_observed_metrics(obsid):
                  'one_shot_yaw': one_shot_yaw,
                  'manvr_angle': manvr_angle,
                  'obsid_preceding': obsid_preceding,
-                 'ending_roll_err': ending_roll_err,
+                 'ending_roll_err': att_errors['dr'][-1],
+                 'preceding_roll_err': preceding_roll_err,
                  'aber_y': aber_y,
                  'aber_z': aber_z,
                  'aber_flag': aber_flag,
@@ -356,6 +372,7 @@ def get_observed_metrics(obsid):
 
     cat = crs['cat']
     d = events.dwells.filter(obsid=obsid)[0]
+    logger.info(f'Dwell at {d.start}')
 
     for slot in range(8):
         ok = cat['slot'] == slot
@@ -513,10 +530,10 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
 
     fig = plt.figure(figsize=(8, 7))
 
-    n = len(crs_grnd)
+    n = len(crs['slots'])
     legend = False
 
-    for ii, slot in enumerate(crs_grnd.keys()):
+    for ii, slot in enumerate(crs['slots']):
 
         plt.subplot(n, 1, ii + 1)
 
@@ -524,7 +541,7 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
             resids_obc = getattr(crs_obc[slot], f'd{coord}s')
             times_obc = getattr(crs_obc[slot], f'{coord}_times')
 
-            if crs_grnd[slot] is None:
+            if slot not in crs_grnd or crs_grnd[slot] is None:
                 resids_ref = resids_obc
                 times_ref = times_obc
             else:
@@ -592,11 +609,13 @@ def plot_n_kalman(obsid, plot_dir, save=False):
 
     t0 = n_kalman.times[0]
 
-    plot_cxctime(n_kalman.times, n_kalman.vals, color='k')
+    # The Kalman vals are strings, so these can be out of order on y axis
+    # if not handled as ints.
+    plot_cxctime(n_kalman.times, n_kalman.vals.astype(int), color='k')
     plot_cxctime([t0, t0 + 1000], [0.5, 0.5], lw=3, color='orange')
 
     plt.text(DateTime(t0).plotdate, 0.7, "1 ksec")
-    plt.ylabel(f'# Kalman stars')
+    plt.ylabel('# Kalman stars')
     ylims = plt.ylim()
     plt.ylim(-0.2, ylims[1] + 0.2)
     plt.grid(ls=':')
@@ -718,6 +737,7 @@ def plot_observed_metrics(obsids, plot_dir, coord='dr', att_errors=None, factor=
     for obsid in list(obsids):
         kwargs = {'save': save, 'on_the_fly': on_the_fly}
         errs = plot_att_errors_per_obsid(obsid, coord=coord, att_errors=att_errors,
+                                         plot_dir=plot_dir,
                                          **kwargs)
         crs = errs['crs']
 
@@ -748,6 +768,14 @@ def read_metrics_from_file(filename):
 
 
 class NoObsidError(ValueError):
+    pass
+
+
+class NoManvrError(ValueError):
+    pass
+
+
+class NoDwellError(ValueError):
     pass
 
 
@@ -806,7 +834,8 @@ def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, f
                     dat_slot_old.remove_rows(ok)
 
         try:
-            metrics_obsid, metrics_slot = get_observed_metrics(obsid)
+            metrics_obsid, metrics_slot = get_observed_metrics(obsid,
+                                                               metrics_file=obsid_metrics_file)
 
             if not metrics_obsid['dwell']:
                 logger.info(f'Skipping obsid {obsid}: not a dwell?')
@@ -833,12 +862,11 @@ def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, f
                                       coord='dr',
                                       att_errors=metrics_obsid['att_errors'],
                                       **kwargs)
-
-        except NoObsidError:  # not yet in archive
-            logger.info(f'Skipping obsid {obsid}: not yet in archive')
+        except (NoObsidError, NoDwellError, NoManvrError) as err:
+            logger.info(f'Skipping obsid {obsid} missing data: {err}')
             continue
         except Exception as err:
-            logger.info(f'ERROR: {err}')
+            logger.warning(f'Skipping obsid {obsid} ERROR: {err}')
             continue
 
         # Process entries for 'per obsid' metrics
@@ -848,7 +876,7 @@ def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, f
                       'aber_y', 'aber_z', 'aber_flag',
                       'one_shot_pitch', 'one_shot_yaw',
                       'one_shot', 'one_shot_aber_corrected',
-                      'manvr_angle', 'ending_roll_err',
+                      'manvr_angle', 'preceding_roll_err', 'ending_roll_err',
                       'obsid_preceding', 'obsid_next')
 
         row_obsid = {k: metrics_obsid[k] for k in keys_obsid}
@@ -874,10 +902,10 @@ def update_observed_metrics(obsid=None, start=None, stop=None, data_root=None, f
         # Build html page for this obsid
         make_html(row_obsid, row_slots, obs_dir)
 
-    # Update the 'per_obsid' table
-    if rows_obsid:
-        sort_cols = ['mean_date']
-        update_data_table(rows_obsid, dat_obsid_old, obsid_metrics_file, sort_cols)
+        # Update the 'per_obsid' table
+        if rows_obsid:
+            sort_cols = ['mean_date']
+            update_data_table(rows_obsid, dat_obsid_old, obsid_metrics_file, sort_cols)
 
         # Update the 'per_slot' table
         if rows_slots:
@@ -917,6 +945,7 @@ def make_html(row_obsid, rows_slot, obs_dir):
     obsid_preceding = row_obsid['obsid_preceding']
     obsid_next = row_obsid['obsid_next']
     ending_roll_err = row_obsid['ending_roll_err']
+    preceding_roll_err = row_obsid['preceding_roll_err']
     one_shot_pitch = row_obsid['one_shot_pitch']
     one_shot_yaw = row_obsid['one_shot_yaw']
     one_shot = row_obsid['one_shot']
@@ -1032,10 +1061,12 @@ OBSID <a href="{MICA_PORTAL}{obsid}">{obsid}</a>         Mean date: {DateTime(me
   dr50 = {dr50:.2f} arcsec
   dr95 = {dr95:.2f} arcsec
 
+  Ending roll err = {ending_roll_err:.2f} arcsec
+
 Preceding Observation
 
   OBSID <a href="{MICA_PORTAL}{obsid_preceding}">{obsid_preceding}</a>
-  Ending roll error = {ending_roll_err:.2f} arcsec
+  Ending roll error = {preceding_roll_err:.2f} arcsec
 
 Next Observation
 
@@ -1088,20 +1119,20 @@ Next Observation
 """
     string += f"""</table>
 
-<img src="crs_vis_{obsid}.png" width="490">
+<img src="crs_vis_{obsid}.png" width="490" height="490">
             </div>
         </div>
 
     </div>
 
     <div id="rightsmall" class="border" style="padding-top: 10px; margin-bottom: .5cm">
-        <img src="observed_drs_{obsid}.png" width="635">
+        <img src="observed_drs_{obsid}.png" width="635" height="198">
     </div>
     <div id="rightsmall" class="border" style="padding-top: 10px; margin-bottom: .5cm">
-        <img src="crs_time_{obsid}.png" width="635">
+        <img src="crs_time_{obsid}.png" width="635" height="556">
     </div>
     <div id="rightsmall" class="border" style="padding-top: 10px; margin-bottom: .5cm">
-        <img src="n_kalman_{obsid}.png" width="635">
+        <img src="n_kalman_{obsid}.png" width="635" height="198">
     </div>
 
 </div>

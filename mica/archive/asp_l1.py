@@ -220,7 +220,10 @@ def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
         att_chunks.append((Quat(asol[q_att_name]) * Quat(q_mis_inv)).q)
         time_chunks.append(np.array(asol['time']))
         records.append(asol.meta)
-    return np.vstack(att_chunks), np.hstack(time_chunks), records
+    if len(att_chunks) > 0 and len(time_chunks) > 0:
+        return np.vstack(att_chunks), np.hstack(time_chunks), records
+    else:
+        return np.array([]), np.array([]), []
 
 
 def main():
