@@ -577,7 +577,8 @@ class Obi(object):
                 ['yag', 'zag', 'ang_y_sm', 'ang_z_sm']]
         ai_starts = [interv.deltas[slot_num]['time'][0]
                      for interv in self.aspect_intervals
-                     if len(interv.deltas[slot_num]['time'])]
+                     if slot_num in interv.deltas
+                     and len(interv.deltas[slot_num]['time'])]
         time0 = time[0]
         dy0 = np.median(dy)
         dz0 = np.median(dz)
