@@ -305,10 +305,9 @@ class Obi(object):
                 save['slots'][slot_str]['used'] = save['slots'][slot_str]['cel_loc_flag']
         # make a recarray
         save_rec = np.rec.fromrecords(
-            [[save['slots'][slot_str].get(k) for k in self.table.dtype.names]
+            [tuple([save['slots'][slot_str].get(k) for k in self.table.dtype.names])
              for slot_str in save['slots'] if 'n_pts' in save['slots'][slot_str]],
             dtype=self.table.dtype)
-
         have_obsid_coord = self.table.get_where_list('(obsid == %d)'
                                                    % (save['obsid']),
                                                    sort=True)
