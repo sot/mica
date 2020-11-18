@@ -305,10 +305,9 @@ class Obi(object):
                 save['slots'][slot_str]['used'] = save['slots'][slot_str]['cel_loc_flag']
         # make a recarray
         save_rec = np.rec.fromrecords(
-            [[save['slots'][slot_str].get(k) for k in self.table.dtype.names]
+            [tuple([save['slots'][slot_str].get(k) for k in self.table.dtype.names])
              for slot_str in save['slots'] if 'n_pts' in save['slots'][slot_str]],
             dtype=self.table.dtype)
-
         have_obsid_coord = self.table.get_where_list('(obsid == %d)'
                                                    % (save['obsid']),
                                                    sort=True)
@@ -578,7 +577,8 @@ class Obi(object):
                 ['yag', 'zag', 'ang_y_sm', 'ang_z_sm']]
         ai_starts = [interv.deltas[slot_num]['time'][0]
                      for interv in self.aspect_intervals
-                     if len(interv.deltas[slot_num]['time'])]
+                     if slot_num in interv.deltas
+                     and len(interv.deltas[slot_num]['time'])]
         time0 = time[0]
         dy0 = np.median(dy)
         dz0 = np.median(dz)
