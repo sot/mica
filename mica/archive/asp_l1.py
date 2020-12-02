@@ -139,6 +139,10 @@ def get_files(obsid=None, start=None, stop=None,
       ...                                stop='2012:030',
       ...                                content=['FIDPROPS'])
 
+
+    The available content types are: ASPQUAL, ASPSOL, ASPSOLOBI, ACACAL,
+    ACA_BADPIX, FIDPROPS, GYROCAL, GSPROPS, and ACACENT.
+
     :param obsid: obsid
     :param start: time range start (Chandra.Time compatible)
     :param stop: time range stop (Chandra.Time compatible)
