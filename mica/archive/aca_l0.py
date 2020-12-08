@@ -767,14 +767,14 @@ class Updater(object):
 
     def _insert_files(self, files):
         count_inserted = 0
-        with Ska.DBI.DBI(**self.db) as db:
-            for i, f in enumerate(files):
-                arch_info = self._read_archfile(i, f, files)
-                if arch_info:
-                    self._move_archive_files([f])
+        for i, f in enumerate(files):
+            arch_info = self._read_archfile(i, f, files)
+            if arch_info:
+                self._move_archive_files([f])
+                with Ska.DBI.DBI(**self.db) as db:
                     db.insert(arch_info, 'archfiles')
-                    count_inserted += 1
-            db.commit()
+                    db.commit()
+                count_inserted += 1
         logger.info("Ingested %d files" % count_inserted)
 
     def update(self):
