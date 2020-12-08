@@ -40,7 +40,7 @@ FILETYPE = {'level': 'L0',
             'instrum': 'PCAD',
             'content': 'ACADATA',
             'arc5gl_query': 'ACA0',
-            'fileglob': '*fits.gz'}
+            'fileglob': 'aca*fits*'}
 
 ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('MNF', '>i4'),
@@ -552,7 +552,7 @@ class Updater(object):
                          and 'fileglob' for arc5gl.  For ACA0:
                          {'level': 'L0', 'instrum': 'PCAD',
                          'content': 'ACADATA', 'arc5gl_query': 'ACA0',
-                         'fileglob': '*fits.gz'}
+                         'fileglob': 'aca*fits*'}
         :param start: start of interval to retrieve (Chandra.Time compatible)
         :param stop: end of interval to retrieve (Chandra.Time compatible)
 
@@ -739,7 +739,7 @@ class Updater(object):
         fetched_files = []
         ingest_dates = []
         # get the files, store in file archive, and record in database
-        for file in files:
+        for i, file in enumerate(files):
             # Retrieve CXC archive files in a temp directory with arc5gl
             missed_file = file['filename']
             arc5.sendline('dataset=flight')
@@ -750,9 +750,7 @@ class Updater(object):
             arc5.sendline('version=last')
             arc5.sendline('operation=retrieve')
             arc5.sendline('go')
-            have_files = sorted(glob(self.filetype['fileglob']))
-            if not len(have_files):
-                raise ValueError
+            have_files = sorted(glob(f"{missed_file}*"))
             filename = have_files[0]
             # if it isn't gzipped, just gzip it
             if re.match(r'.*\.fits$', filename):
