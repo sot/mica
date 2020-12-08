@@ -14,8 +14,6 @@ import collections
 import tables
 from itertools import count
 from pathlib import Path
-import six
-from six.moves import zip
 
 import Ska.DBI
 import Ska.arc5gl
@@ -248,7 +246,7 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
         if sz < 8:
             imgraw = imgraw[:sz, :sz]
 
-        meta = {name: col[i] for name, col in six.iteritems(cols) if col[i] != -9999}
+        meta = {name: col[i] for name, col in cols.items() if col[i] != -9999}
         imgs.append(ACAImage(imgraw, meta=meta))
 
     return imgs
