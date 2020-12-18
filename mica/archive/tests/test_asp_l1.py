@@ -59,7 +59,7 @@ def test_get_atts_time():
     stop = '2014:005:00:00:00.000'
     atts, times, recs = asp_l1.get_atts(start=start, stop=stop)
     assert len(atts) == len(times)
-    compare_obc_and_asol(atts, times, recs, rtol=51)
+    compare_obc_and_asol(atts, times, recs, rtol=55)
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
         if dwell.get_obsid() > 38000:
