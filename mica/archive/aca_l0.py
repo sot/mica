@@ -5,6 +5,7 @@ import re
 import logging
 import shutil
 import time
+import gzip
 from astropy.table import Table
 import astropy.io.fits as pyfits
 import numpy as np
@@ -752,7 +753,6 @@ class Updater(object):
             filename = have_files[0]
             # if it isn't gzipped, just gzip it
             if re.match(r'.*\.fits$', filename):
-                import gzip
                 f_in = open(file, 'rb')
                 f_out = gzip.open("%s.gz" % filename, 'wb')
                 f_out.writelines(f_in)
