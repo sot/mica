@@ -738,7 +738,7 @@ class Updater(object):
         fetched_files = []
         ingest_dates = []
         # get the files, store in file archive, and record in database
-        for i, file in enumerate(files):
+        for file in files:
             # Retrieve CXC archive files in a temp directory with arc5gl
             missed_file = file['filename']
             arc5.sendline('dataset=flight')
