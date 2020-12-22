@@ -5,6 +5,7 @@ import re
 import logging
 import shutil
 import time
+import gzip
 from astropy.table import Table
 import astropy.io.fits as pyfits
 import numpy as np
@@ -14,8 +15,6 @@ import collections
 import tables
 from itertools import count
 from pathlib import Path
-import six
-from six.moves import zip
 
 import Ska.DBI
 import Ska.arc5gl
@@ -40,7 +39,7 @@ FILETYPE = {'level': 'L0',
             'instrum': 'PCAD',
             'content': 'ACADATA',
             'arc5gl_query': 'ACA0',
-            'fileglob': '*fits.gz'}
+            'fileglob': 'aca*fits*'}
 
 ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
              ('MNF', '>i4'),
@@ -248,7 +247,7 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
         if sz < 8:
             imgraw = imgraw[:sz, :sz]
 
-        meta = {name: col[i] for name, col in six.iteritems(cols) if col[i] != -9999}
+        meta = {name: col[i] for name, col in cols.items() if col[i] != -9999}
         imgs.append(ACAImage(imgraw, meta=meta))
 
     return imgs
@@ -552,7 +551,7 @@ class Updater(object):
                          and 'fileglob' for arc5gl.  For ACA0:
                          {'level': 'L0', 'instrum': 'PCAD',
                          'content': 'ACADATA', 'arc5gl_query': 'ACA0',
-                         'fileglob': '*fits.gz'}
+                         'fileglob': 'aca*fits*'}
         :param start: start of interval to retrieve (Chandra.Time compatible)
         :param stop: end of interval to retrieve (Chandra.Time compatible)
 
@@ -750,13 +749,10 @@ class Updater(object):
             arc5.sendline('version=last')
             arc5.sendline('operation=retrieve')
             arc5.sendline('go')
-            have_files = sorted(glob(self.filetype['fileglob']))
-            if not len(have_files):
-                raise ValueError
+            have_files = sorted(glob(f"{missed_file}*"))
             filename = have_files[0]
             # if it isn't gzipped, just gzip it
             if re.match(r'.*\.fits$', filename):
-                import gzip
                 f_in = open(file, 'rb')
                 f_out = gzip.open("%s.gz" % filename, 'wb')
                 f_out.writelines(f_in)
@@ -769,14 +765,14 @@ class Updater(object):
 
     def _insert_files(self, files):
         count_inserted = 0
-        with Ska.DBI.DBI(**self.db) as db:
-            for i, f in enumerate(files):
-                arch_info = self._read_archfile(i, f, files)
-                if arch_info:
-                    self._move_archive_files([f])
+        for i, f in enumerate(files):
+            arch_info = self._read_archfile(i, f, files)
+            if arch_info:
+                self._move_archive_files([f])
+                with Ska.DBI.DBI(**self.db) as db:
                     db.insert(arch_info, 'archfiles')
-                    count_inserted += 1
-            db.commit()
+                    db.commit()
+                count_inserted += 1
         logger.info("Ingested %d files" % count_inserted)
 
     def update(self):

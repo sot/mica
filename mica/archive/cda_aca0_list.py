@@ -21,7 +21,7 @@ import re
 import tables
 from astropy.table import Table
 import numpy as np
-from six.moves import urllib, zip
+import urllib
 
 import time
 from Chandra.Time import DateTime
@@ -71,22 +71,33 @@ def make_data_table(lines):
     files.sort(['aca_ingest', 'ingest_date', 'filename'])
     return files
 
+TABLE_DTYPE = np.dtype([('filename', 'S29'), ('status', 'S1'),
+                        ('ingest_time', 'S19'), ('ingest_date', 'S21'),
+                        ('aca_ingest', 'S21'), ('filetime', '<i8'), ('version', '<i8')])
 
-def make_table_from_scratch(table_file, cda_fetch_url, start='2015:001:12:00:00'):
+def make_table_from_scratch(table_file, cda_fetch_url, start='2020:320:12:00:00'):
     logger.info("Fetching new CDA list from %s" % start)
     ct_start = DateTime(start)
     query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
             ct_start.mon, ct_start.day, ct_start.year))
     url = cda_fetch_url + query
     logger.info("URL for fetch {}".format(url))
-    new_lines = urllib.request.urlopen(url).readlines()
+    new_lines = urllib.request.urlopen(url).read().decode().splitlines()
     files = make_data_table(new_lines)
     logger.info("Creating new table at %s" % table_file)
     h5f = tables.open_file(table_file, 'a',
                           filters=tables.Filters(complevel=5, complib='zlib'))
-    desc, bo = tables.table.descr_from_dtype(files[0].dtype)
-    tbl = h5f.createTable('/', 'data', desc)
-    tbl.append(files.as_array())
+    desc, bo = tables.table.descr_from_dtype(TABLE_DTYPE)
+    tbl = h5f.create_table('/', 'data', desc)
+    for file in files:
+        row = tbl.row
+        row['filename'] = file['filename']
+        row['status'] = file['status']
+        row['ingest_time'] = file['ingest_time']
+        row['ingest_date'] = file['ingest_date']
+        row['aca_ingest'] = file['aca_ingest']
+        row['filetime'] = file['filetime']
+        row.append()
     tbl.flush()
     h5f.close()
 
@@ -104,6 +115,7 @@ def update_cda_table(data_root=None,
     if not os.path.exists(data_root):
         os.makedirs(data_root)
     table_file = os.path.join(data_root, cda_table)
+
     if not os.path.exists(table_file):
         make_table_from_scratch(table_file, cda_fetch_url)
         return
@@ -112,7 +124,7 @@ def update_cda_table(data_root=None,
     with tables.open_file(table_file, 'r') as h5f:
         tbl = h5f.get_node('/', 'data')
         cda_files = Table(tbl[:])
-    lastdate = DateTime(cda_files[-1]['ingest_date'])
+        lastdate = DateTime(cda_files[-1]['ingest_date'])
 
     # Get new data
     logger.info("Fetching new CDA list from %s" % lastdate.date)
@@ -121,11 +133,10 @@ def update_cda_table(data_root=None,
     url = cda_fetch_url + query
     logger.info("URL for fetch {}".format(url))
     try:
-        new_lines = urllib.request.urlopen(url).readlines()
+        new_lines = urllib.request.urlopen(url).read().decode().splitlines()
     except urllib.error.URLError as err:
         logger.info(err)
         return
-    new_lines = [line.decode() for line in new_lines]
     files = make_data_table(new_lines)
     match = np.flatnonzero(cda_files['filename'] == files[0]['filename'])
     if len(match) == 0:
