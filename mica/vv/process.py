@@ -211,11 +211,6 @@ def process(obsid, version='last'):
         return None
     obi.tempdir = tempfile.mkdtemp(dir=FILES['temp_root'])
     obi.save_plots_and_resid()
-    shelf_file = os.path.join(FILES['data_root'],
-                              FILES['shelf_file'])
-    if not os.path.exists(os.path.dirname(shelf_file)):
-        os.makedirs(os.path.dirname(shelf_file))
-    obi.shelve_info(shelf_file)
     _file_vv(obi)
     if not os.path.exists(FILES['h5_file']):
         vv_desc, byteorder = tables.descr_from_dtype(VV_DTYPE)

@@ -6,7 +6,6 @@ import re
 import six
 import pickle
 import json
-import shelve
 import csv
 import gzip
 import logging
@@ -243,15 +242,6 @@ class Obi(object):
         logger.info("Saved JSON to {}".format(file))
 
 
-    def shelve_info(self, file):
-        if self.info()['aspect_1_id'] is None:
-            logger.warning("Shelving not implemented for obsids without aspect_1_ids")
-            return
-        s = shelve.open(file)
-        s["%s_%s" % (self.info()['obsid'], self.info()['revision'])] \
-            = self.info()
-        s.close()
-        logger.info("Saved to shelve file {}".format(file))
 
     def slots_to_db(self):
         if self.info()['aspect_1_id'] is None:
