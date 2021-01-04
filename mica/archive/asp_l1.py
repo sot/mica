@@ -13,7 +13,7 @@ import os
 import logging
 import numpy as np
 from astropy.table import Table
-from mica.quaternion import Quat
+from Quaternion import Quat
 
 from mica.archive import obsid_archive
 from mica.archive import asp_l1_proc
@@ -214,14 +214,17 @@ def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
                 nok = ((asol['time'] >= (aqual['time'][idx] - 1.025))
                        & (asol['time'] <= (aqual['time'][idx] + 1.025)))
                 asol = asol[~nok]
-        # Make a Nx4 list of the inv misalign quats
-        q_mis_inv = np.repeat(Quat(acal['aca_misalign'][0]).inv().q,
-                              len(asol)).reshape((4, len(asol))).transpose()
+
+        # Transpose of transform/rotation matrix is the inverse
+        aca_mis_inv = acal['aca_misalign'][0].transpose()
+
+        # Repeat the transform to match asol
+        aca_mis_inv = np.repeat(aca_mis_inv[np.newaxis, ...], repeats=len(asol), axis=0)
+        q_mis_inv = Quat(transform=aca_mis_inv)
+
         # Quaternion multiply the asol quats with that inv misalign and save
-        # I could also do this with the transform matrix and then only need
-        # one accessory quat function.
         q_att_name = 'q_att_raw' if 'q_att_raw' in asol.colnames else 'q_att'
-        att_chunks.append((Quat(asol[q_att_name]) * Quat(q_mis_inv)).q)
+        att_chunks.append((Quat(q=asol[q_att_name]) * q_mis_inv).q)
         time_chunks.append(np.array(asol['time']))
         records.append(asol.meta)
     if len(att_chunks) > 0 and len(time_chunks) > 0:

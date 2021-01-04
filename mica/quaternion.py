@@ -35,6 +35,7 @@ Quaternion provides a class for manipulating quaternion objects.  This class pro
 ## SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numpy as np
+import warnings
 
 
 class Quat(object):
@@ -101,6 +102,7 @@ class Quat(object):
 
     """
     def __init__(self, attitude, intype=None):
+        warnings.warn("mica.quaternion is deprecated as of Quaternion 3.5.0", FutureWarning)
         self._q = None
         self._equatorial = None
         self._ra0 = None
