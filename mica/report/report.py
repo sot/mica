@@ -324,7 +324,6 @@ def obs_links(obsid, sequence=None, plan=None):
     else:
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
 
-
     # Check for centroid dashboard
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
