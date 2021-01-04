@@ -324,13 +324,14 @@ def obs_links(obsid, sequence=None, plan=None):
     else:
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
 
+
     # Check for centroid dashboard
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
     cen_dash_file = "{}/{}/index.html".format(chunk_dir, strobs)
-    if os.path.exists(os.path.join('/proj/sot/ska/www/ASPECT_ICXC/centroid_dashboard/',
+    if os.path.exists(os.path.join('/proj/sot/ska/www/ASPECT_ICXC/centroid_reports/',
                                    cen_dash_file)):
-        cen_url = 'https://icxc.cfa.harvard.edu/aspect/centroid_dashboard/'
+        cen_url = 'https://icxc.cfa.harvard.edu/aspect/centroid_reports/'
         links['cen_dash'] = {'link': "{}/{}".format(cen_url, cen_dash_file),
                             'label': 'Centroid Dashboard'}
 
