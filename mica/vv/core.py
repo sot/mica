@@ -310,18 +310,24 @@ class Obi(object):
             if self.isdefault:
                 obsid_rec['isdefault'] = 0
                 self.table.modify_coordinates(have_obsid_coord, obsid_rec)
-            # if we already have the revision, update in place
+
+            # if we already have the revision, try to update in place.
             if np.any(obsid_rec['revision'] == save['revision']):
                 rev_coord = self.table.get_where_list(
                     '(obsid == %d) & (revision == %d)'
                     % (save['obsid'], save['revision']),
                     sort=True)
-                if len(rev_coord) != len(save_rec):
-                    raise ValueError(
-                        "Could not update; different number of slots")
-                logger.info("updating obsid %d rev %d in place"
-                       % (save['obsid'], save['revision']))
-                self.table.modify_coordinates(rev_coord, save_rec)
+                if len(rev_coord) == len(save_rec):
+                    logger.info("updating obsid %d rev %d in place"
+                                % (save['obsid'], save['revision']))
+                    self.table.modify_coordinates(rev_coord, save_rec)
+
+                # If there was some mismatch with previous V&V processing of
+                # same data, delete the old rows and add the new data.
+                else:
+                    for row_id in rev_coord:
+                        self.table.remove_row(row_id)
+                    self.table.append(save_rec)
             else:
                 self.table.append(save_rec)
         else:
