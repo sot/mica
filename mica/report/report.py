@@ -46,7 +46,7 @@ warnings.filterwarnings(
 
 
 WANT_VV_VERSION = 2
-REPORT_VERSION = 3
+REPORT_VERSION = 4
 
 plt.rcParams['lines.markeredgewidth'] = 0
 
@@ -328,9 +328,9 @@ def obs_links(obsid, sequence=None, plan=None):
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
     cen_dash_file = "{}/{}/index.html".format(chunk_dir, strobs)
-    if os.path.exists(os.path.join('/proj/sot/ska/www/ASPECT_ICXC/centroid_dashboard/',
+    if os.path.exists(os.path.join('/proj/sot/ska/www/ASPECT_ICXC/centroid_reports/',
                                    cen_dash_file)):
-        cen_url = 'https://icxc.cfa.harvard.edu/aspect/centroid_dashboard/'
+        cen_url = 'https://icxc.cfa.harvard.edu/aspect/centroid_reports/'
         links['cen_dash'] = {'link': "{}/{}".format(cen_url, cen_dash_file),
                             'label': 'Centroid Dashboard'}
 

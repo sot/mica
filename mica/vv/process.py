@@ -109,7 +109,6 @@ def update(obsids=[]):
 
     :param obsids: optional list of obsids
     """
-    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
     # if an obsid is requested, just do that
     # there's a little bit of duplication in this block
     if len(obsids):
@@ -124,18 +123,19 @@ def update(obsids=[]):
                 logger.info("running VV for obsid {} run on {}".format(
                     obs['obsid'], obs['ap_date']))
                 process(obs['obsid'], version=obs['revision'])
-                asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = {}
-                                       where obsid = {} and revision = {}
-                                    """.format(VV_VERSION, obs['obsid'], obs['revision']))
+                with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
+                    db.execute("""UPDATE aspect_1_proc set vv_complete = {}
+                                  where obsid = {} and revision = {}
+                               """.format(VV_VERSION, obs['obsid'], obs['revision']))
     else:
-        # if no obsid specified, try to retrieve all data without vv
-        # set to only use aspect_1_id greater than those currently
-        # in the archive at time of vv install.
-        # this is to avoid processing old no-longer-default data for now
-        todo = asp_l1_proc.fetchall(
-            """SELECT * FROM aspect_1_proc
-               where vv_complete = 0 and aspect_1_id > 34878
-               order by aspect_1_id""")
+
+        # If no obsid specified, run on all with vv_complete = 0 in
+        # the local processing database.
+        with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
+            todo = db.fetchall(
+                """SELECT * FROM aspect_1_proc
+                where vv_complete = 0
+                order by aspect_1_id""")
         for obs in todo:
             if obs['obsid'] in KNOWN_BAD_OBSIDS:
                 logger.info("Skipping known bad obsid {}".format(obs['obsid']))
@@ -143,9 +143,12 @@ def update(obsids=[]):
             logger.info("running VV for obsid {} run on {}".format(
                 obs['obsid'], obs['ap_date']))
             process(obs['obsid'], version=obs['revision'])
-            asp_l1_proc.execute("""UPDATE aspect_1_proc set vv_complete = {}
-                                   where obsid = {} and revision = {}
-                                """.format(VV_VERSION, obs['obsid'], obs['revision']))
+            update_str = ("""UPDATE aspect_1_proc set vv_complete = {}
+                             where obsid = {} and revision = {}
+                          """.format(VV_VERSION, obs['obsid'], obs['revision']))
+            logger.info(update_str)
+            with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
+                db.execute(update_str)
 
 
 def get_arch_vv(obsid, version='last'):
@@ -211,11 +214,6 @@ def process(obsid, version='last'):
         return None
     obi.tempdir = tempfile.mkdtemp(dir=FILES['temp_root'])
     obi.save_plots_and_resid()
-    shelf_file = os.path.join(FILES['data_root'],
-                              FILES['shelf_file'])
-    if not os.path.exists(os.path.dirname(shelf_file)):
-        os.makedirs(os.path.dirname(shelf_file))
-    obi.shelve_info(shelf_file)
     _file_vv(obi)
     if not os.path.exists(FILES['h5_file']):
         vv_desc, byteorder = tables.descr_from_dtype(VV_DTYPE)

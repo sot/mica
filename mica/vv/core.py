@@ -6,7 +6,6 @@ import re
 import six
 import pickle
 import json
-import shelve
 import csv
 import gzip
 import logging
@@ -44,7 +43,7 @@ class InconsistentAspectIntervals(ValueError):
     pass
 
 # integer code version for lightweight database tracking
-VV_VERSION = 3
+VV_VERSION = 4
 
 logger = logging.getLogger('vv')
 
@@ -243,15 +242,6 @@ class Obi(object):
         logger.info("Saved JSON to {}".format(file))
 
 
-    def shelve_info(self, file):
-        if self.info()['aspect_1_id'] is None:
-            logger.warning("Shelving not implemented for obsids without aspect_1_ids")
-            return
-        s = shelve.open(file)
-        s["%s_%s" % (self.info()['obsid'], self.info()['revision'])] \
-            = self.info()
-        s.close()
-        logger.info("Saved to shelve file {}".format(file))
 
     def slots_to_db(self):
         if self.info()['aspect_1_id'] is None:
@@ -320,18 +310,24 @@ class Obi(object):
             if self.isdefault:
                 obsid_rec['isdefault'] = 0
                 self.table.modify_coordinates(have_obsid_coord, obsid_rec)
-            # if we already have the revision, update in place
+
+            # if we already have the revision, try to update in place.
             if np.any(obsid_rec['revision'] == save['revision']):
                 rev_coord = self.table.get_where_list(
                     '(obsid == %d) & (revision == %d)'
                     % (save['obsid'], save['revision']),
                     sort=True)
-                if len(rev_coord) != len(save_rec):
-                    raise ValueError(
-                        "Could not update; different number of slots")
-                logger.info("updating obsid %d rev %d in place"
-                       % (save['obsid'], save['revision']))
-                self.table.modify_coordinates(rev_coord, save_rec)
+                if len(rev_coord) == len(save_rec):
+                    logger.info("updating obsid %d rev %d in place"
+                                % (save['obsid'], save['revision']))
+                    self.table.modify_coordinates(rev_coord, save_rec)
+
+                # If there was some mismatch with previous V&V processing of
+                # same data, delete the old rows and add the new data.
+                else:
+                    for row_id in rev_coord:
+                        self.table.remove_row(row_id)
+                    self.table.append(save_rec)
             else:
                 self.table.append(save_rec)
         else:
@@ -1022,14 +1018,15 @@ class AspectInterval(object):
                                  slot=slot,
                                  id_string=str(ocat_info['id']),
                                  id_num=ocat_info['id'],
-                                 ang_y_nom=ocat_info['y_ang'],
-                                 ang_z_nom=ocat_info['z_ang'],
                                  mag_i_cmd=0,
                                  mag_i_avg=0,
                                  mag_i_min=0,
                                  mag_i_max=0,
                                  p_lsi=np.array([0,0,0]),
                                  )
+                if 'ang_y_nom' in self.fidprop.colnames:
+                    mock_prop['ang_y_nom'] = ocat_info['y_ang']
+                    mock_prop['ang_z_nom'] = ocat_info['z_ang']
                 self.fidprop.add_row(mock_prop)
                 self.fidpr_info.append(dict(slot=slot,
                                             tstart=self.asol_header['TSTART'],
