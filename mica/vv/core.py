@@ -1018,14 +1018,15 @@ class AspectInterval(object):
                                  slot=slot,
                                  id_string=str(ocat_info['id']),
                                  id_num=ocat_info['id'],
-                                 ang_y_nom=ocat_info['y_ang'],
-                                 ang_z_nom=ocat_info['z_ang'],
                                  mag_i_cmd=0,
                                  mag_i_avg=0,
                                  mag_i_min=0,
                                  mag_i_max=0,
                                  p_lsi=np.array([0,0,0]),
                                  )
+                if 'ang_y_nom' in self.fidprop.colnames:
+                    mock_prop['ang_y_nom'] = ocat_info['y_ang']
+                    mock_prop['ang_z_nom'] = ocat_info['z_ang']
                 self.fidprop.add_row(mock_prop)
                 self.fidpr_info.append(dict(slot=slot,
                                             tstart=self.asol_header['TSTART'],
