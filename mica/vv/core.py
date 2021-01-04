@@ -43,7 +43,7 @@ class InconsistentAspectIntervals(ValueError):
     pass
 
 # integer code version for lightweight database tracking
-VV_VERSION = 3
+VV_VERSION = 4
 
 logger = logging.getLogger('vv')
 
