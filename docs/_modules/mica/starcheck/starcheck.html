@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mica.starcheck.starcheck &#8212; mica 4.23.0 documentation</title>
+    <title>mica.starcheck.starcheck &#8212; mica 4.24.0 documentation</title>
     <link rel="stylesheet" href="../../../_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     
@@ -47,7 +47,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.23.0 documentation</a>
+	<a href="../../../index.html">mica 4.24.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -97,7 +97,10 @@
 <span class="sd">    :param mp_dir: optional load specifier like &#39;FEB1317A&#39; or &#39;/2017/FEB1317/oflsa/&#39;</span>
 <span class="sd">    :returns: astropy.Table of star catalog</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">get_starcheck_catalog</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">)[</span><span class="s1">&#39;cat&#39;</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_starcheck_catalog</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">)[</span><span class="s1">&#39;cat&#39;</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
 
 <span class="k">def</span> <span class="nf">get_dither</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
