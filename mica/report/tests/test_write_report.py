@@ -9,15 +9,20 @@ from testr.test_helper import on_head_network, has_sybase
 
 from .. import report
 
+user = os.environ.get('USER') or os.environ.get('LOGNAME')
+
 try:
     import Ska.DBI
-    user = os.environ.get('USER') or os.environ.get('LOGNAME')
     with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
         HAS_SYBASE_ACCESS = True
 except Exception:
-    if on_head_network() and not has_sybase():
-        warn("On HEAD but no sybase access. Run ska_envs or define SYBASE/SYBASE_OCS")
     HAS_SYBASE_ACCESS = False
+
+    # If the user should have access, warn about the issue.
+    if (on_head_network() and not has_sybase() and
+            os.path.exists(os.path.join(os.environ['SKA'], 'data', 'aspect_authorization',
+                                        f'sqlsao-axafvv-{user}'))):
+        warn("On HEAD but no sybase access. Run test from production environment.")
 
 
 HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES['data_root'])
