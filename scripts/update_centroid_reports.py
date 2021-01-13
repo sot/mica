@@ -3,4 +3,4 @@
 import mica.centroid_dashboard
 
 # Cheat. Needs entrypoint scripts
-mica.centroid_dashboard.update_observed_metrics()
+mica.centroid_dashboard.update_observed_metrics(save=True, make_plots=True)
