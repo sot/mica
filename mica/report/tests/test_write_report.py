@@ -1,6 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import tempfile
 import os
+from pathlib import Path
+import getpass
 import shutil
 import pytest
 from warnings import warn
@@ -9,7 +11,7 @@ from testr.test_helper import on_head_network, has_sybase
 
 from .. import report
 
-user = os.environ.get('USER') or os.environ.get('LOGNAME')
+user = getpass.getuser()
 
 try:
     import Ska.DBI
@@ -20,8 +22,8 @@ except Exception:
 
     # If the user should have access, warn about the issue.
     if (on_head_network() and not has_sybase() and
-            os.path.exists(os.path.join(os.environ['SKA'], 'data', 'aspect_authorization',
-                                        f'sqlsao-axafvv-{user}'))):
+            Path(os.environ['SKA'], 'data', 'aspect_authorization',
+                 f'sqlsao-axafvv-{user}').exists()):
         warn("On HEAD but no sybase access. Run test from production environment.")
 
 
