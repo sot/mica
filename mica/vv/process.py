@@ -183,7 +183,7 @@ def get_arch_vv(obsid, version='last'):
     if asp_proc is None:
         asp_proc = asp_obs[asp_obs['revision'] == version][0]
     obspar_dirs = obspar_arch.get_obs_dirs(obsid)
-    if asp_proc['obspar_version'] not in obspar_dirs:
+    if obspar_dirs is None or asp_proc['obspar_version'] not in obspar_dirs:
         # try to update the obspar archive with the missing version
         config = obspar_arch.CONFIG.copy()
         config.update(dict(obsid=obsid, version=asp_proc['obspar_version']))
@@ -192,8 +192,11 @@ def get_arch_vv(obsid, version='last'):
         oa.logger.addHandler(logging.StreamHandler())
         oa.update()
         obspar_dirs = obspar_arch.get_obs_dirs(obsid)
-    obspar_file = glob(os.path.join(obspar_dirs[asp_proc['obspar_version']],
-                                    'axaf*par*'))[0]
+    try:
+        obspar_file = glob(os.path.join(obspar_dirs[asp_proc['obspar_version']],
+                                        'axaf*par*'))[0]
+    except IndexError:
+        raise LookupError(f"Requested version {version} not in obspar archive")
     return Obi(obspar_file, l1_dir, temproot=FILES['temp_root'])
 
 
