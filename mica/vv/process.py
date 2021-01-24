@@ -109,43 +109,33 @@ def update(obsids=[]):
 
     :param obsids: optional list of obsids
     """
-    # if an obsid is requested, just do that
-    # there's a little bit of duplication in this block
-    if len(obsids):
-        for obsid in obsids:
-            todo = asp_l1_proc.fetchall(
-                "SELECT * FROM aspect_1_proc where obsid = {}".format(
-                    obsid))
-            for obs in todo:
-                if obs['obsid'] in KNOWN_BAD_OBSIDS:
-                    logger.info("Skipping known bad obsid {}".format(obs['obsid']))
-                    continue
-                logger.info("running VV for obsid {} run on {}".format(
-                    obs['obsid'], obs['ap_date']))
-                process(obs['obsid'], version=obs['revision'])
-                with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
-                    db.execute("""UPDATE aspect_1_proc set vv_complete = {}
-                                  where obsid = {} and revision = {}
-                               """.format(VV_VERSION, obs['obsid'], obs['revision']))
-    else:
+    if len(obsids) == 0:
 
         # If no obsid specified, run on all with vv_complete = 0 in
         # the local processing database.
         with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
-            todo = db.fetchall(
+            obsids = db.fetchall(
                 """SELECT * FROM aspect_1_proc
                 where vv_complete = 0
-                order by aspect_1_id""")
-        for obs in todo:
-            if obs['obsid'] in KNOWN_BAD_OBSIDS:
-                logger.info("Skipping known bad obsid {}".format(obs['obsid']))
+                order by aspect_1_id""")['obsid']
+    for obsid in obsids:
+        with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
+            proc = db.fetchall(
+                f"SELECT obsid, revision, ap_date FROM aspect_1_proc where obsid = {obsid}")
+        for obs in proc:
+            if obsid in KNOWN_BAD_OBSIDS:
+                logger.info(f"Skipping known bad obsid {obsid}")
                 continue
-            logger.info("running VV for obsid {} run on {}".format(
-                obs['obsid'], obs['ap_date']))
-            process(obs['obsid'], version=obs['revision'])
-            update_str = ("""UPDATE aspect_1_proc set vv_complete = {}
-                             where obsid = {} and revision = {}
-                          """.format(VV_VERSION, obs['obsid'], obs['revision']))
+            logger.info(f"running VV for obsid {obsid} run on {obs['ap_date']}")
+            try:
+                process(obsid, version=obs['revision'])
+            except LookupError:
+                logger.warn(
+                    f"Skipping obs:ver {obsid}:{obs['revision']}. Missing data")
+                continue
+            update_str = (f"""UPDATE aspect_1_proc set vv_complete = {VV_VERSION}
+                              where obsid = {obsid} and revision = {obs['revision']}""")
+
             logger.info(update_str)
             with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
                 db.execute(update_str)
