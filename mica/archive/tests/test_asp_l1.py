@@ -10,7 +10,7 @@ from .. import asp_l1
 
 HAS_L1_ARCHIVE = os.path.exists(asp_l1.CONFIG['data_root'])
 
-def compare_obc_and_asol(atts, times, recs, ptol=2, ytol=2, rtol=50):
+def compare_obc_and_asol(atts, times, recs, ptol=2, ytol=2, rtol=65):
     """
     Check that obc solution and ground solution have relatively close quats.
     Note that because the ground aspect solution is not continuous (only run over science obsids
@@ -59,7 +59,7 @@ def test_get_atts_time():
     stop = '2014:005:00:00:00.000'
     atts, times, recs = asp_l1.get_atts(start=start, stop=stop)
     assert len(atts) == len(times)
-    compare_obc_and_asol(atts, times, recs, rtol=55)
+    compare_obc_and_asol(atts, times, recs)
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
         if dwell.get_obsid() > 38000:

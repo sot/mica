@@ -32,12 +32,12 @@ def test_get_rms_data():
 
 @pytest.mark.skipif('not HAS_VV_ARCHIVE', reason='Test requires vv archive')
 def test_get_vv():
-    obs = vv.get_vv(16504)
+    obs = vv.get_vv(16504, version=1)
     assert np.allclose(obs['slots']['7']['dz_rms'], 0.11610256063309182)
 
 @pytest.mark.skipif('not HAS_L1_ARCHIVE', reason='Test requires L1 archive')
 def test_run_vv():
-    obi = process.get_arch_vv(2121)
+    obi = process.get_arch_vv(2121, version=3)
     assert np.allclose(obi.info()['sim']['max_d_dy'], 0.002197265625)
 
 @pytest.mark.skipif('not HAS_L1_ARCHIVE', reason='Test requires L1 archive')
