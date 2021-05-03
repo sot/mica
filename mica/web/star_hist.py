@@ -1,9 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from astropy.table import Table
-from Ska.DBI import DBI
 from Chandra.Time import DateTime
-from mica.stats import acq_stats
-
+from mica.stats import acq_stats, guide_stats
 
 
 def get_acq_data(agasc_id):
@@ -14,12 +12,14 @@ def get_acq_data(agasc_id):
     :returns: list of dicts of acquisitions
     """
 
-    acq = Table(acq_stats.get_stats())
-    acq_star = acq[acq['agasc_id'] == agasc_id]
+    acq = acq_stats.get_star_stats(agasc_id)
     # make list of dicts for use in light templates in kadi web app
+    if not len(acq):
+        return []
+    acq = Table(acq)
+    acq.sort('guide_start')
     acq_table = []
-    acq_star.sort('guide_start')
-    for s in acq_star:
+    for s in acq:
         srec = {}
         # Use these columns as they are named from the mica acq stats table
         for col in ['type', 'obsid', 'obi', 'slot', 'mag', 'mag_obs', 'star_tracked']:
@@ -35,15 +35,12 @@ def get_acq_data(agasc_id):
 
 def get_gui_data(agasc_id):
     """
-    Fetch guide/track history from Sybase for an agasc id
+    Fetch guide/track history for an agasc id
 
     :param agasc_id: AGASC id
     :returns: list of dicts of uses as guide stars
     """
-    with DBI(dbi='sybase', server='sybase', user='aca_read') as db:
-        gui = db.fetchall(
-            'select * from trak_stats_data where type != "FID" and id = {}'.format(
-                agasc_id))
+    gui = guide_stats.get_star_stats(agasc_id)
     if not len(gui):
         return []
     gui = Table(gui)
@@ -57,9 +54,9 @@ def get_gui_data(agasc_id):
             srec[col] = s[col]
         # rename these columns in the dictionary
         srec['date'] = s['kalman_datestart']
-        srec['mag'] = s['mag_exp']
+        srec['mag'] = s['mag_aca']
         srec['mag_obs'] = s['aoacmag_mean']
-        srec['perc_not_track'] = s['not_tracking_samples'] * 100.0 / s['n_samples']
+        srec['perc_not_track'] = s['f_track'] * 100.0
         gui_table.append(srec)
     return gui_table
 
