@@ -16,6 +16,10 @@ def test_read_stats():
     slot = stats[(stats['obsid'] == 5438) & (stats['slot'] == 5)][0]
     np.isclose(slot['dy_std'], 0.16008819321078668)
     np.isclose(slot['dz_std'], 0.23807435722775061)
+    # Fetch the stats for the slot 5 BOT by id
+    single = guide_stats.get_star_stats(839386400)
+    np.isclose(single[single['obsid'] == 5438][0]['dy_std'], 0.16008819321078668)
+
 
 HAS_OBSPAR_ARCHIVE = os.path.exists(
         update_guide_stats.mica.archive.obspar.CONFIG['data_root'])

@@ -2,11 +2,21 @@
 import tempfile
 import os
 import pytest
+from pathlib import Path
 
 from .. import update_acq_stats as acq_stats
+from .. import acq_stats as read_acq_stats
 
 HAS_OBSPAR_ARCHIVE = os.path.exists(
         acq_stats.mica.archive.obspar.CONFIG['data_root'])
+HAS_ACQ_TABLE = Path(read_acq_stats.TABLE_FILE).exists()
+
+
+@pytest.mark.skipif('not HAS_ACQ_TABLE', reason='Test requires acq stats table')
+def read_single_star_stats():
+    # Fetch the stats for the slot 5 BOT of obsid 5438 by id
+    single = read_acq_stats.get_star_stats(839386400)
+    assert single[single['obsid'] == 5438]['acqid'][0] is True
 
 
 @pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
