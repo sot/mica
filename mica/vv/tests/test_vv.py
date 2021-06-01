@@ -27,7 +27,7 @@ def test_get_vv_files():
 @pytest.mark.skipif('not HAS_VV_TABLE', reason='Test requires vv h5 table')
 def test_get_rms_data():
     data = vv.get_rms_data()
-    dz_rms = data[(data['obsid'] == 16505) & (data['slot'] == 4) & (data['isdefault'] == 1)]['dz_rms'][0]
+    dz_rms = data[(data['obsid'] == 16505) & (data['slot'] == 4) & (data['revision'] == 3)]['dz_rms'][0]
     assert np.allclose(dz_rms, 0.047886185719034906)
 
 @pytest.mark.skipif('not HAS_VV_ARCHIVE', reason='Test requires vv archive')
