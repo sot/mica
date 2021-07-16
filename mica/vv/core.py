@@ -927,6 +927,10 @@ class AspectInterval(object):
         asol = Table.read(asol_file)
         # Add logic to handle column names in DS 10.8.3 aspect solutions
         if 'ady' in asol.colnames:
+            # Add code to handle version 4 processing of 16091 which is still
+            # non-conforming
+            if 'DTHETA' in asol.colnames:
+                asol.rename_column('DTHETA', 'dtheta')
             colmap = {'ady': 'dy',
                       'adz': 'dz',
                       'adtheta': 'dtheta',
@@ -938,7 +942,7 @@ class AspectInterval(object):
                 asol.remove_column(colmap[col])
                 asol.rename_column(col, colmap[col])
         # Add code to handle first processing of 16091 with
-        # non-confirming asol file
+        # non-conforming asol file
         if ('dtheta' not in asol.dtype.names
             and 'DTHETA' in asol.dtype.names):
             asol = Ska.Numpy.add_column(asol, 'dtheta', asol['DTHETA'])
