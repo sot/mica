@@ -12,14 +12,14 @@ HAS_OBSPAR_ARCHIVE = os.path.exists(
 HAS_ACQ_TABLE = Path(read_acq_stats.TABLE_FILE).exists()
 
 
-@pytest.mark.skipif('not HAS_ACQ_TABLE', reason='Test requires acq stats table')
-def read_single_star_stats():
+@pytest.mark.skipif(not HAS_ACQ_TABLE, reason='Test requires acq stats table')
+def test_single_star_stats():
     # Fetch the stats for the slot 5 BOT of obsid 5438 by id
     single = read_acq_stats.get_star_stats(839386400)
-    assert single[single['obsid'] == 5438]['acqid'][0] is True
+    assert single[single['obsid'] == 5438]['acqid'][0]
 
 
-@pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
+@pytest.mark.skipif(not HAS_OBSPAR_ARCHIVE, reason='Test requires mica obspars')
 def test_calc_stats():
     acq_stats.calc_stats(17210)
     acq_stats.calc_stats(15175)
@@ -27,7 +27,7 @@ def test_calc_stats():
     acq_stats.calc_stats(19386)
 
 
-@pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
+@pytest.mark.skipif(not HAS_OBSPAR_ARCHIVE, reason='Test requires mica obspars')
 def test_make_acq_stats():
     """
     Save the acq stats for one obsid into a newly-created table
