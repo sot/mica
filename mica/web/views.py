@@ -72,8 +72,10 @@ class StarHistView(BaseView, TemplateView):
                 context['acq_table'] = acq_table
             if len(gui_table):
                 context['gui_table'] = gui_table
-
-
+                reports_url = (
+                    "https://cxc.cfa.harvard.edu/mta/ASPECT/agasc/supplement_reports/stars/"
+                    + f'{int(agasc_id//1e7):03d}/{agasc_id}/index.html')
+                context['reports_url'] = reports_url
         return context
 
 

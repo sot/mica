@@ -12,12 +12,23 @@ def get_stats(filter=True):
     :param filter: True filters out 'known_bad' rows from the table
     :returns gui_stats: numpy.ndarray
     """
-
-    h5 = tables.open_file(TABLE_FILE, 'r')
-    stats = h5.root.data[:]
-    h5.close()
-    if filter:
-        stats = stats[~stats['known_bad']]
+    with tables.open_file(TABLE_FILE, 'r') as h5:
+        stats = h5.root.data[:]
+        if filter:
+            stats = stats[~stats['known_bad']]
     return stats
 
 
+def get_star_stats(id, filter=True):
+    """
+    Retrieve guide stats for agasc id
+
+    :param id: agasc id
+    :param filter: True filters out rows marked 'known_bad' in table
+    :returns stats: numpy.ndarray
+    """
+    with tables.open_file(TABLE_FILE, 'r') as h5:
+        stats = h5.root.data.read_where(f'agasc_id == {id}')
+        if filter:
+            stats = stats[~stats['known_bad']]
+    return stats
