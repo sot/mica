@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mica.stats.acq_stats &#8212; mica 4.26.1 documentation</title>
+    <title>mica.stats.acq_stats &#8212; mica 4.27.0 documentation</title>
     <link rel="stylesheet" href="../../../_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     
@@ -47,7 +47,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.26.1 documentation</a>
+	<a href="../../../index.html">mica 4.27.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -78,12 +78,26 @@
 <span class="sd">    :returns acq_stats: numpy.ndarray</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">h5</span> <span class="o">=</span> <span class="n">tables</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="n">TABLE_FILE</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
-    <span class="n">stats</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="p">[:]</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nb">filter</span><span class="p">:</span>
-        <span class="n">stats</span> <span class="o">=</span> <span class="n">stats</span><span class="p">[</span><span class="o">~</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;known_bad&#39;</span><span class="p">]]</span>
+    <span class="k">with</span> <span class="n">tables</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="n">TABLE_FILE</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="p">[:]</span>
+        <span class="k">if</span> <span class="nb">filter</span><span class="p">:</span>
+            <span class="n">stats</span> <span class="o">=</span> <span class="n">stats</span><span class="p">[</span><span class="o">~</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;known_bad&#39;</span><span class="p">]]</span>
     <span class="k">return</span> <span class="n">stats</span></div>
+
+
+<span class="k">def</span> <span class="nf">get_star_stats</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieve acq stats for agasc id</span>
+
+<span class="sd">    :param id: agasc id</span>
+<span class="sd">    :param filter: True filters out rows marked &#39;known_bad&#39; in table</span>
+<span class="sd">    :returns acq_stats: numpy.ndarray</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">tables</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="n">TABLE_FILE</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">read_where</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;agasc_id == </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">filter</span><span class="p">:</span>
+            <span class="n">stats</span> <span class="o">=</span> <span class="n">stats</span><span class="p">[</span><span class="o">~</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;known_bad&#39;</span><span class="p">]]</span>
+    <span class="k">return</span> <span class="n">stats</span>
 </pre></div>
 
             <div class="clearer"></div>

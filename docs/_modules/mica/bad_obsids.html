@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mica.bad_obsids &#8212; mica 4.26.1 documentation</title>
+    <title>mica.bad_obsids &#8212; mica 4.27.0 documentation</title>
     <link rel="stylesheet" href="../../_static/bootstrap-astropy.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     
@@ -47,7 +47,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../index.html">mica 4.26.1 documentation</a>
+	<a href="../../index.html">mica 4.27.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -65,8 +65,8 @@
   <h1>Source code for mica.bad_obsids</h1><div class="highlight"><pre>
 <span></span><span class="c1"># Licensed under a 3-clause BSD sytle license - see LICENSE</span>
 
-<span class="n">venus</span> <span class="o">=</span> <span class="p">[</span>
 <span class="c1"># Venus</span>
+<span class="n">venus</span> <span class="o">=</span> <span class="p">[</span>
     <span class="mi">583</span><span class="p">,</span>
     <span class="mi">2411</span><span class="p">,</span>
     <span class="mi">2414</span><span class="p">,</span>
@@ -111,7 +111,8 @@
     <span class="mi">18693</span><span class="p">,</span>
     <span class="mi">18694</span><span class="p">,</span>
     <span class="mi">18695</span><span class="p">,</span>
-    <span class="mi">18696</span><span class="p">]</span>
+    <span class="mi">18696</span><span class="p">,</span>
+    <span class="mi">53250</span><span class="p">]</span>
 
 <span class="n">multi_obi</span> <span class="o">=</span> <span class="p">[</span>
     <span class="mi">943</span><span class="p">,</span>
@@ -137,6 +138,10 @@
     <span class="mi">3764</span><span class="p">,</span>
 <span class="p">]</span>
 
+<span class="c1"># Observations with nonload commands changing catalog or other oddities</span>
+<span class="n">weird</span> <span class="o">=</span> <span class="p">[</span><span class="mi">50707</span><span class="p">]</span>
+
+
 <div class="viewcode-block" id="bad_obsids"><a class="viewcode-back" href="../../api.html#mica.bad_obsids.bad_obsids">[docs]</a><span class="k">def</span> <span class="nf">bad_obsids</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns a list of the obsids that are reasonable to exclude from most trending applications.</span>
@@ -144,12 +149,12 @@
 <span class="sd">    of Venus are problematic for star trending.  The observations with multiple obis may have more</span>
 <span class="sd">    than one attitude for the same obsid.</span>
 
-<span class="sd">    The lists of each (venus, multi_obi) are maintained directly in the module and may be used</span>
-<span class="sd">    directly if needed.</span>
+<span class="sd">    The lists of each (venus, multi_obi, weird) are maintained directly in the module and may be</span>
+<span class="sd">    used directly if needed.</span>
 
 <span class="sd">    :returns: list</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">venus</span> <span class="o">+</span> <span class="n">multi_obi</span></div>
+    <span class="k">return</span> <span class="n">venus</span> <span class="o">+</span> <span class="n">multi_obi</span> <span class="o">+</span> <span class="n">weird</span></div>
 </pre></div>
 
             <div class="clearer"></div>
