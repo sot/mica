@@ -3,6 +3,7 @@ import tempfile
 import os
 import numpy as np
 import pytest
+from pathlib import Path
 
 from .. import guide_stats
 from .. import update_guide_stats
@@ -21,8 +22,8 @@ def test_read_stats():
     np.isclose(single[single['obsid'] == 5438][0]['dy_std'], 0.16008819321078668)
 
 
-HAS_OBSPAR_ARCHIVE = os.path.exists(
-        update_guide_stats.mica.archive.obspar.CONFIG['data_root'])
+HAS_OBSPAR_ARCHIVE = (
+    Path(update_guide_stats.mica.archive.obspar.CONFIG['data_root']) / '00').exists()
 
 
 @pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')
