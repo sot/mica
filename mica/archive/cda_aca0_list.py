@@ -22,11 +22,12 @@ import tables
 from astropy.table import Table
 import numpy as np
 import urllib
-
-import time
-from Chandra.Time import DateTime
 import logging
 import argparse
+import time
+
+from ska_helpers.retry import retry_call
+from Chandra.Time import DateTime
 
 from mica.common import MICA_ARCHIVE
 
@@ -133,7 +134,8 @@ def update_cda_table(data_root=None,
     url = cda_fetch_url + query
     logger.info("URL for fetch {}".format(url))
     try:
-        new_lines = urllib.request.urlopen(url).read().decode().splitlines()
+        resp = retry_call(urllib.request.urlopen, [url], tries=5, delay=5)
+        new_lines = resp.read().decode().splitlines()
     except urllib.error.URLError as err:
         logger.info(err)
         return
