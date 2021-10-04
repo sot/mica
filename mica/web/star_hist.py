@@ -56,7 +56,7 @@ def get_gui_data(agasc_id):
         srec['date'] = s['kalman_datestart']
         srec['mag'] = s['mag_aca']
         srec['mag_obs'] = s['aoacmag_mean']
-        srec['perc_not_track'] = s['f_track'] * 100.0
+        srec['perc_not_track'] = (1 - s['f_track']) * 100.0
         gui_table.append(srec)
     return gui_table
 
