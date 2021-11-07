@@ -21,6 +21,7 @@ access to a comprehensive set of information related to Chandra aspect:
    acq_stats
    guide_stats
    observation_parameters
+   ocat_target_table
    starcheck
 
 API docs

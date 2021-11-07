@@ -76,6 +76,17 @@ Functions
 .. autofunction:: get_obs_dirs
 .. autofunction:: get_obspar
 
+:mod:`mica.archive.ocat_target_table`
+=====================================
+
+.. automodule:: mica.archive.ocat_target_table
+
+Functions
+---------
+
+.. autofunction:: get_ocat_target_table
+
+
 :mod:`mica.bad_obsids`
 ======================
 
