@@ -78,6 +78,10 @@ def get_web_table():
         if col.info.dtype.kind == 'U':
             dat[name] = np.char.encode(col, 'utf-8')
 
+    # Lower-case all the columns
+    lc_names = [name.lower() for name in dat.colnames]
+    dat.rename_columns(dat.colnames, lc_names)
+
     return dat
 
 
