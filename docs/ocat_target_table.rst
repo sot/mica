@@ -153,5 +153,5 @@ EFFICIENT                     ACIS use most efficient (Y, N)
 SPWIN                         Spatial window (Y, N)
 ============================= ================================================================
 
-The hdf5 in-kernel searches may be faster working with the table directly for some
+The HDF5 in-kernel searches may be faster working with the table directly for some
 operations.

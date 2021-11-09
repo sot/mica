@@ -19,7 +19,7 @@ def get_ocat_target_table(datafile=None):
 
     dat = Table.read(datafile)
 
-    # Decode bytes to strings manually.  Perhaps fixed in newer versions of numpy.
+    # Decode bytes to strings manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
     for name, col in dat.columns.items():
         if col.info.dtype.kind == 'S':
