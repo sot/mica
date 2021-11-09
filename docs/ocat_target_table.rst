@@ -2,7 +2,7 @@ OCAT Target Table
 ---------------------
 
 The :mod:`mica.archive.ocat_target_table` module includes code
-to fetch a mica version of the content from the OCAT details 
+to fetch a mica version of the content from the OCAT details
 aka Chaser aka target table.
 
 This is the type of content that can be seen directly at:
@@ -13,7 +13,7 @@ Using this module to get the data for all science observations:
 
    >>> from mica.archive.ocat_target_table import get_ocat_target_table
    >>> dat = get_ocat_target_table()
-   >>> dat[dat['OBSID'] == 5438][0]['TARGET_NAME']
+   >>> dat[dat['obsid'] == 5438][0]['target_name']
    'R Aqr'
 
 Some of these fields may be described in the chaser help at:
@@ -27,130 +27,130 @@ Data table fields
 ============================= ================================================================
  Column                       Description
 ============================= ================================================================
-SEQ_NUM                       Sequence Number
-STATUS                        Status (unobserved, archived, untriggered, etc)
-OBSID                         Obsid
-PR_NUM                        Proposal Number
-TARGET_NAME                   Target name
-GRID_NAME                     database id of grid name if grid observation
-INSTR                         Instrument
-GRAT                          Grating (HETG, LETG, NONE)
-TYPE                          Observation type (TOO, GO, GTO)
-OBS_CYCLE                     Observation cycle
-PROP_CYCLE                    Proposal cycle
-CHARGE_CYCLE                  Charge cycle
-START_DATE                    Observation start date
-PUBLIC_AVAIL                  Date publicly available
-READOUT_DETECTOR              Detector (which HRC detector or string of actual ACIS ccds)
-DATAMODE                      Instrument data mode
-JOINT                         Joint observatories (string)
-HST                           HST time (orbits?)
-NOAO                          NOAO time
-NRAO                          NRAO time
-RXTE                          RXTE time
-SPITZER                       SPITZER time
-SUZAKU                        SUZAKU time
-XMM                           XMM time
-SWIFT                         SWIFT time
-NUSTAR                        NUSTAR time
-CATEGORY                      Science category
-SEG_MAX_NUM                   
-PROP_TITLE                    Proposal Title
-PI_NAME                       Principal investigator name
-OBSERVER                      Observer name
-APP_EXP                       Approved exposure time (ks)
-EXP_TIME                      Actual exposure time (ks)
-RA                            Right Ascension
-Dec                           Declination
-SOE_ROLL                      Roll from SOE
-TIME_CRIT                     Time critical flag
-Y_OFF                         Y offset 
-Z_OFF                         Z offset
-X_SIM                         X SIM
-Z_SIM                         Z SIM
-RASTER                        Raster flag
-OBJ_TYPE                      Object type
-OBJ                           Solar system object name
-PHOTO                         Photometry flag
-VMAG                          V Mag of object
-EST_CNT_RATE                  Estimated count rate
-Forder_CNT_RATE               First order count rage
-COUNT_RATE                    
-EVENT_COUNT
-DITHER                        Dither flag
-Y_AMP                         Dither Y amplitude if custom dither
-Y_FREQ                        Dither Y frequency if custom dither
-Y_PHASE                       Dither Y phase if custom dither
-Z_AMP                         Dither Z amplitude if custom dither
-Z_FREQ                        Dither Z frequency if custom dither
-Z_PHASE                       Dither Z phase if custom dither
-ROLL                          Roll constraint flag
-WINDOW                        Window constraint flag
-UNINT                         Uninterrupt constraint flag
-POINTING_UPDATE               Pointing update constraint flag
-MONITOR                       Monitor series flag
-PRE_ID                        Obsid of previous observation in monitor series
-MON_MIN                       Min days from pre_id for monitor observation
-MON_MAX                       Max days from pre_id for monitor observation
-GROUP_ID                      Database group id
-CONSTR
-EPOCH
-PERIOD
-PSTART
-PS_MARG
-PEND
-PE_MARG
-MULTITEL
-MULTITEL_OBS
-MULTITEL_INT
-CONSTR_RMK                    Constraint in remarks flag
-TOO_TYPE
-TOO_START
-TOO_STOP
-ALT_GROUP
-ALT_TRIG
-SIMODE                        Science Instrument (SI) mode
-HRC
-SPECT_MODE
-BLANK_EN
-U_HI
-V_HI
-U_LO
-V_LO
-TIMING
-Z_BLK                  
-ACIS  
-MODE                          ACIS mode (CC or TE)
-BEP_PACK                      ACIS BEP PACK (F, G, VF, F+B)
-DROPPED_CHIP_CNT              Dropped chip count
-I0                            ACIS I0 ccd status (Y, N, optional with number, or D if dropped)
-I1                            ACIS I1 ccd status (Y, N, optional with number, or D if dropped)
-I2                            ACIS I2 ccd status (Y, N, optional with number, or D if dropped)
-I3                            ACIS I3 ccd status (Y, N, optional with number, or D if dropped)
-S0                            ACIS S0 ccd status (Y, N, optional with number, or D if dropped)
-S1                            ACIS S1 ccd status (Y, N, optional with number, or D if dropped)
-S2                            ACIS S2 ccd status (Y, N, optional with number, or D if dropped)
-S3                            ACIS S3 ccd status (Y, N, optional with number, or D if dropped)
-S4                            ACIS S4 ccd status (Y, N, optional with number, or D if dropped)
-S5                            ACIS S5 ccd status (Y, N, optional with number, or D if dropped)
-SPECTRA_MAX_COUNT             Spectra Max Count
-MULTIPLE_SPECTRAL_LINES       Multiple spectral lines expected (Y, N)
-SUBARY                        ACIS subarray (CUSTOM, NONE)
-STRT_ROW                      Start row of ACIS subarray
-ROW_CNT                       Number of rows of ACIS subarray
-D_CYC
-SEC_CNT
-PR_TIME
-SEC_TIME
-F_TIME
-OC_SUM
-OC_ROW
-OC_COL
-EVFIL
-EVFIL_LO
-EVFIL_RA
-EFFICIENT                     ACIS use most efficient (Y, N)
-SPWIN                         Spatial window (Y, N)
+seq_num                       Sequence Number
+status                        Status (unobserved, archived, untriggered, etc)
+obsid                         Obsid
+pr_num                        Proposal Number
+target_name                   Target name
+grid_name                     database id of grid name if grid observation
+instr                         Instrument
+grat                          Grating (HETG, LETG, NONE)
+type                          Observation type (TOO, GO, GTO)
+obs_cycle                     Observation cycle
+prop_cycle                    Proposal cycle
+charge_cycle                  Charge cycle
+start_date                    Observation start date
+public_avail                  Date publicly available
+readout_detector              Detector (which HRC detector or string of actual ACIS ccds)
+datamode                      Instrument data mode
+joint                         Joint observatories (string)
+hst                           HST time (orbits?)
+noao                          NOAO time
+nrao                          NRAO time
+rxte                          RXTE time
+spitzer                       SPITZER time
+suzaku                        SUZAKU time
+xmm                           XMM time
+swift                         SWIFT time
+nustar                        NUSTAR time
+category                      Science category
+seg_max_num
+prop_title                    Proposal Title
+pi_name                       Principal investigator name
+observer                      Observer name
+app_exp                       Approved exposure time (ks)
+exp_time                      Actual exposure time (ks)
+ra                            Right Ascension
+dec                           Declination
+soe_roll                      Roll from SOE
+time_crit                     Time critical flag
+y_off                         Y offset
+z_off                         Z offset
+x_sim                         X SIM
+z_sim                         Z SIM
+raster                        Raster flag
+obj_type                      Object type
+obj                           Solar system object name
+photo                         Photometry flag
+vmag                          V Mag of object
+est_cnt_rate                  Estimated count rate
+forder_cnt_rate               First order count rage
+count_rate
+event_count
+dither                        Dither flag
+y_amp                         Dither Y amplitude if custom dither
+y_freq                        Dither Y frequency if custom dither
+y_phase                       Dither Y phase if custom dither
+z_amp                         Dither Z amplitude if custom dither
+z_freq                        Dither Z frequency if custom dither
+z_phase                       Dither Z phase if custom dither
+roll                          Roll constraint flag
+window                        Window constraint flag
+unint                         Uninterrupt constraint flag
+pointing_update               Pointing update constraint flag
+monitor                       Monitor series flag
+pre_id                        Obsid of previous observation in monitor series
+mon_min                       Min days from pre_id for monitor observation
+mon_max                       Max days from pre_id for monitor observation
+group_id                      Database group id
+constr
+epoch
+period
+pstart
+ps_marg
+pend
+pe_marg
+multitel
+multitel_obs
+multitel_int
+constr_rmk                    Constraint in remarks flag
+too_type
+too_start
+too_stop
+alt_group
+alt_trig
+simode                        Science Instrument (SI) mode
+hrc
+spect_mode
+blank_en
+u_hi
+v_hi
+u_lo
+v_lo
+timing
+z_blk
+acis
+mode                          ACIS mode (CC or TE)
+bep_pack                      ACIS BEP PACK (F, G, VF, F+B)
+dropped_chip_cnt              Dropped chip count
+i0                            ACIS I0 ccd status (Y, N, optional with number, or D if dropped)
+i1                            ACIS I1 ccd status (Y, N, optional with number, or D if dropped)
+i2                            ACIS I2 ccd status (Y, N, optional with number, or D if dropped)
+i3                            ACIS I3 ccd status (Y, N, optional with number, or D if dropped)
+s0                            ACIS S0 ccd status (Y, N, optional with number, or D if dropped)
+s1                            ACIS S1 ccd status (Y, N, optional with number, or D if dropped)
+s2                            ACIS S2 ccd status (Y, N, optional with number, or D if dropped)
+s3                            ACIS S3 ccd status (Y, N, optional with number, or D if dropped)
+s4                            ACIS S4 ccd status (Y, N, optional with number, or D if dropped)
+s5                            ACIS S5 ccd status (Y, N, optional with number, or D if dropped)
+spectra_max_count             Spectra Max Count
+multiple_spectral_lines       Multiple spectral lines expected (Y, N)
+subary                        ACIS subarray (CUSTOM, NONE)
+strt_row                      Start row of ACIS subarray
+row_cnt                       Number of rows of ACIS subarray
+d_cyc
+sec_cnt
+pr_time
+sec_time
+f_time
+oc_sum
+oc_row
+oc_col
+evfil
+evfil_lo
+evfil_ra
+efficient                     ACIS use most efficient (Y, N)
+spwin                         Spatial window (Y, N)
 ============================= ================================================================
 
 The HDF5 in-kernel searches may be faster working with the table directly for some
