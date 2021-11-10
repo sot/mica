@@ -20,7 +20,7 @@ except ImportError:
     cmdclass = {}
 
 entry_points = {'console_scripts':
-                ['update_ocat_target_table=mica.archive.update_ocat_target_table:main']}
+                ['mica_update_ocat_target_table=mica.archive.update_ocat_target_table:main']}
 
 # Borrowed from acis_taco setup.py.  This will install all of the following
 # into sys.prefix/share/mica/ via the data_files directive.
@@ -43,7 +43,8 @@ setup(name='mica',
       data_files=data_files,
       packages=['mica', 'mica.archive', 'mica.archive.tests', 'mica.archive.aca_dark',
                 'mica.vv', 'mica.vv.tests',
-                'mica.starcheck', 'mica.starcheck.tests', 'mica.catalog', 'mica.report', 'mica.report.tests', 'mica.web',
+                'mica.starcheck', 'mica.starcheck.tests', 'mica.catalog',
+                'mica.report', 'mica.report.tests', 'mica.web',
                 'mica.stats', 'mica.stats.tests'],
       package_data={'mica.web': ['templates/*/*.html', 'templates/*.html'],
                     'mica.report': ['templates/*.html', '*.sql'],
