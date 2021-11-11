@@ -384,9 +384,9 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
     return dat
 
 
-def main_update_ocat_hdf5():
+def main_update_ocat_local():
     """
-    Command line interface to write an Ocat HDF5 file.
+    Command line interface to write a local Ocat HDF5 file.
 
     This overwrites the file from scratch each time.
     """
@@ -397,10 +397,10 @@ def main_update_ocat_hdf5():
                         default='target_table.h5')
     opt = parser.parse_args()
 
-    update_ocat_hdf5(opt.datafile)
+    update_ocat_local(opt.datafile)
 
 
-def update_ocat_hdf5(datafile, **params):
+def update_ocat_local(datafile, **params):
     """Write HDF5 ``datafile`` with the Ocat "details" data.
 
     :param **params: dict

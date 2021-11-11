@@ -20,7 +20,7 @@ except ImportError:
     cmdclass = {}
 
 entry_points = {'console_scripts':
-                ['mica_update_ocat_target_table=mica.archive.update_ocat_target_table:main']}
+                ['mica_update_ocat_target_table=mica.archive.cda.services:main_update_ocat_local']}
 
 # Borrowed from acis_taco setup.py.  This will install all of the following
 # into sys.prefix/share/mica/ via the data_files directive.
