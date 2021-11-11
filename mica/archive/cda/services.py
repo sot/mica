@@ -61,7 +61,7 @@ PARAMETER_DOCS = """
 
         lon
         lat
-        radius
+        radius (arcsec)
 
     These parameters form a box search; one lon & one lat are required.
     Open-ended ranges are allowed. (Such as lonMin=15 with no lonMax.)
@@ -94,7 +94,7 @@ PARAMETER_DOCS = """
 
         outputCoordFrame=J2000 (other options: b1950, bxxxx, ec1950, ecxxxx, galactic)
         outputCoordEquinox=2000 (4 digit year)
-        outputCoordUnits=sexagesimal (other option: decimal)
+        outputCoordUnits=decimal (other option: sexagesimal)
         sortColumn=ra (other options:
                 dec,seqNum,instrument,grating,
                 appExpTime,expTime,
@@ -219,7 +219,7 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
 
 
 def get_ocat_summary(timeout=30, return_type='auto', **params):
-    f"""
+    """
     Get the Ocat summaryfrom the CDA services.
 
     If ``return_type`` is 'auto', the return type is determined by the rules:
@@ -259,7 +259,7 @@ def get_ocat_details(timeout=30, return_type='auto', **params):
 
     Specify ``return_type='table'`` to always return a ``Table``.
 
-    {}
+    {PARAMETER_DOCS}
 
     Special parameters that change the output table contents:
     - ``acisWindows='true'``: return ACIS windows details for a single obsid
@@ -295,6 +295,11 @@ def _get_ocat_cda(service, timeout=30, return_type='auto', **params):
         raise ValueError(f"invalid return_type {return_type!r}, must be 'auto' or 'table'")
 
     params['format'] = 'text'
+
+    # Default to decimal RA, Dec not sexagesimal
+    if 'outputCoordUnits' not in params:
+        params['outputCoordUnits'] = 'decimal'
+
     html = _get_cda_service_text(service, **params)
     dat = _get_table_or_dict_from_cda_rdb_text(html, return_type, params.get('obsid'))
 
@@ -328,11 +333,13 @@ def _get_cda_service_text(service, timeout=30, **params):
     return resp.text
 
 
-def _get_table_or_dict_from_cda_rdb_text(text, obsid):
+def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
     """Get astropy Table or dict from the quasi-RDB text returned by the CDA services.
 
     :param text: str
         Text returned by the CDA services for a format='text' query
+    :param return_type: str
+        Return type (default='auto' => Table or dict)
     :param obsid: int, str, None
         Observation ID if provided
     :return: astropy Table, dict
@@ -364,7 +371,7 @@ def _get_table_or_dict_from_cda_rdb_text(text, obsid):
     dat.rename_columns(dat.colnames, lc_names)
 
     # If obsid is a single integer then return the row as a dict.
-    if obsid is not None:
+    if return_type == 'auto' and obsid is not None:
         try:
             int(obsid)
         except (ValueError, TypeError):
@@ -399,8 +406,15 @@ def update_ocat_hdf5(datafile, **params):
     :param **params: dict
         Parameters to filter ``get_cda_ocat`` details query
     """
-    table = get_ocat_details(**params)
-    table.write(datafile, path='data', serialize_meta=True, overwrite=True, format='hdf5')
+    dat = get_ocat_details(**params)
+
+    # Encode unicode strings to bytes manually.  Fixed in numpy 1.20.
+    # Eventually we will want just dat.convert_bytestring_to_unicode().
+    for name, col in dat.columns.items():
+        if col.info.dtype.kind == 'U':
+            dat[name] = np.char.encode(col, 'utf-8')
+
+    dat.write(datafile, path='data', serialize_meta=True, overwrite=True, format='hdf5')
 
 
 def get_ocat_details_local(datafile=None, where=None):
@@ -427,8 +441,10 @@ def get_ocat_details_local(datafile=None, where=None):
         dat = Table.read(datafile)
     else:
         with tables.open_file(datafile) as hdu:
-            recs = hdu.root.root.read_where(where)
-            dat = Table(recs)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=tables.NaturalNameWarning)
+                dat = hdu.root.data.read_where(where)
+            dat = Table(dat)
 
     # Decode bytes to strings manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
