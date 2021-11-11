@@ -10,8 +10,9 @@ from astropy.table import Table
 
 from mica.common import MICA_ARCHIVE
 
-__all__ = ['get_ocat_target_table', 'get_cda_archive_file_list', 'get_cda_prop_abstract',
-           'get_cda_ocat']
+
+__all__ = ['get_archive_file_list', 'get_proposal_abstract',
+           'get_ocat_details', 'get_ocat_details_local', 'get_ocat_summary']
 
 OCAT_TARGET_TABLE = Path(MICA_ARCHIVE) / 'ocat_target_table.h5'
 URL_CDA_SERVICES = "https://cda.harvard.edu/srservices"
@@ -20,6 +21,89 @@ CDA_SERVICES = {
     'ocat_summary': 'ocatList',
     'ocat_details': 'ocatDetails',
     'archive_file_list': 'archiveFileList'}
+
+PARAMETER_DOCS = """
+    Search parameters::
+
+        instrument=ACIS,ACIS-I,ACIS-S,HRC,HRC-I,HRC-S
+        grating=NONE,LETG,HETG
+        type=ER,TOO,CAL,GO,GTO,DDT
+        cycle=00,01,02,03,04, ...
+        category=SOLAR SYSTEM,
+            NORMAL GALAXIES,
+            STARS AND WD,
+            WD BINARIES AND CV,
+            BH AND NS BINARIES,
+            NORMAL GALAXIES
+            CLUSTERS OF GALAXIES,
+            ACTIVE GALAXIES AND QUASARS,
+            GALACTIC DIFFUSE EMISSION AND SURVEYS,
+            EXTRAGALACTIC DIFFUSE EMISSION AND SURVEYS
+        jointObservation= HST,XMM,Spitzer,NOAO,NRAO,NuSTAR,Suzaku,Swift,RXTE
+        status= archived,observed,scheduled, unobserved,untriggered,canceled,deleted
+        expMode= ACIS TE,ACIS CC,HRC Timing
+        grid = 'is not null' or 'is null'
+
+    Input coordinate specifications::
+
+        inputCoordFrame=J2000 (other options: b1950, bxxxx, ec1950, ecxxxx, galactic)
+        inputCoordEquinox=2000 (4 digit year)
+
+    These parameters are single text entries::
+
+        target: name will be resolved to RA, Dec
+        piName: matches any part of PI name
+        observer: matches any part of observer name
+        propNum: proposal number
+        propTitle: matches any part of proposal title
+
+    These parameters form a cone search; if you use one you should use them all::
+
+        lon
+        lat
+        radius
+
+    These parameters form a box search; one lon & one lat are required.
+    Open-ended ranges are allowed. (Such as lonMin=15 with no lonMax.)
+    ::
+
+        lonMin
+        lonMax
+        latMin
+        latMax
+
+    These parameters are range lists, where the range is indicated by a hyphen (-).
+    Multiple ranges can be entered separated by commas::
+
+        obsid  (eg. obsid=100,200-300,600-1000,1800)
+        seqNum
+        expTime
+        appExpTime
+        countRate
+
+    These parameters are date range lists, where the range is
+    indicated by a hyphen (/). Multiple ranges can be entered separated
+    by commas. Valid dates are in one of the following formats:
+    YYYY-MM-DD, YYYY-MM-DD hh:mm, or YYYY-MM-DD hh:mm:ss
+    ::
+
+        startDate
+        releaseDate
+
+    These specify how the data is displayed and ordered::
+
+        outputCoordFrame=J2000 (other options: b1950, bxxxx, ec1950, ecxxxx, galactic)
+        outputCoordEquinox=2000 (4 digit year)
+        outputCoordUnits=sexagesimal (other option: decimal)
+        sortColumn=ra (other options:
+                dec,seqNum,instrument,grating,
+                appExpTime,expTime,
+                target,piName,observer,status,
+                startDate,releaseDate,
+                obsid,propNum,category,type,cycle)
+        sortOrder=ascending (other option: descending)
+        maxResults=#  (the number of results after which to stop displaying)
+"""
 
 
 def html_to_text(html):
@@ -36,7 +120,7 @@ def clean_text(text):
     return out
 
 
-def get_cda_archive_file_list(obsid, detector, level, dataset='flight', **params):
+def get_archive_file_list(obsid, detector, level, dataset='flight', **params):
     """
     Get list of archive files for given ``obsid``, ``detector``, ``level``, and ``dataset``.
 
@@ -83,7 +167,7 @@ def get_cda_archive_file_list(obsid, detector, level, dataset='flight', **params
     params['level'] = level
     params['obsid'] = obsid
 
-    text = get_cda_service_text('archive_file_list', **params)
+    text = _get_cda_service_text('archive_file_list', **params)
     dat = Table.read(text.splitlines(), format='ascii.basic', delimiter='\t', guess=False)
     filesize = [int(x.replace(',', '')) for x in dat['Filesize']]
     dat['Filesize'] = filesize
@@ -91,7 +175,7 @@ def get_cda_archive_file_list(obsid, detector, level, dataset='flight', **params
     return dat
 
 
-def get_cda_prop_abstract(obsid=None, propnum=None, timeout=30):
+def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
     """Get a proposal abstract from the CDA services.
 
     One of ``obsid`` or ``propnum`` must be provided.
@@ -114,7 +198,7 @@ def get_cda_prop_abstract(obsid=None, propnum=None, timeout=30):
     if not params:
         raise ValueError('must provide obsid or propnum')
 
-    html = get_cda_service_text('prop_abstract', timeout=timeout, **params)
+    html = _get_cda_service_text('prop_abstract', timeout=timeout, **params)
     text = html_to_text(html)
 
     delims = ['Proposal Title',
@@ -134,45 +218,90 @@ def get_cda_prop_abstract(obsid=None, propnum=None, timeout=30):
     return out
 
 
-def get_cda_ocat(query_type='details', timeout=30, **params):
+def get_ocat_summary(timeout=30, return_type='auto', **params):
+    f"""
+    Get the Ocat summaryfrom the CDA services.
+
+    If ``return_type`` is 'auto', the return type is determined by the rules:
+    - If ``obsid`` is provided AND the obsid corresponds to an integer
+      AND the returned result has a single row THEN the return type is ``dict``.
+    - Otherwise the return tuple is a ``Table``.
+    Specify ``return_type='table'`` to always return a ``Table``.
+
+    {PARAMETER_DOCS}
+
+    :param timeout: int, float
+        Timeout in seconds for the request
+    :param return_type: str
+        Return type (default='auto' => Table or dict)
+    :param **params: dict
+        Parameters passed to CDA web service
+    :return: astropy Table or dict of the observation details
+    """
+    dat = _get_ocat_cda('ocat_summary', timeout, return_type, **params)
+    return dat
+
+
+get_ocat_summary.__doc__ = get_ocat_summary.__doc__.format(PARAMETER_DOCS=PARAMETER_DOCS)
+
+
+def get_ocat_details(timeout=30, return_type='auto', **params):
+    """
+    Get the Ocat details from the CDA services.
+
+    If ``return_type`` is 'auto', the return type is determined by the rules::
+
+      If ``obsid`` is provided
+        AND the obsid corresponds to an integer
+        AND the returned result has a single row
+      THEN the return type is ``dict``.
+      ELSE the return tuple is a ``Table``.
+
+    Specify ``return_type='table'`` to always return a ``Table``.
+
+    {}
+
+    Special parameters that change the output table contents:
+    - ``acisWindows='true'``: return ACIS windows details for a single obsid
+    - ``rollReqs='true'``: return roll requirements for a single obsid
+    - ``timeReqs='true'``: return time requirements for a single obsid
+
+    :param timeout: int, float
+        Timeout in seconds for the request
+    :param return_type: str
+        Return type (default='auto' => Table or dict)
+    :param **params: dict
+        Parameters passed to CDA web service
+    :return: astropy Table or dict of the observation details
+    """
+    dat = _get_ocat_cda('ocat_details', timeout, return_type, **params)
+    return dat
+
+
+get_ocat_details.__doc__ = get_ocat_details.__doc__.format(PARAMETER_DOCS=PARAMETER_DOCS)
+
+
+def _get_ocat_cda(service, timeout=30, return_type='auto', **params):
     """
     Get either the Ocat summary or details from the CDA services.
 
-    If ``obsid`` is provided and corresponds to an integer,
-    then the returned result is a ``dict``.  Otherwise, the returned result is
-    an ``astropy.table.Table``.
-
-    :param query_type: str
-        Ocat query type ('details' or 'summary')
-    :param **params: dict
-        Parameters to filter query
     :param timeout: int, float
         Timeout in seconds for the request
+    :param **params: dict
+        Parameters passed to CDA web service
     :return: astropy Table or dict of the observation details
     """
-    if query_type not in ['details', 'summary']:
-        raise ValueError(f'unknown query_type {query_type!r}, '
-                         'must be one of details or summary')
+    if return_type not in ('auto', 'table'):
+        raise ValueError(f"invalid return_type {return_type!r}, must be 'auto' or 'table'")
 
     params['format'] = 'text'
-    html = get_cda_service_text(f'ocat_{query_type}', **params)
-    dat = get_table_from_cda_rdb_text(html)
-
-    # If obsid is a single integer then return the row as a dict.
-    if 'obsid' in params:
-        try:
-            int(params['obsid'])
-        except (ValueError, TypeError):
-            pass
-        else:
-            if len(dat) == 1:
-                # Maybe multi-obi obsids early in the mission could have multiple rows?
-                dat = dict(dat[0])
+    html = _get_cda_service_text(service, **params)
+    dat = _get_table_or_dict_from_cda_rdb_text(html, return_type, params.get('obsid'))
 
     return dat
 
 
-def get_cda_service_text(service, timeout=30, **params):
+def _get_cda_service_text(service, timeout=30, **params):
     """
     Fetch all observation details from one of the CDA SRService pages
 
@@ -199,13 +328,15 @@ def get_cda_service_text(service, timeout=30, **params):
     return resp.text
 
 
-def get_table_from_cda_rdb_text(text):
-    """Get astropy Table from the quasi-RDB text returned by the CDA services.
+def _get_table_or_dict_from_cda_rdb_text(text, obsid):
+    """Get astropy Table or dict from the quasi-RDB text returned by the CDA services.
 
     :param text: str
         Text returned by the CDA services for a format='text' query
-    :return: astropy Table
-        Table of the returned data
+    :param obsid: int, str, None
+        Observation ID if provided
+    :return: astropy Table, dict
+        Table of the returned data, or dict if just one obsid selected
     """
     lines = text.splitlines()
 
@@ -232,6 +363,17 @@ def get_table_from_cda_rdb_text(text):
     lc_names = [name.lower() for name in dat.colnames]
     dat.rename_columns(dat.colnames, lc_names)
 
+    # If obsid is a single integer then return the row as a dict.
+    if obsid is not None:
+        try:
+            int(obsid)
+        except (ValueError, TypeError):
+            pass
+        else:
+            if len(dat) == 1:
+                # Maybe multi-obi obsids early in the mission could have multiple rows?
+                dat = dict(dat[0])
+
     return dat
 
 
@@ -257,19 +399,23 @@ def update_ocat_hdf5(datafile, **params):
     :param **params: dict
         Parameters to filter ``get_cda_ocat`` details query
     """
-    table = get_cda_ocat(query_type='details', **params)
+    table = get_ocat_details(**params)
     table.write(datafile, path='data', serialize_meta=True, overwrite=True, format='hdf5')
 
 
-def get_ocat_hdf5(datafile=None, read_where=None):
+def get_ocat_details_local(datafile=None, where=None):
     """
-    Read the Ocat target table from an HDF5 data file.
+    Read the Ocat target table from a local data file.
+
+    The local data file is assumed to be an HDF5 file that contains a copy of
+    the Ocat details, typically updated by a cron job running on HEAD and
+    potentially synced to the local host.
 
     :param datafile: str
         HDF5 Ocat target table data file.
         Defaults to MICA_ARCHIVE/ocat_target_table.h5
-    :param read_where: str
-        filter string to pass to tables read_where() to limit returned results.
+    :param where: str
+        Filter string to pass to tables read_where() to limit returned results.
         See https://www.pytables.org/usersguide/condition_syntax.html
 
     :returns: astropy table of target table
@@ -277,11 +423,11 @@ def get_ocat_hdf5(datafile=None, read_where=None):
     if datafile is None:
         datafile = OCAT_TARGET_TABLE
 
-    if read_where is None:
+    if where is None:
         dat = Table.read(datafile)
     else:
         with tables.open_file(datafile) as hdu:
-            recs = hdu.root.root.read_where(read_where)
+            recs = hdu.root.root.read_where(where)
             dat = Table(recs)
 
     # Decode bytes to strings manually.  Fixed in numpy 1.20.
@@ -291,5 +437,3 @@ def get_ocat_hdf5(datafile=None, read_where=None):
             dat[name] = np.char.decode(col, 'utf-8')
 
     return dat
-
-
