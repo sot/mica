@@ -22,6 +22,25 @@ CDA_SERVICES = {
     'ocat_details': 'ocatDetails',
     'archive_file_list': 'archiveFileList'}
 
+# Units copied from https://github.com/jzuhone/pycda/blob/
+# 5a4261328eab989bab91bed17f426ad17d876988/pycda/obscat.py#L38
+OCAT_UNITS = {
+    "app_exp": "ks",
+    "count_rate": "s**-1",
+    "est_cnt_rate": "s**-1",
+    "evfil_lo": "keV",
+    "evfil_ra": "keV",
+    "exp_time": "ks",
+    "f_time": "s",
+    "forder_cnt_rate": "s**-1",
+    "soe_roll": "degree",
+    "x_sim": "mm",
+    "y_off": "arcmin",
+    "z_off": "arcmin",
+    "z_sim": "mm",
+}
+
+
 PARAMETER_DOCS = """
     Search parameters::
 
@@ -369,6 +388,11 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
     # Lower-case all the column names
     lc_names = [name.lower() for name in dat.colnames]
     dat.rename_columns(dat.colnames, lc_names)
+
+    # Apply units to the columns
+    for name, col in dat.columns.items():
+        if name in OCAT_UNITS:
+            col.info.unit = OCAT_UNITS[name]
 
     # If obsid is a single integer then return the row as a dict.
     if return_type == 'auto' and obsid is not None:
