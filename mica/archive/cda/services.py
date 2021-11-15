@@ -211,6 +211,7 @@ def get_archive_file_list(obsid, detector, level, dataset='flight', **params):
 
     text = _get_cda_service_text('archive_file_list', **params)
     dat = Table.read(text.splitlines(), format='ascii.basic', delimiter='\t', guess=False)
+    # Original Filesize has commas for the thousands like 11,233,456
     filesize = [int(x.replace(',', '')) for x in dat['Filesize']]
     dat['Filesize'] = filesize
 
@@ -243,6 +244,8 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
     html = _get_cda_service_text('prop_abstract', timeout=timeout, **params)
     text = html_to_text(html)
 
+    # Return value is a text string with these section header lines. Use them
+    # to split the text into sections.
     delims = ['Proposal Title',
               'Proposal Number',
               'Principal Investigator',
@@ -258,6 +261,35 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
             warnings.warn(f'failed to find {delim0} in result')
 
     return out
+
+
+def _update_params_from_kwargs(params, obsid,
+                               target_name, resolve_name,
+                               ra, dec, radius):
+    """Update params dict for CDA Ocat queries from specified keyword args.
+    """
+    if obsid is not None:
+        params['obsid'] = obsid
+
+    if ra is not None:
+        params['ra'] = ra
+    if dec is not None:
+        params['dec'] = dec
+
+    if target_name is not None:
+        if resolve_name:
+            coord = SkyCoord.from_name(target_name)
+            params['ra'] = coord.ra.deg
+            params['dec'] = coord.dec.deg
+        else:
+            # SR services API uses "target" to select substrings of target_name
+            params['target'] = target_name
+
+    # For any positional search include the radius
+    if 'ra' in params and 'dec' in params:
+        params['radius'] = radius
+
+    return params
 
 
 def get_ocat_summary_cda(obsid=None, *,
@@ -283,8 +315,9 @@ def get_ocat_summary_cda(obsid=None, *,
         Parameters passed to CDA web service
     :return: astropy Table or dict of the observation details
     """
-    if obsid is not None:
-        params['obsid'] = obsid
+    _update_params_from_kwargs(params, obsid,
+                               target_name, resolve_name,
+                               ra, dec, radius)
     dat = _get_ocat_cda('ocat_summary', timeout, return_type, **params)
     return dat
 
@@ -323,8 +356,9 @@ def get_ocat_details_cda(obsid=None, *,
         Parameters passed to CDA web service
     :return: astropy Table or dict of the observation details
     """
-    if obsid is not None:
-        params['obsid'] = obsid
+    _update_params_from_kwargs(params, obsid,
+                               target_name, resolve_name,
+                               ra, dec, radius)
     dat = _get_ocat_cda('ocat_details', timeout, return_type, **params)
     return dat
 
@@ -339,6 +373,8 @@ def _get_ocat_cda(service, timeout=30, return_type='auto', **params):
     """
     Get either the Ocat summary or details from the CDA services.
 
+    :param service: str
+        Service name
     :param timeout: int, float
         Timeout in seconds for the request
     :param **params: dict
@@ -354,12 +390,18 @@ def _get_ocat_cda(service, timeout=30, return_type='auto', **params):
     # which is insufficient.
     params['outputCoordUnits'] = 'sexagesimal'
 
-    # Set default radius to 1 arcmin for a positional search
-    if 'ra' in params and 'dec' in params and 'radius' not in params:
-        params['radius'] = 1.0
+    text = _get_cda_service_text(service, **params)
+    dat = _get_table_or_dict_from_cda_rdb_text(text, return_type, params.get('obsid'))
 
-    html = _get_cda_service_text(service, **params)
-    dat = _get_table_or_dict_from_cda_rdb_text(html, return_type, params.get('obsid'))
+    if dat is None:
+        # Query returned no rows. If a single obsid was specified with return_type
+        # of 'auto' then we would have expected to return a dict, but instead
+        # raise a ValueError. Otherwise we return an empty table with the right
+        # column names.
+        if return_type == 'auto' and _is_int(params.get('obsid')):
+            raise ValueError(f"failed to find obsid {params['obsid']}")
+        else:
+            dat = _get_ocat_cda(service, return_type='table', obsid=8000)[0:0]
 
     # Change RA, Dec to decimal
     sc = SkyCoord(dat['ra'], dat['dec'], unit='hr,deg')
@@ -388,7 +430,11 @@ def _get_cda_service_text(service, timeout=30, **params):
 
     # Query the service and check for errors
     url = f'{URL_CDA_SERVICES}/{CDA_SERVICES[service]}.do'
+    verbose = params.pop('verbose', False)
     resp = requests.get(url, timeout=timeout, params=params)
+    if verbose:
+        print(f'GET {resp.url}')
+
     if not resp.ok:
         raise RuntimeError(f'got error {resp.status_code} for {resp.url}\n'
                            f'{html_to_text(resp.text)}')
@@ -405,8 +451,9 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
         Return type (default='auto' => Table or dict)
     :param obsid: int, str, None
         Observation ID if provided
-    :return: astropy Table, dict
-        Table of the returned data, or dict if just one obsid selected
+    :return: astropy Table, dict, None
+        Table of the returned data, or dict if just one obsid selected, or None
+        if the query returned no data.
     """
     lines = text.splitlines()
 
@@ -416,6 +463,8 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
         if not line.startswith('#'):
             header_start = i
             break
+    else:
+        return None
 
     # The line with the lengths and types is next (header_start + 1)
     ctypes = lines[header_start + 1].split("\t")
@@ -439,22 +488,26 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
             col.info.unit = OCAT_UNITS[name]
 
     # Possibly get just the first row as a dict
-    dat = get_table_or_dict(return_type, obsid, dat)
+    dat = _get_table_or_dict(return_type, obsid, dat)
 
     return dat
 
 
-def get_table_or_dict(return_type, obsid, dat):
+def _is_int(val):
+    """Check if a value looks like an integet."""
+    try:
+        return int(val) == float(val)
+    except (ValueError, TypeError):
+        return False
+
+
+def _get_table_or_dict(return_type, obsid, dat):
     # If obsid is a single integer and there was just one row then return the
     # row as a dict.
-    if return_type == 'auto' and obsid is not None:
-        try:
-            int(obsid)
-        except (ValueError, TypeError):
-            pass
-        else:
-            if len(dat) == 1:
-                dat = dict(dat[0])
+    if (return_type == 'auto'
+            and _is_int(obsid)
+            and len(dat) == 1):
+        dat = dict(dat[0])
     return dat
 
 
@@ -586,6 +639,6 @@ def get_ocat_details_local(obsid=None, *,
             col.info.unit = OCAT_UNITS[name]
 
     # Possibly get just the first row as a dict
-    dat = get_table_or_dict(return_type, obsid, dat)
+    dat = _get_table_or_dict(return_type, obsid, dat)
 
     return dat
