@@ -13,7 +13,7 @@ from mica.common import MICA_ARCHIVE
 
 
 __all__ = ['get_archive_file_list', 'get_proposal_abstract',
-           'get_ocat_details_cda', 'get_ocat_details_local', 'get_ocat_summary_cda']
+           'get_ocat_details_web', 'get_ocat_details_local', 'get_ocat_summary_web']
 
 OCAT_TARGET_TABLE = Path(MICA_ARCHIVE) / 'ocat_target_table.h5'
 URL_CDA_SERVICES = "https://cda.harvard.edu/srservices"
@@ -172,7 +172,7 @@ def get_archive_file_list(obsid, detector, level, dataset='flight', **params):
 
     Examples::
 
-       >>> get_cda_archive_file_list(obsid=2365, detector='pcad',
+       >>> get_archive_file_list(obsid=2365, detector='pcad',
        ...                           subdetector='aca', level=1, obi=2)
        <Table length=27>
                Filename            Filesize      Timestamp
@@ -184,7 +184,7 @@ def get_archive_file_list(obsid, detector, level, dataset='flight', **params):
        pcadf126695890N007_adat61.fits  1293120 2021-04-09 08:04:28
        pcadf126695890N007_adat71.fits  1293120 2021-04-09 08:04:28
 
-       >>> get_cda_archive_file_list(obsid=400, detector='acis', level=2, filetype='evt2')
+       >>> get_archive_file_list(obsid=400, detector='acis', level=2, filetype='evt2')
        <Table length=1>
                Filename         Filesize      Timestamp
                 str24            int64          str19
@@ -292,7 +292,7 @@ def _update_params_from_kwargs(params, obsid,
     return params
 
 
-def get_ocat_summary_cda(obsid=None, *,
+def get_ocat_summary_web(obsid=None, *,
                          target_name=None, resolve_name=False,
                          ra=None, dec=None, radius=1.0,
                          return_type='auto',
@@ -318,17 +318,17 @@ def get_ocat_summary_cda(obsid=None, *,
     _update_params_from_kwargs(params, obsid,
                                target_name, resolve_name,
                                ra, dec, radius)
-    dat = _get_ocat_cda('ocat_summary', timeout, return_type, **params)
+    dat = _get_ocat_web('ocat_summary', timeout, return_type, **params)
     return dat
 
 
-get_ocat_summary_cda.__doc__ = get_ocat_summary_cda.__doc__.format(
+get_ocat_summary_web.__doc__ = get_ocat_summary_web.__doc__.format(
     RETURN_TYPE_DOCS=RETURN_TYPE_DOCS,
     CDA_PARAM_DOCS=CDA_PARAM_DOCS,
     COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
 
 
-def get_ocat_details_cda(obsid=None, *,
+def get_ocat_details_web(obsid=None, *,
                          target_name=None, resolve_name=False,
                          ra=None, dec=None, radius=1.0,
                          return_type='auto',
@@ -359,17 +359,17 @@ def get_ocat_details_cda(obsid=None, *,
     _update_params_from_kwargs(params, obsid,
                                target_name, resolve_name,
                                ra, dec, radius)
-    dat = _get_ocat_cda('ocat_details', timeout, return_type, **params)
+    dat = _get_ocat_web('ocat_details', timeout, return_type, **params)
     return dat
 
 
-get_ocat_details_cda.__doc__ = get_ocat_details_cda.__doc__.format(
+get_ocat_details_web.__doc__ = get_ocat_details_web.__doc__.format(
     RETURN_TYPE_DOCS=RETURN_TYPE_DOCS,
     CDA_PARAM_DOCS=CDA_PARAM_DOCS,
     COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
 
 
-def _get_ocat_cda(service, timeout=30, return_type='auto', **params):
+def _get_ocat_web(service, timeout=30, return_type='auto', **params):
     """
     Get either the Ocat summary or details from the CDA services.
 
@@ -401,7 +401,7 @@ def _get_ocat_cda(service, timeout=30, return_type='auto', **params):
         if return_type == 'auto' and _is_int(params.get('obsid')):
             raise ValueError(f"failed to find obsid {params['obsid']}")
         else:
-            dat = _get_ocat_cda(service, return_type='table', obsid=8000)[0:0]
+            dat = _get_ocat_web(service, return_type='table', obsid=8000)[0:0]
 
     # Change RA, Dec to decimal
     sc = SkyCoord(dat['ra'], dat['dec'], unit='hr,deg')
@@ -531,9 +531,9 @@ def update_ocat_local(datafile, **params):
     """Write HDF5 ``datafile`` with the Ocat "details" data.
 
     :param **params: dict
-        Parameters to filter ``get_cda_ocat`` details query
+        Parameters to filter ``get_ocat_details_web`` query
     """
-    dat = get_ocat_details_cda(**params)
+    dat = get_ocat_details_web(**params)
 
     # Encode unicode strings to bytes manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
