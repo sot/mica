@@ -599,26 +599,10 @@ def get_ocat_details_local(obsid=None, *,
     for col_name, value in params.items():
         where_parts.append(f'{col_name}=={value!r}')
 
-    if not where_parts:
-        dat = Table.read(datafile)
+    if where_parts:
+        dat = _table_read_where(datafile, where_parts)
     else:
-        where = '&'.join(f'({where})' for where in where_parts)
-        with tables.open_file(datafile) as h5:
-            # PyTables is unhappy with all the column names that cannot be an
-            # object attribute, so squelch that warning.
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=tables.NaturalNameWarning)
-                dat = h5.root.data.read_where(where)
-        dat = Table(dat)
-
-        # Manually make MaskedColumn's as needed since we are not using Table.read()
-        # which handles this. This assumes a correspondence betweeen <name>.mask
-        # and <name>, but this is always true for the Ocat target table.
-        masked_names = [name for name in dat.colnames if name.endswith('.mask')]
-        for masked_name in masked_names:
-            name = masked_name[:-5]
-            dat[name] = MaskedColumn(dat[name], mask=dat[masked_name])
-            dat.remove_column(masked_name)
+        dat = Table.read(datafile)
 
     # Decode bytes to strings manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
@@ -641,4 +625,28 @@ def get_ocat_details_local(obsid=None, *,
     # Possibly get just the first row as a dict
     dat = _get_table_or_dict(return_type, obsid, dat)
 
+    return dat
+
+
+def _table_read_where(datafile, where_parts):
+    """Read HDF5 ``datafile`` using read_where() and ``where_parts``.
+    """
+    where = '&'.join(f'({where})' for where in where_parts)
+
+    with tables.open_file(datafile) as h5:
+        # PyTables is unhappy with all the column names that cannot be an
+        # object attribute, so squelch that warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=tables.NaturalNameWarning)
+            dat = h5.root.data.read_where(where)
+    dat = Table(dat)
+
+    # Manually make MaskedColumn's as needed since we are not using Table.read()
+    # which handles this. This assumes a correspondence betweeen <name>.mask
+    # and <name>, but this is always true for the Ocat target table.
+    masked_names = [name for name in dat.colnames if name.endswith('.mask')]
+    for masked_name in masked_names:
+        name = masked_name[:-5]
+        dat[name] = MaskedColumn(dat[name], mask=dat[masked_name])
+        dat.remove_column(masked_name)
     return dat
