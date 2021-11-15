@@ -6,13 +6,14 @@ import warnings
 import requests
 import numpy as np
 import tables
-from astropy.table import Table
+from astropy.table import Table, MaskedColumn
+from astropy.coordinates import SkyCoord
 
 from mica.common import MICA_ARCHIVE
 
 
 __all__ = ['get_archive_file_list', 'get_proposal_abstract',
-           'get_ocat_details', 'get_ocat_details_local', 'get_ocat_summary']
+           'get_ocat_details_cda', 'get_ocat_details_local', 'get_ocat_summary_cda']
 
 OCAT_TARGET_TABLE = Path(MICA_ARCHIVE) / 'ocat_target_table.h5'
 URL_CDA_SERVICES = "https://cda.harvard.edu/srservices"
@@ -41,8 +42,17 @@ OCAT_UNITS = {
 }
 
 
-PARAMETER_DOCS = """
-    Search parameters::
+RETURN_TYPE_DOCS = """If ``return_type='auto'`` the return type is determined by the rules:
+
+    - If ``obsid`` is provided
+      AND the obsid corresponds to an integer
+      AND the returned result has a single row
+      THEN the return type is ``dict``
+      ELSE the return tuple is a ``Table``.
+
+    If ``return_type='table'`` then always return a ``Table``."""
+
+CDA_PARAM_DOCS = """Additional function args for CDA search parameters::
 
         instrument=ACIS,ACIS-I,ACIS-S,HRC,HRC-I,HRC-S
         grating=NONE,LETG,HETG
@@ -70,7 +80,7 @@ PARAMETER_DOCS = """
 
     These parameters are single text entries::
 
-        target: name will be resolved to RA, Dec
+        target: matches any part of target name
         piName: matches any part of PI name
         observer: matches any part of observer name
         propNum: proposal number
@@ -80,7 +90,7 @@ PARAMETER_DOCS = """
 
         lon
         lat
-        radius (arcsec)
+        radius (arcmin, default=1.0)
 
     These parameters form a box search; one lon & one lat are required.
     Open-ended ranges are allowed. (Such as lonMin=15 with no lonMax.)
@@ -123,6 +133,19 @@ PARAMETER_DOCS = """
         sortOrder=ascending (other option: descending)
         maxResults=#  (the number of results after which to stop displaying)
 """
+
+COMMON_PARAM_DOCS = """:param target_name: str, optional
+        Target name, used in SkyCoord.from_name() to define ``ra`` and ``dec``
+        if ``resolve_name`` is True, otherwise matches a substring of the
+        table column ``target_name`` (ignoring spaces).
+    :param resolve_name: bool, optional
+        If True, use ``target_name`` to resolve ``ra`` and ``dec``.
+    :param ra: float, optional
+        Right Ascension in decimal degrees
+    :param dec: float, optional
+        Declination in decimal degrees
+    :param radius: float, optional
+        Search radius in arcmin (default=1.0)"""
 
 
 def html_to_text(html):
@@ -237,18 +260,21 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
     return out
 
 
-def get_ocat_summary(timeout=30, return_type='auto', **params):
+def get_ocat_summary_cda(obsid=None, *,
+                         target_name=None, resolve_name=False,
+                         ra=None, dec=None, radius=1.0,
+                         return_type='auto',
+                         timeout=30, **params):
     """
-    Get the Ocat summaryfrom the CDA services.
+    Get the Ocat summary from the CDA services.
 
-    If ``return_type`` is 'auto', the return type is determined by the rules:
-    - If ``obsid`` is provided AND the obsid corresponds to an integer
-      AND the returned result has a single row THEN the return type is ``dict``.
-    - Otherwise the return tuple is a ``Table``.
-    Specify ``return_type='table'`` to always return a ``Table``.
+    {RETURN_TYPE_DOCS}
 
-    {PARAMETER_DOCS}
+    {CDA_PARAM_DOCS}
 
+    :param obsid: int, str
+        Observation ID or string with ObsId range or list of ObsIds
+    {COMMON_PARAM_DOCS}
     :param timeout: int, float
         Timeout in seconds for the request
     :param return_type: str
@@ -257,34 +283,38 @@ def get_ocat_summary(timeout=30, return_type='auto', **params):
         Parameters passed to CDA web service
     :return: astropy Table or dict of the observation details
     """
+    if obsid is not None:
+        params['obsid'] = obsid
     dat = _get_ocat_cda('ocat_summary', timeout, return_type, **params)
     return dat
 
 
-get_ocat_summary.__doc__ = get_ocat_summary.__doc__.format(PARAMETER_DOCS=PARAMETER_DOCS)
+get_ocat_summary_cda.__doc__ = get_ocat_summary_cda.__doc__.format(
+    RETURN_TYPE_DOCS=RETURN_TYPE_DOCS,
+    CDA_PARAM_DOCS=CDA_PARAM_DOCS,
+    COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
 
 
-def get_ocat_details(timeout=30, return_type='auto', **params):
+def get_ocat_details_cda(obsid=None, *,
+                         target_name=None, resolve_name=False,
+                         ra=None, dec=None, radius=1.0,
+                         return_type='auto',
+                         timeout=30, **params):
     """
     Get the Ocat details from the CDA services.
 
-    If ``return_type`` is 'auto', the return type is determined by the rules::
+    {RETURN_TYPE_DOCS}
 
-      If ``obsid`` is provided
-        AND the obsid corresponds to an integer
-        AND the returned result has a single row
-      THEN the return type is ``dict``.
-      ELSE the return tuple is a ``Table``.
-
-    Specify ``return_type='table'`` to always return a ``Table``.
-
-    {PARAMETER_DOCS}
+    {CDA_PARAM_DOCS}
 
     Special parameters that change the output table contents:
     - ``acisWindows='true'``: return ACIS windows details for a single obsid
     - ``rollReqs='true'``: return roll requirements for a single obsid
     - ``timeReqs='true'``: return time requirements for a single obsid
 
+    :param obsid: int, str
+        Observation ID or string with ObsId range or list of ObsIds
+    {COMMON_PARAM_DOCS}
     :param timeout: int, float
         Timeout in seconds for the request
     :param return_type: str
@@ -293,11 +323,16 @@ def get_ocat_details(timeout=30, return_type='auto', **params):
         Parameters passed to CDA web service
     :return: astropy Table or dict of the observation details
     """
+    if obsid is not None:
+        params['obsid'] = obsid
     dat = _get_ocat_cda('ocat_details', timeout, return_type, **params)
     return dat
 
 
-get_ocat_details.__doc__ = get_ocat_details.__doc__.format(PARAMETER_DOCS=PARAMETER_DOCS)
+get_ocat_details_cda.__doc__ = get_ocat_details_cda.__doc__.format(
+    RETURN_TYPE_DOCS=RETURN_TYPE_DOCS,
+    CDA_PARAM_DOCS=CDA_PARAM_DOCS,
+    COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
 
 
 def _get_ocat_cda(service, timeout=30, return_type='auto', **params):
@@ -315,12 +350,21 @@ def _get_ocat_cda(service, timeout=30, return_type='auto', **params):
 
     params['format'] = 'text'
 
-    # Default to decimal RA, Dec not sexagesimal
-    if 'outputCoordUnits' not in params:
-        params['outputCoordUnits'] = 'decimal'
+    # Force RA, Dec in sexagesimal because decimal returns only 3 decimal digits
+    # which is insufficient.
+    params['outputCoordUnits'] = 'sexagesimal'
+
+    # Set default radius to 1 arcmin for a positional search
+    if 'ra' in params and 'dec' in params and 'radius' not in params:
+        params['radius'] = 1.0
 
     html = _get_cda_service_text(service, **params)
     dat = _get_table_or_dict_from_cda_rdb_text(html, return_type, params.get('obsid'))
+
+    # Change RA, Dec to decimal
+    sc = SkyCoord(dat['ra'], dat['dec'], unit='hr,deg')
+    dat['ra'] = sc.ra.deg
+    dat['dec'] = sc.dec.deg
 
     return dat
 
@@ -394,7 +438,15 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
         if name in OCAT_UNITS:
             col.info.unit = OCAT_UNITS[name]
 
-    # If obsid is a single integer then return the row as a dict.
+    # Possibly get just the first row as a dict
+    dat = get_table_or_dict(return_type, obsid, dat)
+
+    return dat
+
+
+def get_table_or_dict(return_type, obsid, dat):
+    # If obsid is a single integer and there was just one row then return the
+    # row as a dict.
     if return_type == 'auto' and obsid is not None:
         try:
             int(obsid)
@@ -402,9 +454,7 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
             pass
         else:
             if len(dat) == 1:
-                # Maybe multi-obi obsids early in the mission could have multiple rows?
                 dat = dict(dat[0])
-
     return dat
 
 
@@ -430,7 +480,7 @@ def update_ocat_local(datafile, **params):
     :param **params: dict
         Parameters to filter ``get_cda_ocat`` details query
     """
-    dat = get_ocat_details(**params)
+    dat = get_ocat_details_cda(**params)
 
     # Encode unicode strings to bytes manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
@@ -441,7 +491,11 @@ def update_ocat_local(datafile, **params):
     dat.write(datafile, path='data', serialize_meta=True, overwrite=True, format='hdf5')
 
 
-def get_ocat_details_local(datafile=None, where=None):
+def get_ocat_details_local(obsid=None, *,
+                           target_name=None, resolve_name=False,
+                           ra=None, dec=None, radius=1.0,
+                           return_type='auto',
+                           datafile=None, where=None, **params):
     """
     Read the Ocat target table from a local data file.
 
@@ -449,31 +503,89 @@ def get_ocat_details_local(datafile=None, where=None):
     the Ocat details, typically updated by a cron job running on HEAD and
     potentially synced to the local host.
 
-    :param datafile: str
+    {RETURN_TYPE_DOCS}
+
+    :param obsid: int, optional
+        Observation ID
+    {COMMON_PARAM_DOCS}
+    :param datafile: str, optional
         HDF5 Ocat target table data file.
         Defaults to MICA_ARCHIVE/ocat_target_table.h5
     :param where: str
         Filter string to pass to tables read_where() to limit returned results.
         See https://www.pytables.org/usersguide/condition_syntax.html
+    :param **params: dict
+        Additional filter criteria as ``<colname> == <value>`` key/value pairs.
 
-    :returns: astropy table of target table
+    :returns: astropy Table or dict of Ocat details
     """
+    where_parts = []  # build up bits of the where clause
+    if where is not None:
+        where_parts.append(where)
+
     if datafile is None:
         datafile = OCAT_TARGET_TABLE
 
-    if where is None:
+    if obsid is not None:
+        where_parts.append(f"obsid=={obsid}")
+
+    if target_name is not None and resolve_name:
+        coord = SkyCoord.from_name(target_name)
+        ra = coord.ra.deg
+        dec = coord.dec.deg
+
+    if ra is not None and dec is not None:
+        d2r = np.pi / 180.0  # Degrees to radians
+        # Use great-circle distance to find targets within radius. This is
+        # accurate enough for this application.
+        where = (f'arccos(sin({ra * d2r})*sin(ra*{d2r}) + '
+                 f'cos({ra * d2r})*cos(ra*{d2r})*cos({dec*d2r}-dec*d2r))'
+                 f'< {radius / 60 * d2r}')
+        where_parts.append(where)
+
+    for col_name, value in params.items():
+        where_parts.append(f'{col_name}=={value!r}')
+
+    if not where_parts:
         dat = Table.read(datafile)
     else:
-        with tables.open_file(datafile) as hdu:
+        where = '&'.join(f'({where})' for where in where_parts)
+        with tables.open_file(datafile) as h5:
+            # PyTables is unhappy with all the column names that cannot be an
+            # object attribute, so squelch that warning.
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=tables.NaturalNameWarning)
-                dat = hdu.root.data.read_where(where)
-            dat = Table(dat)
+                dat = h5.root.data.read_where(where)
+        dat = Table(dat)
+
+        # Manually make MaskedColumn's as needed since we are not using Table.read()
+        # which handles this. This assumes a correspondence betweeen <name>.mask
+        # and <name>, but this is always true for the Ocat target table.
+        masked_names = [name for name in dat.colnames if name.endswith('.mask')]
+        for masked_name in masked_names:
+            name = masked_name[:-5]
+            dat[name] = MaskedColumn(dat[name], mask=dat[masked_name])
+            dat.remove_column(masked_name)
 
     # Decode bytes to strings manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
     for name, col in dat.columns.items():
         if col.info.dtype.kind == 'S':
             dat[name] = np.char.decode(col, 'utf-8')
+
+    # Match target_name as a substring of the table target_name column.
+    if target_name is not None and not resolve_name:
+        target_name = target_name.lower().replace(' ', '')
+        target_names = np.char.lower(np.char.replace(dat['target_name'], ' ', ''))
+        ok = np.char.find(target_names, target_name) != -1
+        dat = dat[ok]
+
+    # Apply units to the columns
+    for name, col in dat.columns.items():
+        if name in OCAT_UNITS:
+            col.info.unit = OCAT_UNITS[name]
+
+    # Possibly get just the first row as a dict
+    dat = get_table_or_dict(return_type, obsid, dat)
 
     return dat

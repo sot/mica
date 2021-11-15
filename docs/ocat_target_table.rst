@@ -60,8 +60,8 @@ pi_name                       Principal investigator name
 observer                      Observer name
 app_exp                       Approved exposure time (ks)
 exp_time                      Actual exposure time (ks)
-ra                            Right Ascension
-dec                           Declination
+ra                            Target Right Ascension
+dec                           Target Declination
 soe_roll                      Roll from SOE
 time_crit                     Time critical flag
 y_off                         Y offset
