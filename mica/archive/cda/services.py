@@ -2,6 +2,7 @@
 from pathlib import Path
 import re
 import warnings
+import time
 
 import requests
 import numpy as np
@@ -15,7 +16,9 @@ from mica.common import MICA_ARCHIVE
 __all__ = ['get_archive_file_list', 'get_proposal_abstract',
            'get_ocat_details_web', 'get_ocat_details_local', 'get_ocat_summary_web']
 
-OCAT_TARGET_TABLE = Path(MICA_ARCHIVE) / 'ocat_target_table.h5'
+OCAT_TABLE_PATH = Path(MICA_ARCHIVE) / 'ocat_target_table.h5'
+OCAT_TABLE_CACHE = {}
+
 URL_CDA_SERVICES = "https://cda.harvard.edu/srservices"
 CDA_SERVICES = {
     'prop_abstract': 'propAbstract',
@@ -298,7 +301,7 @@ def get_ocat_summary_web(obsid=None, *,
                          return_type='auto',
                          timeout=30, **params):
     """
-    Get the Ocat summary from the CDA services.
+    Get the Ocat summary from Chandra Data Archive web services.
 
     {RETURN_TYPE_DOCS}
 
@@ -334,7 +337,7 @@ def get_ocat_details_web(obsid=None, *,
                          return_type='auto',
                          timeout=30, **params):
     """
-    Get the Ocat details from the CDA services.
+    Get the Ocat details from Chandra Data Archive web services.
 
     {RETURN_TYPE_DOCS}
 
@@ -541,7 +544,8 @@ def update_ocat_local(datafile, **params):
         if col.info.dtype.kind == 'U':
             dat[name] = np.char.encode(col, 'utf-8')
 
-    dat.write(datafile, path='data', serialize_meta=True, overwrite=True, format='hdf5')
+    dat.write(datafile, path='data', serialize_meta=True, overwrite=True,
+              format='hdf5', compression=True)
 
 
 def get_ocat_details_local(obsid=None, *,
@@ -550,11 +554,11 @@ def get_ocat_details_local(obsid=None, *,
                            return_type='auto',
                            datafile=None, where=None, **params):
     """
-    Read the Ocat target table from a local data file.
+    Get the Ocat details from a local HDF5 data file.
 
     The local data file is assumed to be an HDF5 file that contains a copy of
     the Ocat details, typically updated by a cron job running on HEAD and
-    potentially synced to the local host.
+    (if necessary) synced to the local host.
 
     {RETURN_TYPE_DOCS}
 
@@ -577,7 +581,7 @@ def get_ocat_details_local(obsid=None, *,
         where_parts.append(where)
 
     if datafile is None:
-        datafile = OCAT_TARGET_TABLE
+        datafile = OCAT_TABLE_PATH
 
     if obsid is not None:
         where_parts.append(f"obsid=={obsid}")
@@ -592,7 +596,7 @@ def get_ocat_details_local(obsid=None, *,
         # Use great-circle distance to find targets within radius. This is
         # accurate enough for this application.
         where = (f'arccos(sin({ra * d2r})*sin(ra*{d2r}) + '
-                 f'cos({ra * d2r})*cos(ra*{d2r})*cos({dec*d2r}-dec*d2r))'
+                 f'cos({ra * d2r})*cos(ra*{d2r})*cos({dec*d2r}-dec*{d2r}))'
                  f'< {radius / 60 * d2r}')
         where_parts.append(where)
 
@@ -602,7 +606,7 @@ def get_ocat_details_local(obsid=None, *,
     if where_parts:
         dat = _table_read_where(datafile, where_parts)
     else:
-        dat = Table.read(datafile)
+        dat = _table_read_cached(datafile)
 
     # Decode bytes to strings manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
@@ -625,6 +629,22 @@ def get_ocat_details_local(obsid=None, *,
     # Possibly get just the first row as a dict
     dat = _get_table_or_dict(return_type, obsid, dat)
 
+    return dat
+
+
+def _table_read_cached(datafile):
+    """Read the Ocat target table from a cached local data file.
+
+    The cache expires after one hour.
+    """
+    now_time = time.time()
+    if datafile in OCAT_TABLE_CACHE:
+        last_time = OCAT_TABLE_CACHE[datafile]['last_time']
+        if now_time - last_time < 3600:
+            return OCAT_TABLE_CACHE[datafile]['data']
+
+    dat = Table.read(datafile)
+    OCAT_TABLE_CACHE[datafile] = {'last_time': now_time, 'data': dat}
     return dat
 
 
