@@ -231,3 +231,8 @@ def test_get_proposal_abstract():
 def test_get_proposal_abstract_fail():
     with pytest.raises(ValueError, match=r'must provide obsid or propnum'):
         get_proposal_abstract()
+
+
+def test_bad_return_type(query_func):
+    with pytest.raises(ValueError, match=r'invalid return_type'):
+        query_func(obsid=8000, return_type='junk')

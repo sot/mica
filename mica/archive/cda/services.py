@@ -516,6 +516,9 @@ def _is_int(val):
 def _get_table_or_dict(return_type, obsid, dat):
     # If obsid is a single integer and there was just one row then return the
     # row as a dict.
+    if return_type not in ('auto', 'table'):
+        raise ValueError(f"invalid return_type {return_type!r}, must be 'auto' or 'table'")
+
     if return_type == 'auto' and _is_int(obsid):
         if len(dat) == 1:
             dat = dict(dat[0])
