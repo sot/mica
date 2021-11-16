@@ -221,7 +221,7 @@ def get_archive_file_list(obsid, detector, level, dataset='flight', **params):
     return dat
 
 
-def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
+def get_proposal_abstract(obsid=None, propnum=None, timeout=60):
     """Get a proposal abstract from the CDA services.
 
     One of ``obsid`` or ``propnum`` must be provided.
@@ -298,7 +298,7 @@ def get_ocat_summary_web(obsid=None, *,
                          target_name=None, resolve_name=False,
                          ra=None, dec=None, radius=1.0,
                          return_type='auto',
-                         timeout=30, **params):
+                         timeout=60, **params):
     """
     Get the Ocat summary from Chandra Data Archive web services.
 
@@ -334,7 +334,7 @@ def get_ocat_details_web(obsid=None, *,
                          target_name=None, resolve_name=False,
                          ra=None, dec=None, radius=1.0,
                          return_type='auto',
-                         timeout=30, **params):
+                         timeout=60, **params):
     """
     Get the Ocat details from Chandra Data Archive web services.
 
@@ -371,7 +371,7 @@ get_ocat_details_web.__doc__ = get_ocat_details_web.__doc__.format(
     COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
 
 
-def _get_ocat_web(service, timeout=30, return_type='auto', **params):
+def _get_ocat_web(service, timeout=60, return_type='auto', **params):
     """
     Get either the Ocat summary or details from the CDA services.
 
@@ -413,7 +413,7 @@ def _get_ocat_web(service, timeout=30, return_type='auto', **params):
     return dat
 
 
-def _get_cda_service_text(service, timeout=30, **params):
+def _get_cda_service_text(service, timeout=60, **params):
     """
     Fetch all observation details from one of the CDA SRService pages
 
