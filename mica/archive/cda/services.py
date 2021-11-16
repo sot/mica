@@ -480,9 +480,19 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
 
     dat = Table.read(lines, format='ascii.rdb', guess=False)
 
-    # Lower-case all the column names
-    lc_names = [name.lower() for name in dat.colnames]
-    dat.rename_columns(dat.colnames, lc_names)
+    # Fix the column names
+    # Transform summary names to corresponding detail names.
+    trans = {'obs_id': 'obsid',
+             'grating': 'grat', 'instrument': 'instr', 'appr_exp': 'app_exp',
+             'exposure': 'exp_time', 'data_mode': 'datamode', 'exp_mode': 'mode',
+             'avg_cnt_rate': 'count_rate', 'public_release_date': 'public_avail',
+             'proposal_num': 'pr_num', 'science_category': 'category',
+             'alternate_group': 'alt_group', 'appr._triggers': 'alt_trig'}
+    names = (name.lower() for name in dat.colnames)
+    names = (name.replace(' (ks)', '') for name in names)
+    names = (name.replace(' ', '_') for name in names)
+    names = [trans.get(name, name) for name in names]
+    dat.rename_columns(dat.colnames, names)
 
     # Apply units to the columns
     for name, col in dat.columns.items():
