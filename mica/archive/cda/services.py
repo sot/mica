@@ -228,8 +228,8 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
 
     :param obsid: int, str
         Observation ID
-    :param propnum: int, str
-        Proposal number
+    :param propnum: str
+        Proposal number, including leading zeros e.g. '08900073'
     :param timeout: int, float
         Timeout in seconds for the request
     :returns: dict
@@ -239,7 +239,7 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
     if obsid is not None:
         params['obsid'] = obsid
     if propnum is not None:
-        params['propnum'] = propnum
+        params['propNum'] = propnum
 
     if not params:
         raise ValueError('must provide obsid or propnum')
@@ -257,7 +257,6 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=30):
     out = {}
     for delim0, delim1 in zip(delims[:-1], delims[1:]):
         name = '_'.join(word.lower() for word in delim0.split())
-        print(rf'{delim0}:(.+){delim1}:')
         if match := re.search(rf'{delim0}:(.+){delim1}:', text, re.DOTALL):
             out[name] = clean_text(match.group(1))
         else:
@@ -507,10 +506,12 @@ def _is_int(val):
 def _get_table_or_dict(return_type, obsid, dat):
     # If obsid is a single integer and there was just one row then return the
     # row as a dict.
-    if (return_type == 'auto'
-            and _is_int(obsid)
-            and len(dat) == 1):
-        dat = dict(dat[0])
+    if return_type == 'auto' and _is_int(obsid):
+        if len(dat) == 1:
+            dat = dict(dat[0])
+        else:
+            raise ValueError(f"failed to find obsid {obsid}")
+
     return dat
 
 
@@ -611,12 +612,15 @@ def get_ocat_details_local(obsid=None, *,
     # Decode bytes to strings manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
     for name, col in dat.columns.items():
+        zero_length = len(dat) == 0
         if col.info.dtype.kind == 'S':
-            dat[name] = np.char.decode(col, 'utf-8')
+            dat[name] = col.astype('U') if zero_length else np.char.decode(col, 'utf-8')
 
     # Match target_name as a substring of the table target_name column.
-    if target_name is not None and not resolve_name:
+    if len(dat) > 0 and target_name is not None and not resolve_name:
         target_name = target_name.lower().replace(' ', '')
+        # Numpy bug: np.char.replace(dat['target_name'], ' ', '') returns float
+        # array for a zero-length input, so we need the len(dat) > 0 above.
         target_names = np.char.lower(np.char.replace(dat['target_name'], ' ', ''))
         ok = np.char.find(target_names, target_name) != -1
         dat = dat[ok]
@@ -659,7 +663,7 @@ def _table_read_where(datafile, where_parts):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=tables.NaturalNameWarning)
             dat = h5.root.data.read_where(where)
-    dat = Table(dat)
+        dat = Table(dat)
 
     # Manually make MaskedColumn's as needed since we are not using Table.read()
     # which handles this. This assumes a correspondence betweeen <name>.mask
@@ -667,6 +671,6 @@ def _table_read_where(datafile, where_parts):
     masked_names = [name for name in dat.colnames if name.endswith('.mask')]
     for masked_name in masked_names:
         name = masked_name[:-5]
-        dat[name] = MaskedColumn(dat[name], mask=dat[masked_name])
+        dat[name] = MaskedColumn(dat[name], mask=dat[masked_name], dtype=dat[name].dtype)
         dat.remove_column(masked_name)
     return dat
