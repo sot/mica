@@ -1,28 +1,167 @@
-OCAT Target Table
----------------------
+Chandra Data Archive and Ocat
+=============================
 
-The :mod:`mica.archive.ocat_target_table` module includes code
-to fetch a mica version of the content from the OCAT details
-aka Chaser aka target table.
+The :mod:`mica.archive.cda.services` module provides a Python interface to the
+Chandra Data Archive (CDA) web services and an interface to a local disk copy of
+the Observation Catalog (Ocat) if that is available.
+
+The CDA web services interface provides access to the following. Note however
+that the CDA is not accessible from the GRETA network.
+
+- Ocat details: full details from the Ocat (124 fields) for the mission, plus
+  access to ACIS windows, roll requirements and time requirements for
+  applicable observations.
+- Ocat summary: summary data from the Ocat (26 fields).
+- Proposal abstracts: abstract information for each observation.
+- Archive file list: list of raw data files in the Chandra archive for each
+  observation.
+
+On the HEAD and GRETA networks, a copy of the Ocat details table (124 fields) is
+maintained and updated daily. This is a compressed HDF5 file which is
+approximately 5 Mb and can be synced to a local (laptop) computer.
+It is located at::
+
+  ${SKA}/data/mica/archive/ocat_target_table.h5
+
+This local file version can be used for faster, network-free queries of the
+Ocat.
 
 This is the type of content that can be seen directly at:
 
 https://cda.harvard.edu/srservices/ocatDetails.do?obsid=2121
 
-Using this module to get the data for all science observations:
+Local Ocat access
+-----------------
 
-   >>> from mica.archive.ocat_target_table import get_ocat_target_table
-   >>> dat = get_ocat_target_table()
-   >>> dat[dat['obsid'] == 5438][0]['target_name']
+Faster access to the Ocat is possible if the local Ocat HDF5 file is
+available on disk. In particular reading the entire Ocat or querying on a
+target name substring is at least 10 times faster.
+
+The local version of the Ocat is cached in memory the first time it is read in
+full, so this means subsequent full reads or searches for target names will be
+much faster. The cache expires in one hour in case you have a long-running job.
+
+Any of the fields in the returned table can be used for filtering the query
+via exact matches of the parameters::
+
+   >>> from mica.archive.cda import get_ocat_local
+   >>> dat = get_ocat_local(obsid=5438)
+   >>> dat['target_name']
    'R Aqr'
+
+   >>> dat = get_ocat_local()  # Get the whole Ocat for the mission
+   >>> dat = get_ocat_local(instr='HRC-S', grat='LETG')  # All HRC-S LETG obs
+   >>> dat
+   <Table length=734>
+   seq_num  status  obsid  pr_num  target_name ... evfil evfil_lo evfil_ra efficient spwin
+                                               ...         keV      keV
+     str6   str11   int64   str8      str29    ...  str1 float64  float64     str1    str1
+   ------- -------- ----- -------- ----------- ... ----- -------- -------- --------- -----
+           archived 62635                      ...     0       --       --         0     0
+           archived 62636                      ...     0       --       --         0     0
+       ...      ...   ...      ...         ... ...   ...      ...      ...       ...   ...
+    901342 archived 20944 18900560     Mkn 421 ...     0       --       --         0     0
+    901410 archived 21389 20900088 PKS0405-123 ...     0       --       --         0     0
+    901410 archived 21955 20900088 PKS0405-123 ...     0       --       --         0     0
+
+The ``target_name`` is handled specially. By default, this parameter matches
+any substring in the Ocat target name field, ignoring spaces::
+
+   # Targets with 'jet' in name.
+   >>> dat = get_ocat_local(target_name='jet')
+
+However, if the target name is a valid catalog source name that can be resolved
+by the CDS name resolver, then the target name can be used for a radial cone
+search around the target position by specifying ``resolve_name=True``::
+
+   # Observations within 4 arcmin of 3C273
+   >>> dat = get_ocat_local(target_name='3c273', resolve_name=True, radius=4)
+
+   # Observations within 1 degree of RA, Dec = 10, 10
+   >>> dat = get_ocat_local(ra=10, dec=10, radius=60)
+
+One convenience in this function is that when the ``obsid`` is specified, then
+by default the result is returned as a ``dict`` instead of a ``Table``. This
+saves the boilerplate step of selecting element-0 of a Table.
+
+Advanced users may consider use of the ``where`` keyword argument, which allows
+fast in-kernel filtering of the table contents.
+See https://www.pytables.org/usersguide/condition_syntax.html for details.
+This feature is used internally for the exact parameter matching as well as
+for the positional cone search around a coordinate.
+
+Web access
+----------
+
+The Chandra Data Archive hosts a web service that provides access to various
+elements of the archive. Examples follow.
+
+Ocat
+^^^^
+The interface for web access to the Ocat is similar to the local file access
+documented above, and all of those examples will work just by changing
+``get_ocat_local`` to ``get_ocat_web``.
+
+Additional functionality is described in the function docs
+`~mica.archive.cda.services.get_ocat_web`_. In particular the Web API parameters
+can be used via the function call.
+
+Proposal abstracts
+^^^^^^^^^^^^^^^^^^
+This allows getting information about the proposal and the abstract::
+
+    >>> from mica.archive.cda import get_proposal_abstract
+    >>> get_proposal_abstract(obsid=8000)
+    {'abstract': 'We propose the Chandra-COSMOS survey which will provide an '
+                 'unprecedented combination of contiguous area, depth and '
+                 'resolution. 36 densely tiled observations will cover the central '
+                 '0.7 sq.deg. COSMOS field to a uniform 200ksec depth. COSMOS '
+                 'explores the coupled evolution of galaxies, dark matter halos '
+                 'and AGNs (massive black holes) largely free of cosmic variance. '
+                 'COSMOS is a comprehensive survey including: HST, Spitzer, '
+                 'Subaru, VLT, Magellan, VLA, MAMBO, GALEX, & potentially EVLA & '
+                 'ALMA. Chandra resolution & sensitivity enables the study of '
+                 'large scale phenomena: (1) influence of the surrounding '
+                 'environment; (2) interaction between galaxies; (3) influence of '
+                 'groups and clusters',
+     'principal_investigator': 'Martin Elvis',
+     'proposal_number': '08900073',
+     'proposal_title': 'THE CHANDRA-COSMOS SURVEY'}
+
+Archive file list
+^^^^^^^^^^^^^^^^^
+This allows getting a list of archive files for given ``obsid``, ``detector``,
+``level``, and ``dataset`` (and possibly other parameters).
+
+Example::
+
+    >>> get_archive_file_list(obsid=2365, detector='pcad',
+    ...                           subdetector='aca', level=1, obi=2)
+    <Table length=27>
+            Filename            Filesize      Timestamp
+                str30               int64          str19
+    ------------------------------ -------- -------------------
+    pcadf126690624N007_asol1.fits  7300800 2021-04-09 08:04:29
+    pcadf02365_002N001_asol1.fits  4728960 2021-04-09 08:04:30
+                            ...      ...                 ...
+    pcadf126695890N007_adat61.fits  1293120 2021-04-09 08:04:28
+    pcadf126695890N007_adat71.fits  1293120 2021-04-09 08:04:28
+
+    >>> get_archive_file_list(obsid=400, detector='acis', level=2, filetype='evt2')
+    <Table length=1>
+            Filename         Filesize      Timestamp
+            str24            int64          str19
+    ------------------------ -------- -------------------
+    acisf00400N007_evt2.fits  4619520 2011-07-08 13:52:57
+
+
+Ocat table fields
+-----------------
 
 Some of these fields may be described in the chaser help at:
 
 https://cda.harvard.edu/chaser/chaserFieldHelp.html
 
-
-Data table fields
-^^^^^^^^^^^^^^^^^
 
 ============================= ================================================================
  Column                       Description
@@ -74,7 +213,7 @@ obj                           Solar system object name
 photo                         Photometry flag
 vmag                          V Mag of object
 est_cnt_rate                  Estimated count rate
-forder_cnt_rate               First order count rage
+forder_cnt_rate               First order count rate
 count_rate
 event_count
 dither                        Dither flag
