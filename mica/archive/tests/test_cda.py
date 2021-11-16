@@ -2,14 +2,12 @@
 from functools import partial
 
 from astropy.table import Table
-from astropy.coordinates import SkyCoord
 import numpy as np
 import pytest
 import requests
 
-from mica.archive.cda import (get_archive_file_list, get_ocat_details_local,
-                              get_ocat_details_web, get_ocat_summary_web,
-                              get_proposal_abstract)
+from mica.archive.cda import (get_archive_file_list, get_ocat_local,
+                              get_ocat_web, get_proposal_abstract)
 from mica.archive.cda.services import update_ocat_local, URL_CDA_SERVICES
 
 try:
@@ -47,8 +45,7 @@ COLNAMES = {
 
 # Ensure tests continue to work in future by always using a fixed date range
 DATE_RANGE = '1999-01-01/2021-11-01'
-get_ocat_details_web = partial(get_ocat_details_web, startDate=DATE_RANGE)
-get_ocat_summary_web = partial(get_ocat_summary_web, startDate=DATE_RANGE)
+get_ocat_web = partial(get_ocat_web, startDate=DATE_RANGE)
 
 
 @pytest.fixture(scope="session")
@@ -69,15 +66,15 @@ def service(request):
 @pytest.fixture(scope="function")
 def query_func(service, datafile):
     if service == 'local-detail':
-        return partial(get_ocat_details_local, datafile=datafile)
+        return partial(get_ocat_local, datafile=datafile)
     elif service == 'web-detail':
-        return get_ocat_details_web
+        return get_ocat_web
     elif service == 'web-summary':
-        return get_ocat_summary_web
+        return partial(get_ocat_web, summary=True)
 
 
 def test_ocat_details_local_all(datafile):
-    dat = get_ocat_details_local(datafile=datafile)
+    dat = get_ocat_local(datafile=datafile)
     assert dat.colnames == COLNAMES['detail']
     assert len(dat) == 38
     ok = dat['obsid'] == 7781
@@ -92,9 +89,33 @@ def test_ocat_details_local_all(datafile):
 
 
 def test_ocat_details_local_where(datafile):
-    dat = get_ocat_details_local(datafile=datafile, target_name='jet')
+    dat = get_ocat_local(datafile=datafile, target_name='jet')
     assert len(dat) == 4
     assert all('JET' in row['target_name'] for row in dat)
+
+
+def test_ocat_special_query():
+    dat = get_ocat_web(obsid=8008, rollReqs='true')
+    assert len(dat) == 1
+    assert dat.colnames == ['obsid', 'roll_const', 'roll_ang', 'roll_tol', 'roll_180']
+
+    dat = get_ocat_web(obsid=8008, acisWindows='true')
+    assert len(dat) == 0
+    assert dat.colnames == [
+        'obsid',
+        'start_row',
+        'start_col',
+        'sample_rate',
+        'height',
+        'width',
+        'low_energy',
+        'range',
+        'chip',
+        'include']
+
+    dat = get_ocat_web(obsid=8008, timeReqs='true')
+    assert len(dat) == 0
+    assert dat.colnames == ['obsid', 'win_const', 'tstart_request', 'tstop_request']
 
 
 def filt_kwargs(service, value):

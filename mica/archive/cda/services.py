@@ -1,4 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+"""Python interface to the Chandra Data Archive (CDA) web services and an
+interface to a local disk copy of the Observation Catalog (Ocat).
+"""
 from pathlib import Path
 import re
 import warnings
@@ -14,7 +17,7 @@ from mica.common import MICA_ARCHIVE
 
 
 __all__ = ['get_archive_file_list', 'get_proposal_abstract',
-           'get_ocat_details_web', 'get_ocat_details_local', 'get_ocat_summary_web']
+           'get_ocat_web', 'get_ocat_local']
 
 OCAT_TABLE_PATH = Path(MICA_ARCHIVE) / 'ocat_target_table.h5'
 OCAT_TABLE_CACHE = {}
@@ -135,6 +138,13 @@ CDA_PARAM_DOCS = """Additional function args for CDA search parameters::
                 obsid,propNum,category,type,cycle)
         sortOrder=ascending (other option: descending)
         maxResults=#  (the number of results after which to stop displaying)
+
+    Special parameters that change the output table contents are available for
+    full output (``summary=False``):
+    - ``acisWindows='true'``: return ACIS windows details for a single obsid
+    - ``rollReqs='true'``: return roll requirements for a single obsid
+    - ``timeReqs='true'``: return time requirements for a single obsid
+
 """
 
 COMMON_PARAM_DOCS = """:param target_name: str, optional
@@ -294,13 +304,13 @@ def _update_params_from_kwargs(params, obsid,
     return params
 
 
-def get_ocat_summary_web(obsid=None, *,
-                         target_name=None, resolve_name=False,
-                         ra=None, dec=None, radius=1.0,
-                         return_type='auto',
-                         timeout=60, **params):
+def get_ocat_web(obsid=None, *, summary=False,
+                 target_name=None, resolve_name=False,
+                 ra=None, dec=None, radius=1.0,
+                 return_type='auto',
+                 timeout=60, **params):
     """
-    Get the Ocat summary from Chandra Data Archive web services.
+    Get the Ocat data from Chandra Data Archive web services.
 
     {RETURN_TYPE_DOCS}
 
@@ -308,83 +318,27 @@ def get_ocat_summary_web(obsid=None, *,
 
     :param obsid: int, str
         Observation ID or string with ObsId range or list of ObsIds
+    :param summary: bool
+        Return summary data (26 columns) instead of full data (124 columns)
     {COMMON_PARAM_DOCS}
     :param timeout: int, float
-        Timeout in seconds for the request
+        Timeout in seconds for the request (default=60)
     :param return_type: str
         Return type (default='auto' => Table or dict)
     :param **params: dict
         Parameters passed to CDA web service
     :return: astropy Table or dict of the observation details
     """
-    _update_params_from_kwargs(params, obsid,
-                               target_name, resolve_name,
-                               ra, dec, radius)
-    dat = _get_ocat_web('ocat_summary', timeout, return_type, **params)
-    return dat
+    # These special params change the returned data and should always be a table
+    if set(['acisWindows', 'rollReqs', 'timeReqs']) & set(params):
+        return_type = 'table'
 
-
-get_ocat_summary_web.__doc__ = get_ocat_summary_web.__doc__.format(
-    RETURN_TYPE_DOCS=RETURN_TYPE_DOCS,
-    CDA_PARAM_DOCS=CDA_PARAM_DOCS,
-    COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
-
-
-def get_ocat_details_web(obsid=None, *,
-                         target_name=None, resolve_name=False,
-                         ra=None, dec=None, radius=1.0,
-                         return_type='auto',
-                         timeout=60, **params):
-    """
-    Get the Ocat details from Chandra Data Archive web services.
-
-    {RETURN_TYPE_DOCS}
-
-    {CDA_PARAM_DOCS}
-
-    Special parameters that change the output table contents:
-    - ``acisWindows='true'``: return ACIS windows details for a single obsid
-    - ``rollReqs='true'``: return roll requirements for a single obsid
-    - ``timeReqs='true'``: return time requirements for a single obsid
-
-    :param obsid: int, str
-        Observation ID or string with ObsId range or list of ObsIds
-    {COMMON_PARAM_DOCS}
-    :param timeout: int, float
-        Timeout in seconds for the request
-    :param return_type: str
-        Return type (default='auto' => Table or dict)
-    :param **params: dict
-        Parameters passed to CDA web service
-    :return: astropy Table or dict of the observation details
-    """
-    _update_params_from_kwargs(params, obsid,
-                               target_name, resolve_name,
-                               ra, dec, radius)
-    dat = _get_ocat_web('ocat_details', timeout, return_type, **params)
-    return dat
-
-
-get_ocat_details_web.__doc__ = get_ocat_details_web.__doc__.format(
-    RETURN_TYPE_DOCS=RETURN_TYPE_DOCS,
-    CDA_PARAM_DOCS=CDA_PARAM_DOCS,
-    COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
-
-
-def _get_ocat_web(service, timeout=60, return_type='auto', **params):
-    """
-    Get either the Ocat summary or details from the CDA services.
-
-    :param service: str
-        Service name
-    :param timeout: int, float
-        Timeout in seconds for the request
-    :param **params: dict
-        Parameters passed to CDA web service
-    :return: astropy Table or dict of the observation details
-    """
     if return_type not in ('auto', 'table'):
         raise ValueError(f"invalid return_type {return_type!r}, must be 'auto' or 'table'")
+
+    _update_params_from_kwargs(params, obsid,
+                               target_name, resolve_name,
+                               ra, dec, radius)
 
     params['format'] = 'text'
 
@@ -392,6 +346,7 @@ def _get_ocat_web(service, timeout=60, return_type='auto', **params):
     # which is insufficient.
     params['outputCoordUnits'] = 'sexagesimal'
 
+    service = 'ocat_summary' if summary else 'ocat_details'
     text = _get_cda_service_text(service, **params)
     dat = _get_table_or_dict_from_cda_rdb_text(text, return_type, params.get('obsid'))
 
@@ -403,14 +358,25 @@ def _get_ocat_web(service, timeout=60, return_type='auto', **params):
         if return_type == 'auto' and _is_int(params.get('obsid')):
             raise ValueError(f"failed to find obsid {params['obsid']}")
         else:
-            dat = _get_ocat_web(service, return_type='table', obsid=8000)[0:0]
+            dat = get_ocat_web(summary=summary, return_type='table', obsid=8000)[0:0]
 
-    # Change RA, Dec to decimal
-    sc = SkyCoord(dat['ra'], dat['dec'], unit='hr,deg')
-    dat['ra'] = sc.ra.deg
-    dat['dec'] = sc.dec.deg
+    # Change RA, Dec to decimal if those columns exist
+    try:
+        ra, dec = dat['ra'], dat['dec']
+    except KeyError:
+        pass
+    else:
+        sc = SkyCoord(ra, dec, unit='hr,deg')
+        dat['ra'] = sc.ra.deg
+        dat['dec'] = sc.dec.deg
 
     return dat
+
+
+get_ocat_web.__doc__ = get_ocat_web.__doc__.format(
+    RETURN_TYPE_DOCS=RETURN_TYPE_DOCS,
+    CDA_PARAM_DOCS=CDA_PARAM_DOCS,
+    COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
 
 
 def _get_cda_service_text(service, timeout=60, **params):
@@ -550,7 +516,7 @@ def update_ocat_local(datafile, **params):
     :param **params: dict
         Parameters to filter ``get_ocat_details_web`` query
     """
-    dat = get_ocat_details_web(**params)
+    dat = get_ocat_web(**params)
 
     # Encode unicode strings to bytes manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
@@ -562,13 +528,13 @@ def update_ocat_local(datafile, **params):
               format='hdf5', compression=True)
 
 
-def get_ocat_details_local(obsid=None, *,
+def get_ocat_local(obsid=None, *,
                            target_name=None, resolve_name=False,
                            ra=None, dec=None, radius=1.0,
                            return_type='auto',
                            datafile=None, where=None, **params):
     """
-    Get the Ocat details from a local HDF5 data file.
+    Get full Ocat details from a local HDF5 data file.
 
     The local data file is assumed to be an HDF5 file that contains a copy of
     the Ocat details, typically updated by a cron job running on HEAD and
