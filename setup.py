@@ -4,11 +4,6 @@ import os
 from setuptools import setup
 from pathlib import Path
 
-try:
-    from testr.setup_helper import cmdclass
-except ImportError:
-    cmdclass = {}
-
 license = """\
 New BSD/3-clause BSD License
 Copyright (c) 2012 Smithsonian Astrophysical Observatory
@@ -50,7 +45,7 @@ setup(name='mica',
                     'mica.report': ['templates/*.html', '*.sql'],
                     'mica.archive': ['*.sql'],
                     'mica.starcheck': ['*.sql']},
-
+      entry_points=entry_points,
       tests_require=['pytest'],
       cmdclass=cmdclass,
       )

@@ -310,7 +310,7 @@ def get_ocat_web(obsid=None, *, summary=False,
                  return_type='auto',
                  timeout=60, **params):
     """
-    Get the Ocat data from Chandra Data Archive web services.
+    Get the Ocat target table data from Chandra Data Archive web services.
 
     {RETURN_TYPE_DOCS}
 
@@ -504,7 +504,7 @@ def main_update_ocat_local():
     parser = argparse.ArgumentParser(
         description="Update target table")
     parser.add_argument("--datafile",
-                        default='target_table.h5')
+                        default='ocat_target_table.h5')
     opt = parser.parse_args()
 
     update_ocat_local(opt.datafile)
@@ -529,12 +529,12 @@ def update_ocat_local(datafile, **params):
 
 
 def get_ocat_local(obsid=None, *,
-                           target_name=None, resolve_name=False,
-                           ra=None, dec=None, radius=1.0,
-                           return_type='auto',
-                           datafile=None, where=None, **params):
+                   target_name=None, resolve_name=False,
+                   ra=None, dec=None, radius=1.0,
+                   return_type='auto',
+                   datafile=None, where=None, **params):
     """
-    Get full Ocat details from a local HDF5 data file.
+    Get Ocat target table from a local HDF5 data file.
 
     The local data file is assumed to be an HDF5 file that contains a copy of
     the Ocat details, typically updated by a cron job running on HEAD and
