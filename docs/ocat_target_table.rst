@@ -33,9 +33,10 @@ https://cda.harvard.edu/srservices/ocatDetails.do?obsid=2121
 Local Ocat access
 -----------------
 
-Faster access to the Ocat is possible if the local Ocat HDF5 file is
-available on disk. In particular reading the entire Ocat or querying on a
-target name substring is at least 10 times faster.
+The :func:`~mica.archive.cda.services.get_ocat_local` function provides fast
+access to the Ocat if the local Ocat HDF5 file is available on disk. In
+particular reading the entire Ocat or querying on a target name substring is at
+least 10 times faster than using the `Web access to CDA`_.
 
 The local version of the Ocat is cached in memory the first time it is read in
 full, so this means subsequent full reads or searches for target names will be
@@ -90,25 +91,26 @@ See https://www.pytables.org/usersguide/condition_syntax.html for details.
 This feature is used internally for the exact parameter matching as well as
 for the positional cone search around a coordinate.
 
-Web access
-----------
+Web access to CDA
+-----------------
 
 The Chandra Data Archive hosts a web service that provides access to various
 elements of the archive. Examples follow.
 
 Ocat
 ^^^^
-The interface for web access to the Ocat is similar to the local file access
-documented above, and all of those examples will work just by changing
-``get_ocat_local`` to ``get_ocat_web``.
+The :func:`~mica.archive.cda.services.get_ocat_web` function for web access to
+the Ocat is similar to the local file access documented above, and all of those
+examples will work just by changing ``get_ocat_local`` to ``get_ocat_web``.
 
 Additional functionality is described in the function docs
-`~mica.archive.cda.services.get_ocat_web`_. In particular the Web API parameters
+:func:`~mica.archive.cda.services.get_ocat_web`. In particular the Web API parameters
 can be used via the function call.
 
 Proposal abstracts
 ^^^^^^^^^^^^^^^^^^
-This allows getting information about the proposal and the abstract::
+The :func:`~mica.archive.cda.services.get_proposal_abstract` function allows
+getting information about the proposal and the abstract::
 
     >>> from mica.archive.cda import get_proposal_abstract
     >>> get_proposal_abstract(obsid=8000)
@@ -130,8 +132,9 @@ This allows getting information about the proposal and the abstract::
 
 Archive file list
 ^^^^^^^^^^^^^^^^^
-This allows getting a list of archive files for given ``obsid``, ``detector``,
-``level``, and ``dataset`` (and possibly other parameters).
+The :func:`~mica.archive.cda.services.get_archive_file_list` function allows
+getting a list of archive files for given ``obsid``, ``detector``, ``level``,
+and ``dataset`` (and possibly other parameters).
 
 Example::
 
@@ -291,6 +294,3 @@ evfil_ra
 efficient                     ACIS use most efficient (Y, N)
 spwin                         Spatial window (Y, N)
 ============================= ================================================================
-
-The HDF5 in-kernel searches may be faster working with the table directly for some
-operations.

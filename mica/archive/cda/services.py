@@ -347,7 +347,7 @@ def get_ocat_web(obsid=None, *, summary=False,
     params['outputCoordUnits'] = 'sexagesimal'
 
     service = 'ocat_summary' if summary else 'ocat_details'
-    text = _get_cda_service_text(service, **params)
+    text = _get_cda_service_text(service, timeout=timeout, **params)
     dat = _get_table_or_dict_from_cda_rdb_text(text, return_type, params.get('obsid'))
 
     if dat is None:
@@ -399,6 +399,7 @@ def _get_cda_service_text(service, timeout=60, **params):
     # Query the service and check for errors
     url = f'{URL_CDA_SERVICES}/{CDA_SERVICES[service]}.do'
     verbose = params.pop('verbose', False)
+    print(f'{timeout=}')
     resp = requests.get(url, timeout=timeout, params=params)
     if verbose:
         print(f'GET {resp.url}')
@@ -501,13 +502,16 @@ def main_update_ocat_local():
     This overwrites the file from scratch each time.
     """
     import argparse
+    from ska_helpers.retry import retry_call
+
     parser = argparse.ArgumentParser(
         description="Update target table")
     parser.add_argument("--datafile",
                         default='ocat_target_table.h5')
     opt = parser.parse_args()
 
-    update_ocat_local(opt.datafile)
+    retry_call(update_ocat_local, [opt.datafile], {"timeout": 120},
+               tries=3, delay=1)
 
 
 def update_ocat_local(datafile, **params):
@@ -613,6 +617,12 @@ def get_ocat_local(obsid=None, *,
     dat = _get_table_or_dict(return_type, obsid, dat)
 
     return dat
+
+
+get_ocat_local.__doc__ = get_ocat_local.__doc__.format(
+    RETURN_TYPE_DOCS=RETURN_TYPE_DOCS,
+    CDA_PARAM_DOCS=CDA_PARAM_DOCS,
+    COMMON_PARAM_DOCS=COMMON_PARAM_DOCS)
 
 
 def _table_read_cached(datafile):
