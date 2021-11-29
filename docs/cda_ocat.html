@@ -1,0 +1,673 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chandra Data Archive and Ocat &#8212; mica 4.28.0 documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Guide star statistics" href="guide_stats.html" />
+    <link rel="prev" title="Aspect L1 products" href="aspect_l1_products.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="https://cxc.cfa.harvard.edu/mta/ASPECT/tool_doc">
+        <span id="logotext1">ska</span><span id="logotext2">tools</span>
+    </a></li>
+    <li><a title="General Index" href="genindex.html">Index</a></li>
+    <li><a title="Module Index" href="py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li class="right">
+	<a href="guide_stats.html" title="Guide star statistics">
+	  next &raquo;
+	</a>
+      </li>
+      <li class="right">
+	<a href="aspect_l1_products.html" title="Aspect L1 products">
+	  &laquo; previous
+	</a>
+	 |
+      </li>
+      <li>
+	<a href="index.html">mica 4.28.0 documentation</a>
+	 &#187;
+      </li>
+      
+      <li>Chandra Data Archive and Ocat</li> 
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="chandra-data-archive-and-ocat">
+<h1>Chandra Data Archive and Ocat<a class="headerlink" href="#chandra-data-archive-and-ocat" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.cda.services</span></code> module provides a Python interface to the
+Chandra Data Archive (CDA) web services and an interface to a local disk copy of
+the Observation Catalog (Ocat) if that is available.</p>
+<p>The CDA web services interface provides access to the following. Note however
+that the CDA is not accessible from the GRETA network.</p>
+<ul class="simple">
+<li><p>Ocat details: full details from the Ocat (124 fields) for the mission, plus
+access to ACIS windows, roll requirements and time requirements for
+applicable observations.</p></li>
+<li><p>Ocat summary: summary data from the Ocat (26 fields).</p></li>
+<li><p>Proposal abstracts: abstract information for each observation.</p></li>
+<li><p>Archive file list: list of raw data files in the Chandra archive for each
+observation.</p></li>
+</ul>
+<p>On the HEAD and GRETA networks, a copy of the Ocat details table (124 fields) is
+maintained and updated daily. This is a compressed HDF5 file which is
+approximately 5 Mb and can be synced to a local (laptop) computer.
+It is located at:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>${SKA}/data/mica/archive/ocat_target_table.h5
+</pre></div>
+</div>
+<p>This local file version can be used for faster, network-free queries of the
+Ocat.</p>
+<p>This is the type of content that can be seen directly at:</p>
+<p><a class="reference external" href="https://cda.harvard.edu/srservices/ocatDetails.do?obsid=2121">https://cda.harvard.edu/srservices/ocatDetails.do?obsid=2121</a></p>
+<div class="section" id="local-ocat-access">
+<h2>Local Ocat access<a class="headerlink" href="#local-ocat-access" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_local()</span></code> function provides fast
+access to the Ocat if the local Ocat HDF5 file is available on disk. In
+particular reading the entire Ocat or querying on a target name substring is at
+least 10 times faster than using the <a class="reference internal" href="#web-access-to-cda">Web access to CDA</a>.</p>
+<p>The local version of the Ocat is cached in memory the first time it is read in
+full, so this means subsequent full reads or searches for target names will be
+much faster. The cache expires in one hour in case you have a long-running job.</p>
+<p>Any of the fields in the returned table can be used for filtering the query
+via exact matches of the parameters:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive.cda</span> <span class="kn">import</span> <span class="n">get_ocat_local</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dat</span> <span class="o">=</span> <span class="n">get_ocat_local</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="mi">5438</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dat</span><span class="p">[</span><span class="s1">&#39;target_name&#39;</span><span class="p">]</span>
+<span class="go">&#39;R Aqr&#39;</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dat</span> <span class="o">=</span> <span class="n">get_ocat_local</span><span class="p">()</span>  <span class="c1"># Get the whole Ocat for the mission</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dat</span> <span class="o">=</span> <span class="n">get_ocat_local</span><span class="p">(</span><span class="n">instr</span><span class="o">=</span><span class="s1">&#39;HRC-S&#39;</span><span class="p">,</span> <span class="n">grat</span><span class="o">=</span><span class="s1">&#39;LETG&#39;</span><span class="p">)</span>  <span class="c1"># All HRC-S LETG obs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dat</span>
+<span class="go">&lt;Table length=734&gt;</span>
+<span class="go">seq_num  status  obsid  pr_num  target_name ... evfil evfil_lo evfil_ra efficient spwin</span>
+<span class="go">                                            ...         keV      keV</span>
+<span class="go">  str6   str11   int64   str8      str29    ...  str1 float64  float64     str1    str1</span>
+<span class="go">------- -------- ----- -------- ----------- ... ----- -------- -------- --------- -----</span>
+<span class="go">        archived 62635                      ...     0       --       --         0     0</span>
+<span class="go">        archived 62636                      ...     0       --       --         0     0</span>
+<span class="go">    ...      ...   ...      ...         ... ...   ...      ...      ...       ...   ...</span>
+<span class="go"> 901342 archived 20944 18900560     Mkn 421 ...     0       --       --         0     0</span>
+<span class="go"> 901410 archived 21389 20900088 PKS0405-123 ...     0       --       --         0     0</span>
+<span class="go"> 901410 archived 21955 20900088 PKS0405-123 ...     0       --       --         0     0</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">target_name</span></code> is handled specially. By default, this parameter matches
+any substring in the Ocat target name field, ignoring spaces:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Targets with &#39;jet&#39; in name.</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">dat</span> <span class="o">=</span> <span class="n">get_ocat_local</span><span class="p">(</span><span class="n">target_name</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>However, if the target name is a valid catalog source name that can be resolved
+by the CDS name resolver, then the target name can be used for a radial cone
+search around the target position by specifying <code class="docutils literal notranslate"><span class="pre">resolve_name=True</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Observations within 4 arcmin of 3C273</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">dat</span> <span class="o">=</span> <span class="n">get_ocat_local</span><span class="p">(</span><span class="n">target_name</span><span class="o">=</span><span class="s1">&#39;3c273&#39;</span><span class="p">,</span> <span class="n">resolve_name</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+<span class="c1"># Observations within 1 degree of RA, Dec = 10, 10</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">dat</span> <span class="o">=</span> <span class="n">get_ocat_local</span><span class="p">(</span><span class="n">ra</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>One convenience in this function is that when the <code class="docutils literal notranslate"><span class="pre">obsid</span></code> is specified, then
+by default the result is returned as a <code class="docutils literal notranslate"><span class="pre">dict</span></code> instead of a <code class="docutils literal notranslate"><span class="pre">Table</span></code>. This
+saves the boilerplate step of selecting element-0 of a Table.</p>
+<p>Advanced users may consider use of the <code class="docutils literal notranslate"><span class="pre">where</span></code> keyword argument, which allows
+fast in-kernel filtering of the table contents.
+See <a class="reference external" href="https://www.pytables.org/usersguide/condition_syntax.html">https://www.pytables.org/usersguide/condition_syntax.html</a> for details.
+This feature is used internally for the exact parameter matching as well as
+for the positional cone search around a coordinate.</p>
+</div>
+<div class="section" id="web-access-to-cda">
+<h2>Web access to CDA<a class="headerlink" href="#web-access-to-cda" title="Permalink to this headline">¶</a></h2>
+<p>The Chandra Data Archive hosts a web service that provides access to various
+elements of the archive. Examples follow.</p>
+<div class="section" id="ocat">
+<h3>Ocat<a class="headerlink" href="#ocat" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_web()</span></code> function for web access to
+the Ocat is similar to the local file access documented above, and all of those
+examples will work just by changing <code class="docutils literal notranslate"><span class="pre">get_ocat_local</span></code> to <code class="docutils literal notranslate"><span class="pre">get_ocat_web</span></code>.</p>
+<p>Additional functionality is described in the function docs
+<code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_web()</span></code>. In particular the Web API parameters
+can be used via the function call.</p>
+</div>
+<div class="section" id="proposal-abstracts">
+<h3>Proposal abstracts<a class="headerlink" href="#proposal-abstracts" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_proposal_abstract()</span></code> function allows
+getting information about the proposal and the abstract:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive.cda</span> <span class="kn">import</span> <span class="n">get_proposal_abstract</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">get_proposal_abstract</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="mi">8000</span><span class="p">)</span>
+<span class="go">{&#39;abstract&#39;: &#39;We propose the Chandra-COSMOS survey which will provide an &#39;</span>
+<span class="go">             &#39;unprecedented combination of contiguous area, depth and &#39;</span>
+<span class="go">             &#39;resolution. 36 densely tiled observations will cover the central &#39;</span>
+<span class="go">             &#39;0.7 sq.deg. COSMOS field to a uniform 200ksec depth. COSMOS &#39;</span>
+<span class="go">             &#39;explores the coupled evolution of galaxies, dark matter halos &#39;</span>
+<span class="go">             &#39;and AGNs (massive black holes) largely free of cosmic variance. &#39;</span>
+<span class="go">             &#39;COSMOS is a comprehensive survey including: HST, Spitzer, &#39;</span>
+<span class="go">             &#39;Subaru, VLT, Magellan, VLA, MAMBO, GALEX, &amp; potentially EVLA &amp; &#39;</span>
+<span class="go">             &#39;ALMA. Chandra resolution &amp; sensitivity enables the study of &#39;</span>
+<span class="go">             &#39;large scale phenomena: (1) influence of the surrounding &#39;</span>
+<span class="go">             &#39;environment; (2) interaction between galaxies; (3) influence of &#39;</span>
+<span class="go">             &#39;groups and clusters&#39;,</span>
+<span class="go"> &#39;principal_investigator&#39;: &#39;Martin Elvis&#39;,</span>
+<span class="go"> &#39;proposal_number&#39;: &#39;08900073&#39;,</span>
+<span class="go"> &#39;proposal_title&#39;: &#39;THE CHANDRA-COSMOS SURVEY&#39;}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="archive-file-list">
+<h3>Archive file list<a class="headerlink" href="#archive-file-list" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_archive_file_list()</span></code> function allows
+getting a list of archive files for given <code class="docutils literal notranslate"><span class="pre">obsid</span></code>, <code class="docutils literal notranslate"><span class="pre">detector</span></code>, <code class="docutils literal notranslate"><span class="pre">level</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">dataset</span></code> (and possibly other parameters).</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">get_archive_file_list</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="mi">2365</span><span class="p">,</span> <span class="n">detector</span><span class="o">=</span><span class="s1">&#39;pcad&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                          <span class="n">subdetector</span><span class="o">=</span><span class="s1">&#39;aca&#39;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">obi</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">&lt;Table length=27&gt;</span>
+<span class="go">        Filename            Filesize      Timestamp</span>
+<span class="go">            str30               int64          str19</span>
+<span class="go">------------------------------ -------- -------------------</span>
+<span class="go">pcadf126690624N007_asol1.fits  7300800 2021-04-09 08:04:29</span>
+<span class="go">pcadf02365_002N001_asol1.fits  4728960 2021-04-09 08:04:30</span>
+<span class="go">                        ...      ...                 ...</span>
+<span class="go">pcadf126695890N007_adat61.fits  1293120 2021-04-09 08:04:28</span>
+<span class="go">pcadf126695890N007_adat71.fits  1293120 2021-04-09 08:04:28</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">get_archive_file_list</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">detector</span><span class="o">=</span><span class="s1">&#39;acis&#39;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">filetype</span><span class="o">=</span><span class="s1">&#39;evt2&#39;</span><span class="p">)</span>
+<span class="go">&lt;Table length=1&gt;</span>
+<span class="go">        Filename         Filesize      Timestamp</span>
+<span class="go">        str24            int64          str19</span>
+<span class="go">------------------------ -------- -------------------</span>
+<span class="go">acisf00400N007_evt2.fits  4619520 2011-07-08 13:52:57</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="ocat-table-fields">
+<h2>Ocat table fields<a class="headerlink" href="#ocat-table-fields" title="Permalink to this headline">¶</a></h2>
+<p>Some of these fields may be described in the chaser help at:</p>
+<p><a class="reference external" href="https://cda.harvard.edu/chaser/chaserFieldHelp.html">https://cda.harvard.edu/chaser/chaserFieldHelp.html</a></p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 69%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Column</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>seq_num</p></td>
+<td><p>Sequence Number</p></td>
+</tr>
+<tr class="row-odd"><td><p>status</p></td>
+<td><p>Status (unobserved, archived, untriggered, etc)</p></td>
+</tr>
+<tr class="row-even"><td><p>obsid</p></td>
+<td><p>Obsid</p></td>
+</tr>
+<tr class="row-odd"><td><p>pr_num</p></td>
+<td><p>Proposal Number</p></td>
+</tr>
+<tr class="row-even"><td><p>target_name</p></td>
+<td><p>Target name</p></td>
+</tr>
+<tr class="row-odd"><td><p>grid_name</p></td>
+<td><p>database id of grid name if grid observation</p></td>
+</tr>
+<tr class="row-even"><td><p>instr</p></td>
+<td><p>Instrument</p></td>
+</tr>
+<tr class="row-odd"><td><p>grat</p></td>
+<td><p>Grating (HETG, LETG, NONE)</p></td>
+</tr>
+<tr class="row-even"><td><p>type</p></td>
+<td><p>Observation type (TOO, GO, GTO)</p></td>
+</tr>
+<tr class="row-odd"><td><p>obs_cycle</p></td>
+<td><p>Observation cycle</p></td>
+</tr>
+<tr class="row-even"><td><p>prop_cycle</p></td>
+<td><p>Proposal cycle</p></td>
+</tr>
+<tr class="row-odd"><td><p>charge_cycle</p></td>
+<td><p>Charge cycle</p></td>
+</tr>
+<tr class="row-even"><td><p>start_date</p></td>
+<td><p>Observation start date</p></td>
+</tr>
+<tr class="row-odd"><td><p>public_avail</p></td>
+<td><p>Date publicly available</p></td>
+</tr>
+<tr class="row-even"><td><p>readout_detector</p></td>
+<td><p>Detector (which HRC detector or string of actual ACIS ccds)</p></td>
+</tr>
+<tr class="row-odd"><td><p>datamode</p></td>
+<td><p>Instrument data mode</p></td>
+</tr>
+<tr class="row-even"><td><p>joint</p></td>
+<td><p>Joint observatories (string)</p></td>
+</tr>
+<tr class="row-odd"><td><p>hst</p></td>
+<td><p>HST time (orbits?)</p></td>
+</tr>
+<tr class="row-even"><td><p>noao</p></td>
+<td><p>NOAO time</p></td>
+</tr>
+<tr class="row-odd"><td><p>nrao</p></td>
+<td><p>NRAO time</p></td>
+</tr>
+<tr class="row-even"><td><p>rxte</p></td>
+<td><p>RXTE time</p></td>
+</tr>
+<tr class="row-odd"><td><p>spitzer</p></td>
+<td><p>SPITZER time</p></td>
+</tr>
+<tr class="row-even"><td><p>suzaku</p></td>
+<td><p>SUZAKU time</p></td>
+</tr>
+<tr class="row-odd"><td><p>xmm</p></td>
+<td><p>XMM time</p></td>
+</tr>
+<tr class="row-even"><td><p>swift</p></td>
+<td><p>SWIFT time</p></td>
+</tr>
+<tr class="row-odd"><td><p>nustar</p></td>
+<td><p>NUSTAR time</p></td>
+</tr>
+<tr class="row-even"><td><p>category</p></td>
+<td><p>Science category</p></td>
+</tr>
+<tr class="row-odd"><td><p>seg_max_num</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>prop_title</p></td>
+<td><p>Proposal Title</p></td>
+</tr>
+<tr class="row-odd"><td><p>pi_name</p></td>
+<td><p>Principal investigator name</p></td>
+</tr>
+<tr class="row-even"><td><p>observer</p></td>
+<td><p>Observer name</p></td>
+</tr>
+<tr class="row-odd"><td><p>app_exp</p></td>
+<td><p>Approved exposure time (ks)</p></td>
+</tr>
+<tr class="row-even"><td><p>exp_time</p></td>
+<td><p>Actual exposure time (ks)</p></td>
+</tr>
+<tr class="row-odd"><td><p>ra</p></td>
+<td><p>Target Right Ascension</p></td>
+</tr>
+<tr class="row-even"><td><p>dec</p></td>
+<td><p>Target Declination</p></td>
+</tr>
+<tr class="row-odd"><td><p>soe_roll</p></td>
+<td><p>Roll from SOE</p></td>
+</tr>
+<tr class="row-even"><td><p>time_crit</p></td>
+<td><p>Time critical flag</p></td>
+</tr>
+<tr class="row-odd"><td><p>y_off</p></td>
+<td><p>Y offset</p></td>
+</tr>
+<tr class="row-even"><td><p>z_off</p></td>
+<td><p>Z offset</p></td>
+</tr>
+<tr class="row-odd"><td><p>x_sim</p></td>
+<td><p>X SIM</p></td>
+</tr>
+<tr class="row-even"><td><p>z_sim</p></td>
+<td><p>Z SIM</p></td>
+</tr>
+<tr class="row-odd"><td><p>raster</p></td>
+<td><p>Raster flag</p></td>
+</tr>
+<tr class="row-even"><td><p>obj_type</p></td>
+<td><p>Object type</p></td>
+</tr>
+<tr class="row-odd"><td><p>obj</p></td>
+<td><p>Solar system object name</p></td>
+</tr>
+<tr class="row-even"><td><p>photo</p></td>
+<td><p>Photometry flag</p></td>
+</tr>
+<tr class="row-odd"><td><p>vmag</p></td>
+<td><p>V Mag of object</p></td>
+</tr>
+<tr class="row-even"><td><p>est_cnt_rate</p></td>
+<td><p>Estimated count rate</p></td>
+</tr>
+<tr class="row-odd"><td><p>forder_cnt_rate</p></td>
+<td><p>First order count rate</p></td>
+</tr>
+<tr class="row-even"><td><p>count_rate</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>event_count</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>dither</p></td>
+<td><p>Dither flag</p></td>
+</tr>
+<tr class="row-odd"><td><p>y_amp</p></td>
+<td><p>Dither Y amplitude if custom dither</p></td>
+</tr>
+<tr class="row-even"><td><p>y_freq</p></td>
+<td><p>Dither Y frequency if custom dither</p></td>
+</tr>
+<tr class="row-odd"><td><p>y_phase</p></td>
+<td><p>Dither Y phase if custom dither</p></td>
+</tr>
+<tr class="row-even"><td><p>z_amp</p></td>
+<td><p>Dither Z amplitude if custom dither</p></td>
+</tr>
+<tr class="row-odd"><td><p>z_freq</p></td>
+<td><p>Dither Z frequency if custom dither</p></td>
+</tr>
+<tr class="row-even"><td><p>z_phase</p></td>
+<td><p>Dither Z phase if custom dither</p></td>
+</tr>
+<tr class="row-odd"><td><p>roll</p></td>
+<td><p>Roll constraint flag</p></td>
+</tr>
+<tr class="row-even"><td><p>window</p></td>
+<td><p>Window constraint flag</p></td>
+</tr>
+<tr class="row-odd"><td><p>unint</p></td>
+<td><p>Uninterrupt constraint flag</p></td>
+</tr>
+<tr class="row-even"><td><p>pointing_update</p></td>
+<td><p>Pointing update constraint flag</p></td>
+</tr>
+<tr class="row-odd"><td><p>monitor</p></td>
+<td><p>Monitor series flag</p></td>
+</tr>
+<tr class="row-even"><td><p>pre_id</p></td>
+<td><p>Obsid of previous observation in monitor series</p></td>
+</tr>
+<tr class="row-odd"><td><p>mon_min</p></td>
+<td><p>Min days from pre_id for monitor observation</p></td>
+</tr>
+<tr class="row-even"><td><p>mon_max</p></td>
+<td><p>Max days from pre_id for monitor observation</p></td>
+</tr>
+<tr class="row-odd"><td><p>group_id</p></td>
+<td><p>Database group id</p></td>
+</tr>
+<tr class="row-even"><td><p>constr</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>epoch</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>period</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>pstart</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>ps_marg</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>pend</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>pe_marg</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>multitel</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>multitel_obs</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>multitel_int</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>constr_rmk</p></td>
+<td><p>Constraint in remarks flag</p></td>
+</tr>
+<tr class="row-odd"><td><p>too_type</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>too_start</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>too_stop</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>alt_group</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>alt_trig</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>simode</p></td>
+<td><p>Science Instrument (SI) mode</p></td>
+</tr>
+<tr class="row-odd"><td><p>hrc</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>spect_mode</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>blank_en</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>u_hi</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>v_hi</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>u_lo</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>v_lo</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>timing</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>z_blk</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>acis</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>mode</p></td>
+<td><p>ACIS mode (CC or TE)</p></td>
+</tr>
+<tr class="row-even"><td><p>bep_pack</p></td>
+<td><p>ACIS BEP PACK (F, G, VF, F+B)</p></td>
+</tr>
+<tr class="row-odd"><td><p>dropped_chip_cnt</p></td>
+<td><p>Dropped chip count</p></td>
+</tr>
+<tr class="row-even"><td><p>i0</p></td>
+<td><p>ACIS I0 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-odd"><td><p>i1</p></td>
+<td><p>ACIS I1 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-even"><td><p>i2</p></td>
+<td><p>ACIS I2 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-odd"><td><p>i3</p></td>
+<td><p>ACIS I3 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-even"><td><p>s0</p></td>
+<td><p>ACIS S0 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-odd"><td><p>s1</p></td>
+<td><p>ACIS S1 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-even"><td><p>s2</p></td>
+<td><p>ACIS S2 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-odd"><td><p>s3</p></td>
+<td><p>ACIS S3 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-even"><td><p>s4</p></td>
+<td><p>ACIS S4 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-odd"><td><p>s5</p></td>
+<td><p>ACIS S5 ccd status (Y, N, optional with number, or D if dropped)</p></td>
+</tr>
+<tr class="row-even"><td><p>spectra_max_count</p></td>
+<td><p>Spectra Max Count</p></td>
+</tr>
+<tr class="row-odd"><td><p>multiple_spectral_lines</p></td>
+<td><p>Multiple spectral lines expected (Y, N)</p></td>
+</tr>
+<tr class="row-even"><td><p>subary</p></td>
+<td><p>ACIS subarray (CUSTOM, NONE)</p></td>
+</tr>
+<tr class="row-odd"><td><p>strt_row</p></td>
+<td><p>Start row of ACIS subarray</p></td>
+</tr>
+<tr class="row-even"><td><p>row_cnt</p></td>
+<td><p>Number of rows of ACIS subarray</p></td>
+</tr>
+<tr class="row-odd"><td><p>d_cyc</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>sec_cnt</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>pr_time</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>sec_time</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>f_time</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>oc_sum</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>oc_row</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>oc_col</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>evfil</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>evfil_lo</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>evfil_ra</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>efficient</p></td>
+<td><p>ACIS use most efficient (Y, N)</p></td>
+</tr>
+<tr class="row-odd"><td><p>spwin</p></td>
+<td><p>Spatial window (Y, N)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+<ul>
+<li><a class="reference internal" href="#">Chandra Data Archive and Ocat</a><ul>
+<li><a class="reference internal" href="#local-ocat-access">Local Ocat access</a></li>
+<li><a class="reference internal" href="#web-access-to-cda">Web access to CDA</a><ul>
+<li><a class="reference internal" href="#ocat">Ocat</a></li>
+<li><a class="reference internal" href="#proposal-abstracts">Proposal abstracts</a></li>
+<li><a class="reference internal" href="#archive-file-list">Archive file list</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ocat-table-fields">Ocat table fields</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="aspect_l1_products.html"
+                        title="previous chapter">Aspect L1 products</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="guide_stats.html"
+                        title="next chapter">Guide star statistics</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/cda_ocat.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<form action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right">
+    <a href="_sources/cda_ocat.rst.txt"
+       rel="nofollow">Page Source</a> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

@@ -14,13 +14,14 @@ access to a comprehensive set of information related to Chandra aspect:
 
    aca_dark_current
    aca_l0_telemetry
-   aspect_l1_products
    aca_diagnostic_telemetry
-   bad_obsids
-   aspect_vv
    acq_stats
+   aspect_l1_products
+   cda_ocat
    guide_stats
+   bad_obsids
    observation_parameters
+   aspect_vv
    starcheck
 
 API docs

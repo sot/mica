@@ -76,6 +76,12 @@ Functions
 .. autofunction:: get_obs_dirs
 .. autofunction:: get_obspar
 
+:mod:`mica.archive.cda.services`
+=====================================
+
+.. automodule:: mica.archive.cda.services
+   :members:
+
 :mod:`mica.bad_obsids`
 ======================
 
