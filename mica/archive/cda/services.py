@@ -399,7 +399,6 @@ def _get_cda_service_text(service, timeout=60, **params):
     # Query the service and check for errors
     url = f'{URL_CDA_SERVICES}/{CDA_SERVICES[service]}.do'
     verbose = params.pop('verbose', False)
-    print(f'{timeout=}')
     resp = requests.get(url, timeout=timeout, params=params)
     if verbose:
         print(f'GET {resp.url}')
