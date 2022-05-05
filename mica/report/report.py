@@ -22,7 +22,7 @@ import astropy.units as u
 from Ska.Shell import bash
 import agasc
 import Ska.DBI
-from Chandra.Time import DateTime
+from cxotime import CxoTime
 from Ska.engarchive import fetch_sci
 from kadi import events
 from kadi.commands.states import get_states
@@ -538,7 +538,7 @@ def main(obsid):
     try:
         if summary is not None and summary['lts_lt_plan'] is not None:
             plan_date = Time(summary['lts_lt_plan'])
-            if plan_date.cxcsec > (DateTime() + 21).secs:
+            if plan_date.cxcsec > (CxoTime.now() + 21).secs:
                 raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         obs_sc, mp_dir, status = get_starcheck(obsid)
@@ -580,7 +580,7 @@ def main(obsid):
                  'short_term': str(report_status.get('short_term')),
                  'starcheck': report_status.get('starcheck'),
                  'obsid': obsid,
-                 'checked_date': DateTime().date}
+                 'checked_date': CxoTime.now().date}
         f = open(os.path.join(outdir, 'notes.json'), 'w')
         f.write(json.dumps(notes,
                            sort_keys=True,
@@ -794,7 +794,7 @@ def main(obsid):
              'short_term': str(report_status.get('short_term')),
              'starcheck': report_status.get('starcheck'),
              'obsid': obsid,
-             'checked_date': DateTime().date}
+             'checked_date': CxoTime.now().date}
     if vv:
         notes['vv_version'] = vv.get('vv_version')
         notes['vv_revision'] = vv.get('revision')
@@ -849,7 +849,7 @@ def save_state_in_db(obsid, notes):
 
 
 def update():
-    recent_obs = get_states(start=-7, state_keys=['obsid'], merge_identical=True)
+    recent_obs = get_states(start=CxoTime.now() - 7, state_keys=['obsid'], merge_identical=True)
     for obs in recent_obs['obsid']:
         process_obsids([int(obs)]) # the int() is here to keep json happy downstream
 
@@ -890,7 +890,7 @@ def process_obsids(obsids, update=True, retry=False):
             # Write out a notes jason file
             notes = {'report_version': REPORT_VERSION,
                      'obsid': obsid,
-                     'checked_date': DateTime().date,
+                     'checked_date': CxoTime.now().date,
                      'last_sched': "{}".format(str(emess)),
                      'vv_version': None,
                      'vv_revision': None,
@@ -905,7 +905,7 @@ def process_obsids(obsids, update=True, retry=False):
                                indent=4))
             f.close()
             # Make a stub html page
-            proc_date = DateTime().date
+            proc_date = CxoTime.now().date
             jinja_env = jinja2.Environment(
                 loader=jinja2.PackageLoader('mica.report'))
             jinja_env.line_comment_prefix = '##'
