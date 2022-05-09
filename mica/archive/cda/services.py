@@ -528,7 +528,7 @@ def update_ocat_local(datafile, **params):
             dat[name] = np.char.encode(col, 'utf-8')
 
     dat.write(datafile, path='data', serialize_meta=True, overwrite=True,
-              format='hdf5', compression=True)
+              format='hdf5', compression=False)
 
 
 def get_ocat_local(obsid=None, *,
