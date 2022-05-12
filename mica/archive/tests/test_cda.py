@@ -94,6 +94,13 @@ def test_ocat_details_local_where(datafile):
     assert all('JET' in row['target_name'] for row in dat)
 
 
+def test_ocat_local_unicode():
+    """Unicode converstion from H5 encoding to UTF-8 is working"""
+    dat = get_ocat_local()
+    for key in ('observer', 'pi_name'):
+        assert np.any('ü' in val for val in dat[key])
+
+
 def test_ocat_special_query():
     dat = get_ocat_web(obsid=8008, rollReqs='true')
     assert len(dat) == 1

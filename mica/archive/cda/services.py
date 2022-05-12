@@ -604,7 +604,7 @@ def get_ocat_local(obsid=None, *,
                 # above 128 that signify a non-ASCII character.
                 itemsize = col.dtype.itemsize
                 col_bytes = col.view((np.uint8, (itemsize,)))
-                if np.all(col_bytes.flatten() < 128):
+                if np.all(col_bytes < 128):
                     # This is ASCII so the numpy UTF-8 version is just the same
                     # but with the single leading byte set.
                     col_utf8 = np.zeros((col_bytes.shape[0], itemsize * 4), dtype=np.uint8)
@@ -612,8 +612,10 @@ def get_ocat_local(obsid=None, *,
                         col_utf8[:, ii * 4] = col_bytes[:, ii]
                     dat[name] = col_utf8.view(('U', itemsize)).flatten()
                 else:
-                    # Use the standard slow way for non-ASCII input. This can
-                    # run for pi_name and observer columns.
+                    # Use the standard slow way for non-ASCII input. This is
+                    # commonly run for pi_name and observer columns that have
+                    # names with unicode characters, but it might run for other
+                    # columns since we have no spec on OCAT data content.
                     dat[name] = np.char.decode(col, 'utf-8')
 
     # Match target_name as a substring of the table target_name column.
