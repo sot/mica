@@ -1,8 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
+import shutil
 import tempfile
 from Chandra.Time import DateTime
-from Ska.Shell import bash
 import mica.common
 
 # Override MICA_ARCHIVE with a temporary directory
@@ -17,4 +17,4 @@ config = mica.starcheck.process.DEFAULT_CONFIG
 config['start'] = DateTime() - 30
 mica.starcheck.process.update(config)
 # Cleanup manually
-bash("rm -r {}".format(TESTDIR))
+shutil.rmtree(TESTDIR)

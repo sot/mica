@@ -19,7 +19,6 @@ from astropy.table import Table
 from astropy.time import Time
 import astropy.units as u
 
-from Ska.Shell import bash
 import agasc
 import Ska.DBI
 from cxotime import CxoTime
@@ -652,7 +651,7 @@ def main(obsid):
             newfile = os.path.join(outdir, os.path.basename(file))
             if not os.path.exists(newfile):
                 logger.debug("linking {} into {}".format(file, outdir))
-                bash("ln -s {} {}".format(file, outdir))
+                os.symlink(file, newfile)
         asp_dir = asp_l1.get_obs_dirs(obsid)['last']
         asp_logs = sorted(glob(os.path.join(asp_dir, "asp_l1_f*log*gz")))
         for log, interval in zip(asp_logs, vv['intervals']):

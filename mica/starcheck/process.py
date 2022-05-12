@@ -9,7 +9,6 @@ from pathlib import Path
 
 from six.moves import zip
 from Chandra.Time import DateTime
-import Ska.Shell
 import Ska.DBI
 
 from starcheck.parser import read_starcheck
