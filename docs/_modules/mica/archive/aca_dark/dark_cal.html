@@ -1,0 +1,353 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mica.archive.aca_dark.dark_cal &#8212; mica 4.29.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/bootstrap-astropy.css" />
+    
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/sidebar.js"></script>
+    <script type="text/javascript" src="../../../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="../../../../index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="https://cxc.cfa.harvard.edu/mta/ASPECT/tool_doc">
+        <span id="logotext1">ska</span><span id="logotext2">tools</span>
+    </a></li>
+    <li><a title="General Index" href="../../../../genindex.html">Index</a></li>
+    <li><a title="Module Index" href="../../../../py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li>
+	<a href="../../../../index.html">mica 4.29.0 documentation</a>
+	 &#187;
+      </li>
+      <li><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+      
+       
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for mica.archive.aca_dark.dark_cal</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">import</span> <span class="nn">six</span>
+<span class="kn">from</span> <span class="nn">six.moves</span> <span class="kn">import</span> <span class="nb">zip</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span><span class="p">,</span> <span class="n">ascii</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Column</span>
+<span class="kn">import</span> <span class="nn">pyyaks.context</span>
+<span class="kn">from</span> <span class="nn">Chandra.Time</span> <span class="kn">import</span> <span class="n">DateTime</span>
+<span class="kn">from</span> <span class="nn">chandra_aca.aca_image</span> <span class="kn">import</span> <span class="n">ACAImage</span>
+
+<span class="kn">from</span> <span class="nn">chandra_aca.dark_model</span> <span class="kn">import</span> <span class="n">dark_temp_scale</span><span class="p">,</span> <span class="n">DARK_SCALE_4C</span>
+<span class="kn">from</span> <span class="nn">mica.cache</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+<span class="kn">from</span> <span class="nn">mica.common</span> <span class="kn">import</span> <span class="n">MICA_ARCHIVE_PATH</span><span class="p">,</span> <span class="n">MissingDataError</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">file_defs</span>
+
+<span class="n">DARK_CAL</span> <span class="o">=</span> <span class="n">pyyaks</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">ContextDict</span><span class="p">(</span><span class="s1">&#39;dark_cal&#39;</span><span class="p">)</span>
+
+<span class="n">MICA_FILES</span> <span class="o">=</span> <span class="n">pyyaks</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">ContextDict</span><span class="p">(</span><span class="s1">&#39;update_mica_files&#39;</span><span class="p">,</span>
+                                        <span class="n">basedir</span><span class="o">=</span><span class="n">MICA_ARCHIVE_PATH</span><span class="p">)</span>
+<span class="n">MICA_FILES</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">file_defs</span><span class="o">.</span><span class="n">MICA_FILES</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="date_to_dark_id"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.date_to_dark_id">[docs]</a><span class="k">def</span> <span class="nf">date_to_dark_id</span><span class="p">(</span><span class="n">date</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert ``date`` to the corresponding YYYYDOY format for a dark cal identifiers.</span>
+
+<span class="sd">    :param date: any DateTime compatible format</span>
+<span class="sd">    :returns: dark id (YYYYDOY)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">date</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
+    <span class="k">return</span> <span class="n">date</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">+</span> <span class="n">date</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="dark_id_to_date"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.dark_id_to_date">[docs]</a><span class="k">def</span> <span class="nf">dark_id_to_date</span><span class="p">(</span><span class="n">dark_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert ``dark_id`` (YYYYDOY) to the corresponding DateTime &#39;date&#39; format.</span>
+
+<span class="sd">    :param date: dark id (YYYYDOY)</span>
+<span class="sd">    :returns: str in DateTime &#39;date&#39; format</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dark_id</span><span class="p">[:</span><span class="mi">4</span><span class="p">],</span> <span class="n">dark_id</span><span class="p">[</span><span class="mi">4</span><span class="p">:])</span></div>
+
+
+<div class="viewcode-block" id="get_dark_cal_dirs"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_dirs">[docs]</a><span class="nd">@lru_cache</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">get_dark_cal_dirs</span><span class="p">(</span><span class="n">dark_cals_dir</span><span class="o">=</span><span class="n">MICA_FILES</span><span class="p">[</span><span class="s1">&#39;dark_cals_dir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get an ordered dict of directory paths containing dark current calibration files,</span>
+<span class="sd">    where the key is the dark cal identifier (YYYYDOY) and the value is the path.</span>
+
+<span class="sd">    :param source: source of dark cal directories (&#39;mica&#39;|&#39;ska&#39;)</span>
+<span class="sd">    :returns: ordered dict of absolute directory paths</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dark_cal_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">fn</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">dark_cals_dir</span><span class="p">)</span>
+                           <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[12]\d</span><span class="si">{6}</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="n">fn</span><span class="p">)])</span>
+    <span class="n">dark_cal_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dark_cals_dir</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">id_</span> <span class="ow">in</span> <span class="n">dark_cal_ids</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">dark_cal_ids</span><span class="p">,</span> <span class="n">dark_cal_dirs</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="get_dark_cal_id"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_id">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_id</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the dark calibration id corresponding to ``date``.</span>
+
+<span class="sd">    If ``select`` is ``&#39;before&#39;`` (default) then use the first calibration which</span>
+<span class="sd">    occurs before ``date``.  Other valid options are ``&#39;after&#39;`` and ``&#39;nearest&#39;``.</span>
+
+<span class="sd">    :param date: date in any DateTime format</span>
+<span class="sd">    :param select: method to select dark cal (before|nearest|after)</span>
+
+<span class="sd">    :returns: dark cal id string (YYYYDOY)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dark_cals</span> <span class="o">=</span> <span class="n">get_dark_cal_dirs</span><span class="p">()</span>
+    <span class="n">dark_id</span> <span class="o">=</span> <span class="n">date_to_dark_id</span><span class="p">(</span><span class="n">date</span><span class="p">)</span>
+
+    <span class="c1"># Special case if dark_id is exactly an existing dark cal then return that dark</span>
+    <span class="c1"># cal regardless of the select method.</span>
+    <span class="k">if</span> <span class="n">dark_id</span> <span class="ow">in</span> <span class="n">dark_cals</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">dark_id</span>
+
+    <span class="n">dark_cal_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">dark_cals</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">date_secs</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
+    <span class="n">dark_cal_secs</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dark_id_to_date</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span> <span class="k">for</span> <span class="n">id_</span> <span class="ow">in</span> <span class="n">dark_cal_ids</span><span class="p">]))</span><span class="o">.</span><span class="n">secs</span>
+
+    <span class="k">if</span> <span class="n">select</span> <span class="o">==</span> <span class="s1">&#39;nearest&#39;</span><span class="p">:</span>
+        <span class="n">ii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dark_cal_secs</span> <span class="o">-</span> <span class="n">date_secs</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">select</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;before&#39;</span><span class="p">,</span> <span class="s1">&#39;after&#39;</span><span class="p">):</span>
+        <span class="n">ii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">dark_cal_secs</span><span class="p">,</span> <span class="n">date_secs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">select</span> <span class="o">==</span> <span class="s1">&#39;before&#39;</span><span class="p">:</span>
+            <span class="n">ii</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;select arg must be one of &quot;nearest&quot;, &quot;before&quot;, or &quot;after&quot;&#39;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">out_dark_id</span> <span class="o">=</span> <span class="n">dark_cal_ids</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">MissingDataError</span><span class="p">(</span><span class="s1">&#39;No dark cal found </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">select</span><span class="p">,</span> <span class="n">date</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">out_dark_id</span></div>
+
+
+<span class="nd">@DARK_CAL</span><span class="o">.</span><span class="n">cache</span>
+<span class="k">def</span> <span class="nf">_get_dark_cal_image_props</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aca_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                              <span class="n">allow_negative</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding</span>
+<span class="sd">    dark_props file.</span>
+
+<span class="sd">    :param date: date in any DateTime format</span>
+<span class="sd">    :param select: method to select dark cal (before|nearest|after)</span>
+<span class="sd">    :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)</span>
+<span class="sd">    :param aca_image: return an AcaImage instance</span>
+<span class="sd">    :param allow_negative: allow negative values in raw dark map (default=False)</span>
+
+<span class="sd">    :returns: 1024 x 1024 ndarray with dark cal image in e-/s, props dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">DARK_CAL</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_dark_cal_id</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">MICA_FILES</span><span class="p">[</span><span class="s1">&#39;dark_image.fits&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">,</span> <span class="n">memmap</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdus</span><span class="p">:</span>
+        <span class="n">dark</span> <span class="o">=</span> <span class="n">hdus</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="c1"># Recast as native byte ordering since FITS is typically not. This</span>
+        <span class="c1"># statement is normally the same as dark.astype(np.float32).</span>
+        <span class="n">dark</span> <span class="o">=</span> <span class="n">dark</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dark</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">MICA_FILES</span><span class="p">[</span><span class="s1">&#39;dark_props.json&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+        <span class="n">props</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
+
+    <span class="c1"># Change unicode to ascii at top level</span>
+    <span class="k">if</span> <span class="n">six</span><span class="o">.</span><span class="n">PY2</span><span class="p">:</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">props</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">asciiprops</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+            <span class="n">asciiprops</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="n">props</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="n">props</span> <span class="o">=</span> <span class="n">asciiprops</span>
+
+    <span class="k">if</span> <span class="n">t_ccd_ref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Scale factor to adjust data to an effective temperature of t_ccd_ref.</span>
+        <span class="c1"># For t_ccds warmer than t_ccd_ref this scale factor is &lt; 1, i.e. the</span>
+        <span class="c1"># observed dark current is made smaller to match what it would be at the</span>
+        <span class="c1"># lower reference temperature.</span>
+        <span class="n">t_ccd</span> <span class="o">=</span> <span class="n">props</span><span class="p">[</span><span class="s1">&#39;ccd_temp&#39;</span><span class="p">]</span>
+        <span class="n">dark</span> <span class="o">*=</span> <span class="n">dark_temp_scale</span><span class="p">(</span><span class="n">t_ccd</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_negative</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">dark</span><span class="p">,</span> <span class="n">a_min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">dark</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">aca_image</span><span class="p">:</span>
+        <span class="n">dark</span> <span class="o">=</span> <span class="n">ACAImage</span><span class="p">(</span><span class="n">dark</span><span class="p">,</span> <span class="n">row0</span><span class="o">=-</span><span class="mi">512</span><span class="p">,</span> <span class="n">col0</span><span class="o">=-</span><span class="mi">512</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dark</span><span class="p">,</span> <span class="n">props</span>
+
+
+<div class="viewcode-block" id="get_dark_cal_image"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_image">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_image</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aca_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                       <span class="n">allow_negative</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the dark calibration image (e-/s) nearest to ``date``.</span>
+
+<span class="sd">    If ``select`` is ``&#39;before&#39;`` (default) then use the first calibration which</span>
+<span class="sd">    occurs before ``date``.  Other valid options are ``&#39;after&#39;`` and ``&#39;nearest&#39;``.</span>
+
+<span class="sd">    :param date: date in any DateTime format</span>
+<span class="sd">    :param select: method to select dark cal (before|nearest|after)</span>
+<span class="sd">    :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)</span>
+<span class="sd">    :param aca_image: return an ACAImage instance instead of ndarray</span>
+<span class="sd">    :param allow_negative: allow negative values in raw dark map (default=False)</span>
+
+<span class="sd">    :returns: 1024 x 1024 ndarray with dark cal image in e-/s</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dark</span><span class="p">,</span> <span class="n">props</span> <span class="o">=</span> <span class="n">_get_dark_cal_image_props</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="n">select</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="o">=</span><span class="n">t_ccd_ref</span><span class="p">,</span>
+                                            <span class="n">aca_image</span><span class="o">=</span><span class="n">aca_image</span><span class="p">,</span>
+                                            <span class="n">allow_negative</span><span class="o">=</span><span class="n">allow_negative</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dark</span></div>
+
+
+<div class="viewcode-block" id="get_dark_cal_props"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_props">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_props</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">,</span> <span class="n">include_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">aca_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_negative</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a dark calibration properties structure for ``date``</span>
+
+<span class="sd">    If ``select`` is ``&#39;before&#39;`` (default) then use the first calibration which</span>
+<span class="sd">    occurs before ``date``.  Other valid options are ``&#39;after&#39;`` and ``&#39;nearest&#39;``.</span>
+
+<span class="sd">    If ``include_image`` is True then an additional column or key ``image`` is</span>
+<span class="sd">    defined which contains the corresponding 1024x1024 dark cal image.</span>
+
+<span class="sd">    :param date: date in any DateTime format</span>
+<span class="sd">    :param select: method to select dark cal (before|nearest|after)</span>
+<span class="sd">    :param include_image: include the dark cal images in output (default=False)</span>
+<span class="sd">    :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)</span>
+<span class="sd">    :param aca_image: return an ACAImage instance instead of ndarray</span>
+<span class="sd">    :param allow_negative: allow negative values in raw dark map (default=False)</span>
+
+<span class="sd">    :returns: dict of dark calibration properties</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dark</span><span class="p">,</span> <span class="n">props</span> <span class="o">=</span> <span class="n">_get_dark_cal_image_props</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="n">select</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                            <span class="n">aca_image</span><span class="o">=</span><span class="n">aca_image</span><span class="p">,</span>
+                                            <span class="n">allow_negative</span><span class="o">=</span><span class="n">allow_negative</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">include_image</span><span class="p">:</span>
+        <span class="n">props</span><span class="p">[</span><span class="s1">&#39;image&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dark</span>
+
+    <span class="k">return</span> <span class="n">props</span></div>
+
+
+<div class="viewcode-block" id="get_dark_cal_props_table"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_props_table">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_props_table</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">include_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">as_table</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a table of dark calibration properties between ``start`` and ``stop``.</span>
+
+<span class="sd">    If ``include_image`` is True then an additional column or key ``image`` is</span>
+<span class="sd">    defined which contains the corresponding 1024x1024 dark cal image.</span>
+
+<span class="sd">    If ``as_table`` is True (default) then the result is an astropy Table object.</span>
+<span class="sd">    If False then a list of dicts is returned.  In this case the full contents</span>
+<span class="sd">    of the properties file including replica properties is available.</span>
+
+<span class="sd">    :param start: start time (default=beginning of mission)</span>
+<span class="sd">    :param stop: stop time (default=now)</span>
+<span class="sd">    :param include_image: include the dark cal images in output (default=False)</span>
+<span class="sd">    :param as_table: return a Table instead of a list (default=True)</span>
+
+<span class="sd">    :returns: astropy Table or list of dark calibration properties</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">start_id</span> <span class="o">=</span> <span class="n">date_to_dark_id</span><span class="p">(</span><span class="s1">&#39;1999:001:12:00:00&#39;</span> <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">start</span><span class="p">)</span>
+    <span class="n">stop_id</span> <span class="o">=</span> <span class="n">date_to_dark_id</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span>
+    <span class="n">dark_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="n">dark_id</span> <span class="k">for</span> <span class="n">dark_id</span> <span class="ow">in</span> <span class="n">get_dark_cal_dirs</span><span class="p">()</span>
+                 <span class="k">if</span> <span class="n">dark_id</span> <span class="o">&gt;=</span> <span class="n">start_id</span> <span class="ow">and</span> <span class="n">dark_id</span> <span class="o">&lt;=</span> <span class="n">stop_id</span><span class="p">]</span>
+
+    <span class="c1"># Get the list of properties structures</span>
+    <span class="n">props</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_dark_cal_props</span><span class="p">(</span><span class="n">dark_id</span><span class="p">,</span> <span class="n">include_image</span><span class="o">=</span><span class="n">include_image</span><span class="p">)</span> <span class="k">for</span> <span class="n">dark_id</span> <span class="ow">in</span> <span class="n">dark_dirs</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">as_table</span><span class="p">:</span>
+        <span class="c1"># Get rid of a non-scalar data structures and collect col names</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">props</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">prop</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)):</span>
+                    <span class="k">del</span> <span class="n">prop</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                    <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">props</span><span class="p">:</span>
+            <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">prop</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vals</span><span class="p">))</span>
+        <span class="n">table_props</span> <span class="o">=</span> <span class="n">ascii</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;csv&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">include_image</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;image&#39;</span><span class="p">][</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">props</span><span class="p">])</span>
+            <span class="n">images</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">table_props</span><span class="p">[</span><span class="s1">&#39;image&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">images</span>
+        <span class="n">props</span> <span class="o">=</span> <span class="n">table_props</span>
+
+    <span class="k">return</span> <span class="n">props</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+
+
+<form action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right"> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

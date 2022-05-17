@@ -4,16 +4,16 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chandra Data Archive and Ocat &#8212; mica 4.28.0 documentation</title>
-    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Chandra Data Archive and Ocat &#8212; mica 4.29.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
     <script type="text/javascript" src="_static/sidebar.js"></script>
     <script type="text/javascript" src="_static/copybutton.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -60,7 +60,7 @@
 	 |
       </li>
       <li>
-	<a href="index.html">mica 4.28.0 documentation</a>
+	<a href="index.html">mica 4.29.0 documentation</a>
 	 &#187;
       </li>
       
@@ -74,9 +74,9 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="chandra-data-archive-and-ocat">
+  <section id="chandra-data-archive-and-ocat">
 <h1>Chandra Data Archive and Ocat<a class="headerlink" href="#chandra-data-archive-and-ocat" title="Permalink to this headline">¶</a></h1>
-<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.cda.services</span></code> module provides a Python interface to the
+<p>The <a class="reference internal" href="api.html#module-mica.archive.cda.services" title="mica.archive.cda.services"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.cda.services</span></code></a> module provides a Python interface to the
 Chandra Data Archive (CDA) web services and an interface to a local disk copy of
 the Observation Catalog (Ocat) if that is available.</p>
 <p>The CDA web services interface provides access to the following. Note however
@@ -101,9 +101,9 @@ It is located at:</p>
 Ocat.</p>
 <p>This is the type of content that can be seen directly at:</p>
 <p><a class="reference external" href="https://cda.harvard.edu/srservices/ocatDetails.do?obsid=2121">https://cda.harvard.edu/srservices/ocatDetails.do?obsid=2121</a></p>
-<div class="section" id="local-ocat-access">
+<section id="local-ocat-access">
 <h2>Local Ocat access<a class="headerlink" href="#local-ocat-access" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_local()</span></code> function provides fast
+<p>The <a class="reference internal" href="api.html#mica.archive.cda.services.get_ocat_local" title="mica.archive.cda.services.get_ocat_local"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_local()</span></code></a> function provides fast
 access to the Ocat if the local Ocat HDF5 file is available on disk. In
 particular reading the entire Ocat or querying on a target name substring is at
 least 10 times faster than using the <a class="reference internal" href="#web-access-to-cda">Web access to CDA</a>.</p>
@@ -157,23 +157,23 @@ fast in-kernel filtering of the table contents.
 See <a class="reference external" href="https://www.pytables.org/usersguide/condition_syntax.html">https://www.pytables.org/usersguide/condition_syntax.html</a> for details.
 This feature is used internally for the exact parameter matching as well as
 for the positional cone search around a coordinate.</p>
-</div>
-<div class="section" id="web-access-to-cda">
+</section>
+<section id="web-access-to-cda">
 <h2>Web access to CDA<a class="headerlink" href="#web-access-to-cda" title="Permalink to this headline">¶</a></h2>
 <p>The Chandra Data Archive hosts a web service that provides access to various
 elements of the archive. Examples follow.</p>
-<div class="section" id="ocat">
+<section id="ocat">
 <h3>Ocat<a class="headerlink" href="#ocat" title="Permalink to this headline">¶</a></h3>
-<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_web()</span></code> function for web access to
+<p>The <a class="reference internal" href="api.html#mica.archive.cda.services.get_ocat_web" title="mica.archive.cda.services.get_ocat_web"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_web()</span></code></a> function for web access to
 the Ocat is similar to the local file access documented above, and all of those
 examples will work just by changing <code class="docutils literal notranslate"><span class="pre">get_ocat_local</span></code> to <code class="docutils literal notranslate"><span class="pre">get_ocat_web</span></code>.</p>
 <p>Additional functionality is described in the function docs
-<code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_web()</span></code>. In particular the Web API parameters
+<a class="reference internal" href="api.html#mica.archive.cda.services.get_ocat_web" title="mica.archive.cda.services.get_ocat_web"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_ocat_web()</span></code></a>. In particular the Web API parameters
 can be used via the function call.</p>
-</div>
-<div class="section" id="proposal-abstracts">
+</section>
+<section id="proposal-abstracts">
 <h3>Proposal abstracts<a class="headerlink" href="#proposal-abstracts" title="Permalink to this headline">¶</a></h3>
-<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_proposal_abstract()</span></code> function allows
+<p>The <a class="reference internal" href="api.html#mica.archive.cda.services.get_proposal_abstract" title="mica.archive.cda.services.get_proposal_abstract"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_proposal_abstract()</span></code></a> function allows
 getting information about the proposal and the abstract:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive.cda</span> <span class="kn">import</span> <span class="n">get_proposal_abstract</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">get_proposal_abstract</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="mi">8000</span><span class="p">)</span>
@@ -194,10 +194,10 @@ getting information about the proposal and the abstract:</p>
 <span class="go"> &#39;proposal_title&#39;: &#39;THE CHANDRA-COSMOS SURVEY&#39;}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="archive-file-list">
+</section>
+<section id="archive-file-list">
 <h3>Archive file list<a class="headerlink" href="#archive-file-list" title="Permalink to this headline">¶</a></h3>
-<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">get_archive_file_list()</span></code> function allows
+<p>The <a class="reference internal" href="api.html#mica.archive.cda.services.get_archive_file_list" title="mica.archive.cda.services.get_archive_file_list"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_archive_file_list()</span></code></a> function allows
 getting a list of archive files for given <code class="docutils literal notranslate"><span class="pre">obsid</span></code>, <code class="docutils literal notranslate"><span class="pre">detector</span></code>, <code class="docutils literal notranslate"><span class="pre">level</span></code>,
 and <code class="docutils literal notranslate"><span class="pre">dataset</span></code> (and possibly other parameters).</p>
 <p>Example:</p>
@@ -221,9 +221,9 @@ and <code class="docutils literal notranslate"><span class="pre">dataset</span><
 <span class="go">acisf00400N007_evt2.fits  4619520 2011-07-08 13:52:57</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="ocat-table-fields">
+</section>
+</section>
+<section id="ocat-table-fields">
 <h2>Ocat table fields<a class="headerlink" href="#ocat-table-fields" title="Permalink to this headline">¶</a></h2>
 <p>Some of these fields may be described in the chaser help at:</p>
 <p><a class="reference external" href="https://cda.harvard.edu/chaser/chaserFieldHelp.html">https://cda.harvard.edu/chaser/chaserFieldHelp.html</a></p>
@@ -612,8 +612,8 @@ and <code class="docutils literal notranslate"><span class="pre">dataset</span><
 </tr>
 </tbody>
 </table>
-</div>
-</div>
+</section>
+</section>
 
 
             <div class="clearer"></div>
@@ -666,7 +666,7 @@ and <code class="docutils literal notranslate"><span class="pre">dataset</span><
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
   </p>
 </footer>
   </body>

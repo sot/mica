@@ -1,0 +1,777 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mica.archive.cda.services &#8212; mica 4.29.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/bootstrap-astropy.css" />
+    
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/sidebar.js"></script>
+    <script type="text/javascript" src="../../../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,600' rel='stylesheet' type='text/css'/>
+
+  </head><body>
+<div class="topbar">
+  <a class="brand" title="Documentation Home" href="../../../../index.html"><span id="logotext1">Ska!</span><span id="logotext2">mi</span><span id="logotext3">ca</span></a>
+  <ul>
+    
+    <li><a class="home" title="Homepage" href="https://cxc.cfa.harvard.edu/mta/ASPECT/tool_doc">
+        <span id="logotext1">ska</span><span id="logotext2">tools</span>
+    </a></li>
+    <li><a title="General Index" href="../../../../genindex.html">Index</a></li>
+    <li><a title="Module Index" href="../../../../py-modindex.html">Modules</a></li>
+    <li>
+      
+      
+<form action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      
+    </li>
+  </ul>
+</div>
+
+<div class="related">
+    <h3>Navigation</h3>
+    <ul>
+      <li>
+	<a href="../../../../index.html">mica 4.29.0 documentation</a>
+	 &#187;
+      </li>
+      <li><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+      
+       
+    </ul>
+</div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for mica.archive.cda.services</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;Python interface to the Chandra Data Archive (CDA) web services and an</span>
+<span class="sd">interface to a local disk copy of the Observation Catalog (Ocat).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">tables</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">MaskedColumn</span>
+<span class="kn">from</span> <span class="nn">astropy.coordinates</span> <span class="kn">import</span> <span class="n">SkyCoord</span>
+
+<span class="kn">from</span> <span class="nn">mica.common</span> <span class="kn">import</span> <span class="n">MICA_ARCHIVE</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;get_archive_file_list&#39;</span><span class="p">,</span> <span class="s1">&#39;get_proposal_abstract&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;get_ocat_web&#39;</span><span class="p">,</span> <span class="s1">&#39;get_ocat_local&#39;</span><span class="p">]</span>
+
+<span class="n">OCAT_TABLE_PATH</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;ocat_target_table.h5&#39;</span>
+<span class="n">OCAT_TABLE_CACHE</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="n">URL_CDA_SERVICES</span> <span class="o">=</span> <span class="s2">&quot;https://cda.harvard.edu/srservices&quot;</span>
+<span class="n">CDA_SERVICES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;prop_abstract&#39;</span><span class="p">:</span> <span class="s1">&#39;propAbstract&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ocat_summary&#39;</span><span class="p">:</span> <span class="s1">&#39;ocatList&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ocat_details&#39;</span><span class="p">:</span> <span class="s1">&#39;ocatDetails&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;archive_file_list&#39;</span><span class="p">:</span> <span class="s1">&#39;archiveFileList&#39;</span><span class="p">}</span>
+
+<span class="c1"># Units copied from https://github.com/jzuhone/pycda/blob/</span>
+<span class="c1"># 5a4261328eab989bab91bed17f426ad17d876988/pycda/obscat.py#L38</span>
+<span class="n">OCAT_UNITS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;app_exp&quot;</span><span class="p">:</span> <span class="s2">&quot;ks&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;count_rate&quot;</span><span class="p">:</span> <span class="s2">&quot;s**-1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;est_cnt_rate&quot;</span><span class="p">:</span> <span class="s2">&quot;s**-1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;evfil_lo&quot;</span><span class="p">:</span> <span class="s2">&quot;keV&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;evfil_ra&quot;</span><span class="p">:</span> <span class="s2">&quot;keV&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;exp_time&quot;</span><span class="p">:</span> <span class="s2">&quot;ks&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;f_time&quot;</span><span class="p">:</span> <span class="s2">&quot;s&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;forder_cnt_rate&quot;</span><span class="p">:</span> <span class="s2">&quot;s**-1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;soe_roll&quot;</span><span class="p">:</span> <span class="s2">&quot;degree&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;x_sim&quot;</span><span class="p">:</span> <span class="s2">&quot;mm&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;y_off&quot;</span><span class="p">:</span> <span class="s2">&quot;arcmin&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;z_off&quot;</span><span class="p">:</span> <span class="s2">&quot;arcmin&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;z_sim&quot;</span><span class="p">:</span> <span class="s2">&quot;mm&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="n">RETURN_TYPE_DOCS</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;If ``return_type=&#39;auto&#39;`` the return type is determined by the rules:</span>
+
+<span class="s2">    - If ``obsid`` is provided</span>
+<span class="s2">      AND the obsid corresponds to an integer</span>
+<span class="s2">      AND the returned result has a single row</span>
+<span class="s2">      THEN the return type is ``dict``</span>
+<span class="s2">      ELSE the return tuple is a ``Table``.</span>
+
+<span class="s2">    If ``return_type=&#39;table&#39;`` then always return a ``Table``.&quot;&quot;&quot;</span>
+
+<span class="n">CDA_PARAM_DOCS</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;Additional function args for CDA search parameters::</span>
+
+<span class="s2">        instrument=ACIS,ACIS-I,ACIS-S,HRC,HRC-I,HRC-S</span>
+<span class="s2">        grating=NONE,LETG,HETG</span>
+<span class="s2">        type=ER,TOO,CAL,GO,GTO,DDT</span>
+<span class="s2">        cycle=00,01,02,03,04, ...</span>
+<span class="s2">        category=SOLAR SYSTEM,</span>
+<span class="s2">            NORMAL GALAXIES,</span>
+<span class="s2">            STARS AND WD,</span>
+<span class="s2">            WD BINARIES AND CV,</span>
+<span class="s2">            BH AND NS BINARIES,</span>
+<span class="s2">            NORMAL GALAXIES</span>
+<span class="s2">            CLUSTERS OF GALAXIES,</span>
+<span class="s2">            ACTIVE GALAXIES AND QUASARS,</span>
+<span class="s2">            GALACTIC DIFFUSE EMISSION AND SURVEYS,</span>
+<span class="s2">            EXTRAGALACTIC DIFFUSE EMISSION AND SURVEYS</span>
+<span class="s2">        jointObservation= HST,XMM,Spitzer,NOAO,NRAO,NuSTAR,Suzaku,Swift,RXTE</span>
+<span class="s2">        status= archived,observed,scheduled, unobserved,untriggered,canceled,deleted</span>
+<span class="s2">        expMode= ACIS TE,ACIS CC,HRC Timing</span>
+<span class="s2">        grid = &#39;is not null&#39; or &#39;is null&#39;</span>
+
+<span class="s2">    Input coordinate specifications::</span>
+
+<span class="s2">        inputCoordFrame=J2000 (other options: b1950, bxxxx, ec1950, ecxxxx, galactic)</span>
+<span class="s2">        inputCoordEquinox=2000 (4 digit year)</span>
+
+<span class="s2">    These parameters are single text entries::</span>
+
+<span class="s2">        target: matches any part of target name</span>
+<span class="s2">        piName: matches any part of PI name</span>
+<span class="s2">        observer: matches any part of observer name</span>
+<span class="s2">        propNum: proposal number</span>
+<span class="s2">        propTitle: matches any part of proposal title</span>
+
+<span class="s2">    These parameters form a cone search; if you use one you should use them all::</span>
+
+<span class="s2">        lon</span>
+<span class="s2">        lat</span>
+<span class="s2">        radius (arcmin, default=1.0)</span>
+
+<span class="s2">    These parameters form a box search; one lon &amp; one lat are required.</span>
+<span class="s2">    Open-ended ranges are allowed. (Such as lonMin=15 with no lonMax.)</span>
+<span class="s2">    ::</span>
+
+<span class="s2">        lonMin</span>
+<span class="s2">        lonMax</span>
+<span class="s2">        latMin</span>
+<span class="s2">        latMax</span>
+
+<span class="s2">    These parameters are range lists, where the range is indicated by a hyphen (-).</span>
+<span class="s2">    Multiple ranges can be entered separated by commas::</span>
+
+<span class="s2">        obsid  (eg. obsid=100,200-300,600-1000,1800)</span>
+<span class="s2">        seqNum</span>
+<span class="s2">        expTime</span>
+<span class="s2">        appExpTime</span>
+<span class="s2">        countRate</span>
+
+<span class="s2">    These parameters are date range lists, where the range is</span>
+<span class="s2">    indicated by a hyphen (/). Multiple ranges can be entered separated</span>
+<span class="s2">    by commas. Valid dates are in one of the following formats:</span>
+<span class="s2">    YYYY-MM-DD, YYYY-MM-DD hh:mm, or YYYY-MM-DD hh:mm:ss</span>
+<span class="s2">    ::</span>
+
+<span class="s2">        startDate</span>
+<span class="s2">        releaseDate</span>
+
+<span class="s2">    These specify how the data is displayed and ordered::</span>
+
+<span class="s2">        outputCoordFrame=J2000 (other options: b1950, bxxxx, ec1950, ecxxxx, galactic)</span>
+<span class="s2">        outputCoordEquinox=2000 (4 digit year)</span>
+<span class="s2">        outputCoordUnits=decimal (other option: sexagesimal)</span>
+<span class="s2">        sortColumn=ra (other options:</span>
+<span class="s2">                dec,seqNum,instrument,grating,</span>
+<span class="s2">                appExpTime,expTime,</span>
+<span class="s2">                target,piName,observer,status,</span>
+<span class="s2">                startDate,releaseDate,</span>
+<span class="s2">                obsid,propNum,category,type,cycle)</span>
+<span class="s2">        sortOrder=ascending (other option: descending)</span>
+<span class="s2">        maxResults=#  (the number of results after which to stop displaying)</span>
+
+<span class="s2">    Special parameters that change the output table contents are available for</span>
+<span class="s2">    full output (``summary=False``):</span>
+<span class="s2">    - ``acisWindows=&#39;true&#39;``: return ACIS windows details for a single obsid</span>
+<span class="s2">    - ``rollReqs=&#39;true&#39;``: return roll requirements for a single obsid</span>
+<span class="s2">    - ``timeReqs=&#39;true&#39;``: return time requirements for a single obsid</span>
+
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">COMMON_PARAM_DOCS</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;:param target_name: str, optional</span>
+<span class="s2">        Target name, used in SkyCoord.from_name() to define ``ra`` and ``dec``</span>
+<span class="s2">        if ``resolve_name`` is True, otherwise matches a substring of the</span>
+<span class="s2">        table column ``target_name`` (ignoring spaces).</span>
+<span class="s2">    :param resolve_name: bool, optional</span>
+<span class="s2">        If True, use ``target_name`` to resolve ``ra`` and ``dec``.</span>
+<span class="s2">    :param ra: float, optional</span>
+<span class="s2">        Right Ascension in decimal degrees</span>
+<span class="s2">    :param dec: float, optional</span>
+<span class="s2">        Declination in decimal degrees</span>
+<span class="s2">    :param radius: float, optional</span>
+<span class="s2">        Search radius in arcmin (default=1.0)&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">html_to_text</span><span class="p">(</span><span class="n">html</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">bs4</span> <span class="kn">import</span> <span class="n">BeautifulSoup</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">html</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="s1">&#39;lxml&#39;</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\n+&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span>
+
+
+<span class="k">def</span> <span class="nf">clean_text</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<div class="viewcode-block" id="get_archive_file_list"><a class="viewcode-back" href="../../../../api.html#mica.archive.cda.services.get_archive_file_list">[docs]</a><span class="k">def</span> <span class="nf">get_archive_file_list</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">detector</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s1">&#39;flight&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get list of archive files for given ``obsid``, ``detector``, ``level``, and ``dataset``.</span>
+
+<span class="sd">    Other parameters can be ``subdetector``, ``filetype``, ``filename``, and ``obi``.</span>
+
+<span class="sd">    Note: this may not be working for level 0 products.</span>
+
+<span class="sd">    Examples::</span>
+
+<span class="sd">       &gt;&gt;&gt; get_archive_file_list(obsid=2365, detector=&#39;pcad&#39;,</span>
+<span class="sd">       ...                           subdetector=&#39;aca&#39;, level=1, obi=2)</span>
+<span class="sd">       &lt;Table length=27&gt;</span>
+<span class="sd">               Filename            Filesize      Timestamp</span>
+<span class="sd">                   str30               int64          str19</span>
+<span class="sd">       ------------------------------ -------- -------------------</span>
+<span class="sd">       pcadf126690624N007_asol1.fits  7300800 2021-04-09 08:04:29</span>
+<span class="sd">       pcadf02365_002N001_asol1.fits  4728960 2021-04-09 08:04:30</span>
+<span class="sd">                               ...      ...                 ...</span>
+<span class="sd">       pcadf126695890N007_adat61.fits  1293120 2021-04-09 08:04:28</span>
+<span class="sd">       pcadf126695890N007_adat71.fits  1293120 2021-04-09 08:04:28</span>
+
+<span class="sd">       &gt;&gt;&gt; get_archive_file_list(obsid=400, detector=&#39;acis&#39;, level=2, filetype=&#39;evt2&#39;)</span>
+<span class="sd">       &lt;Table length=1&gt;</span>
+<span class="sd">               Filename         Filesize      Timestamp</span>
+<span class="sd">                str24            int64          str19</span>
+<span class="sd">       ------------------------ -------- -------------------</span>
+<span class="sd">       acisf00400N007_evt2.fits  4619520 2011-07-08 13:52:57</span>
+
+<span class="sd">    :param obsid: int, str</span>
+<span class="sd">        Observation ID</span>
+<span class="sd">    :param detector: str</span>
+<span class="sd">        Detector name (e.g. &#39;pcad&#39;, &#39;acis&#39;)</span>
+<span class="sd">    :param level: int, float, str</span>
+<span class="sd">        Level name (e.g. 0, 0.5, 1, 1.5, 2, 3)</span>
+<span class="sd">    :param dataset: str</span>
+<span class="sd">        Dataset name (default=&#39;flight&#39;)</span>
+<span class="sd">    :param **params: dict</span>
+<span class="sd">        Additional parameters to filter query (subdetector, filetype, obi, filename)</span>
+<span class="sd">    :return: astropy Table</span>
+<span class="sd">        Table of archive files</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;dataset&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span>
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;detector&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">detector</span>
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;level&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">level</span>
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obsid</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_get_cda_service_text</span><span class="p">(</span><span class="s1">&#39;archive_file_list&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">splitlines</span><span class="p">(),</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;ascii.basic&#39;</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">guess</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="c1"># Original Filesize has commas for the thousands like 11,233,456</span>
+    <span class="n">filesize</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">dat</span><span class="p">[</span><span class="s1">&#39;Filesize&#39;</span><span class="p">]]</span>
+    <span class="n">dat</span><span class="p">[</span><span class="s1">&#39;Filesize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filesize</span>
+
+    <span class="k">return</span> <span class="n">dat</span></div>
+
+
+<div class="viewcode-block" id="get_proposal_abstract"><a class="viewcode-back" href="../../../../api.html#mica.archive.cda.services.get_proposal_abstract">[docs]</a><span class="k">def</span> <span class="nf">get_proposal_abstract</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">propnum</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get a proposal abstract from the CDA services.</span>
+
+<span class="sd">    One of ``obsid`` or ``propnum`` must be provided.</span>
+
+<span class="sd">    :param obsid: int, str</span>
+<span class="sd">        Observation ID</span>
+<span class="sd">    :param propnum: str</span>
+<span class="sd">        Proposal number, including leading zeros e.g. &#39;08900073&#39;</span>
+<span class="sd">    :param timeout: int, float</span>
+<span class="sd">        Timeout in seconds for the request</span>
+<span class="sd">    :returns: dict</span>
+<span class="sd">        Dictionary of proposal abstract</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">obsid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obsid</span>
+    <span class="k">if</span> <span class="n">propnum</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;propNum&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">propnum</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;must provide obsid or propnum&#39;</span><span class="p">)</span>
+
+    <span class="n">html</span> <span class="o">=</span> <span class="n">_get_cda_service_text</span><span class="p">(</span><span class="s1">&#39;prop_abstract&#39;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">html_to_text</span><span class="p">(</span><span class="n">html</span><span class="p">)</span>
+
+    <span class="c1"># Return value is a text string with these section header lines. Use them</span>
+    <span class="c1"># to split the text into sections.</span>
+    <span class="n">delims</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Proposal Title&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;Proposal Number&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;Principal Investigator&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;Abstract&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;&#39;</span><span class="p">]</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">delim0</span><span class="p">,</span> <span class="n">delim1</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">delims</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">delims</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">word</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">delim0</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">match</span> <span class="o">:=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">rf</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">delim0</span><span class="si">}</span><span class="s1">:(.+)</span><span class="si">{</span><span class="n">delim1</span><span class="si">}</span><span class="s1">:&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">):</span>
+            <span class="n">out</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">clean_text</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;failed to find </span><span class="si">{</span><span class="n">delim0</span><span class="si">}</span><span class="s1"> in result&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<span class="k">def</span> <span class="nf">_update_params_from_kwargs</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">obsid</span><span class="p">,</span>
+                               <span class="n">target_name</span><span class="p">,</span> <span class="n">resolve_name</span><span class="p">,</span>
+                               <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update params dict for CDA Ocat queries from specified keyword args.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">obsid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obsid</span>
+
+    <span class="k">if</span> <span class="n">ra</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ra</span>
+    <span class="k">if</span> <span class="n">dec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dec</span>
+
+    <span class="k">if</span> <span class="n">target_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">resolve_name</span><span class="p">:</span>
+            <span class="n">coord</span> <span class="o">=</span> <span class="n">SkyCoord</span><span class="o">.</span><span class="n">from_name</span><span class="p">(</span><span class="n">target_name</span><span class="p">)</span>
+            <span class="n">params</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coord</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span>
+            <span class="n">params</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coord</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># SR services API uses &quot;target&quot; to select substrings of target_name</span>
+            <span class="n">params</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">target_name</span>
+
+    <span class="c1"># For any positional search include the radius</span>
+    <span class="k">if</span> <span class="s1">&#39;ra&#39;</span> <span class="ow">in</span> <span class="n">params</span> <span class="ow">and</span> <span class="s1">&#39;dec&#39;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;radius&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">radius</span>
+
+    <span class="k">return</span> <span class="n">params</span>
+
+
+<div class="viewcode-block" id="get_ocat_web"><a class="viewcode-back" href="../../../../api.html#mica.archive.cda.services.get_ocat_web">[docs]</a><span class="k">def</span> <span class="nf">get_ocat_web</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">summary</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">target_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">resolve_name</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                 <span class="n">return_type</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                 <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the Ocat target table data from Chandra Data Archive web services.</span>
+
+<span class="sd">    {RETURN_TYPE_DOCS}</span>
+
+<span class="sd">    {CDA_PARAM_DOCS}</span>
+
+<span class="sd">    :param obsid: int, str</span>
+<span class="sd">        Observation ID or string with ObsId range or list of ObsIds</span>
+<span class="sd">    :param summary: bool</span>
+<span class="sd">        Return summary data (26 columns) instead of full data (124 columns)</span>
+<span class="sd">    {COMMON_PARAM_DOCS}</span>
+<span class="sd">    :param timeout: int, float</span>
+<span class="sd">        Timeout in seconds for the request (default=60)</span>
+<span class="sd">    :param return_type: str</span>
+<span class="sd">        Return type (default=&#39;auto&#39; =&gt; Table or dict)</span>
+<span class="sd">    :param **params: dict</span>
+<span class="sd">        Parameters passed to CDA web service</span>
+<span class="sd">    :return: astropy Table or dict of the observation details</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># These special params change the returned data and should always be a table</span>
+    <span class="k">if</span> <span class="nb">set</span><span class="p">([</span><span class="s1">&#39;acisWindows&#39;</span><span class="p">,</span> <span class="s1">&#39;rollReqs&#39;</span><span class="p">,</span> <span class="s1">&#39;timeReqs&#39;</span><span class="p">])</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">return_type</span> <span class="o">=</span> <span class="s1">&#39;table&#39;</span>
+
+    <span class="k">if</span> <span class="n">return_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;table&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;invalid return_type </span><span class="si">{</span><span class="n">return_type</span><span class="si">!r}</span><span class="s2">, must be &#39;auto&#39; or &#39;table&#39;&quot;</span><span class="p">)</span>
+
+    <span class="n">_update_params_from_kwargs</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">obsid</span><span class="p">,</span>
+                               <span class="n">target_name</span><span class="p">,</span> <span class="n">resolve_name</span><span class="p">,</span>
+                               <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="p">)</span>
+
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;format&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;text&#39;</span>
+
+    <span class="c1"># Force RA, Dec in sexagesimal because decimal returns only 3 decimal digits</span>
+    <span class="c1"># which is insufficient.</span>
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;outputCoordUnits&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;sexagesimal&#39;</span>
+
+    <span class="n">service</span> <span class="o">=</span> <span class="s1">&#39;ocat_summary&#39;</span> <span class="k">if</span> <span class="n">summary</span> <span class="k">else</span> <span class="s1">&#39;ocat_details&#39;</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">_get_cda_service_text</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">_get_table_or_dict_from_cda_rdb_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_type</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;obsid&#39;</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">dat</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Query returned no rows. If a single obsid was specified with return_type</span>
+        <span class="c1"># of &#39;auto&#39; then we would have expected to return a dict, but instead</span>
+        <span class="c1"># raise a ValueError. Otherwise we return an empty table with the right</span>
+        <span class="c1"># column names.</span>
+        <span class="k">if</span> <span class="n">return_type</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span> <span class="ow">and</span> <span class="n">_is_int</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;obsid&#39;</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;failed to find obsid </span><span class="si">{</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="n">get_ocat_web</span><span class="p">(</span><span class="n">summary</span><span class="o">=</span><span class="n">summary</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="s1">&#39;table&#39;</span><span class="p">,</span> <span class="n">obsid</span><span class="o">=</span><span class="mi">8000</span><span class="p">)[</span><span class="mi">0</span><span class="p">:</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Change RA, Dec to decimal if those columns exist</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span> <span class="o">=</span> <span class="n">dat</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="n">dat</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">SkyCoord</span><span class="p">(</span><span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;hr,deg&#39;</span><span class="p">)</span>
+        <span class="n">dat</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">dat</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span>
+
+    <span class="k">return</span> <span class="n">dat</span></div>
+
+
+<span class="n">get_ocat_web</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">get_ocat_web</span><span class="o">.</span><span class="vm">__doc__</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+    <span class="n">RETURN_TYPE_DOCS</span><span class="o">=</span><span class="n">RETURN_TYPE_DOCS</span><span class="p">,</span>
+    <span class="n">CDA_PARAM_DOCS</span><span class="o">=</span><span class="n">CDA_PARAM_DOCS</span><span class="p">,</span>
+    <span class="n">COMMON_PARAM_DOCS</span><span class="o">=</span><span class="n">COMMON_PARAM_DOCS</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_cda_service_text</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetch all observation details from one of the CDA SRService pages</span>
+
+<span class="sd">    :param service: str</span>
+<span class="sd">        Name of the service (&#39;prop_abstract&#39;, &#39;ocat_summary&#39;, &#39;ocat_details&#39;, &#39;archive_file_list&#39;)</span>
+<span class="sd">    :param timeout: int, float</span>
+<span class="sd">        Timeout in seconds for the request</span>
+<span class="sd">    :param **params: dict</span>
+<span class="sd">        Additional parameters to pass to the service</span>
+<span class="sd">    :return: str</span>
+<span class="sd">        Returned text from the service</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">service</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">CDA_SERVICES</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;unknown service </span><span class="si">{</span><span class="n">service</span><span class="si">!r}</span><span class="s1">, must be one of </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">CDA_SERVICES</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Query the service and check for errors</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">URL_CDA_SERVICES</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">CDA_SERVICES</span><span class="p">[</span><span class="n">service</span><span class="p">]</span><span class="si">}</span><span class="s1">.do&#39;</span>
+    <span class="n">verbose</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;verbose&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;GET </span><span class="si">{</span><span class="n">resp</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">resp</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;got error </span><span class="si">{</span><span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s1"> for </span><span class="si">{</span><span class="n">resp</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="se">\n</span><span class="s1">&#39;</span>
+                           <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">html_to_text</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span>
+
+
+<span class="k">def</span> <span class="nf">_get_table_or_dict_from_cda_rdb_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_type</span><span class="p">,</span> <span class="n">obsid</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get astropy Table or dict from the quasi-RDB text returned by the CDA services.</span>
+
+<span class="sd">    :param text: str</span>
+<span class="sd">        Text returned by the CDA services for a format=&#39;text&#39; query</span>
+<span class="sd">    :param return_type: str</span>
+<span class="sd">        Return type (default=&#39;auto&#39; =&gt; Table or dict)</span>
+<span class="sd">    :param obsid: int, str, None</span>
+<span class="sd">        Observation ID if provided</span>
+<span class="sd">    :return: astropy Table, dict, None</span>
+<span class="sd">        Table of the returned data, or dict if just one obsid selected, or None</span>
+<span class="sd">        if the query returned no data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+
+    <span class="c1"># Convert the type line to standard RDB</span>
+    <span class="c1"># First find the line that begins the column descriptions</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">):</span>
+            <span class="n">header_start</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># The line with the lengths and types is next (header_start + 1)</span>
+    <span class="n">ctypes</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">header_start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Munge length descriptions back to standard RDB (from &quot;20&quot; to &quot;20S&quot; etc)</span>
+    <span class="c1"># while leaving the numeric types alone (&quot;20N&quot; stays &quot;20N&quot;).</span>
+    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">ctype</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ctypes</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ctype</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;N&quot;</span><span class="p">):</span>
+            <span class="n">ctypes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctype</span> <span class="o">+</span> <span class="s2">&quot;S&quot;</span>
+    <span class="n">lines</span><span class="p">[</span><span class="n">header_start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ctypes</span><span class="p">)</span>
+
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;ascii.rdb&#39;</span><span class="p">,</span> <span class="n">guess</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Fix the column names</span>
+    <span class="c1"># Transform summary names to corresponding detail names.</span>
+    <span class="n">trans</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;obs_id&#39;</span><span class="p">:</span> <span class="s1">&#39;obsid&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;grating&#39;</span><span class="p">:</span> <span class="s1">&#39;grat&#39;</span><span class="p">,</span> <span class="s1">&#39;instrument&#39;</span><span class="p">:</span> <span class="s1">&#39;instr&#39;</span><span class="p">,</span> <span class="s1">&#39;appr_exp&#39;</span><span class="p">:</span> <span class="s1">&#39;app_exp&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;exposure&#39;</span><span class="p">:</span> <span class="s1">&#39;exp_time&#39;</span><span class="p">,</span> <span class="s1">&#39;data_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;datamode&#39;</span><span class="p">,</span> <span class="s1">&#39;exp_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;mode&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;avg_cnt_rate&#39;</span><span class="p">:</span> <span class="s1">&#39;count_rate&#39;</span><span class="p">,</span> <span class="s1">&#39;public_release_date&#39;</span><span class="p">:</span> <span class="s1">&#39;public_avail&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;proposal_num&#39;</span><span class="p">:</span> <span class="s1">&#39;pr_num&#39;</span><span class="p">,</span> <span class="s1">&#39;science_category&#39;</span><span class="p">:</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;alternate_group&#39;</span><span class="p">:</span> <span class="s1">&#39;alt_group&#39;</span><span class="p">,</span> <span class="s1">&#39;appr._triggers&#39;</span><span class="p">:</span> <span class="s1">&#39;alt_trig&#39;</span><span class="p">}</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dat</span><span class="o">.</span><span class="n">colnames</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; (ks)&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">trans</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+    <span class="n">dat</span><span class="o">.</span><span class="n">rename_columns</span><span class="p">(</span><span class="n">dat</span><span class="o">.</span><span class="n">colnames</span><span class="p">,</span> <span class="n">names</span><span class="p">)</span>
+
+    <span class="c1"># Apply units to the columns</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">dat</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">OCAT_UNITS</span><span class="p">:</span>
+            <span class="n">col</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="n">OCAT_UNITS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="c1"># Possibly get just the first row as a dict</span>
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">_get_table_or_dict</span><span class="p">(</span><span class="n">return_type</span><span class="p">,</span> <span class="n">obsid</span><span class="p">,</span> <span class="n">dat</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dat</span>
+
+
+<span class="k">def</span> <span class="nf">_is_int</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check if a value looks like an integet.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="nb">float</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">_get_table_or_dict</span><span class="p">(</span><span class="n">return_type</span><span class="p">,</span> <span class="n">obsid</span><span class="p">,</span> <span class="n">dat</span><span class="p">):</span>
+    <span class="c1"># If obsid is a single integer and there was just one row then return the</span>
+    <span class="c1"># row as a dict.</span>
+    <span class="k">if</span> <span class="n">return_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;table&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;invalid return_type </span><span class="si">{</span><span class="n">return_type</span><span class="si">!r}</span><span class="s2">, must be &#39;auto&#39; or &#39;table&#39;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_type</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span> <span class="ow">and</span> <span class="n">_is_int</span><span class="p">(</span><span class="n">obsid</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dat</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;failed to find obsid </span><span class="si">{</span><span class="n">obsid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dat</span>
+
+
+<span class="k">def</span> <span class="nf">main_update_ocat_local</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Command line interface to write a local Ocat HDF5 file.</span>
+
+<span class="sd">    This overwrites the file from scratch each time.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">argparse</span>
+    <span class="kn">from</span> <span class="nn">ska_helpers.retry</span> <span class="kn">import</span> <span class="n">retry_call</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Update target table&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--datafile&quot;</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="s1">&#39;ocat_target_table.h5&#39;</span><span class="p">)</span>
+    <span class="n">opt</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">retry_call</span><span class="p">(</span><span class="n">update_ocat_local</span><span class="p">,</span> <span class="p">[</span><span class="n">opt</span><span class="o">.</span><span class="n">datafile</span><span class="p">],</span> <span class="p">{</span><span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="mi">120</span><span class="p">},</span>
+               <span class="n">tries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">update_ocat_local</span><span class="p">(</span><span class="n">datafile</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Write HDF5 ``datafile`` with the Ocat &quot;details&quot; data.</span>
+
+<span class="sd">    :param **params: dict</span>
+<span class="sd">        Parameters to filter ``get_ocat_details_web`` query</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">get_ocat_web</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+
+    <span class="c1"># Encode unicode strings to bytes manually.  Fixed in numpy 1.20.</span>
+    <span class="c1"># Eventually we will want just dat.convert_bytestring_to_unicode().</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">dat</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;U&#39;</span><span class="p">:</span>
+            <span class="n">dat</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">char</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+
+    <span class="n">dat</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">datafile</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">serialize_meta</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+              <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;hdf5&#39;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="get_ocat_local"><a class="viewcode-back" href="../../../../api.html#mica.archive.cda.services.get_ocat_local">[docs]</a><span class="k">def</span> <span class="nf">get_ocat_local</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                   <span class="n">target_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">resolve_name</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                   <span class="n">ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                   <span class="n">return_type</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                   <span class="n">datafile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get Ocat target table from a local HDF5 data file.</span>
+
+<span class="sd">    The local data file is assumed to be an HDF5 file that contains a copy of</span>
+<span class="sd">    the Ocat details, typically updated by a cron job running on HEAD and</span>
+<span class="sd">    (if necessary) synced to the local host.</span>
+
+<span class="sd">    {RETURN_TYPE_DOCS}</span>
+
+<span class="sd">    :param obsid: int, optional</span>
+<span class="sd">        Observation ID</span>
+<span class="sd">    {COMMON_PARAM_DOCS}</span>
+<span class="sd">    :param datafile: str, optional</span>
+<span class="sd">        HDF5 Ocat target table data file.</span>
+<span class="sd">        Defaults to MICA_ARCHIVE/ocat_target_table.h5</span>
+<span class="sd">    :param where: str</span>
+<span class="sd">        Filter string to pass to tables read_where() to limit returned results.</span>
+<span class="sd">        See https://www.pytables.org/usersguide/condition_syntax.html</span>
+<span class="sd">    :param **params: dict</span>
+<span class="sd">        Additional filter criteria as ``&lt;colname&gt; == &lt;value&gt;`` key/value pairs.</span>
+
+<span class="sd">    :returns: astropy Table or dict of Ocat details</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">where_parts</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># build up bits of the where clause</span>
+    <span class="k">if</span> <span class="n">where</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">where_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">datafile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">datafile</span> <span class="o">=</span> <span class="n">OCAT_TABLE_PATH</span>
+
+    <span class="k">if</span> <span class="n">obsid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">where_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;obsid==</span><span class="si">{</span><span class="n">obsid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">target_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">resolve_name</span><span class="p">:</span>
+        <span class="n">coord</span> <span class="o">=</span> <span class="n">SkyCoord</span><span class="o">.</span><span class="n">from_name</span><span class="p">(</span><span class="n">target_name</span><span class="p">)</span>
+        <span class="n">ra</span> <span class="o">=</span> <span class="n">coord</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">dec</span> <span class="o">=</span> <span class="n">coord</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span>
+
+    <span class="k">if</span> <span class="n">ra</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">dec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">d2r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.0</span>  <span class="c1"># Degrees to radians</span>
+        <span class="c1"># Use great-circle distance to find targets within radius. This is</span>
+        <span class="c1"># accurate enough for this application.</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s1">&#39;arccos(sin(</span><span class="si">{</span><span class="n">ra</span> <span class="o">*</span> <span class="n">d2r</span><span class="si">}</span><span class="s1">)*sin(ra*</span><span class="si">{</span><span class="n">d2r</span><span class="si">}</span><span class="s1">) + &#39;</span>
+                 <span class="sa">f</span><span class="s1">&#39;cos(</span><span class="si">{</span><span class="n">ra</span> <span class="o">*</span> <span class="n">d2r</span><span class="si">}</span><span class="s1">)*cos(ra*</span><span class="si">{</span><span class="n">d2r</span><span class="si">}</span><span class="s1">)*cos(</span><span class="si">{</span><span class="n">dec</span><span class="o">*</span><span class="n">d2r</span><span class="si">}</span><span class="s1">-dec*</span><span class="si">{</span><span class="n">d2r</span><span class="si">}</span><span class="s1">))&#39;</span>
+                 <span class="sa">f</span><span class="s1">&#39;&lt; </span><span class="si">{</span><span class="n">radius</span> <span class="o">/</span> <span class="mi">60</span> <span class="o">*</span> <span class="n">d2r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">where_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">col_name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">where_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">col_name</span><span class="si">}</span><span class="s1">==</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">where_parts</span><span class="p">:</span>
+        <span class="n">dat</span> <span class="o">=</span> <span class="n">_table_read_where</span><span class="p">(</span><span class="n">datafile</span><span class="p">,</span> <span class="n">where_parts</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dat</span> <span class="o">=</span> <span class="n">_table_read_cached</span><span class="p">(</span><span class="n">datafile</span><span class="p">)</span>
+
+    <span class="c1"># Decode bytes to strings manually.  Fixed in numpy 1.20.</span>
+    <span class="c1"># Eventually we will want just dat.convert_bytestring_to_unicode().</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">dat</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">zero_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;S&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">zero_length</span><span class="p">:</span>
+                <span class="n">dat</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;U&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Try a faster way of converting to unicode for ASCII input.</span>
+                <span class="c1"># View the column as a numpy array of bytes and look for values</span>
+                <span class="c1"># above 128 that signify a non-ASCII character.</span>
+                <span class="n">itemsize</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span>
+                <span class="n">col_bytes</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">view</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span> <span class="p">(</span><span class="n">itemsize</span><span class="p">,)))</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">col_bytes</span> <span class="o">&lt;</span> <span class="mi">128</span><span class="p">):</span>
+                    <span class="c1"># This is ASCII so the numpy UTF-8 version is just the same</span>
+                    <span class="c1"># but with the single leading byte set.</span>
+                    <span class="n">col_utf8</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">col_bytes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">itemsize</span> <span class="o">*</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">itemsize</span><span class="p">):</span>
+                        <span class="n">col_utf8</span><span class="p">[:,</span> <span class="n">ii</span> <span class="o">*</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">col_bytes</span><span class="p">[:,</span> <span class="n">ii</span><span class="p">]</span>
+                    <span class="n">dat</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col_utf8</span><span class="o">.</span><span class="n">view</span><span class="p">((</span><span class="s1">&#39;U&#39;</span><span class="p">,</span> <span class="n">itemsize</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Use the standard slow way for non-ASCII input. This is</span>
+                    <span class="c1"># commonly run for pi_name and observer columns that have</span>
+                    <span class="c1"># names with unicode characters, but it might run for other</span>
+                    <span class="c1"># columns since we have no spec on OCAT data content.</span>
+                    <span class="n">dat</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">char</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Match target_name as a substring of the table target_name column.</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">target_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">resolve_name</span><span class="p">:</span>
+        <span class="n">target_name</span> <span class="o">=</span> <span class="n">target_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="c1"># Numpy bug: np.char.replace(dat[&#39;target_name&#39;], &#39; &#39;, &#39;&#39;) returns float</span>
+        <span class="c1"># array for a zero-length input, so we need the len(dat) &gt; 0 above.</span>
+        <span class="n">target_names</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">char</span><span class="o">.</span><span class="n">lower</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">char</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">dat</span><span class="p">[</span><span class="s1">&#39;target_name&#39;</span><span class="p">],</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+        <span class="n">ok</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">char</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">target_names</span><span class="p">,</span> <span class="n">target_name</span><span class="p">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">dat</span> <span class="o">=</span> <span class="n">dat</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span>
+
+    <span class="c1"># Apply units to the columns</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">dat</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">OCAT_UNITS</span><span class="p">:</span>
+            <span class="n">col</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="n">OCAT_UNITS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="c1"># Possibly get just the first row as a dict</span>
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">_get_table_or_dict</span><span class="p">(</span><span class="n">return_type</span><span class="p">,</span> <span class="n">obsid</span><span class="p">,</span> <span class="n">dat</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dat</span></div>
+
+
+<span class="n">get_ocat_local</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">get_ocat_local</span><span class="o">.</span><span class="vm">__doc__</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+    <span class="n">RETURN_TYPE_DOCS</span><span class="o">=</span><span class="n">RETURN_TYPE_DOCS</span><span class="p">,</span>
+    <span class="n">CDA_PARAM_DOCS</span><span class="o">=</span><span class="n">CDA_PARAM_DOCS</span><span class="p">,</span>
+    <span class="n">COMMON_PARAM_DOCS</span><span class="o">=</span><span class="n">COMMON_PARAM_DOCS</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_table_read_cached</span><span class="p">(</span><span class="n">datafile</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read the Ocat target table from a cached local data file.</span>
+
+<span class="sd">    The cache expires after one hour.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">now_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">datafile</span> <span class="ow">in</span> <span class="n">OCAT_TABLE_CACHE</span><span class="p">:</span>
+        <span class="n">last_time</span> <span class="o">=</span> <span class="n">OCAT_TABLE_CACHE</span><span class="p">[</span><span class="n">datafile</span><span class="p">][</span><span class="s1">&#39;last_time&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">now_time</span> <span class="o">-</span> <span class="n">last_time</span> <span class="o">&lt;</span> <span class="mi">3600</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">OCAT_TABLE_CACHE</span><span class="p">[</span><span class="n">datafile</span><span class="p">][</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">datafile</span><span class="p">)</span>
+    <span class="n">OCAT_TABLE_CACHE</span><span class="p">[</span><span class="n">datafile</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;last_time&#39;</span><span class="p">:</span> <span class="n">now_time</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">dat</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">dat</span>
+
+
+<span class="k">def</span> <span class="nf">_table_read_where</span><span class="p">(</span><span class="n">datafile</span><span class="p">,</span> <span class="n">where_parts</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read HDF5 ``datafile`` using read_where() and ``where_parts``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">where</span> <span class="o">=</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;(</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s1">)&#39;</span> <span class="k">for</span> <span class="n">where</span> <span class="ow">in</span> <span class="n">where_parts</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">tables</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="n">datafile</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+        <span class="c1"># PyTables is unhappy with all the column names that cannot be an</span>
+        <span class="c1"># object attribute, so squelch that warning.</span>
+        <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">tables</span><span class="o">.</span><span class="n">NaturalNameWarning</span><span class="p">)</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">read_where</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+        <span class="n">dat</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
+
+    <span class="c1"># Manually make MaskedColumn&#39;s as needed since we are not using Table.read()</span>
+    <span class="c1"># which handles this. This assumes a correspondence betweeen &lt;name&gt;.mask</span>
+    <span class="c1"># and &lt;name&gt;, but this is always true for the Ocat target table.</span>
+    <span class="n">masked_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dat</span><span class="o">.</span><span class="n">colnames</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.mask&#39;</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">masked_name</span> <span class="ow">in</span> <span class="n">masked_names</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">masked_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">5</span><span class="p">]</span>
+        <span class="n">dat</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">MaskedColumn</span><span class="p">(</span><span class="n">dat</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">mask</span><span class="o">=</span><span class="n">dat</span><span class="p">[</span><span class="n">masked_name</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dat</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">dat</span><span class="o">.</span><span class="n">remove_column</span><span class="p">(</span><span class="n">masked_name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dat</span>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
+
+
+<form action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+<footer class="footer">
+  <p class="pull-right"> &nbsp;
+    <a href="#">Back to Top</a></p>
+  <p>
+    &copy; Copyright 2012, Jean Connelly.<br/>
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
+  </p>
+</footer>
+  </body>
+</html>

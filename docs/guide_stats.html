@@ -4,16 +4,16 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guide star statistics &#8212; mica 4.28.0 documentation</title>
-    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Guide star statistics &#8212; mica 4.29.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
     <script type="text/javascript" src="_static/sidebar.js"></script>
     <script type="text/javascript" src="_static/copybutton.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -60,7 +60,7 @@
 	 |
       </li>
       <li>
-	<a href="index.html">mica 4.28.0 documentation</a>
+	<a href="index.html">mica 4.29.0 documentation</a>
 	 &#187;
       </li>
       
@@ -74,7 +74,7 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="guide-star-statistics">
+  <section id="guide-star-statistics">
 <h1>Guide star statistics<a class="headerlink" href="#guide-star-statistics" title="Permalink to this headline">¶</a></h1>
 <p>The <a class="reference internal" href="api.html#module-mica.stats.guide_stats" title="mica.stats.guide_stats"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.stats.guide_stats</span></code></a> module
 includes code to gather acquisition and guide statistics data for each observation and
@@ -88,7 +88,7 @@ return those data to the user.</p>
 </div>
 <p>The hdf5 in-kernel searches may be faster working with the table directly for some
 operations.</p>
-<div class="section" id="data-table-fields">
+<section id="data-table-fields">
 <h2>Data table fields<a class="headerlink" href="#data-table-fields" title="Permalink to this headline">¶</a></h2>
 <p>The guide statistics data table contains the following columns:</p>
 <table class="docutils align-default">
@@ -358,8 +358,8 @@ expected star position from the telemetered star position (AOACYAN AOACZAN).</p>
 AGASC RA/Dec for the commanded star.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">dr</span></code> is defined as <code class="docutils literal notranslate"><span class="pre">sqrt(dy**2</span> <span class="pre">+</span> <span class="pre">dz**2)</span></code></p></li>
 </ul>
-</div>
-<div class="section" id="processing">
+</section>
+<section id="processing">
 <h2>Processing<a class="headerlink" href="#processing" title="Permalink to this headline">¶</a></h2>
 <p>For each observation, after the observation has run and telemetry is available, the guide
 stats process does the following:</p>
@@ -369,8 +369,8 @@ stats process does the following:</p>
 <li><p>For each guide star in the Kalman interval star calculates statistics on metrics for
 that star over the interval.</p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
             <div class="clearer"></div>
@@ -417,7 +417,7 @@ that star over the interval.</p></li>
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
   </p>
 </footer>
   </body>

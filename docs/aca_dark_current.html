@@ -4,16 +4,16 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACA dark current &#8212; mica 4.28.0 documentation</title>
-    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>ACA dark current &#8212; mica 4.29.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
     <script type="text/javascript" src="_static/sidebar.js"></script>
     <script type="text/javascript" src="_static/copybutton.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -60,7 +60,7 @@
 	 |
       </li>
       <li>
-	<a href="index.html">mica 4.28.0 documentation</a>
+	<a href="index.html">mica 4.29.0 documentation</a>
 	 &#187;
       </li>
       
@@ -74,7 +74,7 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="aca-dark-current">
+  <section id="aca-dark-current">
 <h1>ACA dark current<a class="headerlink" href="#aca-dark-current" title="Permalink to this headline">¶</a></h1>
 <p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark</span></code> package provides modules related to the ACA dark current:</p>
 <blockquote>
@@ -84,19 +84,19 @@
 <li><p><a href="#id3"><span class="problematic" id="id4">`Processing`_</span></a></p></li>
 </ul>
 </div></blockquote>
-<div class="section" id="dark-current-calibrations">
+<section id="dark-current-calibrations">
 <h2>Dark current calibrations<a class="headerlink" href="#dark-current-calibrations" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark.dark_cal</span></code> module provides functions for retrieving
+<p>The <a class="reference internal" href="api.html#module-mica.archive.aca_dark.dark_cal" title="mica.archive.aca_dark.dark_cal"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark.dark_cal</span></code></a> module provides functions for retrieving
 data for the ACA full-frame dark current calibrations which occur about four
 times per year (see the <a class="reference external" href="http://occweb.cfa.harvard.edu/twiki/Aspect/AcaDarkCal">ACA dark calibrations TWiki page</a>).</p>
 <p>The functions available are documented in the <a class="reference internal" href="api.html#api-aca-dark"><span class="std std-ref">mica.archive.aca_dark</span></a> section, but the most useful are:</p>
 <blockquote>
 <div><ul class="simple">
 <li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">dark_temp_scale()</span></code>: get the temperature scaling correction</p></li>
-<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_dirs()</span></code>: get an ordered dict of dark cal identifer and directory</p></li>
-<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_image()</span></code>: get a single dark cal image</p></li>
-<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_props()</span></code>: get properties (e.g. date, temperature) of a dark cal</p></li>
-<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_props_table()</span></code>: get properties of dark cals over a time range as a table</p></li>
+<li><p><a class="reference internal" href="api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_dirs" title="mica.archive.aca_dark.dark_cal.get_dark_cal_dirs"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_dirs()</span></code></a>: get an ordered dict of dark cal identifer and directory</p></li>
+<li><p><a class="reference internal" href="api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_image" title="mica.archive.aca_dark.dark_cal.get_dark_cal_image"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_image()</span></code></a>: get a single dark cal image</p></li>
+<li><p><a class="reference internal" href="api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_props" title="mica.archive.aca_dark.dark_cal.get_dark_cal_props"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_props()</span></code></a>: get properties (e.g. date, temperature) of a dark cal</p></li>
+<li><p><a class="reference internal" href="api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_props_table" title="mica.archive.aca_dark.dark_cal.get_dark_cal_props_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_dark_cal_props_table()</span></code></a>: get properties of dark cals over a time range as a table</p></li>
 </ul>
 </div></blockquote>
 <p>As an example, let’s plot the raw and corrected warm pixel fraction over the mission.  The correction in this case is done to a reference temperature of -15 C:</p>
@@ -134,8 +134,8 @@ times per year (see the <a class="reference external" href="http://occweb.cfa.ha
 for the invidivual dark replicas (typically 5).  These in turn use ACA hdr3 diagnostic
 telemetry for high-resolution temperature readouts which are available before and after
 (but not during) each replica.</p>
-</div>
-</div>
+</section>
+</section>
 
 
             <div class="clearer"></div>
@@ -181,7 +181,7 @@ telemetry for high-resolution temperature readouts which are available before an
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
   </p>
 </footer>
   </body>

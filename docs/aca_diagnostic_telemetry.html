@@ -4,16 +4,16 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACA diagnostic telemetry &#8212; mica 4.28.0 documentation</title>
-    <link rel="stylesheet" href="_static/bootstrap-astropy.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>ACA diagnostic telemetry &#8212; mica 4.29.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
-    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
-    <script src="_static/language_data.js"></script>
     <script type="text/javascript" src="_static/sidebar.js"></script>
     <script type="text/javascript" src="_static/copybutton.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -60,7 +60,7 @@
 	 |
       </li>
       <li>
-	<a href="index.html">mica 4.28.0 documentation</a>
+	<a href="index.html">mica 4.29.0 documentation</a>
 	 &#187;
       </li>
       
@@ -74,9 +74,9 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="aca-diagnostic-telemetry">
+  <section id="aca-diagnostic-telemetry">
 <h1>ACA diagnostic telemetry<a class="headerlink" href="#aca-diagnostic-telemetry" title="Permalink to this headline">¶</a></h1>
-<p>The <code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_hdr3</span></code> module works with Header 3 data
+<p>The <a class="reference internal" href="api.html#module-mica.archive.aca_hdr3" title="mica.archive.aca_hdr3"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_hdr3</span></code></a> module works with Header 3 data
 (extended ACA diagnostic telemetry) available in 8x8 ACA
 L0 image data.  The module provies an MSID class and MSIDset class to fetch
 these data as “pseudo-MSIDs” and return masked array data structures.
@@ -118,8 +118,8 @@ MSID) optimized for fast reads.:</p>
 <span class="n">Wall</span> <span class="n">time</span><span class="p">:</span> <span class="mf">0.81</span> <span class="n">s</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="aca-hdr3-pseudo-msids">
+</section>
+<section id="aca-hdr3-pseudo-msids">
 <h1>ACA HDR3 Pseudo-MSIDS<a class="headerlink" href="#aca-hdr3-pseudo-msids" title="Permalink to this headline">¶</a></h1>
 <table border="1"><tr><th>MSID</th><th>Description</th></tr><tr><td><pre style="font-family:serif">ac_status_word</pre></td><td><pre style="font-family:serif">AC status word.  A status word read from the AC.  The bits in the word are
 defined as follows:
@@ -177,7 +177,7 @@ occupies the low order byte.</pre></td></tr><tr><td><pre style="font-family:seri
 CCD temperature in units of 1 LSB = 0.01 degrees C.</pre></td></tr><tr><td><pre style="font-family:serif">ccd_setpoint</pre></td><td><pre style="font-family:serif">The CCD temperature control setpoint; 1 LSB=0.01 degrees C</pre></td></tr><tr><td><pre style="font-family:serif">aca_temp</pre></td><td><pre style="font-family:serif">The temperature used in the angle calibration equations that convert star
 positions from CCD row and column coordinates to Y and Z angles for OBC
 telemetry; 1 LSB = 1/256 degrees C.</pre></td></tr><tr><td><pre style="font-family:serif">last_ram_fail_addr</pre></td><td><pre style="font-family:serif">The address in RAM of the failure most recently detected by the RAM
-write-and-read test</pre></td></tr><tr><td><pre style="font-family:serif">dac</pre></td><td><pre style="font-family:serif">The number most recently written to the TEC power control DAC.</pre></td></tr></table></div>
+write-and-read test</pre></td></tr><tr><td><pre style="font-family:serif">dac</pre></td><td><pre style="font-family:serif">The number most recently written to the TEC power control DAC.</pre></td></tr></table></section>
 
 
             <div class="clearer"></div>
@@ -221,7 +221,7 @@ write-and-read test</pre></td></tr><tr><td><pre style="font-family:serif">dac</p
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 3.1.2. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
   </p>
 </footer>
   </body>
