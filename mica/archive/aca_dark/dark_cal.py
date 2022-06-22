@@ -34,14 +34,15 @@ def date_to_dark_id(date):
     :param date: any CxoTime compatible format
     :returns: dark id (YYYYDOY)
     """
-    t = CxoTime(date)
-    shape = np.shape(t)
-    if not shape:
-        return t.date[:4] + t.date[5:8]
-    b = t.date.view((str, 1)).reshape(-1, 21)
+    time = CxoTime(date)
+    date_str = time.date
+    if not time.shape:
+        return date_str[:4] + date_str[5:8]
+    date_str = np.atleast_1d(date_str)
+    b = date_str.view((str, 1)).reshape(-1, date_str.dtype.itemsize // 4)
     b = np.hstack([b[:, :4], b[:, 5:8]])
     b = np.frombuffer(b.tobytes(), dtype=(str, 7))
-    return b.reshape(shape)
+    return b.reshape(time.shape)
 
 
 def dark_id_to_date(dark_id):
