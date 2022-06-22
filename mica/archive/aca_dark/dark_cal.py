@@ -14,7 +14,8 @@ import pyyaks.context
 from cxotime import CxoTime
 from chandra_aca.aca_image import ACAImage
 
-from chandra_aca.dark_model import dark_temp_scale, DARK_SCALE_4C
+from chandra_aca.dark_model import dark_temp_scale
+from chandra_aca.dark_model import DARK_SCALE_4C  # noqa
 from mica.cache import lru_cache
 from mica.common import MICA_ARCHIVE_PATH, MissingDataError
 from . import file_defs
