@@ -39,10 +39,10 @@ def date_to_dark_id(date):
     if not time.shape:
         return date_str[:4] + date_str[5:8]
     date_str = np.atleast_1d(date_str)
-    b = date_str.view((str, 1)).reshape(-1, date_str.dtype.itemsize // 4)
-    b = np.hstack([b[:, :4], b[:, 5:8]])
-    b = np.frombuffer(b.tobytes(), dtype=(str, 7))
-    return b.reshape(time.shape)
+    chars = date_str.view((str, 1)).reshape(-1, date_str.dtype.itemsize // 4)
+    result = np.hstack([chars[:, :4], chars[:, 5:8]])
+    result = np.frombuffer(result.tobytes(), dtype=(str, 7))
+    return result.reshape(time.shape)
 
 
 def dark_id_to_date(dark_id):
