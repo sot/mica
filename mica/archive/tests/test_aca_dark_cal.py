@@ -138,7 +138,3 @@ def test_limits():
     last = cxotime.CxoTime(list(dark_cal_ids.keys())[-1]) + 1 * cxotime.units.day
     with pytest.raises(MissingDataError, match='No dark cal found after'):
         dark_cal.get_dark_cal_id(last, 'after')
-
-
-def test_bla():
-    t = CxoTime('2025:001')
