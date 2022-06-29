@@ -131,9 +131,9 @@ def _get_dark_cal_id_scalar(date, select='before'):
 
     if ii < 0:
         earliest = CxoTime(dark_cal_secs[0]).date[:8]
-        raise ValueError(
-            f'trying to get last dark cal on {date}, '
-            f'which is before the earliest dark cal on {earliest}'
+        raise MissingDataError(
+            f'No dark cal found before {earliest}'
+            f'(requested dark cal on {date})'
         )
 
     try:

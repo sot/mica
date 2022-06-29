@@ -6,8 +6,11 @@ import os
 import numpy as np
 import pytest
 
+import cxotime
 from ..aca_dark import dark_cal
 from chandra_aca.aca_image import ACAImage
+
+from mica.common import MissingDataError
 
 HAS_DARK_ARCHIVE = os.path.exists(dark_cal.MICA_FILES['dark_cals_dir'].abs)
 
@@ -127,6 +130,14 @@ def test_vectorized():
 
 
 @pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
-def test_lower_limit():
-    with pytest.raises(ValueError, match='trying to get last dark cal on'):
-        dark_cal.get_dark_cal_id('2000:001')
+def test_limits():
+    with pytest.raises(MissingDataError, match='No dark cal found before'):
+        dark_cal.get_dark_cal_id('2000:001', 'before')
+    dark_cal_ids = dark_cal.get_dark_cal_ids()
+    last = cxotime.CxoTime(list(dark_cal_ids.keys())[-1]) + 1 * cxotime.units.day
+    with pytest.raises(MissingDataError, match='No dark cal found after'):
+        dark_cal.get_dark_cal_id(last, 'after')
+
+
+def test_bla():
+    t = CxoTime('2025:001')
