@@ -131,9 +131,10 @@ def test_vectorized():
 
 @pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
 def test_limits():
-    with pytest.raises(MissingDataError, match='No dark cal found before'):
-        dark_cal.get_dark_cal_id('2000:001', 'before')
     dark_cal_ids = dark_cal.get_dark_cal_ids()
+    first = cxotime.CxoTime(list(dark_cal_ids.keys())[0]) - 1 * cxotime.units.day
+    with pytest.raises(MissingDataError, match='No dark cal found before'):
+        dark_cal.get_dark_cal_id(first, 'before')
     last = cxotime.CxoTime(list(dark_cal_ids.keys())[-1]) + 1 * cxotime.units.day
     with pytest.raises(MissingDataError, match='No dark cal found after'):
         dark_cal.get_dark_cal_id(last, 'after')
