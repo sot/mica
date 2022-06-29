@@ -6,8 +6,11 @@ import os
 import numpy as np
 import pytest
 
+import cxotime
 from ..aca_dark import dark_cal
 from chandra_aca.aca_image import ACAImage
+
+from mica.common import MissingDataError
 
 HAS_DARK_ARCHIVE = os.path.exists(dark_cal.MICA_FILES['dark_cals_dir'].abs)
 
@@ -104,3 +107,34 @@ def test_get_dark_cal_props_table_mixed():
     assert props.colnames == ['ccd_temp', 'date', 'dec', 'dur', 'eb', 'el', 'id', 'l_l0',
                               'ra', 'start', 'stop', 'sun_el', 'zodib', 't_ccd',
                               'n_ccd_img', 'datestart', 'datestop', 'filename']
+
+
+@pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+def test_vectorized():
+    dark_id_ref = ['2022100', '2022105', '2022127']
+    date_ref = ['2022:100', '2022:105', '2022:127']
+    assert np.all(dark_id_ref == dark_cal.date_to_dark_id(date_ref))
+    assert np.all(date_ref == dark_cal.dark_id_to_date(dark_id_ref))
+
+    dark_cal_id_ref = ['2022069', '2022104', '2022104']
+    dark_cal_id = dark_cal.get_dark_cal_id(['2022:100', '2022:105', '2022:127'], 'before')
+    assert np.all(dark_cal_id_ref == dark_cal_id)
+
+    dark_cal_id_ref = ['2022104', '2022133', '2022133']
+    dark_cal_id = dark_cal.get_dark_cal_id(['2022:100', '2022:105', '2022:127'], 'after')
+    assert np.all(dark_cal_id_ref == dark_cal_id)
+
+    dark_cal_id_ref = ['2022104', '2022104', '2022133']
+    dark_cal_id = dark_cal.get_dark_cal_id(['2022:100', '2022:105', '2022:127'], 'nearest')
+    assert np.all(dark_cal_id_ref == dark_cal_id)
+
+
+@pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+def test_limits():
+    dark_cal_ids = dark_cal.get_dark_cal_ids()
+    first = cxotime.CxoTime(list(dark_cal_ids.keys())[0]) - 1 * cxotime.units.day
+    with pytest.raises(MissingDataError, match='No dark cal found before'):
+        dark_cal.get_dark_cal_id(first, 'before')
+    last = cxotime.CxoTime(list(dark_cal_ids.keys())[-1]) + 1 * cxotime.units.day
+    with pytest.raises(MissingDataError, match='No dark cal found after'):
+        dark_cal.get_dark_cal_id(last, 'after')

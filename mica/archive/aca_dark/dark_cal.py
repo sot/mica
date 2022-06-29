@@ -11,10 +11,11 @@ import numpy as np
 from astropy.io import fits, ascii
 from astropy.table import Column
 import pyyaks.context
-from Chandra.Time import DateTime
+from cxotime import CxoTime
 from chandra_aca.aca_image import ACAImage
 
-from chandra_aca.dark_model import dark_temp_scale, DARK_SCALE_4C
+from chandra_aca.dark_model import dark_temp_scale
+from chandra_aca.dark_model import DARK_SCALE_4C  # noqa
 from mica.cache import lru_cache
 from mica.common import MICA_ARCHIVE_PATH, MissingDataError
 from . import file_defs
@@ -30,21 +31,35 @@ def date_to_dark_id(date):
     """
     Convert ``date`` to the corresponding YYYYDOY format for a dark cal identifiers.
 
-    :param date: any DateTime compatible format
+    :param date: any CxoTime compatible format
     :returns: dark id (YYYYDOY)
     """
-    date = DateTime(date).date
-    return date[:4] + date[5:8]
+    time = CxoTime(date)
+    date_str = time.date
+    if not time.shape:
+        return date_str[:4] + date_str[5:8]
+    date_str = np.atleast_1d(date_str)
+    chars = date_str.view((str, 1)).reshape(-1, date_str.dtype.itemsize // 4)
+    result = np.hstack([chars[:, :4], chars[:, 5:8]])
+    result = np.frombuffer(result.tobytes(), dtype=(str, 7))
+    return result.reshape(time.shape)
 
 
 def dark_id_to_date(dark_id):
     """
-    Convert ``dark_id`` (YYYYDOY) to the corresponding DateTime 'date' format.
+    Convert ``dark_id`` (YYYYDOY) to the corresponding CxoTime 'date' format.
 
     :param date: dark id (YYYYDOY)
-    :returns: str in DateTime 'date' format
+    :returns: str in CxoTime 'date' format
     """
-    return '{}:{}'.format(dark_id[:4], dark_id[4:])
+    shape = np.shape(dark_id)
+    if not shape:
+        return '{}:{}'.format(dark_id[:4], dark_id[4:])
+    b = np.atleast_1d(dark_id).view((str, 1)).reshape(-1, 7)
+    sep = np.array([':'] * len(b))[:, None]
+    b = np.hstack([b[:, :4], sep, b[:, 4:]])
+    b = np.frombuffer(b.tobytes(), dtype=(str, 8))
+    return b.reshape(shape)
 
 
 @lru_cache()
@@ -53,7 +68,7 @@ def get_dark_cal_dirs(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     Get an ordered dict of directory paths containing dark current calibration files,
     where the key is the dark cal identifier (YYYYDOY) and the value is the path.
 
-    :param source: source of dark cal directories ('mica'|'ska')
+    :param dark_cals_dir: directory containing dark cals.
     :returns: ordered dict of absolute directory paths
     """
     dark_cal_ids = sorted([fn for fn in os.listdir(dark_cals_dir)
@@ -63,6 +78,20 @@ def get_dark_cal_dirs(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     return OrderedDict(zip(dark_cal_ids, dark_cal_dirs))
 
 
+@lru_cache()
+def get_dark_cal_ids(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
+    """
+    Get an ordered dict dates as keys and dark cal identifiers (YYYYDOY) as values.
+
+    :param dark_cals_dir: directory containing dark cals.
+    :returns: ordered dict of absolute directory paths
+    """
+    dark_cal_ids = sorted([fn for fn in os.listdir(dark_cals_dir)
+                           if re.match(r'[12]\d{6}$', fn)])
+    dates = [CxoTime(d[:4] + ':' + d[4:]).date for d in dark_cal_ids]
+    return OrderedDict(zip(dates, dark_cal_ids))
+
+
 def get_dark_cal_id(date, select='before'):
     """
     Return the dark calibration id corresponding to ``date``.
@@ -70,12 +99,15 @@ def get_dark_cal_id(date, select='before'):
     If ``select`` is ``'before'`` (default) then use the first calibration which
     occurs before ``date``.  Other valid options are ``'after'`` and ``'nearest'``.
 
-    :param date: date in any DateTime format
+    :param date: date in any CxoTime format
     :param select: method to select dark cal (before|nearest|after)
 
     :returns: dark cal id string (YYYYDOY)
     """
+    return _get_dark_cal_id_vector(date, select=select)
 
+
+def _get_dark_cal_id_scalar(date, select='before'):
     dark_cals = get_dark_cal_dirs()
     dark_id = date_to_dark_id(date)
 
@@ -85,8 +117,8 @@ def get_dark_cal_id(date, select='before'):
         return dark_id
 
     dark_cal_ids = list(dark_cals.keys())
-    date_secs = DateTime(date).secs
-    dark_cal_secs = DateTime(np.array([dark_id_to_date(id_) for id_ in dark_cal_ids])).secs
+    date_secs = CxoTime(date).secs
+    dark_cal_secs = CxoTime(np.array([dark_id_to_date(id_) for id_ in dark_cal_ids])).secs
 
     if select == 'nearest':
         ii = np.argmin(np.abs(dark_cal_secs - date_secs))
@@ -97,12 +129,22 @@ def get_dark_cal_id(date, select='before'):
     else:
         raise ValueError('select arg must be one of "nearest", "before", or "after"')
 
+    if ii < 0:
+        earliest = CxoTime(dark_cal_secs[0]).date[:8]
+        raise MissingDataError(
+            f'No dark cal found before {earliest}'
+            f'(requested dark cal on {date})'
+        )
+
     try:
         out_dark_id = dark_cal_ids[ii]
     except IndexError:
         raise MissingDataError('No dark cal found {} {}'.format(select, date))
 
     return out_dark_id
+
+
+_get_dark_cal_id_vector = np.vectorize(_get_dark_cal_id_scalar, excluded=['select'])
 
 
 @DARK_CAL.cache
@@ -112,7 +154,7 @@ def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=F
     Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding
     dark_props file.
 
-    :param date: date in any DateTime format
+    :param date: date in any CxoTime format
     :param select: method to select dark cal (before|nearest|after)
     :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
     :param aca_image: return an AcaImage instance
@@ -164,7 +206,7 @@ def get_dark_cal_image(date, select='before', t_ccd_ref=None, aca_image=False,
     If ``select`` is ``'before'`` (default) then use the first calibration which
     occurs before ``date``.  Other valid options are ``'after'`` and ``'nearest'``.
 
-    :param date: date in any DateTime format
+    :param date: date in any CxoTime format
     :param select: method to select dark cal (before|nearest|after)
     :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
     :param aca_image: return an ACAImage instance instead of ndarray
@@ -189,7 +231,7 @@ def get_dark_cal_props(date, select='before', include_image=False, t_ccd_ref=Non
     If ``include_image`` is True then an additional column or key ``image`` is
     defined which contains the corresponding 1024x1024 dark cal image.
 
-    :param date: date in any DateTime format
+    :param date: date in any CxoTime format
     :param select: method to select dark cal (before|nearest|after)
     :param include_image: include the dark cal images in output (default=False)
     :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)
