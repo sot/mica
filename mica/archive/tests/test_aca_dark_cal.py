@@ -125,3 +125,8 @@ def test_vectorized():
     dark_cal_id = dark_cal.get_dark_cal_id(['2022:100', '2022:105', '2022:127'], 'nearest')
     assert np.all(dark_cal_id_ref == dark_cal_id)
 
+
+@pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+def test_lower_limit():
+    with pytest.raises(ValueError, match='trying to get last dark cal on'):
+        dark_cal.get_dark_cal_id('2000:001')

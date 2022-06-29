@@ -68,7 +68,7 @@ def get_dark_cal_dirs(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     Get an ordered dict of directory paths containing dark current calibration files,
     where the key is the dark cal identifier (YYYYDOY) and the value is the path.
 
-    :param source: source of dark cal directories ('mica'|'ska')
+    :param dark_cals_dir: directory containing dark cals.
     :returns: ordered dict of absolute directory paths
     """
     dark_cal_ids = sorted([fn for fn in os.listdir(dark_cals_dir)
@@ -76,6 +76,20 @@ def get_dark_cal_dirs(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     dark_cal_dirs = [os.path.join(dark_cals_dir, id_)
                      for id_ in dark_cal_ids]
     return OrderedDict(zip(dark_cal_ids, dark_cal_dirs))
+
+
+@lru_cache()
+def get_dark_cal_ids(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
+    """
+    Get an ordered dict dates as keys and dark cal identifiers (YYYYDOY) as values.
+
+    :param dark_cals_dir: directory containing dark cals.
+    :returns: ordered dict of absolute directory paths
+    """
+    dark_cal_ids = sorted([fn for fn in os.listdir(dark_cals_dir)
+                           if re.match(r'[12]\d{6}$', fn)])
+    dates = [CxoTime(d[:4] + ':' + d[4:]).date for d in dark_cal_ids]
+    return OrderedDict(zip(dates, dark_cal_ids))
 
 
 def get_dark_cal_id(date, select='before'):
@@ -118,7 +132,7 @@ def _get_dark_cal_id_scalar(date, select='before'):
     if ii < 0:
         earliest = CxoTime(dark_cal_secs[0]).date[:8]
         raise ValueError(
-            f'trying to get last dark cal before {date}, '
+            f'trying to get last dark cal on {date}, '
             f'which is before the earliest dark cal on {earliest}'
         )
 
