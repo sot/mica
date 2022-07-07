@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>mica.archive.aca_dark &#8212; mica 4.29.0 documentation</title>
+    <title>mica.archive.aca_dark &#8212; mica 4.30.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
@@ -54,7 +54,7 @@
 	
       </li>
       <li>
-	<a href="index.html">mica 4.29.0 documentation</a>
+	<a href="index.html">mica 4.30.0 documentation</a>
 	 &#187;
       </li>
       
@@ -75,13 +75,13 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.dark_id_to_date">
 <span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">dark_id_to_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dark_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#dark_id_to_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.dark_id_to_date" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert <code class="docutils literal notranslate"><span class="pre">dark_id</span></code> (YYYYDOY) to the corresponding DateTime ‘date’ format.</p>
+<dd><p>Convert <code class="docutils literal notranslate"><span class="pre">dark_id</span></code> (YYYYDOY) to the corresponding CxoTime ‘date’ format.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>date</strong> – dark id (YYYYDOY)</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>str in DateTime ‘date’ format</p>
+<dd class="field-even"><p>str in CxoTime ‘date’ format</p>
 </dd>
 </dl>
 </dd></dl>
@@ -92,7 +92,7 @@
 <dd><p>Convert <code class="docutils literal notranslate"><span class="pre">date</span></code> to the corresponding YYYYDOY format for a dark cal identifiers.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>date</strong> – any DateTime compatible format</p>
+<dd class="field-odd"><p><strong>date</strong> – any CxoTime compatible format</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>dark id (YYYYDOY)</p>
@@ -107,7 +107,7 @@
 where the key is the dark cal identifier (YYYYDOY) and the value is the path.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>source</strong> – source of dark cal directories (‘mica’|’ska’)</p>
+<dd class="field-odd"><p><strong>dark_cals_dir</strong> – directory containing dark cals.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>ordered dict of absolute directory paths</p>
@@ -124,12 +124,26 @@ occurs before <code class="docutils literal notranslate"><span class="pre">date<
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>date</strong> – date in any DateTime format</p></li>
+<li><p><strong>date</strong> – date in any CxoTime format</p></li>
 <li><p><strong>select</strong> – method to select dark cal (before|nearest|after)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>dark cal id string (YYYYDOY)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.get_dark_cal_ids">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dark_cals_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/proj/sot/ska/data/mica/archive/aca_dark'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an ordered dict dates as keys and dark cal identifiers (YYYYDOY) as values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dark_cals_dir</strong> – directory containing dark cals.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>ordered dict of absolute directory paths</p>
 </dd>
 </dl>
 </dd></dl>
@@ -143,7 +157,7 @@ occurs before <code class="docutils literal notranslate"><span class="pre">date<
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>date</strong> – date in any DateTime format</p></li>
+<li><p><strong>date</strong> – date in any CxoTime format</p></li>
 <li><p><strong>select</strong> – method to select dark cal (before|nearest|after)</p></li>
 <li><p><strong>t_ccd_ref</strong> – rescale dark map to temperature (degC, default=no scaling)</p></li>
 <li><p><strong>aca_image</strong> – return an ACAImage instance instead of ndarray</p></li>
@@ -167,7 +181,7 @@ defined which contains the corresponding 1024x1024 dark cal image.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>date</strong> – date in any DateTime format</p></li>
+<li><p><strong>date</strong> – date in any CxoTime format</p></li>
 <li><p><strong>select</strong> – method to select dark cal (before|nearest|after)</p></li>
 <li><p><strong>include_image</strong> – include the dark cal images in output (default=False)</p></li>
 <li><p><strong>t_ccd_ref</strong> – rescale dark map to temperature (degC, default=no scaling)</p></li>

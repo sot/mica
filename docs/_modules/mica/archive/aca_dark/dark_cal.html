@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.aca_dark.dark_cal &#8212; mica 4.29.0 documentation</title>
+    <title>mica.archive.aca_dark.dark_cal &#8212; mica 4.30.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/bootstrap-astropy.css" />
     
@@ -46,7 +46,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../../index.html">mica 4.29.0 documentation</a>
+	<a href="../../../../index.html">mica 4.30.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -75,10 +75,11 @@
 <span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span><span class="p">,</span> <span class="n">ascii</span>
 <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Column</span>
 <span class="kn">import</span> <span class="nn">pyyaks.context</span>
-<span class="kn">from</span> <span class="nn">Chandra.Time</span> <span class="kn">import</span> <span class="n">DateTime</span>
+<span class="kn">from</span> <span class="nn">cxotime</span> <span class="kn">import</span> <span class="n">CxoTime</span>
 <span class="kn">from</span> <span class="nn">chandra_aca.aca_image</span> <span class="kn">import</span> <span class="n">ACAImage</span>
 
-<span class="kn">from</span> <span class="nn">chandra_aca.dark_model</span> <span class="kn">import</span> <span class="n">dark_temp_scale</span><span class="p">,</span> <span class="n">DARK_SCALE_4C</span>
+<span class="kn">from</span> <span class="nn">chandra_aca.dark_model</span> <span class="kn">import</span> <span class="n">dark_temp_scale</span>
+<span class="kn">from</span> <span class="nn">chandra_aca.dark_model</span> <span class="kn">import</span> <span class="n">DARK_SCALE_4C</span>  <span class="c1"># noqa</span>
 <span class="kn">from</span> <span class="nn">mica.cache</span> <span class="kn">import</span> <span class="n">lru_cache</span>
 <span class="kn">from</span> <span class="nn">mica.common</span> <span class="kn">import</span> <span class="n">MICA_ARCHIVE_PATH</span><span class="p">,</span> <span class="n">MissingDataError</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">file_defs</span>
@@ -94,21 +95,35 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert ``date`` to the corresponding YYYYDOY format for a dark cal identifiers.</span>
 
-<span class="sd">    :param date: any DateTime compatible format</span>
+<span class="sd">    :param date: any CxoTime compatible format</span>
 <span class="sd">    :returns: dark id (YYYYDOY)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">date</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
-    <span class="k">return</span> <span class="n">date</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">+</span> <span class="n">date</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span></div>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">CxoTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span>
+    <span class="n">date_str</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">date</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">time</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">date_str</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">+</span> <span class="n">date_str</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span>
+    <span class="n">date_str</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">date_str</span><span class="p">)</span>
+    <span class="n">chars</span> <span class="o">=</span> <span class="n">date_str</span><span class="o">.</span><span class="n">view</span><span class="p">((</span><span class="nb">str</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">date_str</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">//</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">chars</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">4</span><span class="p">],</span> <span class="n">chars</span><span class="p">[:,</span> <span class="mi">5</span><span class="p">:</span><span class="mi">8</span><span class="p">]])</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">tobytes</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="dark_id_to_date"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.dark_id_to_date">[docs]</a><span class="k">def</span> <span class="nf">dark_id_to_date</span><span class="p">(</span><span class="n">dark_id</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Convert ``dark_id`` (YYYYDOY) to the corresponding DateTime &#39;date&#39; format.</span>
+<span class="sd">    Convert ``dark_id`` (YYYYDOY) to the corresponding CxoTime &#39;date&#39; format.</span>
 
 <span class="sd">    :param date: dark id (YYYYDOY)</span>
-<span class="sd">    :returns: str in DateTime &#39;date&#39; format</span>
+<span class="sd">    :returns: str in CxoTime &#39;date&#39; format</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dark_id</span><span class="p">[:</span><span class="mi">4</span><span class="p">],</span> <span class="n">dark_id</span><span class="p">[</span><span class="mi">4</span><span class="p">:])</span></div>
+    <span class="n">shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">dark_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">shape</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dark_id</span><span class="p">[:</span><span class="mi">4</span><span class="p">],</span> <span class="n">dark_id</span><span class="p">[</span><span class="mi">4</span><span class="p">:])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">dark_id</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">((</span><span class="nb">str</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">sep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;:&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">))[:,</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">b</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">4</span><span class="p">],</span> <span class="n">sep</span><span class="p">,</span> <span class="n">b</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">:]])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">tobytes</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">b</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="get_dark_cal_dirs"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_dirs">[docs]</a><span class="nd">@lru_cache</span><span class="p">()</span>
@@ -117,7 +132,7 @@
 <span class="sd">    Get an ordered dict of directory paths containing dark current calibration files,</span>
 <span class="sd">    where the key is the dark cal identifier (YYYYDOY) and the value is the path.</span>
 
-<span class="sd">    :param source: source of dark cal directories (&#39;mica&#39;|&#39;ska&#39;)</span>
+<span class="sd">    :param dark_cals_dir: directory containing dark cals.</span>
 <span class="sd">    :returns: ordered dict of absolute directory paths</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">dark_cal_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">fn</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">dark_cals_dir</span><span class="p">)</span>
@@ -127,6 +142,20 @@
     <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">dark_cal_ids</span><span class="p">,</span> <span class="n">dark_cal_dirs</span><span class="p">))</span></div>
 
 
+<div class="viewcode-block" id="get_dark_cal_ids"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_ids">[docs]</a><span class="nd">@lru_cache</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">get_dark_cal_ids</span><span class="p">(</span><span class="n">dark_cals_dir</span><span class="o">=</span><span class="n">MICA_FILES</span><span class="p">[</span><span class="s1">&#39;dark_cals_dir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get an ordered dict dates as keys and dark cal identifiers (YYYYDOY) as values.</span>
+
+<span class="sd">    :param dark_cals_dir: directory containing dark cals.</span>
+<span class="sd">    :returns: ordered dict of absolute directory paths</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dark_cal_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">fn</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">dark_cals_dir</span><span class="p">)</span>
+                           <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[12]\d</span><span class="si">{6}</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="n">fn</span><span class="p">)])</span>
+    <span class="n">dates</span> <span class="o">=</span> <span class="p">[</span><span class="n">CxoTime</span><span class="p">(</span><span class="n">d</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="n">d</span><span class="p">[</span><span class="mi">4</span><span class="p">:])</span><span class="o">.</span><span class="n">date</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dark_cal_ids</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">dates</span><span class="p">,</span> <span class="n">dark_cal_ids</span><span class="p">))</span></div>
+
+
 <div class="viewcode-block" id="get_dark_cal_id"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_id">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_id</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return the dark calibration id corresponding to ``date``.</span>
@@ -134,12 +163,15 @@
 <span class="sd">    If ``select`` is ``&#39;before&#39;`` (default) then use the first calibration which</span>
 <span class="sd">    occurs before ``date``.  Other valid options are ``&#39;after&#39;`` and ``&#39;nearest&#39;``.</span>
 
-<span class="sd">    :param date: date in any DateTime format</span>
+<span class="sd">    :param date: date in any CxoTime format</span>
 <span class="sd">    :param select: method to select dark cal (before|nearest|after)</span>
 
 <span class="sd">    :returns: dark cal id string (YYYYDOY)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_get_dark_cal_id_vector</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="n">select</span><span class="p">)</span></div>
 
+
+<span class="k">def</span> <span class="nf">_get_dark_cal_id_scalar</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">):</span>
     <span class="n">dark_cals</span> <span class="o">=</span> <span class="n">get_dark_cal_dirs</span><span class="p">()</span>
     <span class="n">dark_id</span> <span class="o">=</span> <span class="n">date_to_dark_id</span><span class="p">(</span><span class="n">date</span><span class="p">)</span>
 
@@ -149,8 +181,8 @@
         <span class="k">return</span> <span class="n">dark_id</span>
 
     <span class="n">dark_cal_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">dark_cals</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-    <span class="n">date_secs</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
-    <span class="n">dark_cal_secs</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dark_id_to_date</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span> <span class="k">for</span> <span class="n">id_</span> <span class="ow">in</span> <span class="n">dark_cal_ids</span><span class="p">]))</span><span class="o">.</span><span class="n">secs</span>
+    <span class="n">date_secs</span> <span class="o">=</span> <span class="n">CxoTime</span><span class="p">(</span><span class="n">date</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
+    <span class="n">dark_cal_secs</span> <span class="o">=</span> <span class="n">CxoTime</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dark_id_to_date</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span> <span class="k">for</span> <span class="n">id_</span> <span class="ow">in</span> <span class="n">dark_cal_ids</span><span class="p">]))</span><span class="o">.</span><span class="n">secs</span>
 
     <span class="k">if</span> <span class="n">select</span> <span class="o">==</span> <span class="s1">&#39;nearest&#39;</span><span class="p">:</span>
         <span class="n">ii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dark_cal_secs</span> <span class="o">-</span> <span class="n">date_secs</span><span class="p">))</span>
@@ -161,12 +193,22 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;select arg must be one of &quot;nearest&quot;, &quot;before&quot;, or &quot;after&quot;&#39;</span><span class="p">)</span>
 
+    <span class="k">if</span> <span class="n">ii</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">earliest</span> <span class="o">=</span> <span class="n">CxoTime</span><span class="p">(</span><span class="n">dark_cal_secs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">date</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="n">MissingDataError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;No dark cal found before </span><span class="si">{</span><span class="n">earliest</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;(requested dark cal on </span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s1">)&#39;</span>
+        <span class="p">)</span>
+
     <span class="k">try</span><span class="p">:</span>
         <span class="n">out_dark_id</span> <span class="o">=</span> <span class="n">dark_cal_ids</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span>
     <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">MissingDataError</span><span class="p">(</span><span class="s1">&#39;No dark cal found </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">select</span><span class="p">,</span> <span class="n">date</span><span class="p">))</span>
 
-    <span class="k">return</span> <span class="n">out_dark_id</span></div>
+    <span class="k">return</span> <span class="n">out_dark_id</span>
+
+
+<span class="n">_get_dark_cal_id_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">_get_dark_cal_id_scalar</span><span class="p">,</span> <span class="n">excluded</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;select&#39;</span><span class="p">])</span>
 
 
 <span class="nd">@DARK_CAL</span><span class="o">.</span><span class="n">cache</span>
@@ -176,7 +218,7 @@
 <span class="sd">    Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding</span>
 <span class="sd">    dark_props file.</span>
 
-<span class="sd">    :param date: date in any DateTime format</span>
+<span class="sd">    :param date: date in any CxoTime format</span>
 <span class="sd">    :param select: method to select dark cal (before|nearest|after)</span>
 <span class="sd">    :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)</span>
 <span class="sd">    :param aca_image: return an AcaImage instance</span>
@@ -228,7 +270,7 @@
 <span class="sd">    If ``select`` is ``&#39;before&#39;`` (default) then use the first calibration which</span>
 <span class="sd">    occurs before ``date``.  Other valid options are ``&#39;after&#39;`` and ``&#39;nearest&#39;``.</span>
 
-<span class="sd">    :param date: date in any DateTime format</span>
+<span class="sd">    :param date: date in any CxoTime format</span>
 <span class="sd">    :param select: method to select dark cal (before|nearest|after)</span>
 <span class="sd">    :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)</span>
 <span class="sd">    :param aca_image: return an ACAImage instance instead of ndarray</span>
@@ -253,7 +295,7 @@
 <span class="sd">    If ``include_image`` is True then an additional column or key ``image`` is</span>
 <span class="sd">    defined which contains the corresponding 1024x1024 dark cal image.</span>
 
-<span class="sd">    :param date: date in any DateTime format</span>
+<span class="sd">    :param date: date in any CxoTime format</span>
 <span class="sd">    :param select: method to select dark cal (before|nearest|after)</span>
 <span class="sd">    :param include_image: include the dark cal images in output (default=False)</span>
 <span class="sd">    :param t_ccd_ref: rescale dark map to temperature (degC, default=no scaling)</span>
