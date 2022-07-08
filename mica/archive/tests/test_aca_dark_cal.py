@@ -110,6 +110,12 @@ def test_get_dark_cal_props_table_mixed():
 
 
 @pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
+def test_scalar():
+    dark_cal_id = dark_cal.get_dark_cal_id('2022:100')
+    assert dark_cal_id[:4] == '2022' and dark_cal_id[4:] == '069'
+
+
+@pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
 def test_vectorized():
     dark_id_ref = ['2022100', '2022105', '2022127']
     date_ref = ['2022:100', '2022:105', '2022:127']
