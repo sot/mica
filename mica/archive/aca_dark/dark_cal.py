@@ -107,7 +107,7 @@ def get_dark_cal_id(date, select='before'):
     dark_id = _get_dark_cal_id_vector(date, select=select)
     if not dark_id.shape:
         # returning an instance of the type, not a numpy array
-        return dark_id.dtype.type(dark_id)
+        return dark_id.tolist()
     return dark_id
 
 
