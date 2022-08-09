@@ -20,7 +20,7 @@ entry_points = {'console_scripts':
 # Borrowed from acis_taco setup.py.  This will install all of the following
 # into sys.prefix/share/mica/ via the data_files directive.
 if "--user" not in sys.argv:
-    share_path = os.path.join(sys.prefix, "share", "mica")
+    share_path = os.path.join("share", "mica")
     scripts = [str(script) for script in Path('scripts').glob('update_*.py')]
     data_files = [(share_path, scripts + ['task_schedule.cfg'])]
 else:
