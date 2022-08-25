@@ -92,7 +92,7 @@ def get_dark_cal_ids(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     return OrderedDict(zip(dates, dark_cal_ids))
 
 
-def get_dark_cal_id(date, select='before'):
+def get_dark_cal_id(date, select='before', dark_cal_ids=None):
     """
     Return the dark calibration id corresponding to ``date``.
 
@@ -101,26 +101,27 @@ def get_dark_cal_id(date, select='before'):
 
     :param date: date in any CxoTime format
     :param select: method to select dark cal (before|nearest|after)
+    :param dark_cal_ids: list of all dark-cal IDs (optional, the output of get_dark_cal_ids)
 
     :returns: dark cal id string (YYYYDOY)
     """
-    dark_id = _get_dark_cal_id_vector(date, select=select)
+    dark_id = _get_dark_cal_id_vector(date, select=select, dark_cal_ids=dark_cal_ids)
     if not dark_id.shape:
         # returning an instance of the type, not a numpy array
         return dark_id.tolist()
     return dark_id
 
 
-def _get_dark_cal_id_scalar(date, select='before'):
-    dark_cals = get_dark_cal_dirs()
+def _get_dark_cal_id_scalar(date, select='before', dark_cal_ids=None):
+    if dark_cal_ids is None:
+        dark_cal_ids = list(get_dark_cal_dirs().keys())
     dark_id = date_to_dark_id(date)
 
     # Special case if dark_id is exactly an existing dark cal then return that dark
     # cal regardless of the select method.
-    if dark_id in dark_cals:
+    if dark_id in dark_cal_ids:
         return dark_id
 
-    dark_cal_ids = list(dark_cals.keys())
     date_secs = CxoTime(date).secs
     dark_cal_secs = CxoTime(np.array([dark_id_to_date(id_) for id_ in dark_cal_ids])).secs
 
@@ -148,7 +149,7 @@ def _get_dark_cal_id_scalar(date, select='before'):
     return out_dark_id
 
 
-_get_dark_cal_id_vector = np.vectorize(_get_dark_cal_id_scalar, excluded=['select'])
+_get_dark_cal_id_vector = np.vectorize(_get_dark_cal_id_scalar, excluded=['select', 'dark_cal_ids'])
 
 
 @DARK_CAL.cache
