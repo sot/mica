@@ -160,7 +160,7 @@ def update(config=None):
         logger.info("Attempting ingest of %s" % st)
         # get an existing id or insert a new one
         mp_dir = re.search(
-            "\/data\/mpcrit1\/mplogs(\/\d{4}\/\w{7}/\w{5}\/)starcheck.txt", st
+            r"/data/mpcrit1/mplogs(/\d{4}/\w{7}/\w{5}/)starcheck.txt", st
         ).group(1)
         idcheck = db.fetchone("select id from starcheck_id where dir = '%s'" % mp_dir)
         existing = None
