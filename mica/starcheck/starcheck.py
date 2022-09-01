@@ -2,23 +2,30 @@
 import os
 import re
 
-from Chandra.Time import DateTime
-from kadi.commands.states import get_states
 import Ska.DBI
-from kadi import events
 from astropy.table import Table
+from Chandra.Time import DateTime
+from kadi import events
+from kadi.commands.states import get_states
 
-from mica.utils import get_timeline_at_date
 from mica.common import MICA_ARCHIVE
+from mica.utils import get_timeline_at_date
 
-DEFAULT_CONFIG = dict(starcheck_db=dict(dbi='sqlite',
-                                        server=os.path.join(MICA_ARCHIVE, 'starcheck', 'starcheck.db3')),
-                      mp_top_level='/data/mpcrit1/mplogs',
-                      timelines_db=dict(dbi='sqlite',
-                                        server=os.path.join(os.environ['SKA'], 'data', 'cmd_states', 'cmd_states.db3')))
-FILES = dict(data_root=os.path.join(MICA_ARCHIVE, 'starcheck'),
-             touch_file=os.path.join(MICA_ARCHIVE, 'starcheck', "starcheck_parser.touch"),
-             sql_def='starcheck.sql')
+DEFAULT_CONFIG = dict(
+    starcheck_db=dict(
+        dbi="sqlite", server=os.path.join(MICA_ARCHIVE, "starcheck", "starcheck.db3")
+    ),
+    mp_top_level="/data/mpcrit1/mplogs",
+    timelines_db=dict(
+        dbi="sqlite",
+        server=os.path.join(os.environ["SKA"], "data", "cmd_states", "cmd_states.db3"),
+    ),
+)
+FILES = dict(
+    data_root=os.path.join(MICA_ARCHIVE, "starcheck"),
+    touch_file=os.path.join(MICA_ARCHIVE, "starcheck", "starcheck_parser.touch"),
+    sql_def="starcheck.sql",
+)
 
 
 OBS_CACHE = {}
@@ -33,7 +40,7 @@ def get_starcat(obsid, mp_dir=None):
     :returns: astropy.Table of star catalog
     """
     try:
-        return get_starcheck_catalog(obsid, mp_dir)['cat']
+        return get_starcheck_catalog(obsid, mp_dir)["cat"]
     except Exception:
         return None
 
@@ -51,15 +58,19 @@ def get_dither(obsid, mp_dir=None):
     :returns: dictionary of planned dither parameters: 'yaw_ampl', 'pitch_ampl',
     'yaw_period', and 'pitch_period'.  amplitudes in arcseconds, periods in seconds.
     """
-    obs = get_starcheck_catalog(obsid, mp_dir)['obs']
-    if obs['dither_state'] is None:
-        raise ValueError("Dither parameters not in starcheck database for obsid {}".format(obsid))
+    obs = get_starcheck_catalog(obsid, mp_dir)["obs"]
+    if obs["dither_state"] is None:
+        raise ValueError(
+            "Dither parameters not in starcheck database for obsid {}".format(obsid)
+        )
     # For observations with no dither, period may be None, so just set to 1.0 to
     # avoid divide-by-None and divide-by-0 errors.  It is moot for 0 amplitude anyway.
-    return {'yaw_ampl': obs['dither_y_amp'],
-            'pitch_ampl': obs['dither_z_amp'],
-            'yaw_period': obs['dither_y_period'] if obs['dither_y_amp'] != 0 else -999.0,
-            'pitch_period': obs['dither_z_period'] if obs['dither_z_amp'] != 0 else -999.0}
+    return {
+        "yaw_ampl": obs["dither_y_amp"],
+        "pitch_ampl": obs["dither_z_amp"],
+        "yaw_period": obs["dither_y_period"] if obs["dither_y_amp"] != 0 else -999.0,
+        "pitch_period": obs["dither_z_period"] if obs["dither_z_amp"] != 0 else -999.0,
+    }
 
 
 def get_att(obsid, mp_dir=None):
@@ -70,58 +81,71 @@ def get_att(obsid, mp_dir=None):
     :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'
     :returns: list of RA, Dec, Roll
     """
-    obs = get_starcheck_catalog(obsid, mp_dir)['obs']
-    return [obs['point_ra'],
-            obs['point_dec'],
-            obs['point_roll']]
+    obs = get_starcheck_catalog(obsid, mp_dir)["obs"]
+    return [obs["point_ra"], obs["point_dec"], obs["point_roll"]]
 
 
 def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     """
-    Use the database of starcheck products to get a list of monitor windows
-    This list is filtered by timelines content to only include catalogs that should have or will run.
+    Use the database of starcheck products to get a list of monitor windows This
+    list is filtered by timelines content to only include catalogs that should
+    have or will run.
 
-    :param start: Optional start time for filtering windows as fetched from the database
-    :param stop: Optional stop time for filtering windows as fetched from the database
-    :param min_obsid: Minimum obsid value for filtering.  Default of 40000 is intended to fetch only ERs
-    :param config: config dictionary. If supplied must include 'starcheck_db' and 'timelines_db' keys
-                   with dictionaries of the required arguments to Ska.DBI to connect to those databases.
-    :returns: astropy Table of monitor windows.  See get_starcheck_catalog_at_date for description of the values
-              of the 'status' column.  The 'catalog' column contains the get_starcheck_catalog_at_date
-              returned dictionary.
+    :param start: Optional start time for filtering windows as fetched from the
+        database
+    :param stop: Optional stop time for filtering windows as fetched from the
+        database
+    :param min_obsid: Minimum obsid value for filtering.  Default of 40000 is
+        intended to fetch only ERs
+
+    :param config: config dictionary. If supplied must include 'starcheck_db'
+                   and 'timelines_db' keys with dictionaries of the required
+                   arguments to Ska.DBI to connect to those databases.
+
+    :returns: astropy Table of monitor windows.  See
+              get_starcheck_catalog_at_date for description of the values of the
+              'status' column.  The 'catalog' column contains the
+              get_starcheck_catalog_at_date returned dictionary.
     """
     if config is None:
         config = DEFAULT_CONFIG
-    start_date = DateTime(start or '1999:001:12:00:00').date
+    start_date = DateTime(start or "1999:001:12:00:00").date
     stop_date = DateTime(stop).date
-    with Ska.DBI.DBI(**config['starcheck_db']) as db:
-        mons = db.fetchall("""select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
+    with Ska.DBI.DBI(**config["starcheck_db"]) as db:
+        mons = db.fetchall(
+            """select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
                           from starcheck_catalog, starcheck_id
                           where type = 'MON' and obsid > {}
                           and mp_starcat_date >= '{}'
                           and mp_starcat_date <= '{}'
                           and starcheck_id.id = starcheck_catalog.sc_id""".format(
-                min_obsid, start_date, stop_date))
+                min_obsid, start_date, stop_date
+            )
+        )
     mons = Table(mons)
-    mons['catalog'] = None
-    with Ska.DBI.DBI(**config['timelines_db']) as timelines_db:
+    mons["catalog"] = None
+    with Ska.DBI.DBI(**config["timelines_db"]) as timelines_db:
         statuses = []
         # Check which ones actually ran or are likely to run
         for mon in mons:
             try:
-                catalog = get_starcheck_catalog_at_date(mon['mp_starcat_date'],
-                                                        timelines_db=timelines_db)
-                if (catalog is not None and catalog['obs']['obsid'] == mon['obsid']
-                        and catalog['mp_dir'] == mon['dir']):
-                    mon['catalog'] = catalog
-                    statuses.append(catalog['status'])
+                catalog = get_starcheck_catalog_at_date(
+                    mon["mp_starcat_date"], timelines_db=timelines_db
+                )
+                if (
+                    catalog is not None
+                    and catalog["obs"]["obsid"] == mon["obsid"]
+                    and catalog["mp_dir"] == mon["dir"]
+                ):
+                    mon["catalog"] = catalog
+                    statuses.append(catalog["status"])
                 else:
-                    statuses.append('none')
+                    statuses.append("none")
             except LookupError:
-                statuses.append('none')
+                statuses.append("none")
         # Add that status info to the table and filter on it
-        mons['status'] = statuses
-        mons = mons[mons['status'] != 'none']
+        mons["status"] = statuses
+        mons = mons[mons["status"] != "none"]
     return mons
 
 
@@ -160,14 +184,16 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     """
     date = DateTime(date).date
     if starcheck_db is None:
-        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
+        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
     db = starcheck_db
     if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
-    last_tl = timelines_db.fetchone(
-        "select max(datestop) as datestop from timelines")['datestop']
+        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG["timelines_db"])
+    last_tl = timelines_db.fetchone("select max(datestop) as datestop from timelines")[
+        "datestop"
+    ]
     first_tl = timelines_db.fetchone(
-        "select min(datestart) as datestart from timelines")['datestart']
+        "select min(datestart) as datestart from timelines"
+    )["datestart"]
     # Check kadi to get the first dwell that *ends* after the given time
     dwells = events.dwells.filter(stop__gte=date, subset=slice(None, 1))
     # if we're outside of timelines or not yet in kadi, just try from the starcheck database
@@ -179,13 +205,17 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
                where mp_starcat_time <= '{}' and mp_starcat_time > '{}'
                and starcheck_id.id = starcheck_obs.sc_id
                order by sc_id desc, mp_starcat_time desc """.format(
-                date, (DateTime(date) - 1).date))
+                date, (DateTime(date) - 1).date
+            )
+        )
         if starcheck:
-            cat_info = get_starcheck_catalog(starcheck['obsid'], mp_dir=starcheck['dir'])
+            cat_info = get_starcheck_catalog(
+                starcheck["obsid"], mp_dir=starcheck["dir"]
+            )
             if date < first_tl:
-                cat_info['status'] = 'ran_pretimelines'
+                cat_info["status"] = "ran_pretimelines"
             if date > last_tl:
-                cat_info['status'] = 'planned'
+                cat_info["status"] = "planned"
             return cat_info
 
     # We want to search for legitimate commanding that would cover the time when a star
@@ -199,13 +229,18 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     # There is a tiny window of time in cmd_states but not yet in kadi, but this code tries to
     # grab the dwell and maneuver that would be related to a date in that range
     if date < last_tl and len(dwells) == 0:
-        pcad_states = get_states(start=DateTime(date) - 2, state_keys=['pcad_mode'],
-                                 merge_identical=True)
-        dwell = pcad_states[(pcad_states['pcad_mode'] == 'NPNT') & (pcad_states['datestop'] >= date)][0]
-        manvr = pcad_states[(pcad_states['pcad_mode'] == 'NMAN')
-                            & (pcad_states['datestop'] <= dwell['datestart'])][-1]
-        start_cat_search = manvr['datestart']
-        dwell_start = dwell['datestart']
+        pcad_states = get_states(
+            start=DateTime(date) - 2, state_keys=["pcad_mode"], merge_identical=True
+        )
+        dwell = pcad_states[
+            (pcad_states["pcad_mode"] == "NPNT") & (pcad_states["datestop"] >= date)
+        ][0]
+        manvr = pcad_states[
+            (pcad_states["pcad_mode"] == "NMAN")
+            & (pcad_states["datestop"] <= dwell["datestart"])
+        ][-1]
+        start_cat_search = manvr["datestart"]
+        dwell_start = dwell["datestart"]
     else:
         # If we have a dwell from kadi, use it to search for commanding
         dwell = dwells[0]
@@ -219,9 +254,11 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
             start_cat_search = dwell.get_previous().stop
 
     timelines = timelines_db.fetchall(
-            """select * from timeline_loads where scs < 131
+        """select * from timeline_loads where scs < 131
            and datestop > '{}' and datestart < '{}' order by datestart""".format(
-            start_cat_search, dwell_start))
+            start_cat_search, dwell_start
+        )
+    )
     for timeline in timelines[::-1]:
         starchecks = db.fetchall(
             """select * from starcheck_obs, starcheck_id
@@ -230,31 +267,39 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
                and mp_starcat_time <= '{}' and mp_starcat_time <= '{}'
                and starcheck_id.id = starcheck_obs.sc_id
                order by mp_starcat_time """.format(
-                timeline['mp_dir'],
-                timeline['datestart'],
-                timeline['datestop'], dwell_start))
+                timeline["mp_dir"],
+                timeline["datestart"],
+                timeline["datestop"],
+                dwell_start,
+            )
+        )
         # The last one should be the one before beginning of the dwell
         if len(starchecks):
-            # Use the obsid and the known products directory to use the more generic get_starcheck_catalog
-            # to fetch the right one from the database
-            cat_info = get_starcheck_catalog(starchecks[-1]['obsid'], mp_dir=starchecks[-1]['dir'])
-            cat_info['status'] = 'ran' if date < DateTime().date else 'approved'
+            # Use the obsid and the known products directory to use the more
+            # generic get_starcheck_catalog to fetch the right one from the
+            # database
+            cat_info = get_starcheck_catalog(
+                starchecks[-1]["obsid"], mp_dir=starchecks[-1]["dir"]
+            )
+            cat_info["status"] = "ran" if date < DateTime().date else "approved"
             return cat_info
     return None
 
 
 def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
     """
-    Get the mission planning directory for an obsid and some status information.  If the obsid catalog was
-    used more than once (multi-obi or rescheduled after being used in a vehicle-only interval), return the
-    directory and details of the last one used on the spacecraft.
+    Get the mission planning directory for an obsid and some status information.
+    If the obsid catalog was used more than once (multi-obi or rescheduled after
+    being used in a vehicle-only interval), return the directory and details of
+    the last one used on the spacecraft.
 
-    The returned directory describes the directory that was used for the products with this star catalog.
-    The returned status has possible values:
+    The returned directory describes the directory that was used for the
+    products with this star catalog. The returned status has possible values:
 
     - ran: observation was observed
     - planned: observation in a not-approved future schedule
-    - approved: observation in an approved future schedule (ingested in timelines/cmd_states)
+    - approved: observation in an approved future schedule (ingested in
+      timelines/cmd_states)
     - ran_pretimelines: ran, but before timelines database starts
     - timelines_gap: after timelines database start but missing data
     - no starcat: in the database but has no star catalog
@@ -268,45 +313,59 @@ def get_mp_dir(obsid, starcheck_db=None, timelines_db=None):
 
     """
     if starcheck_db is None:
-        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
+        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
     db = starcheck_db
     if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
-    last_tl = timelines_db.fetchone(
-        "select max(datestop) as datestop from timelines")['datestop']
+        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG["timelines_db"])
+    last_tl = timelines_db.fetchone("select max(datestop) as datestop from timelines")[
+        "datestop"
+    ]
     starchecks = db.fetchall(
         """select * from starcheck_obs, starcheck_id
            where obsid = %d and starcheck_id.id = starcheck_obs.sc_id
-           order by sc_id """ % obsid)
-    # If this has a star catalog that predates timelines data just return the last record that matches
-    # and hope for the best
-    if (len(starchecks) and (starchecks[-1]['mp_starcat_time'] is not None) and
-        (starchecks[-1]['mp_starcat_time'] < '2001:001:00:00:00.000')):
-        return (starchecks[-1]['dir'], 'ran_pretimelines', starchecks[-1]['mp_starcat_time'])
+           order by sc_id """
+        % obsid
+    )
+    # If this has a star catalog that predates timelines data just return the
+    # last record that matches and hope for the best
+    if (
+        len(starchecks)
+        and (starchecks[-1]["mp_starcat_time"] is not None)
+        and (starchecks[-1]["mp_starcat_time"] < "2001:001:00:00:00.000")
+    ):
+        return (
+            starchecks[-1]["dir"],
+            "ran_pretimelines",
+            starchecks[-1]["mp_starcat_time"],
+        )
     # And if there are no entries, just return None for dir, status, time
     if not len(starchecks):
         return (None, None, None)
     # Go through the entries backwards (which are in ingest/date order)
     for sc in starchecks[::-1]:
-        sc_date = sc['mp_starcat_time']
+        sc_date = sc["mp_starcat_time"]
         # If it has no star catalog, there's not much to do
         if sc_date is None:
-            return (sc['dir'], 'no starcat', sc_date)
+            return (sc["dir"], "no starcat", sc_date)
         # If this is in a schedule not-yet-in-timelines or has no star catalog,
         # we'll have to hope that is the most useful entry if there are multiples
         if sc_date > last_tl:
-            return (sc['dir'], 'planned', sc_date)
+            return (sc["dir"], "planned", sc_date)
         tl = get_timeline_at_date(sc_date, timelines_db=timelines_db)
         # If there is a gap in timelines at this date, just return the most recent starcheck entry
         if tl is None or not len(tl):
-            return (starchecks[-1]['dir'], 'timelines_gap', starchecks[-1]['mp_starcat_time'])
+            return (
+                starchecks[-1]["dir"],
+                "timelines_gap",
+                starchecks[-1]["mp_starcat_time"],
+            )
         # If the approved products in timelines are from a different directory, no-go
-        if tl['mp_dir'] != sc['dir']:
+        if tl["mp_dir"] != sc["dir"]:
             continue
         if sc_date < DateTime().date:
-            return (sc['dir'], 'ran', sc_date)
+            return (sc["dir"], "ran", sc_date)
         else:
-            return (sc['dir'], 'approved', sc_date)
+            return (sc["dir"], "approved", sc_date)
     raise ValueError("get_mp_dir should find something or nothing")
 
 
@@ -346,12 +405,14 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
         return OBS_CACHE[obsid, mp_dir]
 
     if starcheck_db is None:
-        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG['starcheck_db'])
+        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
     if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG['timelines_db'])
+        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG["timelines_db"])
     status = None
     if mp_dir is None:
-        mp_dir, status, obs_date = get_mp_dir(obsid, starcheck_db=starcheck_db, timelines_db=timelines_db)
+        mp_dir, status, obs_date = get_mp_dir(
+            obsid, starcheck_db=starcheck_db, timelines_db=timelines_db
+        )
 
     # if it is still none, there's nothing to try here
     if mp_dir is None:
@@ -359,34 +420,37 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
 
     # mp_dir is in the standard short-form "MAY3018A".  Translate to
     # '/2018/MAY3018/oflsa/'
-    if re.match(r'[A-Z]{3}\d{4}[A-Z]$', mp_dir):
+    if re.match(r"[A-Z]{3}\d{4}[A-Z]$", mp_dir):
         load_version = mp_dir[7].lower()
-        load_year = '20' + mp_dir[5:7]
+        load_year = "20" + mp_dir[5:7]
         load_name = mp_dir[:7]
-        mp_dir = '/{}/{}/ofls{}/'.format(load_year, load_name, load_version)
+        mp_dir = "/{}/{}/ofls{}/".format(load_year, load_name, load_version)
 
-    db = starcheck_db # shorthand for the rest of the routine
-    sc_id = db.fetchone("select id from starcheck_id "
-                                  "where dir = '%s'" % mp_dir)
+    db = starcheck_db  # shorthand for the rest of the routine
+    sc_id = db.fetchone("select id from starcheck_id where dir = '%s'" % mp_dir)
     if sc_id is None:
         return None
-    sc_id = sc_id['id']
-    sc = {'mp_dir': mp_dir,
-          'status': status}
-    sc['obs'] = db.fetchone("select * from starcheck_obs where obsid = {} and sc_id = {}".format(
-            obsid, sc_id))
-    for d in ['manvr', 'catalog', 'warnings']:
+    sc_id = sc_id["id"]
+    sc = {"mp_dir": mp_dir, "status": status}
+    sc["obs"] = db.fetchone(
+        "select * from starcheck_obs where obsid = {} and sc_id = {}".format(
+            obsid, sc_id
+        )
+    )
+    for d in ["manvr", "catalog", "warnings"]:
         table_entries = db.fetchall(
             "select * from starcheck_%s where obsid = %d and sc_id = %d"
-            % (d, obsid, sc_id))
+            % (d, obsid, sc_id)
+        )
         sc[d] = Table(table_entries) if len(table_entries) else []
-    sc['cat'] = sc['catalog']
-    del sc['catalog']
-    pred_temp = db.fetchone("select pred_ccd_temp from starcheck_pred_temp "
-                            "where sc_id = {} and obsid = {}".format(
-            sc_id, obsid))
-    if pred_temp is not None and 'pred_ccd_temp' in pred_temp:
-        sc['pred_temp'] = pred_temp['pred_ccd_temp']
+    sc["cat"] = sc["catalog"]
+    del sc["catalog"]
+    pred_temp = db.fetchone(
+        "select pred_ccd_temp from starcheck_pred_temp "
+        "where sc_id = {} and obsid = {}".format(sc_id, obsid)
+    )
+    if pred_temp is not None and "pred_ccd_temp" in pred_temp:
+        sc["pred_temp"] = pred_temp["pred_ccd_temp"]
 
     # Cache result for later re-use (use whatever user supplied as mp_dir kwarg)
     # since mp_dir gets munged in the meantime.
