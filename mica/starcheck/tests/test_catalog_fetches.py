@@ -1,80 +1,111 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
+
 import numpy as np
-from Quaternion import normalize, Quat
+import pytest
 from Chandra.Time import DateTime
 from kadi import events
+from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
 from Ska.quatutil import radec2yagzag, yagzag2radec
-import pytest
 
 from .. import starcheck
 
-HAS_SC_ARCHIVE = os.path.exists(starcheck.FILES['data_root'])
+HAS_SC_ARCHIVE = os.path.exists(starcheck.FILES["data_root"])
+
 
 def get_cmd_quat(date):
     date = DateTime(date)
-    cmd_quats = fetch.MSIDset(['AOCMDQT{}'.format(i) for i in [1, 2, 3]],
-                              date.secs, date.secs + 120)
-    cmd_q4 = np.sqrt(np.abs(1 - cmd_quats['AOCMDQT1'].vals[0]**2
-                            - cmd_quats['AOCMDQT2'].vals[0]**2
-                            - cmd_quats['AOCMDQT3'].vals[0]**2))
-    return Quat(normalize([cmd_quats['AOCMDQT1'].vals[0],
-                           cmd_quats['AOCMDQT2'].vals[0],
-                           cmd_quats['AOCMDQT3'].vals[0],
-                           cmd_q4]))
+    cmd_quats = fetch.MSIDset(
+        ["AOCMDQT{}".format(i) for i in [1, 2, 3]], date.secs, date.secs + 120
+    )
+    cmd_q4 = np.sqrt(
+        np.abs(
+            1
+            - cmd_quats["AOCMDQT1"].vals[0] ** 2
+            - cmd_quats["AOCMDQT2"].vals[0] ** 2
+            - cmd_quats["AOCMDQT3"].vals[0] ** 2
+        )
+    )
+    return Quat(
+        normalize(
+            [
+                cmd_quats["AOCMDQT1"].vals[0],
+                cmd_quats["AOCMDQT2"].vals[0],
+                cmd_quats["AOCMDQT3"].vals[0],
+                cmd_q4,
+            ]
+        )
+    )
 
 
 def get_trak_cat_from_telem(start, stop, cmd_quat):
     start = DateTime(start)
     stop = DateTime(stop)
-    msids = ["{}{}".format(m, i) for m in ['AOACYAN', 'AOACZAN', 'AOACFID', 'AOIMAGE', 'AOACFCT']
-             for i in range(0, 8)]
-    telem = fetch.MSIDset(['AOACASEQ', 'CORADMEN', 'AOPCADMD', 'AONSTARS', 'AOKALSTR']
-                          + msids, start, stop)
-    att = fetch.MSIDset(['AOATTQT{}'.format(i) for i in [1, 2, 3, 4]], start, stop)
+    msids = [
+        "{}{}".format(m, i)
+        for m in ["AOACYAN", "AOACZAN", "AOACFID", "AOIMAGE", "AOACFCT"]
+        for i in range(0, 8)
+    ]
+    telem = fetch.MSIDset(
+        ["AOACASEQ", "CORADMEN", "AOPCADMD", "AONSTARS", "AOKALSTR"] + msids,
+        start,
+        stop,
+    )
+    att = fetch.MSIDset(["AOATTQT{}".format(i) for i in [1, 2, 3, 4]], start, stop)
     cat = {}
     for slot in range(0, 8):
-        track = telem['AOACFCT{}'.format(slot)].vals == 'TRAK'
-        fid = telem['AOACFID{}'.format(slot)].vals == 'FID '
-        star = telem['AOIMAGE{}'.format(slot)].vals == 'STAR'
+        track = telem["AOACFCT{}".format(slot)].vals == "TRAK"
+        fid = telem["AOACFID{}".format(slot)].vals == "FID "
+        star = telem["AOIMAGE{}".format(slot)].vals == "STAR"
         n = 30
         if np.count_nonzero(track) < n:
             continue
         if np.any(fid & track):
-            cat[slot] = {'type': 'FID',
-                         'yag': telem['AOACYAN{}'.format(slot)].vals[fid & track][0],
-                         'zag': telem['AOACZAN{}'.format(slot)].vals[fid & track][0]}
+            cat[slot] = {
+                "type": "FID",
+                "yag": telem["AOACYAN{}".format(slot)].vals[fid & track][0],
+                "zag": telem["AOACZAN{}".format(slot)].vals[fid & track][0],
+            }
         else:
             n_samples = np.count_nonzero(track & star)
             if n_samples < (n + 4):
                 continue
             # If there is tracked data with a star, let's try to get our n samples from about
             # the middle of the range
-            mid_point = int(n_samples / 2.)
+            mid_point = int(n_samples / 2.0)
             yags = []
             zags = []
-            for sample in range(mid_point - int(n / 2.), mid_point + int(n / 2.)):
-                qref = Quat(normalize([att['AOATTQT{}'.format(i)].vals[track & star][sample]
-                                       for i in [1, 2, 3, 4]]))
+            for sample in range(mid_point - int(n / 2.0), mid_point + int(n / 2.0)):
+                qref = Quat(
+                    normalize(
+                        [
+                            att["AOATTQT{}".format(i)].vals[track & star][sample]
+                            for i in [1, 2, 3, 4]
+                        ]
+                    )
+                )
                 ra, dec = yagzag2radec(
-                    telem['AOACYAN{}'.format(slot)].vals[track & star][sample] / 3600.,
-                    telem['AOACZAN{}'.format(slot)].vals[track & star][sample] / 3600.,
-                    qref)
+                    telem["AOACYAN{}".format(slot)].vals[track & star][sample] / 3600.0,
+                    telem["AOACZAN{}".format(slot)].vals[track & star][sample] / 3600.0,
+                    qref,
+                )
                 yag, zag = radec2yagzag(ra, dec, cmd_quat)
                 yags.append(yag)
                 zags.append(zag)
             # This doesn't detect MON just yet
-            cat[slot] = {'type': 'STAR',
-                         'yag': np.median(yags) * 3600.,
-                         'zag': np.median(zags) * 3600.}
+            cat[slot] = {
+                "type": "STAR",
+                "yag": np.median(yags) * 3600.0,
+                "zag": np.median(zags) * 3600.0,
+            }
     return cat, telem
 
 
-@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
 def test_validate_catalogs_over_range():
-    start = '2017:001:12:00:00'
-    stop = '2017:002:12:00:00'
+    start = "2017:001:12:00:00"
+    stop = "2017:002:12:00:00"
     dwells = events.dwells.filter(start, stop)
     for dwell in dwells:
         print(dwell)
@@ -82,71 +113,72 @@ def test_validate_catalogs_over_range():
             telem_quat = get_cmd_quat(dwell.start)
             # try to get the tracked telemetry for 1ks at the beginning of the dwell,
             # or if the dwell is shorter than that, just get the dwell
-            cat, telem = get_trak_cat_from_telem(dwell.start,
-                                                 np.min([dwell.tstart + 100, dwell.tstop]),
-                                                 telem_quat)
+            cat, telem = get_trak_cat_from_telem(
+                dwell.start, np.min([dwell.tstart + 100, dwell.tstop]), telem_quat
+            )
         except ValueError as err:
-            if 'MSID' in str(err):
-                pytest.skip('Eng archive MSID missing {}'.format(err))
+            if "MSID" in str(err):
+                pytest.skip("Eng archive MSID missing {}".format(err))
 
         sc = starcheck.get_starcheck_catalog_at_date(dwell.start)
-        sc_quat = Quat([sc['manvr'][-1]["target_Q{}".format(i)] for i in [1, 2, 3, 4]])
+        sc_quat = Quat([sc["manvr"][-1]["target_Q{}".format(i)] for i in [1, 2, 3, 4]])
         dq = sc_quat.dq(telem_quat)
-        if ((np.abs(dq.pitch) * 3600 > 1) or (np.abs(dq.yaw) * 3600 > 1)):
-            if dwell.manvr.template != 'unknown':
+        if (np.abs(dq.pitch) * 3600 > 1) or (np.abs(dq.yaw) * 3600 > 1):
+            if dwell.manvr.template != "unknown":
                 raise ValueError("Unexpected offset in pointing")
             else:
                 print(dwell.start, "pointing offset but has unknown manvr template")
                 continue
-        trak_sc = sc['cat'][sc['cat']['type'] != 'ACQ']
+        trak_sc = sc["cat"][sc["cat"]["type"] != "ACQ"]
         for slot in range(0, 8):
             if slot in cat:
-                slot_match = trak_sc[trak_sc['slot'] == slot]
+                slot_match = trak_sc[trak_sc["slot"] == slot]
                 # the if statement may see false positives if fewer than a total of 8 BOT/GUI/MON
                 # slots were commanded
                 if not len(slot_match):
                     raise ValueError("missing slot in catalog")
                 trak_sc_slot = slot_match[0]
-                if trak_sc_slot['type'] == 'FID':
-                    assert cat[slot]['type'] == 'FID'
-                    assert np.abs(cat[slot]['yag'] - trak_sc_slot['yang']) < 20.0
-                    assert np.abs(cat[slot]['zag'] - trak_sc_slot['zang']) < 20.0
+                if trak_sc_slot["type"] == "FID":
+                    assert cat[slot]["type"] == "FID"
+                    assert np.abs(cat[slot]["yag"] - trak_sc_slot["yang"]) < 20.0
+                    assert np.abs(cat[slot]["zag"] - trak_sc_slot["zang"]) < 20.0
                 else:
-                    assert np.abs(cat[slot]['yag'] - trak_sc_slot['yang']) < 5.0
-                    assert np.abs(cat[slot]['zag'] - trak_sc_slot['zang']) < 5.0
+                    assert np.abs(cat[slot]["yag"] - trak_sc_slot["yang"]) < 5.0
+                    assert np.abs(cat[slot]["zag"] - trak_sc_slot["zang"]) < 5.0
 
 
-@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
 def test_obsid_catalog_fetch():
-    tests = [{'obsid': 19990,
-              'mp_dir': '/2017/FEB2017/oflsa/',
-              'n_cat_entries': 11},
-             {'obsid': 17210,
-              'mp_dir': '/2016/JAN2516/oflsa/',
-              'n_cat_entries': 11},
-             {'obsid': 62668}]
+    tests = [
+        {"obsid": 19990, "mp_dir": "/2017/FEB2017/oflsa/", "n_cat_entries": 11},
+        {"obsid": 17210, "mp_dir": "/2016/JAN2516/oflsa/", "n_cat_entries": 11},
+        {"obsid": 62668},
+    ]
     # 62668 should be an undercover with no catalog
     for t in tests:
-        sc = starcheck.get_starcheck_catalog(t['obsid'])
-        if 'mp_dir' in t:
-            assert t['mp_dir'] == sc['mp_dir']
-        if 'n_cat_entries' in t:
-            assert len(sc['cat']) == t['n_cat_entries']
-        if t['obsid'] == 62668:
+        sc = starcheck.get_starcheck_catalog(t["obsid"])
+        if "mp_dir" in t:
+            assert t["mp_dir"] == sc["mp_dir"]
+        if "n_cat_entries" in t:
+            assert len(sc["cat"]) == t["n_cat_entries"]
+        if t["obsid"] == 62668:
             assert sc is None
     # review a dark current replica obsid
     dcdir, dcstatus, dcdate = starcheck.get_mp_dir(49961)
-    assert dcdir == '/2017/JUL0317/oflsb/'
-    assert dcstatus == 'no starcat'
+    assert dcdir == "/2017/JUL0317/oflsb/"
+    assert dcstatus == "no starcat"
     assert dcdate is None
 
-@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
 def test_monitor_fetch():
-    mons = starcheck.get_monitor_windows(start='2009:002:12:00:00', stop='2009:007:12:00:00')
+    mons = starcheck.get_monitor_windows(
+        start="2009:002:12:00:00", stop="2009:007:12:00:00"
+    )
     assert len(mons) == 10
 
 
-@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
 def test_get_starcheck_methods():
     """
     Check that the get_starcat, get_dither, and get_att Spacecraft methods
@@ -165,50 +197,56 @@ def test_get_starcheck_methods():
     assert len(starcheck.OBS_CACHE) == 2
 
     # IDX and ID of the entries of this obsid catalog
-    regress = {1: 1,
-               2: 5,
-               3: 6,
-               4: 454035528,
-               5: 454035856,
-               6: 454428648,
-               7: 454432416,
-               8: 454433448,
-               9: 454036528,
-               10: 454039632,
-               11: 454036472,
-               12: 454038056}
+    regress = {
+        1: 1,
+        2: 5,
+        3: 6,
+        4: 454035528,
+        5: 454035856,
+        6: 454428648,
+        7: 454432416,
+        8: 454433448,
+        9: 454036528,
+        10: 454039632,
+        11: 454036472,
+        12: 454038056,
+    }
     assert len(regress) == len(cat)
     for row in cat:
-        assert regress[row['idx']] == row['id']
+        assert regress[row["idx"]] == row["id"]
 
     dither = starcheck.get_dither(obsid)
-    assert dither == {'pitch_ampl': 8.0,
-                      'pitch_period': 707.1,
-                      'yaw_ampl': 8.0,
-                      'yaw_period': 1000.0}
+    assert dither == {
+        "pitch_ampl": 8.0,
+        "pitch_period": 707.1,
+        "yaw_ampl": 8.0,
+        "yaw_period": 1000.0,
+    }
 
     att = starcheck.get_att(obsid)
     assert att == [209.04218, 47.227524, 357.020117]
 
     obsid = 2000
     dither = starcheck.get_dither(obsid)
-    assert dither == {'pitch_ampl': 0.0,
-                      'pitch_period': -999.0,
-                      'yaw_ampl': 0.0,
-                      'yaw_period': -999.0}
+    assert dither == {
+        "pitch_ampl": 0.0,
+        "pitch_period": -999.0,
+        "yaw_ampl": 0.0,
+        "yaw_period": -999.0,
+    }
 
 
-@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Test requires starcheck archive')
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
 def test_get_starcheck_with_mp_dir():
     """Obsid 21082 was scheduled in APR2318A and B, but not C, which was actually
     run. Use this to test the functionality of explicitly specifying load name."""
 
     starcheck.OBS_CACHE.clear()
 
-    sc = starcheck.get_starcheck_catalog(21082, '/2018/APR2318/oflsa/')
-    assert len(sc['cat']) == 12
-    assert (21082, '/2018/APR2318/oflsa/') in starcheck.OBS_CACHE
+    sc = starcheck.get_starcheck_catalog(21082, "/2018/APR2318/oflsa/")
+    assert len(sc["cat"]) == 12
+    assert (21082, "/2018/APR2318/oflsa/") in starcheck.OBS_CACHE
 
-    sc = starcheck.get_starcheck_catalog(21082, 'APR2318A')
-    assert len(sc['cat']) == 12
-    assert (21082, 'APR2318A') in starcheck.OBS_CACHE
+    sc = starcheck.get_starcheck_catalog(21082, "APR2318A")
+    assert len(sc["cat"]) == 12
+    assert (21082, "APR2318A") in starcheck.OBS_CACHE
