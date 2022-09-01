@@ -154,14 +154,14 @@ def test_obsid_catalog_fetch():
         {"obsid": 17210, "mp_dir": "/2016/JAN2516/oflsa/", "n_cat_entries": 11},
         {"obsid": 62668},
     ]
-    # 62668 should be an undercover with no catalog
+    # 45312 is a gyro hold with no star catalog
     for t in tests:
         sc = starcheck.get_starcheck_catalog(t["obsid"])
         if "mp_dir" in t:
             assert t["mp_dir"] == sc["mp_dir"]
         if "n_cat_entries" in t:
             assert len(sc["cat"]) == t["n_cat_entries"]
-        if t["obsid"] == 62668:
+        if t["obsid"] == 45312:
             assert sc is None
     # review a dark current replica obsid
     dcdir, dcstatus, dcdate = starcheck.get_mp_dir(49961)
@@ -188,7 +188,7 @@ def test_get_starcheck_methods():
     starcheck.OBS_CACHE.clear()
 
     # Get the catalog for any obsid to add something to the cache
-    starcheck.get_starcat(2121)
+    starcheck.get_starcat(8008)
     assert len(starcheck.OBS_CACHE) == 1
 
     # Get an check the values for the utility methods for obsid 19372
@@ -226,7 +226,8 @@ def test_get_starcheck_methods():
     att = starcheck.get_att(obsid)
     assert att == [209.04218, 47.227524, 357.020117]
 
-    obsid = 2000
+    # Check a full-sequence dark cal obs from SEP3019A
+    obsid = 47846
     dither = starcheck.get_dither(obsid)
     assert dither == {
         "pitch_ampl": 0.0,
