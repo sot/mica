@@ -39,6 +39,21 @@ def test_get_dark_cal_id():
     assert dark_cal.get_dark_cal_id('2007:008:12:00:00', 'before') == '2007006'
     assert dark_cal.get_dark_cal_id('2007:008:12:00:00', 'after') == '2007069'
 
+    dark_cal_ids = list(dark_cal.get_dark_cal_ids().values())
+    # removing these two to make sure it is not like the default case
+    dark_cal_ids.remove('2007006')
+    dark_cal_ids.remove('2007069')
+
+    assert dark_cal.get_dark_cal_id(
+        '2007:008:12:00:00', 'nearest', dark_cal_ids=dark_cal_ids
+    ) == '2006329'
+    assert dark_cal.get_dark_cal_id(
+        '2007:008:12:00:00', 'before', dark_cal_ids=dark_cal_ids
+    ) == '2006329'
+    assert dark_cal.get_dark_cal_id(
+        '2007:008:12:00:00', 'after', dark_cal_ids=dark_cal_ids
+    ) == '2007251'
+
 
 @pytest.mark.skipif('not HAS_DARK_ARCHIVE', reason='Test requires dark archive')
 @pytest.mark.parametrize('allow_negative', [True, False])
