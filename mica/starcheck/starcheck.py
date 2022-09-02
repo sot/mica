@@ -297,7 +297,42 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     return None
 
 
-def get_mp_dir(obsid, **kwargs):
+def get_mp_dir_from_starcheck_db(obsid, starcheck_db=None):
+    """Get a guess for MP_DIR using the starchecks database.
+
+    :param obsid: obsid
+    :param starcheck_db: optional handle to already-open starcheck database
+    :returns: directory, status, date
+    """
+    if starcheck_db is None:
+        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
+
+    starchecks = starcheck_db.fetchall(
+        """select * from starcheck_obs, starcheck_id
+            where obsid = %d and starcheck_id.id = starcheck_obs.sc_id
+            order by sc_id """
+        % obsid
+    )
+    # If this has a star catalog that predates command observations then return
+    # the last record that matches and hope for the best
+    obss = get_observations(start="1999:001", stop="2003:001", scenario="flight")
+    if (
+        len(starchecks)
+        and (starchecks[-1]["mp_starcat_time"] is not None)
+        and (starchecks[-1]["mp_starcat_time"] < obss[0]["obs_start"])
+    ):
+        out = (
+            starchecks[-1]["dir"],
+            "ran_pretimelines",
+            starchecks[-1]["mp_starcat_time"],
+        )
+    else:
+        out = (None, None, None)
+
+    return out
+
+
+def get_mp_dir(obsid, starcheck_db=None, **kwargs):
     """
     Get the mission planning directory for an obsid and some status information.
     If the obsid catalog was used more than once (multi-obi or rescheduled after
@@ -314,36 +349,43 @@ def get_mp_dir(obsid, **kwargs):
 
     - "ran": observation date before current time
     - "approved": observation date after current time
+    - "ran_pretimelines": probably ran, but before commands database starts
     - "no starcat": observation exists but has no star catalog
 
     The return ``date`` is the date/time of the ``MP_STARCAT`` time.
 
     :param obsid: obsid
-    :param **kwargs: additional keyword arguments for back-compatibility
+    :param starcheck_db: optional handle to already-open starcheck database
+    :param **kwargs: catch for timelines_db kwarg for back-compatibility
     :returns: directory, status, date
 
     """
+    # If code is supplying any other kwargs then warn
     if kwargs:
         warnings.warn(f"keyword args {list(kwargs)} are ignored", DeprecationWarning)
 
-    # Use last star catalog matching obsid. If no matches the get_observations
-    # call raises a ValueError.
-    obs = get_observations(obsid=obsid)[-1]
-
-    sc_date = obs.get("starcat_date")
-    if sc_date is None:
-        status = "no starcat"
-    else:
-        if sc_date < CxoTime.now().date:
-            status = "ran"
+    try:
+        obs = get_observations(obsid=obsid)[-1]
+    except ValueError as err:
+        if "No matching observations" in str(err):
+            mp_dir, status, sc_date = get_mp_dir_from_starcheck_db(obsid, starcheck_db)
         else:
-            status = "approved"
-    mp_dir = _load_name_to_mp_dir(obs["source"])
+            raise err
+    else:
+        sc_date = obs.get("starcat_date")
+        if sc_date is None:
+            status = "no starcat"
+        else:
+            if sc_date < CxoTime.now().date:
+                status = "ran"
+            else:
+                status = "approved"
+        mp_dir = _load_name_to_mp_dir(obs["source"])
 
     return mp_dir, status, sc_date
 
 
-def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=None):
+def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None):
     """
     For a given obsid, return a dictionary describing the starcheck catalog that should apply.
     The content of that dictionary is from the database tables of that parsed the starcheck report
@@ -380,13 +422,9 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None, timelines_db=No
 
     if starcheck_db is None:
         starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
-    if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG["timelines_db"])
     status = None
     if mp_dir is None:
-        mp_dir, status, obs_date = get_mp_dir(
-            obsid, starcheck_db=starcheck_db, timelines_db=timelines_db
-        )
+        mp_dir, status, obs_date = get_mp_dir(obsid)
 
     # if it is still none, there's nothing to try here
     if mp_dir is None:

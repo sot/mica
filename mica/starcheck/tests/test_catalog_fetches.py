@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from Chandra.Time import DateTime
 from kadi import events
+from kadi.commands import get_starcats as kadi_get_starcats
 from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
 from Ska.quatutil import radec2yagzag, yagzag2radec
@@ -188,7 +189,7 @@ def test_get_starcheck_methods():
     starcheck.OBS_CACHE.clear()
 
     # Get the catalog for any obsid to add something to the cache
-    starcheck.get_starcat(8008)
+    starcheck.get_starcat(2121)
     assert len(starcheck.OBS_CACHE) == 1
 
     # Get an check the values for the utility methods for obsid 19372
@@ -226,15 +227,23 @@ def test_get_starcheck_methods():
     att = starcheck.get_att(obsid)
     assert att == [209.04218, 47.227524, 357.020117]
 
-    # Check a full-sequence dark cal obs from SEP3019A
-    obsid = 47846
-    dither = starcheck.get_dither(obsid)
-    assert dither == {
-        "pitch_ampl": 0.0,
-        "pitch_period": -999.0,
-        "yaw_ampl": 0.0,
-        "yaw_period": -999.0,
-    }
+    # Check a dark cal obs from SEP3019A and an old (pre-kadi) obsid
+    for obsid in (47846, 2000):
+        dither = starcheck.get_dither(obsid)
+        assert dither == {
+            "pitch_ampl": 0.0,
+            "pitch_period": -999.0,
+            "yaw_ampl": 0.0,
+            "yaw_period": -999.0,
+        }
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_vs_kadi():
+    # Make sure this works for an obsid in kadi commands
+    cat_mica = starcheck.get_starcat(8008)
+    cat_kadi = kadi_get_starcats(obsid=8008, scenario='flight')[0]
+    assert np.all(cat_mica['id'] == cat_kadi['id'])
 
 
 @pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
