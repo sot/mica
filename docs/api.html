@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>mica.archive.aca_dark &#8212; mica 4.30.1 documentation</title>
+    <title>mica.archive.aca_dark &#8212; mica 4.31.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
@@ -54,7 +54,7 @@
 	
       </li>
       <li>
-	<a href="index.html">mica 4.30.1 documentation</a>
+	<a href="index.html">mica 4.31.0 documentation</a>
 	 &#187;
       </li>
       
@@ -117,7 +117,7 @@ where the key is the dark cal identifier (YYYYDOY) and the value is the path.</p
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.get_dark_cal_id">
-<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'before'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_id" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'before'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dark_cal_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the dark calibration id corresponding to <code class="docutils literal notranslate"><span class="pre">date</span></code>.</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">select</span></code> is <code class="docutils literal notranslate"><span class="pre">'before'</span></code> (default) then use the first calibration which
 occurs before <code class="docutils literal notranslate"><span class="pre">date</span></code>.  Other valid options are <code class="docutils literal notranslate"><span class="pre">'after'</span></code> and <code class="docutils literal notranslate"><span class="pre">'nearest'</span></code>.</p>
@@ -126,6 +126,7 @@ occurs before <code class="docutils literal notranslate"><span class="pre">date<
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>date</strong> – date in any CxoTime format</p></li>
 <li><p><strong>select</strong> – method to select dark cal (before|nearest|after)</p></li>
+<li><p><strong>dark_cal_ids</strong> – list of all dark-cal IDs (optional, the output of get_dark_cal_ids)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1367,15 +1368,17 @@ previous dwell through the end of the dwell in which the catalog was used.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_mp_dir">
 <span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_mp_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timelines_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_mp_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_mp_dir" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the mission planning directory for an obsid and some status information.  If the obsid catalog was
-used more than once (multi-obi or rescheduled after being used in a vehicle-only interval), return the
-directory and details of the last one used on the spacecraft.</p>
-<p>The returned directory describes the directory that was used for the products with this star catalog.
-The returned status has possible values:</p>
+<dd><p>Get the mission planning directory for an obsid and some status information.
+If the obsid catalog was used more than once (multi-obi or rescheduled after
+being used in a vehicle-only interval), return the directory and details of
+the last one used on the spacecraft.</p>
+<p>The returned directory describes the directory that was used for the
+products with this star catalog. The returned status has possible values:</p>
 <ul class="simple">
 <li><p>ran: observation was observed</p></li>
 <li><p>planned: observation in a not-approved future schedule</p></li>
-<li><p>approved: observation in an approved future schedule (ingested in timelines/cmd_states)</p></li>
+<li><p>approved: observation in an approved future schedule (ingested in
+timelines/cmd_states)</p></li>
 <li><p>ran_pretimelines: ran, but before timelines database starts</p></li>
 <li><p>timelines_gap: after timelines database start but missing data</p></li>
 <li><p>no starcat: in the database but has no star catalog</p></li>
@@ -1398,22 +1401,28 @@ The returned status has possible values:</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_monitor_windows">
 <span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_monitor_windows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_obsid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_monitor_windows"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_monitor_windows" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use the database of starcheck products to get a list of monitor windows
-This list is filtered by timelines content to only include catalogs that should have or will run.</p>
+<dd><p>Use the database of starcheck products to get a list of monitor windows This
+list is filtered by timelines content to only include catalogs that should
+have or will run.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>start</strong> – Optional start time for filtering windows as fetched from the database</p></li>
-<li><p><strong>stop</strong> – Optional stop time for filtering windows as fetched from the database</p></li>
-<li><p><strong>min_obsid</strong> – Minimum obsid value for filtering.  Default of 40000 is intended to fetch only ERs</p></li>
-<li><p><strong>config</strong> – config dictionary. If supplied must include ‘starcheck_db’ and ‘timelines_db’ keys
-with dictionaries of the required arguments to Ska.DBI to connect to those databases.</p></li>
+<li><p><strong>start</strong> – Optional start time for filtering windows as fetched from the
+database</p></li>
+<li><p><strong>stop</strong> – Optional stop time for filtering windows as fetched from the
+database</p></li>
+<li><p><strong>min_obsid</strong> – Minimum obsid value for filtering.  Default of 40000 is
+intended to fetch only ERs</p></li>
+<li><p><strong>config</strong> – config dictionary. If supplied must include ‘starcheck_db’
+and ‘timelines_db’ keys with dictionaries of the required
+arguments to Ska.DBI to connect to those databases.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>astropy Table of monitor windows.  See get_starcheck_catalog_at_date for description of the values
-of the ‘status’ column.  The ‘catalog’ column contains the get_starcheck_catalog_at_date
-returned dictionary.</p>
+<dd class="field-even"><p>astropy Table of monitor windows.  See
+get_starcheck_catalog_at_date for description of the values of the
+‘status’ column.  The ‘catalog’ column contains the
+get_starcheck_catalog_at_date returned dictionary.</p>
 </dd>
 </dl>
 </dd></dl>
