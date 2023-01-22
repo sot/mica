@@ -3,6 +3,7 @@ import os
 import re
 import warnings
 
+import numpy as np
 import Ska.DBI
 from astropy.table import Table
 from cxotime import CxoTime
@@ -135,6 +136,32 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
         )
     mons = Table(mons)
     mons["catalog"] = None
+
+    obss = get_observations()
+    obss_keys = set()
+    for obs in obss:
+        if obs["source"] == "CMD_EVT":
+            continue
+        key = (
+            obs["obsid"],
+            obs.get("starcat_date"),
+            _load_name_to_mp_dir(obs["source"]),
+        )
+        obss_keys.add(key)
+
+    statuses = []
+    date_now = CxoTime.now().date
+    for mon in mons:
+        sc_date = mon['mp_starcat_date']
+        key = (mon['obsid'], sc_date, mon['dir'])
+        if key not in obss_keys:
+            statuses.append("not run")
+        else:
+            statuses.append("run" if sc_date < date_now else "approved")
+
+    ok = np.array(statuses) != "not run"
+    mons = mons[ok]
+
     with Ska.DBI.DBI(**config["timelines_db"]) as timelines_db:
         statuses = []
         # Check which ones actually ran or are likely to run
