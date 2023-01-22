@@ -5,11 +5,11 @@ import warnings
 
 import numpy as np
 import Ska.DBI
+import astropy.units as u
 from astropy.table import Table
+
 from cxotime import CxoTime
-from kadi import events
 from kadi.commands import get_observations
-from kadi.commands.states import get_states
 
 from mica.common import MICA_ARCHIVE
 
@@ -18,10 +18,6 @@ DEFAULT_CONFIG = dict(
         dbi="sqlite", server=os.path.join(MICA_ARCHIVE, "starcheck", "starcheck.db3")
     ),
     mp_top_level="/data/mpcrit1/mplogs",
-    timelines_db=dict(
-        dbi="sqlite",
-        server=os.path.join(os.environ["SKA"], "data", "cmd_states", "cmd_states.db3"),
-    ),
 )
 FILES = dict(
     data_root=os.path.join(MICA_ARCHIVE, "starcheck"),
@@ -152,8 +148,8 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     statuses = []
     date_now = CxoTime.now().date
     for mon in mons:
-        sc_date = mon['mp_starcat_date']
-        key = (mon['obsid'], sc_date, mon['dir'])
+        sc_date = mon["mp_starcat_date"]
+        key = (mon["obsid"], sc_date, mon["dir"])
         if key not in obss_keys:
             statuses.append("not run")
         else:
@@ -220,108 +216,28 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
 
 
     """
-    date = CxoTime(date).date
+    date = CxoTime(date)
     if starcheck_db is None:
         starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
-    db = starcheck_db
-    if timelines_db is None:
-        timelines_db = Ska.DBI.DBI(**DEFAULT_CONFIG["timelines_db"])
-    last_tl = timelines_db.fetchone("select max(datestop) as datestop from timelines")[
-        "datestop"
-    ]
-    first_tl = timelines_db.fetchone(
-        "select min(datestart) as datestart from timelines"
-    )["datestart"]
-    # Check kadi to get the first dwell that *ends* after the given time
-    dwells = events.dwells.filter(stop__gte=date, subset=slice(None, 1))
-    # if we're outside of timelines or not yet in kadi, just try from the starcheck database
-    if date > last_tl or date < first_tl:
-        # Get one entry that is the last one before the specified time, in the most
-        # recently ingested products directory
-        starcheck = db.fetchone(
-            """select * from starcheck_obs, starcheck_id
-               where mp_starcat_time <= '{}' and mp_starcat_time > '{}'
-               and starcheck_id.id = starcheck_obs.sc_id
-               order by sc_id desc, mp_starcat_time desc """.format(
-                date, (CxoTime(date) - 1).date
-            )
-        )
-        if starcheck:
-            cat_info = get_starcheck_catalog(
-                starcheck["obsid"], mp_dir=starcheck["dir"]
-            )
-            if date < first_tl:
-                cat_info["status"] = "ran_pretimelines"
-            if date > last_tl:
-                cat_info["status"] = "planned"
-            return cat_info
 
-    # We want to search for legitimate commanding that would cover the time when a star
-    # catalog would have been commanded for this dwell.  This is generally the time range
-    # between the end of the previous dwell and the beginning of this dwell.  However, if
-    # there are multiple dwells from one maneuver, use the beginning of NMM from that one
-    # maneuver else, use the end of the last dwell.  Don't use nman_start time by default
-    # because that doesn't appear to work if the catalog was commanded in a nonstandard
-    # nmm sequence like dark cal.
-
-    # There is a tiny window of time in cmd_states but not yet in kadi, but this code tries to
-    # grab the dwell and maneuver that would be related to a date in that range
-    if date < last_tl and len(dwells) == 0:
-        pcad_states = get_states(
-            start=CxoTime(date) - 2, state_keys=["pcad_mode"], merge_identical=True
-        )
-        dwell = pcad_states[
-            (pcad_states["pcad_mode"] == "NPNT") & (pcad_states["datestop"] >= date)
-        ][0]
-        manvr = pcad_states[
-            (pcad_states["pcad_mode"] == "NMAN")
-            & (pcad_states["datestop"] <= dwell["datestart"])
-        ][-1]
-        start_cat_search = manvr["datestart"]
-        dwell_start = dwell["datestart"]
+    # Get observations within +/- 7 days and find the one where ``date`` is between end
+    # of the previous obs dwell through the end of the current obs dwell.
+    obss = Table(get_observations(start=date - 7 * u.day, stop=date + 7 * u.day))
+    obss.sort("obs_start")
+    for obs_prev, obs in zip(obss[:-1], obss[1:]):
+        if obs_prev["obs_stop"] < date.date <= obs["obs_stop"]:
+            break
     else:
-        # If we have a dwell from kadi, use it to search for commanding
-        dwell = dwells[0]
-        dwell_start = dwell.start
-        # Try to use the beginning of the previous nman period to define when the catalog
-        # should have been commanded.  If there are multiple dwells for attitude, try to
-        # use nman_start if available.
-        if dwell.manvr.n_dwell > 1 and dwell.manvr.nman_start is not None:
-            start_cat_search = dwell.manvr.nman_start
-        else:
-            start_cat_search = dwell.get_previous().stop
+        raise ValueError(f"could not find observation at {date}")
 
-    timelines = timelines_db.fetchall(
-        """select * from timeline_loads where scs < 131
-           and datestop > '{}' and datestart < '{}' order by datestart""".format(
-            start_cat_search, dwell_start
-        )
-    )
-    for timeline in timelines[::-1]:
-        starchecks = db.fetchall(
-            """select * from starcheck_obs, starcheck_id
-               where dir = '{}'
-               and mp_starcat_time >= '{}'
-               and mp_starcat_time <= '{}' and mp_starcat_time <= '{}'
-               and starcheck_id.id = starcheck_obs.sc_id
-               order by mp_starcat_time """.format(
-                timeline["mp_dir"],
-                timeline["datestart"],
-                timeline["datestop"],
-                dwell_start,
-            )
-        )
-        # The last one should be the one before beginning of the dwell
-        if len(starchecks):
-            # Use the obsid and the known products directory to use the more
-            # generic get_starcheck_catalog to fetch the right one from the
-            # database
-            cat_info = get_starcheck_catalog(
-                starchecks[-1]["obsid"], mp_dir=starchecks[-1]["dir"]
-            )
-            cat_info["status"] = "ran" if date < CxoTime().date else "approved"
-            return cat_info
-    return None
+    mp_dir = _load_name_to_mp_dir(obs["source"])
+    obsid = obs["obsid"]
+
+    # Use the obsid and the known products directory to use the more generic
+    # get_starcheck_catalog to fetch the right one from the database
+    cat_info = get_starcheck_catalog(obsid, mp_dir=mp_dir, starcheck_db=starcheck_db)
+    cat_info["status"] = "ran" if date < CxoTime().date else "approved"
+    return cat_info
 
 
 def get_mp_dir_from_starcheck_db(obsid, starcheck_db=None):
