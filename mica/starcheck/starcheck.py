@@ -12,6 +12,7 @@ from cxotime import CxoTime
 from kadi.commands import get_observations
 
 from mica.common import MICA_ARCHIVE
+from mica.utils import load_name_to_mp_dir
 
 DEFAULT_CONFIG = dict(
     starcheck_db=dict(
@@ -27,16 +28,6 @@ FILES = dict(
 
 
 OBS_CACHE = {}
-
-
-def _load_name_to_mp_dir(load_name):
-    """Convert a load name like DEC2506C to /2006/DEC2506/oflsc/"""
-    yr = load_name[5:7]
-    version = load_name[-1].lower()
-    year = f"19{yr}" if (int(yr) > 90) else f"20{yr}"
-
-    out = f"/{year}/{load_name[:7]}/ofls{version}/"
-    return out
 
 
 def get_starcat(obsid, mp_dir=None):
@@ -123,23 +114,23 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     with Ska.DBI.DBI(**config["starcheck_db"]) as db:
         mons = db.fetchall(
             f"""select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
-                          from starcheck_catalog, starcheck_id
-                          where type = 'MON' and obsid > {min_obsid}
-                          and mp_starcat_date >= '{start_date}'
-                          and mp_starcat_date <= '{stop_date}'
-                          and starcheck_id.id = starcheck_catalog.sc_id"""
+                    from starcheck_catalog, starcheck_id
+                    where type = 'MON' and obsid > {min_obsid}
+                    and mp_starcat_date >= '{start_date}'
+                    and mp_starcat_date <= '{stop_date}'
+                    and starcheck_id.id = starcheck_catalog.sc_id"""  # noqa: E501
         )
     mons = Table(mons)
     mons["catalog"] = None
 
-    obss = get_observations()
+    obss = get_observations(start=start_date, stop=stop_date)
     obss_keys = set()
     for obs in obss:
         if obs["source"] != "CMD_EVT":
             key = (
                 obs["obsid"],
                 obs.get("starcat_date"),
-                _load_name_to_mp_dir(obs["source"]),
+                load_name_to_mp_dir(obs["source"]),
             )
             obss_keys.add(key)
 
@@ -160,10 +151,11 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
 
 def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     """
-    For a given date, return a dictionary describing the starcheck catalog that should apply.
-    The content of that dictionary is from the database tables that parsed the starcheck report.
-    A catalog is defined as applying, in this function, to any time from the end of the
-    previous dwell through the end of the dwell in which the catalog was used.
+    For a given date, return a dictionary describing the starcheck catalog that should
+    apply. The content of that dictionary is from the database tables that parsed the
+    starcheck report. A catalog is defined as applying, in this function, to any time
+    from the end of the previous dwell through the end of the dwell in which the catalog
+    was used.
 
     Star catalog dictionary with keys:
 
@@ -179,7 +171,8 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
 
     - ran: observation was observed
     - planned: observation in a not-approved future schedule
-    - approved: observation in an approved future schedule (ingested in timelines/cmd_states)
+    - approved: observation in an approved future schedule (ingested in
+      timelines/cmd_states)
     - ran_pretimelines: ran, but before timelines database starts
     - timelines_gap: after timelines database start but missing data
     - no starcat: in the database but has no star catalog
@@ -205,7 +198,7 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     else:
         raise ValueError(f"could not find observation at {date}")
 
-    mp_dir = _load_name_to_mp_dir(obs["source"])
+    mp_dir = load_name_to_mp_dir(obs["source"])
     obsid = obs["obsid"]
 
     # Use the obsid and the known products directory to use the more generic
@@ -298,16 +291,16 @@ def get_mp_dir(obsid, starcheck_db=None, **kwargs):
                 status = "ran"
             else:
                 status = "approved"
-        mp_dir = _load_name_to_mp_dir(obs["source"])
+        mp_dir = load_name_to_mp_dir(obs["source"])
 
     return mp_dir, status, sc_date
 
 
 def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None):
     """
-    For a given obsid, return a dictionary describing the starcheck catalog that should apply.
-    The content of that dictionary is from the database tables of that parsed the starcheck report
-    and has keys:
+    For a given obsid, return a dictionary describing the starcheck catalog that should
+    apply. The content of that dictionary is from the database tables of that parsed the
+    starcheck report and has keys:
 
     - cat: catalog rows as astropy.table
     - manvr: list of maneuvers to this attitude
@@ -321,13 +314,14 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None):
 
     - ran: observation was observed
     - planned: observation in a not-approved future schedule
-    - approved: observation in an approved future schedule (ingested in timelines/cmd_states)
+    - approved: observation in an approved future schedule (ingested in
+      timelines/cmd_states)
     - ran_pretimelines: ran, but before timelines database starts
     - timelines_gap: after timelines database start but missing data
 
     :param obsid: obsid
-    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'.
-                   By default the as-run loads (via ``get_mp_dir()``) are used.
+    :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'. By
+                   default the as-run loads (via ``get_mp_dir()``) are used.
     :param starcheck_db: optional handle to already-open starcheck database
     :param timelines_db: optional handle to already-open timelines database
     :returns: dictionary with starcheck content described above
@@ -351,7 +345,7 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None):
     # mp_dir is in the standard short-form "MAY3018A".  Translate to
     # '/2018/MAY3018/oflsa/'
     if re.match(r"[A-Z]{3}\d{4}[A-Z]$", mp_dir):
-        mp_dir = _load_name_to_mp_dir(mp_dir)
+        mp_dir = load_name_to_mp_dir(mp_dir)
 
     db = starcheck_db  # shorthand for the rest of the routine
     sc_id = db.fetchone("select id from starcheck_id where dir = '%s'" % mp_dir)
