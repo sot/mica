@@ -117,18 +117,17 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     """
     if config is None:
         config = DEFAULT_CONFIG
+
     start_date = CxoTime(start or "1999:001:12:00:00").date
     stop_date = CxoTime(stop).date
     with Ska.DBI.DBI(**config["starcheck_db"]) as db:
         mons = db.fetchall(
-            """select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
+            f"""select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
                           from starcheck_catalog, starcheck_id
-                          where type = 'MON' and obsid > {}
-                          and mp_starcat_date >= '{}'
-                          and mp_starcat_date <= '{}'
-                          and starcheck_id.id = starcheck_catalog.sc_id""".format(
-                min_obsid, start_date, stop_date
-            )
+                          where type = 'MON' and obsid > {min_obsid}
+                          and mp_starcat_date >= '{start_date}'
+                          and mp_starcat_date <= '{stop_date}'
+                          and starcheck_id.id = starcheck_catalog.sc_id"""
         )
     mons = Table(mons)
     mons["catalog"] = None
@@ -136,14 +135,13 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     obss = get_observations()
     obss_keys = set()
     for obs in obss:
-        if obs["source"] == "CMD_EVT":
-            continue
-        key = (
-            obs["obsid"],
-            obs.get("starcat_date"),
-            _load_name_to_mp_dir(obs["source"]),
-        )
-        obss_keys.add(key)
+        if obs["source"] != "CMD_EVT":
+            key = (
+                obs["obsid"],
+                obs.get("starcat_date"),
+                _load_name_to_mp_dir(obs["source"]),
+            )
+            obss_keys.add(key)
 
     statuses = []
     date_now = CxoTime.now().date
@@ -151,35 +149,12 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
         sc_date = mon["mp_starcat_date"]
         key = (mon["obsid"], sc_date, mon["dir"])
         if key not in obss_keys:
-            statuses.append("not run")
+            statuses.append("none")
         else:
             statuses.append("run" if sc_date < date_now else "approved")
 
-    ok = np.array(statuses) != "not run"
-    mons = mons[ok]
+    mons = mons[np.array(statuses) != "none"]
 
-    with Ska.DBI.DBI(**config["timelines_db"]) as timelines_db:
-        statuses = []
-        # Check which ones actually ran or are likely to run
-        for mon in mons:
-            try:
-                catalog = get_starcheck_catalog_at_date(
-                    mon["mp_starcat_date"], timelines_db=timelines_db
-                )
-                if (
-                    catalog is not None
-                    and catalog["obs"]["obsid"] == mon["obsid"]
-                    and catalog["mp_dir"] == mon["dir"]
-                ):
-                    mon["catalog"] = catalog
-                    statuses.append(catalog["status"])
-                else:
-                    statuses.append("none")
-            except LookupError:
-                statuses.append("none")
-        # Add that status info to the table and filter on it
-        mons["status"] = statuses
-        mons = mons[mons["status"] != "none"]
     return mons
 
 
