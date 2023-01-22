@@ -3,12 +3,7 @@ import os
 
 from kadi.commands.core import ska_load_dir
 
-DEFAULT_CONFIG = dict(
-    timelines_db=dict(
-        dbi="sqlite",
-        server=os.path.join(os.environ["SKA"], "data", "cmd_states", "cmd_states.db3"),
-    )
-)
+DEFAULT_CONFIG = {}
 
 
 def load_name_to_mp_dir(load_name):

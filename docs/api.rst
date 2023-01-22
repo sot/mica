@@ -116,7 +116,7 @@ Functions
 Functions
 ---------
 
-.. autofunction:: get_timeline_at_date
+.. autofunction:: load_name_to_mp_dir
 
 
 :mod:`mica.starcheck`

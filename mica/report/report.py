@@ -611,7 +611,7 @@ def main(obsid):
     if er:
         stat_map = {'ran': 'ran on',
                     'approved': 'approved for',
-                    'ran_pretimelines': 'ran on',
+                    'ran_pre_commands': 'ran on',
                     'planned': 'planned for'}
         er_status = "{} {}".format(stat_map[status], obs_sc['obs']['mp_starcat_time'])
         run_obspar = None

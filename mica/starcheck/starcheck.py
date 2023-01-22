@@ -86,9 +86,12 @@ def get_att(obsid, mp_dir=None):
 
 def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     """
-    Use the database of starcheck products to get a list of monitor windows This
-    list is filtered by timelines content to only include catalogs that should
-    have or will run.
+    Use the database of starcheck products to get a list of monitor windows.
+
+    This includes only catalogs that ran or will run.
+
+    NOTE: by default only monitor windows in ER's are included, set ``min_obsid=0``
+    to change this.
 
     :param start: Optional start time for filtering windows as fetched from the
         database
@@ -98,8 +101,8 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
         intended to fetch only ERs
 
     :param config: config dictionary. If supplied must include 'starcheck_db'
-                   and 'timelines_db' keys with dictionaries of the required
-                   arguments to Ska.DBI to connect to those databases.
+                   key with a dictionary of the required arguments to Ska.DBI to connect
+                   to that database.
 
     :returns: astropy Table of monitor windows.  See
               get_starcheck_catalog_at_date for description of the values of the
@@ -149,7 +152,7 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
     return mons
 
 
-def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
+def get_starcheck_catalog_at_date(date, starcheck_db=None):
     """
     For a given date, return a dictionary describing the starcheck catalog that should
     apply. The content of that dictionary is from the database tables that parsed the
@@ -170,16 +173,10 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None, timelines_db=None):
     Status:
 
     - ran: observation was observed
-    - planned: observation in a not-approved future schedule
-    - approved: observation in an approved future schedule (ingested in
-      timelines/cmd_states)
-    - ran_pretimelines: ran, but before timelines database starts
-    - timelines_gap: after timelines database start but missing data
-    - no starcat: in the database but has no star catalog
+    - approved: observation in an approved future schedule
 
     :param date: Chandra.Time compatible date
     :param starcheck_db: optional handle to already-open starcheck database
-    :param timelines_db: optional handle to already-open timelines database
     :returns: dictionary with starcheck content described above
 
 
@@ -234,7 +231,7 @@ def get_mp_dir_from_starcheck_db(obsid, starcheck_db=None):
     ):
         out = (
             starchecks[-1]["dir"],
-            "ran_pretimelines",
+            "ran_pre_commands",
             starchecks[-1]["mp_starcat_time"],
         )
     else:
@@ -243,7 +240,7 @@ def get_mp_dir_from_starcheck_db(obsid, starcheck_db=None):
     return out
 
 
-def get_mp_dir(obsid, starcheck_db=None, **kwargs):
+def get_mp_dir(obsid, starcheck_db=None):
     """
     Get the mission planning directory for an obsid and some status information.
     If the obsid catalog was used more than once (multi-obi or rescheduled after
@@ -260,21 +257,15 @@ def get_mp_dir(obsid, starcheck_db=None, **kwargs):
 
     - "ran": observation date before current time
     - "approved": observation date after current time
-    - "ran_pretimelines": probably ran, but before commands database starts
     - "no starcat": observation exists but has no star catalog
 
     The return ``date`` is the date/time of the ``MP_STARCAT`` time.
 
     :param obsid: obsid
     :param starcheck_db: optional handle to already-open starcheck database
-    :param **kwargs: catch for timelines_db kwarg for back-compatibility
     :returns: directory, status, date
 
     """
-    # If code is supplying any other kwargs then warn
-    if kwargs:
-        warnings.warn(f"keyword args {list(kwargs)} are ignored", DeprecationWarning)
-
     try:
         obs = get_observations(obsid=obsid)[-1]
     except ValueError as err:
@@ -312,18 +303,14 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None):
 
     Status:
 
-    - ran: observation was observed
-    - planned: observation in a not-approved future schedule
-    - approved: observation in an approved future schedule (ingested in
-      timelines/cmd_states)
-    - ran_pretimelines: ran, but before timelines database starts
-    - timelines_gap: after timelines database start but missing data
+    - ran: observation approved and has date before current time
+    - approved: observation approved and has date after current time
+    - ran_pre_commands: ran, but before commands archive starts
 
     :param obsid: obsid
     :param mp_dir: optional load specifier like 'FEB1317A' or '/2017/FEB1317/oflsa/'. By
                    default the as-run loads (via ``get_mp_dir()``) are used.
     :param starcheck_db: optional handle to already-open starcheck database
-    :param timelines_db: optional handle to already-open timelines database
     :returns: dictionary with starcheck content described above
     """
     # Keep the original kwarg from user for the caching key later
