@@ -54,7 +54,7 @@ M0 = 10.32
 C0 = 5263.0
 
 fidDrEncFrac1 = 0.68
-fidDrEncFrac2 = 0.95 
+fidDrEncFrac2 = 0.95
 starDrEncFrac1 = 0.68
 starDrEncFrac2 = 0.95
 
@@ -652,7 +652,7 @@ class Obi(object):
                 logger.info("Saved plot {}".format(plotfile))
             if close:
                 plt.close(fig1)
-                
+
 
         if singles:
             fig2 = plt.figure(figsize=(3,3))
@@ -865,7 +865,7 @@ class AspectInterval(object):
         gsfile = glob(os.path.join(
                 datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
         # don't filter for only good stars at this point
-        prop = Table.read(gsfile)
+        prop = Table.read(gsfile, unit_parse_strict="silent")
         for col in prop.colnames:
             prop.rename_column(col, col.lower())
         info = []
@@ -1126,7 +1126,7 @@ class AspectInterval(object):
             asol_cen_dtheta = (np.interp(ceni['time'],
                                          asol['time'], asol['dtheta'])
                                * D2R)
- 
+
             rot_x = np.zeros([len(ceni['time']), 3, 3])
             s_th = np.sin(asol_cen_dtheta)
             c_th = np.cos(asol_cen_dtheta)
@@ -1254,9 +1254,9 @@ class AspectInterval(object):
 
 
 
-        
+
 #import unittest
-#from nose.tools import eq_ as 
+#from nose.tools import eq_ as
 import operator as op
 from functools import partial
 
@@ -1311,14 +1311,14 @@ class ObiTest(object):
 
     def slot_table(self):
         checks = self.checks
-        
+
 
 #    def set_disposition(self, disp):
 #        weight = {'OK' : 1,
 #                  'ReproNoDD' : 2
 #                  'Hold' : 3}
 #        if disp in weight:
-#            if (not overall_status in self 
+#            if (not overall_status in self
 #                or weight[self.overall_status] < weight[disp]):
 #                self.overall_status = disp
 #        else:
@@ -1340,9 +1340,9 @@ class ObiTest(object):
 #                    status['warn'].append('slot %d fail check %s' % (slot_id, c))
 #        all_dy_rms = np.array([obi.slot[s]['dy_rms'] for s in obi.guide_slots])
 #        all_dz_rms = np.array([obi.slot[s]['dz_rms'] for s in obi.guide_slots])
-#        n04 = (np.count_nonzero(all_dy_rms > 0.4) + 
+#        n04 = (np.count_nonzero(all_dy_rms > 0.4) +
 #               np.count_nonzero(all_dz_rms > 0.4))
-#        n025 = (np.count_nonzero(all_dy_rms > 0.25) + 
+#        n025 = (np.count_nonzero(all_dy_rms > 0.25) +
 #                np.count_nonzero(all_dz_rms > 0.25))
 #        if (n04 > 2):
 #            status['warn'].append('2 or more stars with RMS > 0.4')
@@ -1351,15 +1351,15 @@ class ObiTest(object):
 #        if (n04 == 1 & n025 == 1):
 #            set_disposition('ReproNoDD')
 #            status['warn'].append('repro without bad slot')
-#        
-#        if (np.count_nonzero(all_dy_rms > 0.25) + 
+#
+#        if (np.count_nonzero(all_dy_rms > 0.25) +
 #            np.count_nonzero(all_dz_rms > 0.25)) > 2:
 #            status['warn'].append('2 or more stars with RMS > 0.25')
-#        if (np.count_nonzero(all_dy_rms > 0.4)  + 
+#        if (np.count_nonzero(all_dy_rms > 0.4)  +
 #            np.count_nonzero(all_dz_rms > 0.25)) > 2:
 #            status['warn'].append('2 or more stars with RMS > 0.4')
 #
-#            
+#
 #        self.status = status
 
         #for fslot in obi.fid_slots:
@@ -1370,14 +1370,14 @@ class ObiTest(object):
         #            status['overall'] = False
         #            status['slot'][fslot] = False
 
-                    
-        
-    
 
-                
-        
-        
-        
+
+
+
+
+
+
+
 #    def fid_checks(self):
 #        obi = self.obi
 #        slot_list = np.array([s for s in obi.slot if obi.slot[s]['type'] == 'fid'])
@@ -1387,7 +1387,7 @@ class ObiTest(object):
 #                     id="test_has_fid_lights",
 #                     slots=slot_list.tolist())
 #        self.tests.append(stest)
-#        
+#
 #        dy_med = np.array([np.median(obi.slot[s]['dy']) for s in slot_list])
 #        dz_med = np.array([np.median(obi.slot[s]['dz']) for s in slot_list])
 #        med_limit = 0.4
@@ -1437,7 +1437,7 @@ class ObiTest(object):
 #                     id="test_n_star_low_rms",
 #                     slots=low_slots.tolist())
 #        self.tests.append(stest)
-#        stest = dict(val=((len(high_slots) == 1) & (len(low_slots) == 1)), 
+#        stest = dict(val=((len(high_slots) == 1) & (len(low_slots) == 1)),
 #                     name="one star with rms > %f" % high_limit,
 #                     id="test_one_star_high_rms",
 #                     slots=high_slots.tolist())
@@ -1467,9 +1467,9 @@ class ObiTest(object):
 #        dyz_big_lim = 0.7
 #        frac_dyz_lim = 0.05
 #        dy_big = np.array([obi.slot[s]['dy']
-#                                - np.median(obi.slot[s]['dy']) 
+#                                - np.median(obi.slot[s]['dy'])
 #                                > dyz_big_lim for s in slot_list])
-#        dz_big = np.array([obi.slot[s]['dz'] 
-#                                - np.median(obi.slot[s]['dz']) 
+#        dz_big = np.array([obi.slot[s]['dz']
+#                                - np.median(obi.slot[s]['dz'])
 #                                > dyz_big_lim for s in slot_list])
 #        raise ValueError
