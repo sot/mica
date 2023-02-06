@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>mica.archive.aca_dark &#8212; mica 4.31.0 documentation</title>
+    <title>mica.archive.aca_dark &#8212; mica 4.31.2 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
@@ -54,7 +54,7 @@
 	
       </li>
       <li>
-	<a href="index.html">mica 4.31.0 documentation</a>
+	<a href="index.html">mica 4.31.2 documentation</a>
 	 &#187;
       </li>
       
@@ -1168,94 +1168,10 @@ used directly if needed.</p>
 
 </section>
 </section>
-<section id="module-mica.vv">
-<span id="mica-vv"></span><h1><a class="reference internal" href="#module-mica.vv" title="mica.vv"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code></a><a class="headerlink" href="#module-mica.vv" title="Permalink to this headline">¶</a></h1>
+<section id="mica-vv">
+<h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code><a class="headerlink" href="#mica-vv" title="Permalink to this headline">¶</a></h1>
 <section id="id10">
 <h2>Functions<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="mica.vv.get_vv">
-<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_vv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/vv.html#get_vv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_vv" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrieve V&amp;V data for an obsid/version.
-This reads the saved JSON and returns the previously-
-calculated V&amp;V data.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>obsid</strong> – obsid</p></li>
-<li><p><strong>version</strong> – ‘last’, ‘default’, or version number</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>dict of V&amp;V data</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="mica.vv.get_vv_dir">
-<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_vv_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/vv.html#get_vv_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_vv_dir" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get directory containing V&amp;V products for a requested obsid/version,
-including plots and json.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>obsid</strong> – obsid</p></li>
-<li><p><strong>version</strong> – ‘last’, ‘default’ or version number</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>directory name for obsid/version</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="mica.vv.get_vv_files">
-<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_vv_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/vv.html#get_vv_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_vv_files" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get list of V&amp;V files available for a requested obsid/version.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>obsid</strong> – obsid</p></li>
-<li><p><strong>version</strong> – ‘default’, ‘last’ or version number</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>list of files</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="mica.vv.get_rms_data">
-<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_rms_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/vv.html#get_rms_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_rms_data" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrieve/return all data from RMS trending H5 archive</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>numpy array of RMS data for each star/obsid/version</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="mica.vv.get_arch_vv">
-<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_arch_vv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'last'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/process.html#get_arch_vv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_arch_vv" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given obsid and version, find archived ASP1 and obspar products and
-run V&amp;V.  Effort is made to find the obspar that was actually used during
-creation of the ASP1 products.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>obsid</strong> – obsid</p></li>
-<li><p><strong>version</strong> – ‘last’, ‘default’, or revision number of ASP1 products</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>mica.vv.Obi V&amp;V object</p>
-</dd>
-</dl>
-</dd></dl>
-
 </section>
 </section>
 <section id="module-mica.utils">
@@ -1501,7 +1417,7 @@ get_starcheck_catalog_at_date returned dictionary.</p>
 <li><a class="reference internal" href="#id9">Functions</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#module-mica.vv"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code></a><ul>
+<li><a class="reference internal" href="#mica-vv"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code></a><ul>
 <li><a class="reference internal" href="#id10">Functions</a></li>
 </ul>
 </li>
