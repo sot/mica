@@ -537,7 +537,7 @@ def main(obsid):
     try:
         if summary is not None and summary['lts_lt_plan'] is not None:
             plan_date = Time(summary['lts_lt_plan'])
-            if plan_date.cxcsec > (CxoTime.now() + 21).secs:
+            if plan_date.cxcsec > (CxoTime.now() + 21 * u.day).secs:
                 raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         obs_sc, mp_dir, status = get_starcheck(obsid)
@@ -848,7 +848,9 @@ def save_state_in_db(obsid, notes):
 
 
 def update():
-    recent_obs = get_states(start=CxoTime.now() - 7, state_keys=['obsid'], merge_identical=True)
+    recent_obs = get_states(
+        start=CxoTime.now() - 7 * u.day, state_keys=['obsid'], merge_identical=True
+    )
     for obs in recent_obs['obsid']:
         process_obsids([int(obs)]) # the int() is here to keep json happy downstream
 
