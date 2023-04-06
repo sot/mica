@@ -149,21 +149,22 @@ def test_validate_catalogs_over_range():
 
 
 @pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
-def test_obsid_catalog_fetch():
-    tests = [
+@pytest.mark.parametrize("test_case",
+    [
         {"obsid": 19990, "mp_dir": "/2017/FEB2017/oflsa/", "n_cat_entries": 11},
         {"obsid": 17210, "mp_dir": "/2016/JAN2516/oflsa/", "n_cat_entries": 11},
-        {"obsid": 62668},
+        # 45312 is a gyro hold with no star catalog
+        {"obsid": 45312, "mp_dir": "/2022/AUG2322/oflsa/", "n_cat_entries": 0},
     ]
-    # 45312 is a gyro hold with no star catalog
-    for t in tests:
-        sc = starcheck.get_starcheck_catalog(t["obsid"])
-        if "mp_dir" in t:
-            assert t["mp_dir"] == sc["mp_dir"]
-        if "n_cat_entries" in t:
-            assert len(sc["cat"]) == t["n_cat_entries"]
-        if t["obsid"] == 45312:
-            assert sc is None
+)
+def test_obsid_catalog_fetch(test_case):
+    sc = starcheck.get_starcheck_catalog(test_case["obsid"])
+    assert test_case["mp_dir"] == sc["mp_dir"]
+    assert len(sc["cat"]) == test_case["n_cat_entries"]
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_obsid_catalog_fetch_dark_cal():
     # review a dark current replica obsid
     dcdir, dcstatus, dcdate = starcheck.get_mp_dir(49961)
     assert dcdir == "/2017/JUL0317/oflsb/"
