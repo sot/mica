@@ -196,7 +196,12 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None):
         raise ValueError(f"could not find observation at {date}")
 
     mp_dir = load_name_to_mp_dir(obs["source"])
-    obsid = obs["obsid"]
+
+    # Kadi observations are labeled by the commanded obsid.  Starcheck catalogs
+    # are labeled by the planned obsid used in the starcheck output.  For observations
+    # after SCS107 with SOSA, the kadi observation obsids and starcheck obsids don't match.
+    # Use a helper function to line these up by starcat time.
+    obsid = get_starcheck_db_obsid(obs["starcat_date"], mp_dir)
 
     # Use the obsid and the known products directory to use the more generic
     # get_starcheck_catalog to fetch the right one from the database
@@ -285,6 +290,23 @@ def get_mp_dir(obsid, starcheck_db=None):
         mp_dir = load_name_to_mp_dir(obs["source"])
 
     return mp_dir, status, sc_date
+
+
+def get_starcheck_db_obsid(date_str, mp_dir, starcheck_db=None):
+    """
+    Given a starcat time and a products directory, return the obsid that appears
+    in the starcheck database for that star catalog
+    """
+    if starcheck_db is None:
+        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
+
+    sc_id = starcheck_db.fetchone(
+        f"select id from starcheck_id where dir = '{mp_dir}'"
+    )["id"]
+    obsid = starcheck_db.fetchone(
+        f"select obsid from starcheck_obs where sc_id = {sc_id} and mp_starcat_time = '{date_str}'"
+    )["obsid"]
+    return obsid
 
 
 def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None):

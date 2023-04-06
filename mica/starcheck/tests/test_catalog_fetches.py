@@ -149,13 +149,14 @@ def test_validate_catalogs_over_range():
 
 
 @pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
-@pytest.mark.parametrize("test_case",
+@pytest.mark.parametrize(
+    "test_case",
     [
         {"obsid": 19990, "mp_dir": "/2017/FEB2017/oflsa/", "n_cat_entries": 11},
         {"obsid": 17210, "mp_dir": "/2016/JAN2516/oflsa/", "n_cat_entries": 11},
         # 45312 is a gyro hold with no star catalog
         {"obsid": 45312, "mp_dir": "/2022/AUG2322/oflsa/", "n_cat_entries": 0},
-    ]
+    ],
 )
 def test_obsid_catalog_fetch(test_case):
     sc = starcheck.get_starcheck_catalog(test_case["obsid"])
@@ -243,8 +244,27 @@ def test_get_starcheck_methods():
 def test_get_starcheck_vs_kadi():
     # Make sure this works for an obsid in kadi commands
     cat_mica = starcheck.get_starcat(8008)
-    cat_kadi = kadi_get_starcats(obsid=8008, scenario='flight')[0]
-    assert np.all(cat_mica['id'] == cat_kadi['id'])
+    cat_kadi = kadi_get_starcats(obsid=8008, scenario="flight")[0]
+    assert np.all(cat_mica["id"] == cat_kadi["id"])
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_db_obsid():
+    obsid = starcheck.get_starcheck_db_obsid(
+        "2022:017:05:15:06.000", mp_dir="/2022/JAN1722/oflsa/"
+    )
+    assert obsid == 45774
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_scs107():
+    cat = starcheck.get_starcheck_catalog_at_date("2022:017:06:00:00.000")
+    assert cat["obs"]["obsid"] == 45774
+    cat_mica = cat['cat']
+    cat_kadi = kadi_get_starcats(
+        obsid=26269, starcat_date="2022:017:05:15:06.000", scenario="flight"
+    )[0]
+    assert np.all(cat_mica["id"] == cat_kadi["id"])
 
 
 @pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
