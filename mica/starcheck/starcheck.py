@@ -1,7 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
 import re
-import warnings
 
 import numpy as np
 import Ska.DBI
@@ -292,20 +291,30 @@ def get_mp_dir(obsid, starcheck_db=None):
     return mp_dir, status, sc_date
 
 
-def get_starcheck_db_obsid(date_str, mp_dir, starcheck_db=None):
+def get_starcheck_db_obsid(mp_starcat_time, mp_dir, starcheck_db=None):
     """
-    Given a starcat time and a products directory, return the obsid that appears
-    in the starcheck database for that star catalog
+    Get starcheck database obsid for a given MP_STARCAT time and products directory.
+
+    :param mp_starcat_time: MP_STARCAT time
+    :param mp_dir: products directory (e.g. /2006/DEC2506/oflsc/)
+    :param starcheck_db: optional handle to already-open starcheck database
+
+    :returns: obsid
     """
     if starcheck_db is None:
         starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
 
-    sc_id = starcheck_db.fetchone(
-        f"select id from starcheck_id where dir = '{mp_dir}'"
-    )["id"]
-    obsid = starcheck_db.fetchone(
-        f"select obsid from starcheck_obs where sc_id = {sc_id} and mp_starcat_time = '{date_str}'"
-    )["obsid"]
+    result = starcheck_db.fetchone(
+        "SELECT starcheck_obs.obsid FROM starcheck_obs "
+        "INNER JOIN starcheck_id "
+        "ON starcheck_id.id = starcheck_obs.sc_id "
+        f"AND starcheck_id.dir = '{mp_dir}'"
+        f"AND starcheck_obs.mp_starcat_time = '{mp_starcat_time}'"
+    )
+    if result is None:
+        raise ValueError(f"no starcheck entry for {mp_starcat_time=} and {mp_dir=}")
+
+    obsid = result["obsid"]
     return obsid
 
 

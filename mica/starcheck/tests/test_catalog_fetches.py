@@ -255,6 +255,22 @@ def test_get_starcheck_db_obsid():
     )
     assert obsid == 45774
 
+    # Science observation not run due to SCS-107. The as-run obsid is 45091 (obsid at
+    # the time of the interrupt) but the planned obsid in the starcheck database is
+    # 26269. The case above may be similar but didn't get documented.
+    obsid = starcheck.get_starcheck_db_obsid(
+        "2022:311:02:39:03.454", "/2022/NOV0722/oflsa/"
+    )
+    assert obsid == 25316
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_db_obsid_fail():
+    with pytest.raises(ValueError, match="no starcheck entry"):
+        starcheck.get_starcheck_db_obsid(
+            "2022:017:05:15:06.000", mp_dir="/2022/JAN1722/oflsZZZ/"
+        )
+
 
 @pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
 def test_get_starcheck_scs107():
