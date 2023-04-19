@@ -186,12 +186,16 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None):
 
     # Get observations within +/- 7 days and find the one where ``date`` is between end
     # of the previous obs dwell through the end of the current obs dwell.
-    obss = Table(get_observations(start=date - 7 * u.day, stop=date + 7 * u.day))
-    obss.sort("obs_start")
+    obss = get_observations(start=date - 7 * u.day, stop=date + 7 * u.day)
+    # Sort obss list of dict by the obs_start date
+    obss = sorted(obss, key=lambda obs: obs["obs_start"])
+
+    # Find obs that contains ``date`` between previous obs_stop and current obs_stop.
     for obs_prev, obs in zip(obss[:-1], obss[1:]):
         if obs_prev["obs_stop"] < date.date <= obs["obs_stop"]:
             break
     else:
+        # This should never happen.
         raise ValueError(f"could not find observation at {date}")
 
     mp_dir = load_name_to_mp_dir(obs["source"])
@@ -200,12 +204,19 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None):
     # are labeled by the planned obsid used in the starcheck output.  For observations
     # after SCS107 with SOSA, the kadi observation obsids and starcheck obsids don't match.
     # Use a helper function to line these up by starcat time.
-    obsid = get_starcheck_db_obsid(obs["starcat_date"], mp_dir)
+    if obs.get("starcat_date") is None:
+        # Observation has no star catalog (e.g. gyro hold) so use the kadi obsid. This
+        # may give an unexpected answer for a gyro hold non-catalog following SCS-107.
+        obsid = obs["obsid"]
+    else:
+        obsid = get_starcheck_db_obsid(obs["starcat_date"], mp_dir)
 
     # Use the obsid and the known products directory to use the more generic
     # get_starcheck_catalog to fetch the right one from the database
     cat_info = get_starcheck_catalog(obsid, mp_dir=mp_dir, starcheck_db=starcheck_db)
     cat_info["status"] = "ran" if date < CxoTime().date else "approved"
+    cat_info["obs"]["obsid_as_run"] = obs["obsid"]
+
     return cat_info
 
 
