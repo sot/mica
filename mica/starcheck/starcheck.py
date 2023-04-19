@@ -198,6 +198,10 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None):
         # This should never happen.
         raise ValueError(f"could not find observation at {date}")
 
+    if obs["source"] == "CMD_EVT":
+        # This follows the API where if there is no starcheck entry then return None
+        return None
+
     mp_dir = load_name_to_mp_dir(obs["source"])
 
     # Kadi observations are labeled by the commanded obsid.  Starcheck catalogs

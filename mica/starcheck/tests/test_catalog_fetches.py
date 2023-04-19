@@ -297,3 +297,46 @@ def test_get_starcheck_with_mp_dir():
     sc = starcheck.get_starcheck_catalog(21082, "APR2318A")
     assert len(sc["cat"]) == 12
     assert (21082, "APR2318A") in starcheck.OBS_CACHE
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_for_no_star_catalog():
+    """Test getting starcheck by date for a time that has no star catalog (gyro hold)"""
+    cat = starcheck.get_starcheck_catalog_at_date('2023:099:04:21:40.719')
+    exp = exp = {
+        "mp_dir": "/2023/APR0323/oflsa/",
+        "status": "ran",
+        "obs": {
+            "sc_id": 2477,
+            "obsid": 44653,
+            "obs_idx": 45,
+            "point_ra": 304.0,
+            "point_dec": -52.0,
+            "point_roll": 107.709085,
+            "target_id": None,
+            "sci_instr": None,
+            "sim_z_offset_steps": None,
+            "sim_z_offset_mm": None,
+            "grating": None,
+            "dither_state": None,
+            "dither_y_amp": None,
+            "dither_y_period": None,
+            "dither_z_amp": None,
+            "dither_z_period": None,
+            "mp_starcat_time": None,
+            "mp_starcat_vcdu_cnt": None,
+            "obsid_as_run": 44653,
+        },
+        "manvr": [],
+        "warnings": [],
+        "cat": [],
+    }
+    assert cat == exp
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_for_no_starcheck_entry():
+    """Test getting starcheck by date after a while in safe mode with no loads"""
+    date = "2023:050:00:30:00"
+    cat = starcheck.get_starcheck_catalog_at_date(date)
+    assert cat is None
