@@ -26,13 +26,11 @@ Data Sources
 Planning data
 --------------
 
-Starcheck outputs.  
-  The starcheck outputs are already stored in sybase tables (starcheck_catalog,
-  starcheck_manvr, starcheck_obs, starcheck_warnings).  The timelines table
-  also maps the obsid to its SOT MP directory to get a link to the original
-  products (including the plots).
+Starcheck outputs.
+  The starcheck outputs are already stored in database tables (starcheck_catalog,
+  starcheck_manvr, starcheck_obs, starcheck_warnings).
 
-Maneuver sequence data  
+Maneuver sequence data
   The maneuvers to and from the obsid target
   should be presented in context.  The ms*sum file in the planned products
   directory should be parsed for these data.  A new tool should archive

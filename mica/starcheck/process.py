@@ -22,10 +22,6 @@ DEFAULT_CONFIG = dict(
         dbi="sqlite", server=os.path.join(MICA_ARCHIVE, "starcheck", "starcheck.db3")
     ),
     mp_top_level="/data/mpcrit1/mplogs",
-    timelines_db=dict(
-        dbi="sqlite",
-        server=os.path.join(os.environ["SKA"], "data", "cmd_states", "cmd_states.db3"),
-    ),
 )
 FILES = dict(data_root=os.path.join(MICA_ARCHIVE, "starcheck"), sql_def="starcheck.sql")
 

@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from Chandra.Time import DateTime
 from kadi import events
+from kadi.commands import get_starcats as kadi_get_starcats
 from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
 from Ska.quatutil import radec2yagzag, yagzag2radec
@@ -148,21 +149,23 @@ def test_validate_catalogs_over_range():
 
 
 @pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
-def test_obsid_catalog_fetch():
-    tests = [
+@pytest.mark.parametrize(
+    "test_case",
+    [
         {"obsid": 19990, "mp_dir": "/2017/FEB2017/oflsa/", "n_cat_entries": 11},
         {"obsid": 17210, "mp_dir": "/2016/JAN2516/oflsa/", "n_cat_entries": 11},
-        {"obsid": 62668},
-    ]
-    # 62668 should be an undercover with no catalog
-    for t in tests:
-        sc = starcheck.get_starcheck_catalog(t["obsid"])
-        if "mp_dir" in t:
-            assert t["mp_dir"] == sc["mp_dir"]
-        if "n_cat_entries" in t:
-            assert len(sc["cat"]) == t["n_cat_entries"]
-        if t["obsid"] == 62668:
-            assert sc is None
+        # 45312 is a gyro hold with no star catalog
+        {"obsid": 45312, "mp_dir": "/2022/AUG2322/oflsa/", "n_cat_entries": 0},
+    ],
+)
+def test_obsid_catalog_fetch(test_case):
+    sc = starcheck.get_starcheck_catalog(test_case["obsid"])
+    assert test_case["mp_dir"] == sc["mp_dir"]
+    assert len(sc["cat"]) == test_case["n_cat_entries"]
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_obsid_catalog_fetch_dark_cal():
     # review a dark current replica obsid
     dcdir, dcstatus, dcdate = starcheck.get_mp_dir(49961)
     assert dcdir == "/2017/JUL0317/oflsb/"
@@ -226,14 +229,58 @@ def test_get_starcheck_methods():
     att = starcheck.get_att(obsid)
     assert att == [209.04218, 47.227524, 357.020117]
 
-    obsid = 2000
-    dither = starcheck.get_dither(obsid)
-    assert dither == {
-        "pitch_ampl": 0.0,
-        "pitch_period": -999.0,
-        "yaw_ampl": 0.0,
-        "yaw_period": -999.0,
-    }
+    # Check a dark cal obs from SEP3019A and an old (pre-kadi) obsid
+    for obsid in (47846, 2000):
+        dither = starcheck.get_dither(obsid)
+        assert dither == {
+            "pitch_ampl": 0.0,
+            "pitch_period": -999.0,
+            "yaw_ampl": 0.0,
+            "yaw_period": -999.0,
+        }
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_vs_kadi():
+    # Make sure this works for an obsid in kadi commands
+    cat_mica = starcheck.get_starcat(8008)
+    cat_kadi = kadi_get_starcats(obsid=8008, scenario="flight")[0]
+    assert np.all(cat_mica["id"] == cat_kadi["id"])
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_db_obsid():
+    obsid = starcheck.get_starcheck_db_obsid(
+        "2022:017:05:15:06.000", mp_dir="/2022/JAN1722/oflsa/"
+    )
+    assert obsid == 45774
+
+    # Science observation not run due to SCS-107. The as-run obsid is 45091 (obsid at
+    # the time of the interrupt) but the planned obsid in the starcheck database is
+    # 26269. The case above may be similar but didn't get documented.
+    obsid = starcheck.get_starcheck_db_obsid(
+        "2022:311:02:39:03.454", "/2022/NOV0722/oflsa/"
+    )
+    assert obsid == 25316
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_db_obsid_fail():
+    with pytest.raises(ValueError, match="no starcheck entry"):
+        starcheck.get_starcheck_db_obsid(
+            "2022:017:05:15:06.000", mp_dir="/2022/JAN1722/oflsZZZ/"
+        )
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_scs107():
+    cat = starcheck.get_starcheck_catalog_at_date("2022:017:06:00:00.000")
+    assert cat["obs"]["obsid"] == 45774
+    cat_mica = cat['cat']
+    cat_kadi = kadi_get_starcats(
+        obsid=26269, starcat_date="2022:017:05:15:06.000", scenario="flight"
+    )[0]
+    assert np.all(cat_mica["id"] == cat_kadi["id"])
 
 
 @pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
@@ -250,3 +297,46 @@ def test_get_starcheck_with_mp_dir():
     sc = starcheck.get_starcheck_catalog(21082, "APR2318A")
     assert len(sc["cat"]) == 12
     assert (21082, "APR2318A") in starcheck.OBS_CACHE
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_for_no_star_catalog():
+    """Test getting starcheck by date for a time that has no star catalog (gyro hold)"""
+    cat = starcheck.get_starcheck_catalog_at_date('2023:099:04:21:40.719')
+    exp = exp = {
+        "mp_dir": "/2023/APR0323/oflsa/",
+        "status": "ran",
+        "obs": {
+            "sc_id": 2477,
+            "obsid": 44653,
+            "obs_idx": 45,
+            "point_ra": 304.0,
+            "point_dec": -52.0,
+            "point_roll": 107.709085,
+            "target_id": None,
+            "sci_instr": None,
+            "sim_z_offset_steps": None,
+            "sim_z_offset_mm": None,
+            "grating": None,
+            "dither_state": None,
+            "dither_y_amp": None,
+            "dither_y_period": None,
+            "dither_z_amp": None,
+            "dither_z_period": None,
+            "mp_starcat_time": None,
+            "mp_starcat_vcdu_cnt": None,
+            "obsid_as_run": 44653,
+        },
+        "manvr": [],
+        "warnings": [],
+        "cat": [],
+    }
+    assert cat == exp
+
+
+@pytest.mark.skipif("not HAS_SC_ARCHIVE", reason="Test requires starcheck archive")
+def test_get_starcheck_for_no_starcheck_entry():
+    """Test getting starcheck by date after a while in safe mode with no loads"""
+    date = "2023:050:00:30:00"
+    cat = starcheck.get_starcheck_catalog_at_date(date)
+    assert cat is None
