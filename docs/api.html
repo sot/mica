@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>mica.archive.aca_dark &#8212; mica 4.31.3 documentation</title>
+    <title>mica.archive.aca_dark &#8212; mica 4.32.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
@@ -54,7 +54,7 @@
 	
       </li>
       <li>
-	<a href="index.html">mica 4.31.3 documentation</a>
+	<a href="index.html">mica 4.32.0 documentation</a>
 	 &#187;
       </li>
       
@@ -1179,19 +1179,15 @@ used directly if needed.</p>
 <section id="id11">
 <h2>Functions<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h2>
 <dl class="py function">
-<dt class="sig sig-object py" id="mica.utils.get_timeline_at_date">
-<span class="sig-prename descclassname"><span class="pre">mica.utils.</span></span><span class="sig-name descname"><span class="pre">get_timeline_at_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timelines_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/utils.html#get_timeline_at_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.utils.get_timeline_at_date" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return timeline that contains a given date.  The ‘timeline_loads’ query is used
-to give the mp_dir as well as datestart and datestop for the timeline.</p>
+<dt class="sig sig-object py" id="mica.utils.load_name_to_mp_dir">
+<span class="sig-prename descclassname"><span class="pre">mica.utils.</span></span><span class="sig-name descname"><span class="pre">load_name_to_mp_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">load_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/utils.html#load_name_to_mp_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.utils.load_name_to_mp_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert <code class="docutils literal notranslate"><span class="pre">load_name</span></code> like DEC2506C to /2006/DEC2506/oflsc/.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>date</strong> – Chandra.Time compatible date</p></li>
-<li><p><strong>timelines_db</strong> – optional already-open handle to a cmd_states/timelines database.</p></li>
-</ul>
+<dd class="field-odd"><p><strong>load_name</strong> – str load name</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>dictionary of appropriate record from timeline_loads table</p>
+<dd class="field-even"><p>str mica-format mission planning dir</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1204,10 +1200,10 @@ to give the mp_dir as well as datestart and datestop for the timeline.</p>
 <h2>Functions<a class="headerlink" href="#id12" title="Permalink to this headline">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_starcheck_catalog">
-<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_starcheck_catalog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mp_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timelines_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_starcheck_catalog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_starcheck_catalog" title="Permalink to this definition">¶</a></dt>
-<dd><p>For a given obsid, return a dictionary describing the starcheck catalog that should apply.
-The content of that dictionary is from the database tables of that parsed the starcheck report
-and has keys:</p>
+<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_starcheck_catalog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mp_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_starcheck_catalog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_starcheck_catalog" title="Permalink to this definition">¶</a></dt>
+<dd><p>For a given obsid, return a dictionary describing the starcheck catalog that should
+apply. The content of that dictionary is from the database tables of that parsed the
+starcheck report and has keys:</p>
 <ul class="simple">
 <li><p>cat: catalog rows as astropy.table</p></li>
 <li><p>manvr: list of maneuvers to this attitude</p></li>
@@ -1219,20 +1215,17 @@ and has keys:</p>
 </ul>
 <p>Status:</p>
 <ul class="simple">
-<li><p>ran: observation was observed</p></li>
-<li><p>planned: observation in a not-approved future schedule</p></li>
-<li><p>approved: observation in an approved future schedule (ingested in timelines/cmd_states)</p></li>
-<li><p>ran_pretimelines: ran, but before timelines database starts</p></li>
-<li><p>timelines_gap: after timelines database start but missing data</p></li>
+<li><p>ran: observation approved and has date before current time</p></li>
+<li><p>approved: observation approved and has date after current time</p></li>
+<li><p>ran_pre_commands: ran, but before commands archive starts</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>obsid</strong> – obsid</p></li>
-<li><p><strong>mp_dir</strong> – optional load specifier like ‘FEB1317A’ or ‘/2017/FEB1317/oflsa/’.
-By default the as-run loads (via <code class="docutils literal notranslate"><span class="pre">get_mp_dir()</span></code>) are used.</p></li>
+<li><p><strong>mp_dir</strong> – optional load specifier like ‘FEB1317A’ or ‘/2017/FEB1317/oflsa/’. By
+default the as-run loads (via <code class="docutils literal notranslate"><span class="pre">get_mp_dir()</span></code>) are used.</p></li>
 <li><p><strong>starcheck_db</strong> – optional handle to already-open starcheck database</p></li>
-<li><p><strong>timelines_db</strong> – optional handle to already-open timelines database</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1243,11 +1236,12 @@ By default the as-run loads (via <code class="docutils literal notranslate"><spa
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_starcheck_catalog_at_date">
-<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_starcheck_catalog_at_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timelines_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_starcheck_catalog_at_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_starcheck_catalog_at_date" title="Permalink to this definition">¶</a></dt>
-<dd><p>For a given date, return a dictionary describing the starcheck catalog that should apply.
-The content of that dictionary is from the database tables that parsed the starcheck report.
-A catalog is defined as applying, in this function, to any time from the end of the
-previous dwell through the end of the dwell in which the catalog was used.</p>
+<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_starcheck_catalog_at_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_starcheck_catalog_at_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_starcheck_catalog_at_date" title="Permalink to this definition">¶</a></dt>
+<dd><p>For a given date, return a dictionary describing the starcheck catalog that should
+apply. The content of that dictionary is from the database tables that parsed the
+starcheck report. A catalog is defined as applying, in this function, to any time
+from the end of the previous dwell through the end of the dwell in which the catalog
+was used.</p>
 <p>Star catalog dictionary with keys:</p>
 <ul class="simple">
 <li><p>cat: catalog rows as astropy.table</p></li>
@@ -1261,18 +1255,13 @@ previous dwell through the end of the dwell in which the catalog was used.</p>
 <p>Status:</p>
 <ul class="simple">
 <li><p>ran: observation was observed</p></li>
-<li><p>planned: observation in a not-approved future schedule</p></li>
-<li><p>approved: observation in an approved future schedule (ingested in timelines/cmd_states)</p></li>
-<li><p>ran_pretimelines: ran, but before timelines database starts</p></li>
-<li><p>timelines_gap: after timelines database start but missing data</p></li>
-<li><p>no starcat: in the database but has no star catalog</p></li>
+<li><p>approved: observation in an approved future schedule</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>date</strong> – Chandra.Time compatible date</p></li>
 <li><p><strong>starcheck_db</strong> – optional handle to already-open starcheck database</p></li>
-<li><p><strong>timelines_db</strong> – optional handle to already-open timelines database</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1283,33 +1272,31 @@ previous dwell through the end of the dwell in which the catalog was used.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_mp_dir">
-<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_mp_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timelines_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_mp_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_mp_dir" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_mp_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_mp_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_mp_dir" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the mission planning directory for an obsid and some status information.
 If the obsid catalog was used more than once (multi-obi or rescheduled after
 being used in a vehicle-only interval), return the directory and details of
 the last one used on the spacecraft.</p>
-<p>The returned directory describes the directory that was used for the
-products with this star catalog. The returned status has possible values:</p>
+<p>Only observations from approved schedules are considered.</p>
+<p>The returned <code class="docutils literal notranslate"><span class="pre">directory</span></code> is a string like “/2006/DEC2506/oflsc/” that
+describes the directory that was used for the products with this star
+catalog.</p>
+<p>The returned <code class="docutils literal notranslate"><span class="pre">status</span></code> has possible values:</p>
 <ul class="simple">
-<li><p>ran: observation was observed</p></li>
-<li><p>planned: observation in a not-approved future schedule</p></li>
-<li><p>approved: observation in an approved future schedule (ingested in
-timelines/cmd_states)</p></li>
-<li><p>ran_pretimelines: ran, but before timelines database starts</p></li>
-<li><p>timelines_gap: after timelines database start but missing data</p></li>
-<li><p>no starcat: in the database but has no star catalog</p></li>
+<li><p>“ran”: observation date before current time</p></li>
+<li><p>“approved”: observation date after current time</p></li>
+<li><p>“no starcat”: observation exists but has no star catalog</p></li>
 </ul>
-<p>The return ‘date’ is the date/time of the <cite>MP_STARCAT</cite> time.</p>
+<p>The return <code class="docutils literal notranslate"><span class="pre">date</span></code> is the date/time of the <code class="docutils literal notranslate"><span class="pre">MP_STARCAT</span></code> time.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>obsid</strong> – obsid</p></li>
 <li><p><strong>starcheck_db</strong> – optional handle to already-open starcheck database</p></li>
-<li><p><strong>timelines_db</strong> – optional handle to already-open timelines database</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>directory, status, date .   Described above.</p>
+<dd class="field-even"><p>directory, status, date</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1317,9 +1304,10 @@ timelines/cmd_states)</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_monitor_windows">
 <span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_monitor_windows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_obsid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_monitor_windows"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_monitor_windows" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use the database of starcheck products to get a list of monitor windows This
-list is filtered by timelines content to only include catalogs that should
-have or will run.</p>
+<dd><p>Use the database of starcheck products to get a list of monitor windows.</p>
+<p>This includes only catalogs that ran or will run.</p>
+<p>NOTE: by default only monitor windows in ER’s are included, set <code class="docutils literal notranslate"><span class="pre">min_obsid=0</span></code>
+to change this.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1330,8 +1318,8 @@ database</p></li>
 <li><p><strong>min_obsid</strong> – Minimum obsid value for filtering.  Default of 40000 is
 intended to fetch only ERs</p></li>
 <li><p><strong>config</strong> – config dictionary. If supplied must include ‘starcheck_db’
-and ‘timelines_db’ keys with dictionaries of the required
-arguments to Ska.DBI to connect to those databases.</p></li>
+key with a dictionary of the required arguments to Ska.DBI to connect
+to that database.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
