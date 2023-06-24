@@ -22,7 +22,7 @@ COLNAMES = {
     'detail': [
         'seq_num', 'status', 'obsid', 'pr_num', 'target_name', 'grid_name', 'instr', 'grat', 'type',
         'obs_cycle', 'prop_cycle', 'charge_cycle', 'start_date', 'public_avail', 'readout_detector',
-        'datamode', 'joint', 'hst', 'noao', 'nrao', 'rxte', 'spitzer', 'suzaku', 'xmm', 'swift',
+        'datamode', 'joint', 'hst', 'jwst', 'noao', 'nrao', 'rxte', 'spitzer', 'suzaku', 'xmm', 'swift',
         'nustar', 'category', 'seg_max_num', 'prop_title', 'pi_name', 'observer', 'app_exp',
         'exp_time', 'ra', 'dec', 'soe_roll', 'time_crit', 'y_off', 'z_off', 'x_sim', 'z_sim',
         'raster', 'obj_type', 'obj', 'photo', 'vmag', 'est_cnt_rate', 'forder_cnt_rate',
@@ -45,6 +45,7 @@ COLNAMES = {
 
 # Ensure tests continue to work in future by always using a fixed date range
 DATE_RANGE = '1999-01-01/2021-11-01'
+
 get_ocat_web = partial(get_ocat_web, startDate=DATE_RANGE)
 
 
