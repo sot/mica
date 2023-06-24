@@ -45,7 +45,6 @@ COLNAMES = {
 
 # Ensure tests continue to work in future by always using a fixed date range
 DATE_RANGE = '1999-01-01/2021-11-01'
-
 get_ocat_web = partial(get_ocat_web, startDate=DATE_RANGE)
 
 
