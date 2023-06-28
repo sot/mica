@@ -284,21 +284,21 @@ def _update_params_from_kwargs(params, obsid,
         params['obsid'] = obsid
 
     if ra is not None:
-        params['ra'] = ra
+        params['lon'] = ra
     if dec is not None:
-        params['dec'] = dec
+        params['lat'] = dec
 
     if target_name is not None:
         if resolve_name:
             coord = SkyCoord.from_name(target_name)
-            params['ra'] = coord.ra.deg
-            params['dec'] = coord.dec.deg
+            params['lon'] = coord.ra.deg
+            params['lat'] = coord.dec.deg
         else:
             # SR services API uses "target" to select substrings of target_name
             params['target'] = target_name
 
     # For any positional search include the radius
-    if 'ra' in params and 'dec' in params:
+    if 'lon' in params and 'lat' in params:
         params['radius'] = radius
 
     return params
