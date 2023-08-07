@@ -107,7 +107,7 @@ ACQ_COLS = {
 
 SKA = os.environ['SKA']
 table_file = os.path.join(SKA, 'data', 'acq_stats', 'acq_stats.h5')
-DEFAULT_EMAIL = ['aca_alert@cfa.harvard.edu']
+DEFAULT_EMAIL = ['aca@cfa.harvard.edu']
 
 def get_options():
     parser = argparse.ArgumentParser(
