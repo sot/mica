@@ -1,18 +1,17 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Index &#8212; mica 4.33.0 documentation</title>
+    <title>Index &#8212; mica 4.33.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css" />
     
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <script type="text/javascript" src="_static/sidebar.js"></script>
     <script type="text/javascript" src="_static/copybutton.js"></script>
     <link rel="index" title="Index" href="#" />
@@ -46,7 +45,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="index.html">mica 4.33.0 documentation</a>
+	<a href="index.html">mica 4.33.1 documentation</a>
 	 &#187;
       </li>
       
@@ -112,6 +111,8 @@
 </li>
       <li><a href="api.html#mica.archive.obsid_archive.ObsArchive.get_arch_info">get_arch_info() (mica.archive.obsid_archive.ObsArchive method)</a>
 </li>
+      <li><a href="api.html#mica.vv.get_arch_vv">get_arch_vv() (in module mica.vv)</a>
+</li>
       <li><a href="api.html#mica.archive.cda.services.get_archive_file_list">get_archive_file_list() (in module mica.archive.cda.services)</a>
 </li>
       <li><a href="api.html#mica.archive.asp_l1.get_atts">get_atts() (in module mica.archive.asp_l1)</a>
@@ -146,12 +147,12 @@
         <li><a href="api.html#mica.archive.asp_l1.get_files">(in module mica.archive.asp_l1)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#mica.archive.obsid_archive.ObsArchive.get_fits_info">get_fits_info() (mica.archive.obsid_archive.ObsArchive method)</a>
 </li>
       <li><a href="api.html#mica.archive.aca_l0.get_l0_images">get_l0_images() (in module mica.archive.aca_l0)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#mica.starcheck.get_monitor_windows">get_monitor_windows() (in module mica.starcheck)</a>
 </li>
       <li><a href="api.html#mica.starcheck.get_mp_dir">get_mp_dir() (in module mica.starcheck)</a>
@@ -174,6 +175,8 @@
 </li>
       <li><a href="api.html#mica.archive.cda.services.get_proposal_abstract">get_proposal_abstract() (in module mica.archive.cda.services)</a>
 </li>
+      <li><a href="api.html#mica.vv.get_rms_data">get_rms_data() (in module mica.vv)</a>
+</li>
       <li><a href="api.html#mica.archive.aca_l0.get_slot_data">get_slot_data() (in module mica.archive.aca_l0)</a>
 </li>
       <li><a href="api.html#mica.starcheck.get_starcheck_catalog">get_starcheck_catalog() (in module mica.starcheck)</a>
@@ -189,6 +192,12 @@
       <li><a href="api.html#mica.archive.obsid_archive.ObsArchive.get_todo_from_links">get_todo_from_links() (mica.archive.obsid_archive.ObsArchive method)</a>
 </li>
       <li><a href="api.html#mica.archive.obsid_archive.ObsArchive.get_ver_num">get_ver_num() (mica.archive.obsid_archive.ObsArchive method)</a>
+</li>
+      <li><a href="api.html#mica.vv.get_vv">get_vv() (in module mica.vv)</a>
+</li>
+      <li><a href="api.html#mica.vv.get_vv_dir">get_vv_dir() (in module mica.vv)</a>
+</li>
+      <li><a href="api.html#mica.vv.get_vv_files">get_vv_files() (in module mica.vv)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -274,8 +283,6 @@
         <li><a href="api.html#module-mica.stats.acq_stats">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     mica.stats.guide_stats
 
@@ -283,11 +290,20 @@
         <li><a href="api.html#module-mica.stats.guide_stats">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     mica.utils
 
       <ul>
         <li><a href="api.html#module-mica.utils">module</a>
+</li>
+      </ul></li>
+      <li>
+    mica.vv
+
+      <ul>
+        <li><a href="api.html#module-mica.vv">module</a>
 </li>
       </ul></li>
       <li>
@@ -317,6 +333,8 @@
         <li><a href="api.html#module-mica.stats.guide_stats">mica.stats.guide_stats</a>
 </li>
         <li><a href="api.html#module-mica.utils">mica.utils</a>
+</li>
+        <li><a href="api.html#module-mica.vv">mica.vv</a>
 </li>
       </ul></li>
       <li><a href="api.html#mica.archive.aca_hdr3.MSID">MSID (class in mica.archive.aca_hdr3)</a>
@@ -382,7 +400,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 6.1.3. &nbsp;
   </p>
 </footer>
   </body>

@@ -1,18 +1,17 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.starcheck.starcheck &#8212; mica 4.33.0 documentation</title>
+    <title>mica.starcheck.starcheck &#8212; mica 4.33.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css" />
     
     <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-    <script src="../../../_static/jquery.js"></script>
-    <script src="../../../_static/underscore.js"></script>
     <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/sphinx_highlight.js"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
     <script type="text/javascript" src="../../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -46,7 +45,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.33.0 documentation</a>
+	<a href="../../../index.html">mica 4.33.1 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -94,7 +93,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_starcat</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the planned star catalog for an obsid.  Uses mica.starcheck database.</span>
 
 <span class="sd">    :param obsid: obsid</span>
@@ -108,7 +107,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_dither</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the planned dither for an obsid.  Uses mica.starcheck database.  Note that this</span>
 <span class="sd">    does not have dither values for ERs and for some early mission observations.</span>
 
@@ -136,7 +135,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_att</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the planned ACA attitude from the starcheck database.</span>
 
 <span class="sd">    :param obsid: obsid</span>
@@ -148,7 +147,7 @@
 
 
 <div class="viewcode-block" id="get_monitor_windows"><a class="viewcode-back" href="../../../api.html#mica.starcheck.get_monitor_windows">[docs]</a><span class="k">def</span> <span class="nf">get_monitor_windows</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_obsid</span><span class="o">=</span><span class="mi">40000</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Use the database of starcheck products to get a list of monitor windows.</span>
 
 <span class="sd">    This includes only catalogs that ran or will run.</span>
@@ -181,7 +180,7 @@
         <span class="n">mons</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;&quot;&quot;select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir</span>
 <span class="s2">                    from starcheck_catalog, starcheck_id</span>
-<span class="s2">                    where type = &#39;MON&#39; and obsid &gt; </span><span class="si">{</span><span class="n">min_obsid</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">                    where type = &#39;MON&#39; and obsid &gt; </span><span class="si">{</span><span class="n">min_obsid</span><span class="si">}</span>
 <span class="s2">                    and mp_starcat_date &gt;= &#39;</span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2">&#39;</span>
 <span class="s2">                    and mp_starcat_date &lt;= &#39;</span><span class="si">{</span><span class="n">stop_date</span><span class="si">}</span><span class="s2">&#39;</span>
 <span class="s2">                    and starcheck_id.id = starcheck_catalog.sc_id&quot;&quot;&quot;</span>  <span class="c1"># noqa: E501</span>
@@ -216,7 +215,7 @@
 
 
 <div class="viewcode-block" id="get_starcheck_catalog_at_date"><a class="viewcode-back" href="../../../api.html#mica.starcheck.get_starcheck_catalog_at_date">[docs]</a><span class="k">def</span> <span class="nf">get_starcheck_catalog_at_date</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    For a given date, return a dictionary describing the starcheck catalog that should</span>
 <span class="sd">    apply. The content of that dictionary is from the database tables that parsed the</span>
 <span class="sd">    starcheck report. A catalog is defined as applying, in this function, to any time</span>
@@ -289,7 +288,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_mp_dir_from_starcheck_db</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Get a guess for MP_DIR using the starchecks database.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get a guess for MP_DIR using the starchecks database.</span>
 
 <span class="sd">    :param obsid: obsid</span>
 <span class="sd">    :param starcheck_db: optional handle to already-open starcheck database</span>
@@ -299,7 +298,7 @@
         <span class="n">starcheck_db</span> <span class="o">=</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="n">DEFAULT_CONFIG</span><span class="p">[</span><span class="s2">&quot;starcheck_db&quot;</span><span class="p">])</span>
 
     <span class="n">starchecks</span> <span class="o">=</span> <span class="n">starcheck_db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
-        <span class="sd">&quot;&quot;&quot;select * from starcheck_obs, starcheck_id</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;select * from starcheck_obs, starcheck_id</span>
 <span class="sd">            where obsid = %d and starcheck_id.id = starcheck_obs.sc_id</span>
 <span class="sd">            order by sc_id &quot;&quot;&quot;</span>
         <span class="o">%</span> <span class="n">obsid</span>
@@ -324,7 +323,7 @@
 
 
 <div class="viewcode-block" id="get_mp_dir"><a class="viewcode-back" href="../../../api.html#mica.starcheck.get_mp_dir">[docs]</a><span class="k">def</span> <span class="nf">get_mp_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the mission planning directory for an obsid and some status information.</span>
 <span class="sd">    If the obsid catalog was used more than once (multi-obi or rescheduled after</span>
 <span class="sd">    being used in a vehicle-only interval), return the directory and details of</span>
@@ -371,7 +370,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_starcheck_db_obsid</span><span class="p">(</span><span class="n">mp_starcat_time</span><span class="p">,</span> <span class="n">mp_dir</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get starcheck database obsid for a given MP_STARCAT time and products directory.</span>
 
 <span class="sd">    :param mp_starcat_time: MP_STARCAT time</span>
@@ -398,7 +397,7 @@
 
 
 <div class="viewcode-block" id="get_starcheck_catalog"><a class="viewcode-back" href="../../../api.html#mica.starcheck.get_starcheck_catalog">[docs]</a><span class="k">def</span> <span class="nf">get_starcheck_catalog</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    For a given obsid, return a dictionary describing the starcheck catalog that should</span>
 <span class="sd">    apply. The content of that dictionary is from the database tables of that parsed the</span>
 <span class="sd">    starcheck report and has keys:</span>
@@ -499,7 +498,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 6.1.3. &nbsp;
   </p>
 </footer>
   </body>

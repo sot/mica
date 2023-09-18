@@ -1,18 +1,17 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.obspar &#8212; mica 4.33.0 documentation</title>
+    <title>mica.archive.obspar &#8212; mica 4.33.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css" />
     
     <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-    <script src="../../../_static/jquery.js"></script>
-    <script src="../../../_static/underscore.js"></script>
     <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/sphinx_highlight.js"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
     <script type="text/javascript" src="../../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -46,7 +45,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.33.0 documentation</a>
+	<a href="../../../index.html">mica 4.33.1 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -271,7 +270,7 @@
 
 
 <div class="viewcode-block" id="get_dir"><a class="viewcode-back" href="../../../api.html#mica.archive.obspar.get_dir">[docs]</a><span class="k">def</span> <span class="nf">get_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get obspar directory for default/released products for an obsid.</span>
 
 <span class="sd">      &gt;&gt;&gt; from mica.archive import obspar</span>
@@ -286,7 +285,7 @@
 
 
 <div class="viewcode-block" id="get_obs_dirs"><a class="viewcode-back" href="../../../api.html#mica.archive.obspar.get_obs_dirs">[docs]</a><span class="k">def</span> <span class="nf">get_obs_dirs</span><span class="p">(</span><span class="n">obsid</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get all obspar directories for an obsid in the Ska file archive.</span>
 
 <span class="sd">      &gt;&gt;&gt; from mica.archive import obspar</span>
@@ -308,7 +307,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_obspar_file</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get location of requested obsid&#39;s obspar.</span>
 
 <span class="sd">      &gt;&gt;&gt; from mica.archive import obspar</span>
@@ -331,7 +330,7 @@
 
 
 <div class="viewcode-block" id="get_obspar"><a class="viewcode-back" href="../../../api.html#mica.archive.obspar.get_obspar">[docs]</a><span class="k">def</span> <span class="nf">get_obspar</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the obspar for obsid.  Return as a dict.</span>
 
 <span class="sd">      &gt;&gt;&gt; from mica.archive import obspar</span>
@@ -356,7 +355,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_files</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    List obspar files for an obsid or a time range.</span>
 
 <span class="sd">      &gt;&gt;&gt; from mica.archive import obspar</span>
@@ -377,7 +376,7 @@
 
 
 <span class="k">def</span> <span class="nf">get_obsids</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    List obsids with obspars in a time range.</span>
 
 <span class="sd">      &gt;&gt;&gt; from mica.archive import obspar</span>
@@ -401,7 +400,7 @@
 
 
 <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Run the update process to get new obspars, save them in the Ska</span>
 <span class="sd">    file archive, and include new entries in the file lookup database.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -440,7 +439,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 6.1.3. &nbsp;
   </p>
 </footer>
   </body>

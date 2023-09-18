@@ -1,18 +1,17 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.aca_hdr3 &#8212; mica 4.33.0 documentation</title>
+    <title>mica.archive.aca_hdr3 &#8212; mica 4.33.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css" />
     
     <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-    <script src="../../../_static/jquery.js"></script>
-    <script src="../../../_static/underscore.js"></script>
     <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/sphinx_highlight.js"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
     <script type="text/javascript" src="../../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -46,7 +45,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.33.0 documentation</a>
+	<a href="../../../index.html">mica 4.33.1 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -480,7 +479,7 @@
 
 
 <div class="viewcode-block" id="MSID"><a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSID">[docs]</a><span class="k">class</span> <span class="nc">MSID</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    ACA header 3 data object to work with header 3 data from</span>
 <span class="sd">    available 8x8 ACA L0 telemetry::</span>
 
@@ -532,7 +531,7 @@
         <span class="k">return</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
 <div class="viewcode-block" id="MSID.filter_bad"><a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSID.filter_bad">[docs]</a>    <span class="k">def</span> <span class="nf">filter_bad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Filter out any missing values.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter out any missing values.</span>
 
 <span class="sd">        After applying this method the ``vals`` attributes will be a</span>
 <span class="sd">        plain np.ndarray object instead of a masked array.</span>
@@ -550,7 +549,7 @@
 
 
 <span class="k">class</span> <span class="nc">Msid</span><span class="p">(</span><span class="n">MSID</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    ACA header 3 data object to work with header 3 data from available 8x8 ACA L0</span>
 <span class="sd">    telemetry.</span>
 
@@ -574,7 +573,7 @@
 
 
 <span class="k">def</span> <span class="nf">confirm_msid</span><span class="p">(</span><span class="n">req_msid</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Check to see if the &#39;MSID&#39; is an alias or is in the HDR3_DEF</span>
 <span class="sd">    dictionary.  If in the aliases, return the unaliased value.</span>
 <span class="sd">    :param req_msid: requested msid</span>
@@ -590,7 +589,7 @@
 
 
 <span class="k">def</span> <span class="nf">slot_for_msid</span><span class="p">(</span><span class="n">msid</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    For a given &#39;MSID&#39; return the slot number that contains those data.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">mmatch</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\d)\d\d&#39;</span><span class="p">,</span> <span class="n">msid</span><span class="p">)</span>
@@ -599,7 +598,7 @@
 
 
 <div class="viewcode-block" id="MSIDset"><a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSIDset">[docs]</a><span class="k">class</span> <span class="nc">MSIDset</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">OrderedDict</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    ACA header 3 data object to work with header 3 data from</span>
 <span class="sd">    available 8x8 ACA L0 telemetry.  An MSIDset works with multiple</span>
 <span class="sd">    MSIDs simultaneously.</span>
@@ -695,7 +694,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 6.1.3. &nbsp;
   </p>
 </footer>
   </body>

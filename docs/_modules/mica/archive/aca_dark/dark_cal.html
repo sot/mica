@@ -1,18 +1,17 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.aca_dark.dark_cal &#8212; mica 4.33.0 documentation</title>
+    <title>mica.archive.aca_dark.dark_cal &#8212; mica 4.33.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/bootstrap-astropy.css" />
     
     <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
-    <script src="../../../../_static/jquery.js"></script>
-    <script src="../../../../_static/underscore.js"></script>
     <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/sphinx_highlight.js"></script>
     <script type="text/javascript" src="../../../../_static/sidebar.js"></script>
     <script type="text/javascript" src="../../../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
@@ -46,7 +45,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../../index.html">mica 4.33.0 documentation</a>
+	<a href="../../../../index.html">mica 4.33.1 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -92,7 +91,7 @@
 
 
 <div class="viewcode-block" id="date_to_dark_id"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.date_to_dark_id">[docs]</a><span class="k">def</span> <span class="nf">date_to_dark_id</span><span class="p">(</span><span class="n">date</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert ``date`` to the corresponding YYYYDOY format for a dark cal identifiers.</span>
 
 <span class="sd">    :param date: any CxoTime compatible format</span>
@@ -110,7 +109,7 @@
 
 
 <div class="viewcode-block" id="dark_id_to_date"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.dark_id_to_date">[docs]</a><span class="k">def</span> <span class="nf">dark_id_to_date</span><span class="p">(</span><span class="n">dark_id</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert ``dark_id`` (YYYYDOY) to the corresponding CxoTime &#39;date&#39; format.</span>
 
 <span class="sd">    :param date: dark id (YYYYDOY)</span>
@@ -128,7 +127,7 @@
 
 <div class="viewcode-block" id="get_dark_cal_dirs"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_dirs">[docs]</a><span class="nd">@lru_cache</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">get_dark_cal_dirs</span><span class="p">(</span><span class="n">dark_cals_dir</span><span class="o">=</span><span class="n">MICA_FILES</span><span class="p">[</span><span class="s1">&#39;dark_cals_dir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get an ordered dict of directory paths containing dark current calibration files,</span>
 <span class="sd">    where the key is the dark cal identifier (YYYYDOY) and the value is the path.</span>
 
@@ -144,7 +143,7 @@
 
 <div class="viewcode-block" id="get_dark_cal_ids"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_ids">[docs]</a><span class="nd">@lru_cache</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">get_dark_cal_ids</span><span class="p">(</span><span class="n">dark_cals_dir</span><span class="o">=</span><span class="n">MICA_FILES</span><span class="p">[</span><span class="s1">&#39;dark_cals_dir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get an ordered dict dates as keys and dark cal identifiers (YYYYDOY) as values.</span>
 
 <span class="sd">    :param dark_cals_dir: directory containing dark cals.</span>
@@ -157,7 +156,7 @@
 
 
 <div class="viewcode-block" id="get_dark_cal_id"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_id">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_id</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">,</span> <span class="n">dark_cal_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return the dark calibration id corresponding to ``date``.</span>
 
 <span class="sd">    If ``select`` is ``&#39;before&#39;`` (default) then use the first calibration which</span>
@@ -219,7 +218,7 @@
 <span class="nd">@DARK_CAL</span><span class="o">.</span><span class="n">cache</span>
 <span class="k">def</span> <span class="nf">_get_dark_cal_image_props</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aca_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                               <span class="n">allow_negative</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding</span>
 <span class="sd">    dark_props file.</span>
 
@@ -269,7 +268,7 @@
 
 <div class="viewcode-block" id="get_dark_cal_image"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_image">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_image</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aca_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                        <span class="n">allow_negative</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return the dark calibration image (e-/s) nearest to ``date``.</span>
 
 <span class="sd">    If ``select`` is ``&#39;before&#39;`` (default) then use the first calibration which</span>
@@ -291,7 +290,7 @@
 
 <div class="viewcode-block" id="get_dark_cal_props"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_props">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_props</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="s1">&#39;before&#39;</span><span class="p">,</span> <span class="n">include_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">t_ccd_ref</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                        <span class="n">aca_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_negative</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return a dark calibration properties structure for ``date``</span>
 
 <span class="sd">    If ``select`` is ``&#39;before&#39;`` (default) then use the first calibration which</span>
@@ -320,7 +319,7 @@
 
 
 <div class="viewcode-block" id="get_dark_cal_props_table"><a class="viewcode-back" href="../../../../api.html#mica.archive.aca_dark.dark_cal.get_dark_cal_props_table">[docs]</a><span class="k">def</span> <span class="nf">get_dark_cal_props_table</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">include_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">as_table</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return a table of dark calibration properties between ``start`` and ``stop``.</span>
 
 <span class="sd">    If ``include_image`` is True then an additional column or key ``image`` is</span>
@@ -393,7 +392,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 6.1.3. &nbsp;
   </p>
 </footer>
   </body>

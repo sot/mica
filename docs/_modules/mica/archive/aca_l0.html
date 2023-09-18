@@ -1,18 +1,17 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.aca_l0 &#8212; mica 4.33.0 documentation</title>
+    <title>mica.archive.aca_l0 &#8212; mica 4.33.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css" />
     
     <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-    <script src="../../../_static/jquery.js"></script>
-    <script src="../../../_static/underscore.js"></script>
     <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/sphinx_highlight.js"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
     <script type="text/javascript" src="../../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -46,7 +45,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.33.0 documentation</a>
+	<a href="../../../index.html">mica 4.33.1 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -165,7 +164,7 @@
                   <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data_root</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                   <span class="n">centered_8x8</span><span class="o">=</span><span class="kc">False</span>
                   <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    For a the given parameters, retrieve telemetry and construct a</span>
 <span class="sd">    masked array of the MSIDs available in that telemetry.</span>
 
@@ -255,7 +254,7 @@
 
 
 <div class="viewcode-block" id="get_l0_images"><a class="viewcode-back" href="../../../api.html#mica.archive.aca_l0.get_l0_images">[docs]</a><span class="k">def</span> <span class="nf">get_l0_images</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">slot</span><span class="p">,</span> <span class="n">imgsize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get ACA L0 images for the given  ``start`` and ``stop`` times and</span>
 <span class="sd">    the given ``slot``.  Optionally filter on image size via ``imgsize``</span>
 <span class="sd">    or change the default image metadata via ``columns``.</span>
@@ -364,7 +363,7 @@
 
 <div class="viewcode-block" id="get_files"><a class="viewcode-back" href="../../../api.html#mica.archive.aca_l0.get_files">[docs]</a><span class="k">def</span> <span class="nf">get_files</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
               <span class="n">slots</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">imgsize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data_root</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Retrieve list of files from ACA0 archive lookup table that</span>
 <span class="sd">    match arguments.  The database query returns files with</span>
 
@@ -423,7 +422,7 @@
 
 <span class="k">def</span> <span class="nf">_get_file_records</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                        <span class="n">imgsize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data_root</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Retrieve list of files from ACA0 archive lookup table that</span>
 <span class="sd">    match arguments.  The database query returns files with</span>
 
@@ -573,14 +572,14 @@
                 <span class="n">version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">file_re</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
                 <span class="c1"># if there is an old file and we&#39;re just looking for new ones</span>
                 <span class="n">range_match</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
-                    <span class="sd">&quot;&quot;&quot;SELECT * from archfiles</span>
+<span class="w">                    </span><span class="sd">&quot;&quot;&quot;SELECT * from archfiles</span>
 <span class="sd">                       WHERE filetime = %(filetime)d</span>
 <span class="sd">                       and slot = %(slot)d&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span><span class="n">filetime</span><span class="o">=</span><span class="n">filetime</span><span class="p">,</span> <span class="n">slot</span><span class="o">=</span><span class="n">slot</span><span class="p">))</span>
                 <span class="k">if</span> <span class="n">range_match</span> <span class="ow">and</span> <span class="n">only_new</span><span class="p">:</span>
                     <span class="k">continue</span>
                 <span class="c1"># if there is a newer file there already</span>
                 <span class="n">version_match</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
-                    <span class="sd">&quot;&quot;&quot;SELECT * from archfiles</span>
+<span class="w">                    </span><span class="sd">&quot;&quot;&quot;SELECT * from archfiles</span>
 <span class="sd">                       WHERE filetime = %(filetime)d</span>
 <span class="sd">                       and slot = %(slot)d</span>
 <span class="sd">                       and revision &gt;= %(version)d&quot;&quot;&quot;</span>
@@ -607,7 +606,7 @@
         <span class="k">return</span> <span class="n">Table</span><span class="p">(</span><span class="n">arc_files</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_archive_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Update FITS file archive with arc5gl and ingest files into file archive</span>
 
 <span class="sd">        :param filetype: a dictionary (or dictionary-like) object with keys for</span>
@@ -632,7 +631,7 @@
         <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="n">filetype</span><span class="p">[</span><span class="s1">&#39;fileglob&#39;</span><span class="p">]))</span>
 
     <span class="k">def</span> <span class="nf">_read_archfile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Read FITS filename ``f`` with index ``i`` (position within list of</span>
 <span class="sd">        filenames) and get dictionary of values to store in file lookup</span>
 <span class="sd">        database.  These values include all header items in</span>
@@ -689,7 +688,7 @@
         <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
             <span class="c1"># remove old versions of this file</span>
             <span class="n">oldmatches</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(</span>
-                <span class="sd">&quot;&quot;&quot;SELECT * from archfiles</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;SELECT * from archfiles</span>
 <span class="sd">                   WHERE filetime = %(filetime)d</span>
 <span class="sd">                   and slot = %(slot)d</span>
 <span class="sd">                   and startmjf = %(startmjf)d and startmnf = %(startmnf)d</span>
@@ -733,11 +732,11 @@
         <span class="k">with</span> <span class="n">Ska</span><span class="o">.</span><span class="n">DBI</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">)</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">file_record</span> <span class="ow">in</span> <span class="n">defunct_matches</span><span class="p">:</span>
                 <span class="n">query</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;&quot;&quot;delete from archfiles</span>
-<span class="s2">                              WHERE filetime = </span><span class="si">%(filetime)d</span><span class="s2"></span>
-<span class="s2">                              and slot = </span><span class="si">%(slot)d</span><span class="s2"></span>
-<span class="s2">                              and startmjf = </span><span class="si">%(startmjf)d</span><span class="s2"></span>
-<span class="s2">                              and startmnf = </span><span class="si">%(startmnf)d</span><span class="s2"></span>
-<span class="s2">                              and stopmjf = </span><span class="si">%(stopmjf)d</span><span class="s2"></span>
+<span class="s2">                              WHERE filetime = </span><span class="si">%(filetime)d</span>
+<span class="s2">                              and slot = </span><span class="si">%(slot)d</span>
+<span class="s2">                              and startmjf = </span><span class="si">%(startmjf)d</span>
+<span class="s2">                              and startmnf = </span><span class="si">%(startmnf)d</span>
+<span class="s2">                              and stopmjf = </span><span class="si">%(stopmjf)d</span>
 <span class="s2">                              and stopmnf = </span><span class="si">%(stopmnf)d</span><span class="s2"> &quot;&quot;&quot;</span>
                            <span class="o">%</span> <span class="n">file_record</span><span class="p">)</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
@@ -755,7 +754,7 @@
                     <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">real_file</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_move_archive_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">archfiles</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Move ACA L0 files into the file archive into directories</span>
 <span class="sd">        by YYYY/DOY under the specified data_root</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -840,7 +839,7 @@
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Ingested </span><span class="si">%d</span><span class="s2"> files&quot;</span> <span class="o">%</span> <span class="n">count_inserted</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Retrieve ACA0 telemetry files from the CXC archive, store in the</span>
 <span class="sd">        Ska/ACA archive, and update database of files.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -933,7 +932,7 @@
 
 
 <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Command line interface to fetch ACA L0 telemetry from the CXC Archive</span>
 <span class="sd">    and store it in the Ska archive.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -968,7 +967,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 4.2.0. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 6.1.3. &nbsp;
   </p>
 </footer>
   </body>
