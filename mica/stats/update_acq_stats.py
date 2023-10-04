@@ -148,7 +148,9 @@ def _deltas_vs_obc_quat(vals, times, catalog):
             logger.info("No agasc id for slot {}, skipping".format(slot))
             continue
         try:
-            star = agasc.get_star(agasc_id, date=times[0], use_supplement=False)
+            star = agasc.get_star(agasc_id, date=times[0],
+                                  agasc_file='miniagasc_*',
+                                  use_supplement=False)
         except:
             logger.info("agasc error on slot {}:{}".format(
                     slot, sys.exc_info()[0]))

@@ -446,7 +446,7 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
 
 def get_star(id):
     try:
-        agasc_info = agasc.get_star(id)
+        agasc_info = agasc.get_star(id, agasc_file='miniagasc_*')
         agasc_list = [(key, agasc_info[key]) for key in agasc_info.dtype.names]
         return agasc_list
     except:
