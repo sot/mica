@@ -62,7 +62,7 @@ class StarHistView(BaseView, TemplateView):
             import agasc
             from agasc.agasc import IdNotFound
             try:
-                agasc_info = agasc.get_star(agasc_id)
+                agasc_info = agasc.get_star(agasc_id, agasc_file=agasc.get_agasc_filename('miniagasc_*'))
                 context['star_info'] = [(key, agasc_info[key]) for key in agasc_info.dtype.names]
             except IdNotFound:
                 context['star_info'] = []
