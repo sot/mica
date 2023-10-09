@@ -540,6 +540,8 @@ def main(obsid):
             if plan_date.cxcsec > (CxoTime.now() + 21 * u.day).secs:
                 raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
+        if status == 'no starcat':
+            raise LookupError("No starcat")
         obs_sc, mp_dir, status = get_starcheck(obsid)
         logger.debug("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
         if obs_sc['obs']['point_ra'] is None:
@@ -551,7 +553,7 @@ def main(obsid):
         fig.savefig(os.path.join(outdir, 'starcheck.png'))
         plt.close('all')
     except LookupError as detail:
-        logger.info("No starcheck catalog.  Writing out OCAT info only")
+        logger.info("No starcheck catalog or no starcat.  Writing out OCAT info only")
         logger.info(detail)
         template = jinja_env.get_template('report.html')
         page = template.render(obsid=obsid,
