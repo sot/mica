@@ -337,19 +337,20 @@ def obs_links(obsid, sequence=None, plan=None):
         dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
         mp_label = "{}{}".format(dir_match.group(1),
                                  dir_match.group(2).upper())
-        mp_date_m = re.match(r'(\d{4}):(\d{3}):\d{2}:\d{2}:\d{2}\.\d{3}', mp_date)
-        if mp_date_m:
-            year = int(mp_date_m.group(1))
-            doy = int(mp_date_m.group(2))
+        if mp_date is not None:
+            mp_date_m = re.match(r'(\d{4}):(\d{3}):\d{2}:\d{2}:\d{2}\.\d{3}', mp_date)
+            if mp_date_m:
+                year = int(mp_date_m.group(1))
+                doy = int(mp_date_m.group(2))
 
-            dtm = datetime.datetime(year, 1, 1) + datetime.timedelta(doy - 1)
-            month = dtm.strftime("%b")
-            dom = dtm.strftime("%d")
-            links['fot_daily'] = {
-                'label': "Daily Plots {}:{:03d}".format(year, int(doy)),
-                'link': "{root}/{year}/{upper_month}/{lower_month}{day_of_month:02d}_{doy:03d}/".format(
-                    root=DAILY_PLOT_ROOT, year=year, upper_month=month.upper(),
-                    lower_month=month.lower(), day_of_month=int(dom), doy=int(doy))}
+                dtm = datetime.datetime(year, 1, 1) + datetime.timedelta(doy - 1)
+                month = dtm.strftime("%b")
+                dom = dtm.strftime("%d")
+                links['fot_daily'] = {
+                    'label': "Daily Plots {}:{:03d}".format(year, int(doy)),
+                    'link': "{root}/{year}/{upper_month}/{lower_month}{day_of_month:02d}_{doy:03d}/".format(
+                        root=DAILY_PLOT_ROOT, year=year, upper_month=month.upper(),
+                        lower_month=month.lower(), day_of_month=int(dom), doy=int(doy))}
         vv, vvid = official_vv(obsid)
         links['shortterm'] = {'link': guess_shortterm(mp_dir),
                               'label': "Short Term Sched. {}".format(mp_label)}
