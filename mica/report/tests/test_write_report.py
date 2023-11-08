@@ -43,7 +43,7 @@ def test_write_reports():
     os.unlink(fn)
     report.REPORT_ROOT = tempdir
     report.REPORT_SERVER = fn
-    for obsid in [20001, 15175, 54778]:
+    for obsid in [20001, 15175, 54778, 44077]:
         report.main(obsid)
     os.unlink(fn)
     shutil.rmtree(tempdir)
