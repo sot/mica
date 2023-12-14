@@ -45,7 +45,7 @@ COLNAMES = {
         "joint",
         "hst",
         "jwst",
-        "noao",
+        "noirlab",
         "nrao",
         "rxte",
         "spitzer",
