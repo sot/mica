@@ -325,7 +325,7 @@ def test_ocat_filtering_no_match3(query_func, service):
 def test_ocat_filtering_no_match4(query_func, service):
     dat = query_func(
         target_name="jet",
-        public_avail="2004-12-05 10:16:12",
+        public_avail="2004-12-05",
         obsid=4876000,
         return_type="table",  # no match
         **filt_kwargs(service, "700958"),
