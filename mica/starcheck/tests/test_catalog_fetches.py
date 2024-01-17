@@ -11,6 +11,7 @@ from Ska.engarchive import fetch
 from Ska.quatutil import radec2yagzag, yagzag2radec
 
 from .. import starcheck
+from mica.utils import load_name_to_mp_dir
 
 HAS_SC_ARCHIVE = os.path.exists(starcheck.FILES["data_root"])
 
@@ -340,3 +341,8 @@ def test_get_starcheck_for_no_starcheck_entry():
     date = "2023:050:00:30:00"
     cat = starcheck.get_starcheck_catalog_at_date(date)
     assert cat is None
+
+
+def test_load_name_to_mp_dir():
+    mp_dir = load_name_to_mp_dir("DEC2506C")
+    assert mp_dir == "/2006/DEC2506/oflsc/"
