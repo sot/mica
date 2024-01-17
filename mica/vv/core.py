@@ -169,8 +169,8 @@ class Obi(object):
 # this should probably be handled in mica.archive.asp_l1
     @staticmethod
     def _asp1_lookup(obsid, obi, revision):
-        import Ska.DBI
-        apstat = Ska.DBI.DBI(dbi='sybase',
+        import ska_dbi
+        apstat = ska_dbi.DBI(dbi='sybase',
                              server='sqlsao',
                              database='axafapstat')
         # take these from the first aspect solution file header
@@ -882,10 +882,10 @@ class AspectInterval(object):
         return (prop, info, header)
 
     def _read_ocat_stars(self):
-        import Ska.DBI
+        import ska_dbi
         obsid = int(self.asol_header['OBS_ID'])
         obi = int(self.asol_header['OBI_NUM'])
-        ocat_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', database='axafocat')
+        ocat_db = ska_dbi.DBI(dbi='sybase', server='sqlsao', database='axafocat')
         stars = ocat_db.fetchall("select * from stars where "
                                  "obsid = {} and obi = {} "
                                  "and type != 0".format(obsid, obi))

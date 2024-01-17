@@ -16,7 +16,7 @@ import tables
 from itertools import count
 from pathlib import Path
 
-import Ska.DBI
+import ska_dbi
 import Ska.arc5gl
 from Chandra.Time import DateTime
 import Ska.File
@@ -411,7 +411,7 @@ def _get_file_records(start, stop=None, slots=None,
                 'AND imgsize in (%s) '
                 'order by filetime asc '
                 % (tstart, tstart_pad, tstop, tstart, slot_str, imgsize_str))
-    with Ska.DBI.DBI(**db) as db:
+    with ska_dbi.DBI(**db) as db:
         files = db.fetchall(db_query)
     return files
 
@@ -456,7 +456,7 @@ class Updater(object):
 #        db_sql = os.path.join(os.environ['SKA_DATA'],
 #                              'mica', sql_def)
 #        db_init_cmds = file(db_sql).read()
-#        db = Ska.DBI.DBI(dbi='sqlite', server=db_file,
+#        db = ska_dbi.DBI(dbi='sqlite', server=db_file,
 #                         autocommit=False)
 #        db.execute(db_init_cmds, commit=True)
 #    year_dirs = sorted(glob(
@@ -490,7 +490,7 @@ class Updater(object):
         missing = []
         # for the entries after the start date, see if we have the
         # file or a later version
-        with Ska.DBI.DBI(**self.db) as db:
+        with ska_dbi.DBI(**self.db) as db:
             for file, idx in zip(ingested_files[-backcnt:], count(0)):
                 filename = file['filename']
                 db_match = db.fetchall(
@@ -579,7 +579,7 @@ class Updater(object):
         :param i: index of file f within list of files archfiles
         :param f: filename
         :param archfiles: list of filenames for this batch
-        :param db: database handle for file lookup database (Ska.DBI handle)
+        :param db: database handle for file lookup database (ska_dbi handle)
 
         :returns: info for a file.
         :rtype: dictionary
@@ -588,7 +588,7 @@ class Updater(object):
         # Check if filename is already in file lookup table
         # If so then delete temporary file and abort further processing.
         filename = os.path.basename(f)
-        with Ska.DBI.DBI(**self.db) as db:
+        with ska_dbi.DBI(**self.db) as db:
             if db.fetchall('SELECT filename FROM archfiles WHERE filename=?',
                            (filename,)):
                 logger.debug(
@@ -622,7 +622,7 @@ class Updater(object):
         archfiles_row['rows'] = len(hdu.data)
         hdus.close()
 
-        with Ska.DBI.DBI(**self.db) as db:
+        with ska_dbi.DBI(**self.db) as db:
             # remove old versions of this file
             oldmatches = db.fetchall(
                 """SELECT * from archfiles
@@ -666,7 +666,7 @@ class Updater(object):
         return archfiles_row
 
     def _arch_remove(self, defunct_matches):
-        with Ska.DBI.DBI(**self.db) as db:
+        with ska_dbi.DBI(**self.db) as db:
             for file_record in defunct_matches:
                 query = ("""delete from archfiles
                               WHERE filetime = %(filetime)d
@@ -769,7 +769,7 @@ class Updater(object):
             arch_info = self._read_archfile(i, f, files)
             if arch_info:
                 self._move_archive_files([f])
-                with Ska.DBI.DBI(**self.db) as db:
+                with ska_dbi.DBI(**self.db) as db:
                     db.insert(arch_info, 'archfiles')
                     db.commit()
                 count_inserted += 1
@@ -793,14 +793,14 @@ class Updater(object):
                         % self.sql_def)
             db_sql = Path(__file__).parent / self.sql_def
             db_init_cmds = open(db_sql).read()
-            with Ska.DBI.DBI(**self.db) as db:
+            with ska_dbi.DBI(**self.db) as db:
                 db.execute(db_init_cmds, commit=True)
         if self.start:
             datestart = DateTime(self.start)
         else:
             # Get datestart as the most-recent file time from archfiles table
             # will need min-of-max-slot-datestart
-            with Ska.DBI.DBI(**self.db) as db:
+            with ska_dbi.DBI(**self.db) as db:
                 last_time = min([db.fetchone(
                             "select max(filetime) from archfiles where slot = %d"
                             % s)['max(filetime)'] for s in range(0, 8)])

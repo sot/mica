@@ -14,8 +14,8 @@ from .. import report
 user = getpass.getuser()
 
 try:
-    import Ska.DBI
-    with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
+    import ska_dbi
+    with ska_dbi.DBI(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
         HAS_SYBASE_ACCESS = True
 except Exception:
     HAS_SYBASE_ACCESS = False

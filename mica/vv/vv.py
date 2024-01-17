@@ -8,7 +8,7 @@ import logging
 from glob import glob
 import numpy as np
 
-import Ska.DBI
+import ska_dbi
 
 from mica.common import MICA_ARCHIVE
 
@@ -38,7 +38,7 @@ def get_vv_dir(obsid, version="default"):
     """
     num_version = None
     if version == 'last' or version == 'default':
-        asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
+        asp_l1_proc = ska_dbi.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
         if version == 'default':
             obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
                                           where obsid = {} and isdefault = 1

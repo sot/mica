@@ -20,7 +20,7 @@ from astropy.time import Time
 import astropy.units as u
 
 import agasc
-import Ska.DBI
+import ska_dbi
 from cxotime import CxoTime
 from Ska.engarchive import fetch_sci
 from kadi import events
@@ -216,7 +216,7 @@ def get_obs_temps(obsid, outdir):
 
 def target_summary(obsid):
 
-    with Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
+    with ska_dbi.DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
         ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
                                     and target.obsid = {}""".format(obsid))
@@ -259,7 +259,7 @@ def guess_fot_summary(mp_dir):
 
 def official_vv(obsid):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv')
+    vv_db = ska_dbi.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv')
     vv = vv_db.fetchone("""select vvid from vvreport where obsid = {obsid}
                            and creation_date = (
                               select max(creation_date) from vvreport where obsid = {obsid})
@@ -276,7 +276,7 @@ def official_vv(obsid):
 
 def official_vv_notes(obsid, summary):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv',
+    vv_db = ska_dbi.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv',
                         numpy=False)
     all_vv = vv_db.fetchall("""select * from vvreport where obsid = {obsid}
                         """.format(obsid=obsid))
@@ -465,7 +465,7 @@ def star_info(id):
             'agg_trak': agg_trak}
 
 def get_aiprops(obsid):
-    ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+    ACA_DB = ska_dbi.DBI(dbi='sybase', server='sybase', user='aca_read')
     aiprops = ACA_DB.fetchall(
         "select * from aiprops where obsid = {} order by tstart".format(
             obsid))
@@ -817,10 +817,10 @@ def save_state_in_db(obsid, notes):
             os.makedirs(os.path.dirname(REPORT_SERVER))
         db_sql = Path(__file__).parent / FILES['sql_def']
         db_init_cmds = open(db_sql).read()
-        db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
+        db = ska_dbi.DBI(dbi='sqlite', server=REPORT_SERVER)
         db.execute(db_init_cmds)
     else:
-        db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
+        db = ska_dbi.DBI(dbi='sqlite', server=REPORT_SERVER)
 
     notes['report_status'] = notes['last_sched']
     del notes['last_sched']
