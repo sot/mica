@@ -339,7 +339,7 @@ class ObsArchive:
         arc5.sendline("cd %s" % tempdir)
         arc5.sendline("obsid=%d" % obsid)
 
-        with ska_dbi.DBI(**apstat) as db:
+        with ska_dbi.Sqsh(**apstat) as db:
             obis = db.fetchall(
                 "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
         if len(obis) > 1:
@@ -468,7 +468,7 @@ class ObsArchive:
         logger.info("retrieving data for %d in %s" % (obsid, tempdir))
         arc5.sendline("obsid=%d" % obsid)
         # if multi-obi, limit to just the first obi
-        with ska_dbi.DBI(**apstat) as db:
+        with ska_dbi.Sqsh(**apstat) as db:
             obis = db.fetchall(
                 "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
         if len(obis) > 1:
@@ -689,7 +689,7 @@ class ObsArchive:
                                   order by %(apstat_id)s"""
                         % query_vars)
         logger.debug(apstat_query)
-        with ska_dbi.DBI(**apstat) as db:
+        with ska_dbi.Sqsh(**apstat) as db:
             todo = db.fetchall(apstat_query)
         for obs in todo:
             logger.info("running get_arch for obsid %d run on %s"
@@ -755,7 +755,7 @@ class ObsArchive:
                                and revision = %(revision)d"""
                             % query_vars)
             logger.debug(apstat_query)
-            with ska_dbi.DBI(**apstat) as db:
+            with ska_dbi.Sqsh(**apstat) as db:
                 current_status = db.fetchall(apstat_query)
             if len(current_status) == 0:
                 logger.warning(
@@ -770,7 +770,7 @@ class ObsArchive:
             # a query to get the quality from the max science_2 data that
             # used this aspect_solution.  Ugh.
             if config['apstat_table'] == 'aspect_1':
-                with ska_dbi.DBI(**apstat) as db:
+                with ska_dbi.Sqsh(**apstat) as db:
                     science_qual = db.fetchall(
                         """select quality from science_2 where science_2_id in (
                          select science_2_id from science_2_obi where science_1_id in (
@@ -787,7 +787,7 @@ class ObsArchive:
                 else:
                     # if there are no science_2 entries at all for the obsid
                     # see if it is discarded
-                    with ska_dbi.DBI(dbi='sybase', server='sqlsao', database='axafocat') as db:
+                    with ska_dbi.Sqsh(dbi='sybase', server='sqlsao', database='axafocat') as db:
                         target_status = db.fetchone(
                             "select status from target where obsid = {}".format(obs['obsid']))
                         if target_status['status'] == 'discarded':
