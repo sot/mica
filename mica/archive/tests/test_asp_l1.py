@@ -78,6 +78,50 @@ def test_get_atts_time():
         # also assert that the number of ~.25sec samples works out
         assert (len(times[ok]) * .25625) > dwell.dur * .90
 
+
+@pytest.mark.skipif("not test_helper.on_head_network()", reason="Not on HEAD network")
+def test_update_l1_archive(tmp_path):
+
+    config = asp_l1.CONFIG.copy()
+    config["data_root"] = tmp_path / "asp1"
+    config["temp_root"] = tmp_path / "temp"
+    config["bad_obsids"] = tmp_path / "asp1" / "asp_l1_bad_obsids.dat"
+    config["firstrun"] = True
+    config["rebuild"] = True
+    config["obsid"] = 1
+    config["version"] = 4
+    archive = obsid_archive.ObsArchive(config)
+    obsids = archive.update()
+
+    with ska_dbi.DBI(
+        dbi="sqlite", server=config["data_root"] / "archfiles.db3"
+    ) as db:
+        dat = Table(db.fetchall("select * from archfiles"))
+        dat.sort("filename")
+        assert dat[
+            "filename",
+            "filetime",
+            "ascdsver",
+            "caldbver",
+            "content",
+            "revision",
+            "obsid",
+        ].pformat_all() == (
+            [
+                "             filename             filetime ascdsver caldbver  content   revision obsid",
+                "--------------------------------- -------- -------- -------- ---------- -------- -----",
+                " pcadf059904356N004_acal1.fits.gz 59904356  8.3.2.1    4.3.0     ACACAL        4     1",
+                " pcadf059904356N004_acen1.fits.gz 59904356  8.3.2.1    4.3.0    ACACENT        4     1",
+                "pcadf059904356N004_aqual1.fits.gz 59904356  8.3.2.1    4.3.0    ASPQUAL        4     1",
+                " pcadf059904356N004_asol1.fits.gz 59904356  8.3.2.1    4.3.0     ASPSOL        4     1",
+                " pcadf059904356N004_bpix1.fits.gz 59904356  8.3.2.1    4.3.0 ACA_BADPIX        4     1",
+                "pcadf059904356N004_fidpr1.fits.gz 59904356  8.3.2.1    4.3.0   FIDPROPS        4     1",
+                " pcadf059904356N004_gcal1.fits.gz 59904356  8.3.2.1    4.3.0    GYROCAL        4     1",
+                " pcadf059904356N004_gspr1.fits.gz 59904356  8.3.2.1    4.3.0    GSPROPS        4     1",
+            ]
+        )
+
+
 @pytest.mark.skipif("not HAS_L1_ARCHIVE", reason="Test requires L1 archive")
 def test_get_atts_filter():
     # Obsid 19039 has a momentum dump that shows up in asp_sol_status
