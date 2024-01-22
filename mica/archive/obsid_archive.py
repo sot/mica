@@ -131,8 +131,6 @@ class ObsArchive:
         self._arc5 = Ska.arc5gl.Arc5gl()
         self._apstat = dict(dbi='sybase', server='sqlsao',
                             database='axafapstat')
-        self._aca_db = dict(dbi='sybase', server='sybase',
-                                   user='aca_read')
         config = self.config
         db_file = os.path.join(os.path.abspath(config['data_root']),
                                'archfiles.db3')
