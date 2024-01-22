@@ -76,7 +76,7 @@ def test_get_atts_time():
         ok = (times < dwell.tstop) & (times > dwell.tstart)
         assert (times[ok][-1] - times[ok][0]) > dwell.dur * 0.90
         # also assert that the number of ~.25sec samples works out
-        assert (len(times[ok]) * .25625) > dwell.dur * .90
+        assert (len(times[ok]) * 0.25625) > dwell.dur * 0.90
 
 
 @pytest.mark.skipif("not test_helper.on_head_network()", reason="Not on HEAD network")
