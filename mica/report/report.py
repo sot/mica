@@ -216,7 +216,7 @@ def get_obs_temps(obsid, outdir):
 
 def target_summary(obsid):
 
-    with ska_dbi.DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
+    with ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
         ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
                                     and target.obsid = {}""".format(obsid))
@@ -259,12 +259,13 @@ def guess_fot_summary(mp_dir):
 
 def official_vv(obsid):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = ska_dbi.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv')
-    vv = vv_db.fetchone("""select vvid from vvreport where obsid = {obsid}
+    vv_db = ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
+    vvs = vv_db.fetchall("""select vvid from vvreport where obsid = {obsid}
                            and creation_date = (
                               select max(creation_date) from vvreport where obsid = {obsid})
                         """.format(obsid=obsid))
-    if vv is not None:
+    if len(vvs) != 0:
+        vv = vvs[0]
         vv_url = "https://icxc.cfa.harvard.edu/cgi-bin/vv/vv_report.cgi?vvid={}".format(vv['vvid'])
         del vv_db
         return vv_url, vv['vvid']
@@ -276,7 +277,7 @@ def official_vv(obsid):
 
 def official_vv_notes(obsid, summary):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = ska_dbi.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv',
+    vv_db = ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv',
                         numpy=False)
     all_vv = vv_db.fetchall("""select * from vvreport where obsid = {obsid}
                         """.format(obsid=obsid))
@@ -465,7 +466,7 @@ def star_info(id):
             'agg_trak': agg_trak}
 
 def get_aiprops(obsid):
-    ACA_DB = ska_dbi.DBI(dbi='sybase', server='sybase', user='aca_read')
+    ACA_DB = ska_dbi.Sqsh(dbi='sybase', server='sybase', database='aca', user='aca_read')
     aiprops = ACA_DB.fetchall(
         "select * from aiprops where obsid = {} order by tstart".format(
             obsid))

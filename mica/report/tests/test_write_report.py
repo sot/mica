@@ -15,7 +15,7 @@ user = getpass.getuser()
 
 try:
     import ska_dbi
-    with ska_dbi.DBI(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
+    with ska_dbi.Sqsh(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
         HAS_SYBASE_ACCESS = True
 except Exception:
     HAS_SYBASE_ACCESS = False
@@ -23,8 +23,8 @@ except Exception:
     # If the user should have access, warn about the issue.
     if (on_head_network() and not has_sybase() and
             Path(os.environ['SKA'], 'data', 'aspect_authorization',
-                 f'sqlsao-axafvv-{user}').exists()):
-        warn("On HEAD but no sybase access. Run test from production environment.")
+                 f'sqsh-sqlsao-axafvv-{user}').exists()):
+        warn("On HEAD but no sybase access.")
 
 
 HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES['data_root'])
