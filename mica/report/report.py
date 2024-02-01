@@ -261,33 +261,30 @@ def guess_fot_summary(mp_dir):
 def official_vv(obsid):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
     vv_db = ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
-    vvs = vv_db.fetchall("""select vvid from vvreport where obsid = {obsid}
+    vv = vv_db.fetchone("""select vvid from vvreport where obsid = {obsid}
                            and creation_date = (
                               select max(creation_date) from vvreport where obsid = {obsid})
                         """.format(obsid=obsid))
-    if len(vvs) != 0:
-        vv = vvs[0]
+    if vv:
         vv_url = "https://icxc.cfa.harvard.edu/cgi-bin/vv/vv_report.cgi?vvid={}".format(vv['vvid'])
-        del vv_db
         return vv_url, vv['vvid']
     else:
-        del vv_db
         return None, None
 
 
 
 def official_vv_notes(obsid, summary):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv',
-                        numpy=False)
-    all_vv = vv_db.fetchall("""select * from vvreport where obsid = {obsid}
-                        """.format(obsid=obsid))
+    vv_db = ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
+    all_vv = vv_db.fetchall(f"select * from vvreport where obsid = {obsid}")
     if not len(all_vv):
         return None
 
+    all_vv['aspect_review'] = None
+    all_vv['comments'] = ''
+
     for report in all_vv:
-        aspect_rev = vv_db.fetchone("""select * from vvreview where vvid = {vvid}
-                        """.format(vvid=report['vvid']))
+        aspect_rev = vv_db.fetchone(f"select * from vvreview where vvid = {report['vvid']}")
         report['aspect_review'] = aspect_rev
 
     if summary['status'] != 'archived' and summary['data_rights'] != 'N':
@@ -295,7 +292,6 @@ def official_vv_notes(obsid, summary):
             if report['comments'] != '':
                 report['comments'] = 'Hidden'
 
-    del vv_db
     return all_vv
 
 
@@ -319,7 +315,7 @@ def obs_links(obsid, sequence=None, plan=None):
     # if this is a science observation, only try to get a star catalog if it has a home
     # in the schedule either in the past or the near future
     if plan is not None:
-        plan_date = Time(plan)
+        plan_date = Time(datetime.datetime.strptime(plan, "%b %d %Y %I:%M%p"))
         if plan_date < Time.now() + 21 * u.day:
             mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     else:
@@ -539,7 +535,8 @@ def main(obsid):
     logger.debug("Fetching starcheck catalog")
     try:
         if summary is not None and summary['lts_lt_plan'] is not None:
-            plan_date = Time(summary['lts_lt_plan'])
+            plan_date = Time(datetime.datetime.strptime(
+                summary['lts_lt_plan'], "%b %d %Y %I:%M%p"))
             if plan_date.cxcsec > (CxoTime.now() + 21 * u.day).secs:
                 raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
