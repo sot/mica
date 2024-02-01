@@ -53,6 +53,7 @@ logger = logging.getLogger('mica.report')
 logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
+logging.getLogger('matplotlib.font_manager').disabled = True
 
 
 DAILY_PLOT_ROOT = "http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
