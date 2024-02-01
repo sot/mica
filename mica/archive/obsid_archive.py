@@ -788,7 +788,7 @@ class ObsArchive:
                     with ska_dbi.Sqsh(dbi='sybase', server='sqlsao', database='axafocat') as db:
                         target_status = db.fetchone(
                             "select status from target where obsid = {}".format(obs['obsid']))
-                        if target_status['status'] == 'discarded':
+                        if target_status and target_status['status'] == 'discarded':
                             logger.info("Skipping {}, obsid 'discarded'".format(
                                     obs['obsid']))
                             continue
