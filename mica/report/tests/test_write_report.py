@@ -22,7 +22,7 @@ except Exception as e:
 
     # If the user should have access, warn about the issue.
     if on_head_network():
-        warn("On HEAD but Sqsh did not work. {e}")
+        warn(f"On HEAD but Sqsh did not work. {e}")
 
 
 HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES['data_root'])
