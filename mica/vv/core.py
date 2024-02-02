@@ -27,6 +27,7 @@ import Ska.Numpy
 from Chandra.Time import DateTime
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
+from ska_dbi.sqsh import Sqsh
 
 from mica.archive.obsid_archive import parse_obspar, get_obspar
 
@@ -169,8 +170,7 @@ class Obi(object):
 # this should probably be handled in mica.archive.asp_l1
     @staticmethod
     def _asp1_lookup(obsid, obi, revision):
-        import ska_dbi
-        apstat = ska_dbi.Sqsh(dbi='sybase',
+        apstat = Sqsh(dbi='sybase',
                              server='sqlsao',
                              database='axafapstat')
         # take these from the first aspect solution file header
@@ -885,7 +885,7 @@ class AspectInterval(object):
         import ska_dbi
         obsid = int(self.asol_header['OBS_ID'])
         obi = int(self.asol_header['OBI_NUM'])
-        ocat_db = ska_dbi.Sqsh(dbi='sybase', server='sqlsao', database='axafocat')
+        ocat_db = Sqsh(dbi='sybase', server='sqlsao', database='axafocat')
         stars = ocat_db.fetchall("select * from stars where "
                                  "obsid = {} and obi = {} "
                                  "and type != 0".format(obsid, obi))

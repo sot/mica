@@ -11,6 +11,7 @@ import gzip
 from pathlib import Path
 
 import ska_dbi
+from ska_dbi.sqsh import Sqsh
 from Ska.File import get_globfiles
 
 from mica.common import MICA_ARCHIVE
@@ -71,7 +72,7 @@ def update(obsids, config=None):
             obi = hdus[1].header['OBI_NUM']
             revision = hdus[1].header['REVISION']
 
-            with ska_dbi.sqsh.Sqsh(**apstat_db) as db:
+            with Sqsh(**apstat_db) as db:
                 aspect_1 = db.fetchall("""SELECT * FROM aspect_1
                                              WHERE obsid = {obsid}
                                              AND obi = {obi}

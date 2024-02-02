@@ -21,6 +21,7 @@ import astropy.units as u
 
 import agasc
 import ska_dbi
+from ska_dbi.sqsh import Sqsh
 from cxotime import CxoTime
 from Ska.engarchive import fetch_sci
 from kadi import events
@@ -217,7 +218,7 @@ def get_obs_temps(obsid, outdir):
 
 def target_summary(obsid):
 
-    with ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
+    with Sqsh(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
         ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
                                     and target.obsid = {}""".format(obsid))
@@ -260,7 +261,7 @@ def guess_fot_summary(mp_dir):
 
 def official_vv(obsid):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
+    vv_db = Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
     vv = vv_db.fetchone("""select vvid from vvreport where obsid = {obsid}
                            and creation_date = (
                               select max(creation_date) from vvreport where obsid = {obsid})
@@ -275,7 +276,7 @@ def official_vv(obsid):
 
 def official_vv_notes(obsid, summary):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = ska_dbi.Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
+    vv_db = Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
     all_vv = vv_db.fetchall(f"select * from vvreport where obsid = {obsid}")
     if not len(all_vv):
         return None
@@ -463,7 +464,7 @@ def star_info(id):
             'agg_trak': agg_trak}
 
 def get_aiprops(obsid):
-    ACA_DB = ska_dbi.Sqsh(dbi='sybase', server='sybase', database='aca', user='aca_read')
+    ACA_DB = Sqsh(dbi='sybase', server='sybase', database='aca', user='aca_read')
     aiprops = ACA_DB.fetchall(
         "select * from aiprops where obsid = {} order by tstart".format(
             obsid))
