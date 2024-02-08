@@ -282,7 +282,6 @@ def official_vv_notes(obsid, summary):
         return None
 
     all_vv['aspect_review'] = None
-    all_vv['comments'] = ''
 
     for report in all_vv:
         aspect_rev = vv_db.fetchone(f"select * from vvreview where vvid = {report['vvid']}")
