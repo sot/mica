@@ -7,24 +7,22 @@ import shutil
 import pytest
 from warnings import warn
 
-from testr.test_helper import on_head_network, has_sybase
+from testr.test_helper import on_head_network
 
 from .. import report
 
 user = getpass.getuser()
 
 try:
-    import Ska.DBI
-    with Ska.DBI.DBI(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
+    import ska_dbi.sqsh
+    with ska_dbi.sqsh.Sqsh(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
         HAS_SYBASE_ACCESS = True
-except Exception:
+except Exception as e:
     HAS_SYBASE_ACCESS = False
 
     # If the user should have access, warn about the issue.
-    if (on_head_network() and not has_sybase() and
-            Path(os.environ['SKA'], 'data', 'aspect_authorization',
-                 f'sqlsao-axafvv-{user}').exists()):
-        warn("On HEAD but no sybase access. Run test from production environment.")
+    if on_head_network():
+        warn(f"On HEAD but Sqsh did not work. {e}")
 
 
 HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES['data_root'])

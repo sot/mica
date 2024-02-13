@@ -10,7 +10,7 @@ import logging
 from glob import glob
 import numpy as np
 
-import Ska.DBI
+import ska_dbi
 
 import mica.archive.asp_l1 as asp_l1_arch
 import mica.archive.obspar as obspar_arch
@@ -113,13 +113,13 @@ def update(obsids=[]):
 
         # If no obsid specified, run on all with vv_complete = 0 in
         # the local processing database.
-        with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
+        with ska_dbi.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
             obsids = db.fetchall(
                 """SELECT * FROM aspect_1_proc
                 where vv_complete = 0
                 order by aspect_1_id""")['obsid']
     for obsid in obsids:
-        with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
+        with ska_dbi.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
             proc = db.fetchall(
                 f"SELECT obsid, revision, ap_date FROM aspect_1_proc where obsid = {obsid}")
         for obs in proc:
@@ -137,7 +137,7 @@ def update(obsids=[]):
                               where obsid = {obsid} and revision = {obs['revision']}""")
 
             logger.info(update_str)
-            with Ska.DBI.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
+            with ska_dbi.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
                 db.execute(update_str)
 
 
@@ -158,7 +158,7 @@ def get_arch_vv(obsid, version='last'):
     l1_dir = asp_l1_dirs[version]
     # find the obspar that matches the requested aspect_1 products
     # this is in the aspect processing table
-    asp_l1_proc = Ska.DBI.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
+    asp_l1_proc = ska_dbi.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
     asp_obs = asp_l1_proc.fetchall(
         "SELECT * FROM aspect_1_proc where obsid = {}".format(
             obsid))

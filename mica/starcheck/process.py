@@ -7,7 +7,7 @@ from itertools import count
 from operator import itemgetter
 from pathlib import Path
 
-import Ska.DBI
+import ska_dbi
 from Chandra.Time import DateTime
 from starcheck.parser import read_starcheck
 
@@ -137,10 +137,10 @@ def update(config=None):
             os.makedirs(os.path.dirname(config["starcheck_db"]["server"]))
         db_sql = Path(__file__).parent / FILES["sql_def"]
         db_init_cmds = open(db_sql).read()
-        db = Ska.DBI.DBI(dbi="sqlite", server=config["starcheck_db"]["server"])
+        db = ska_dbi.DBI(dbi="sqlite", server=config["starcheck_db"]["server"])
         db.execute(db_init_cmds)
     else:
-        db = Ska.DBI.DBI(dbi="sqlite", server=config["starcheck_db"]["server"])
+        db = ska_dbi.DBI(dbi="sqlite", server=config["starcheck_db"]["server"])
         max_mtime = db.fetchone("select max(mtime) as mtime from starcheck_id")
         if max_mtime is not None:
             last_starcheck_mtime = max_mtime["mtime"]

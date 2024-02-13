@@ -3,12 +3,12 @@
 # files in the same directories
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import Ska.DBI
+import ska_dbi
 import os
 import re
 
 for t in ['obspar', 'asp1']:
-    db = Ska.DBI.DBI(dbi='sqlite', server='/data/aca/archive/%s/archfiles_redo.db3' % t)
+    db = ska_dbi.DBI(dbi='sqlite', server='/data/aca/archive/%s/archfiles_redo.db3' % t)
     db.execute("ALTER table archfiles add column isdefault int")
     if t == 'obspar':
         db.execute("ALTER table archfiles add column content text default 'OBSPAR'")

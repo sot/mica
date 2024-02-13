@@ -20,7 +20,8 @@ from astropy.time import Time
 import astropy.units as u
 
 import agasc
-import Ska.DBI
+import ska_dbi
+from ska_dbi.sqsh import Sqsh
 from cxotime import CxoTime
 from Ska.engarchive import fetch_sci
 from kadi import events
@@ -53,6 +54,7 @@ logger = logging.getLogger('mica.report')
 logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
+logging.getLogger('matplotlib.font_manager').disabled = True
 
 
 DAILY_PLOT_ROOT = "http://occweb.cfa.harvard.edu/occweb/FOT/engineering/reports/dailies"
@@ -216,7 +218,7 @@ def get_obs_temps(obsid, outdir):
 
 def target_summary(obsid):
 
-    with Ska.DBI.DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
+    with Sqsh(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
         ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
                                     and target.obsid = {}""".format(obsid))
@@ -259,33 +261,30 @@ def guess_fot_summary(mp_dir):
 
 def official_vv(obsid):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv')
+    vv_db = Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
     vv = vv_db.fetchone("""select vvid from vvreport where obsid = {obsid}
                            and creation_date = (
                               select max(creation_date) from vvreport where obsid = {obsid})
                         """.format(obsid=obsid))
-    if vv is not None:
+    if vv:
         vv_url = "https://icxc.cfa.harvard.edu/cgi-bin/vv/vv_report.cgi?vvid={}".format(vv['vvid'])
-        del vv_db
         return vv_url, vv['vvid']
     else:
-        del vv_db
         return None, None
 
 
 
 def official_vv_notes(obsid, summary):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
-    vv_db = Ska.DBI.DBI(dbi='sybase', server='sqlsao', user=user, database='axafvv',
-                        numpy=False)
-    all_vv = vv_db.fetchall("""select * from vvreport where obsid = {obsid}
-                        """.format(obsid=obsid))
+    vv_db = Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
+    all_vv = vv_db.fetchall(f"select * from vvreport where obsid = {obsid}")
     if not len(all_vv):
         return None
 
+    all_vv['aspect_review'] = None
+
     for report in all_vv:
-        aspect_rev = vv_db.fetchone("""select * from vvreview where vvid = {vvid}
-                        """.format(vvid=report['vvid']))
+        aspect_rev = vv_db.fetchone(f"select * from vvreview where vvid = {report['vvid']}")
         report['aspect_review'] = aspect_rev
 
     if summary['status'] != 'archived' and summary['data_rights'] != 'N':
@@ -293,7 +292,6 @@ def official_vv_notes(obsid, summary):
             if report['comments'] != '':
                 report['comments'] = 'Hidden'
 
-    del vv_db
     return all_vv
 
 
@@ -317,7 +315,7 @@ def obs_links(obsid, sequence=None, plan=None):
     # if this is a science observation, only try to get a star catalog if it has a home
     # in the schedule either in the past or the near future
     if plan is not None:
-        plan_date = Time(plan)
+        plan_date = Time(datetime.datetime.strptime(plan, "%b %d %Y %I:%M%p"))
         if plan_date < Time.now() + 21 * u.day:
             mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
     else:
@@ -465,7 +463,7 @@ def star_info(id):
             'agg_trak': agg_trak}
 
 def get_aiprops(obsid):
-    ACA_DB = Ska.DBI.DBI(dbi='sybase', server='sybase', user='aca_read')
+    ACA_DB = Sqsh(dbi='sybase', server='sybase', database='aca', user='aca_read')
     aiprops = ACA_DB.fetchall(
         "select * from aiprops where obsid = {} order by tstart".format(
             obsid))
@@ -537,7 +535,8 @@ def main(obsid):
     logger.debug("Fetching starcheck catalog")
     try:
         if summary is not None and summary['lts_lt_plan'] is not None:
-            plan_date = Time(summary['lts_lt_plan'])
+            plan_date = Time(datetime.datetime.strptime(
+                summary['lts_lt_plan'], "%b %d %Y %I:%M%p"))
             if plan_date.cxcsec > (CxoTime.now() + 21 * u.day).secs:
                 raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
@@ -817,10 +816,10 @@ def save_state_in_db(obsid, notes):
             os.makedirs(os.path.dirname(REPORT_SERVER))
         db_sql = Path(__file__).parent / FILES['sql_def']
         db_init_cmds = open(db_sql).read()
-        db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
+        db = ska_dbi.DBI(dbi='sqlite', server=REPORT_SERVER)
         db.execute(db_init_cmds)
     else:
-        db = Ska.DBI.DBI(dbi='sqlite', server=REPORT_SERVER)
+        db = ska_dbi.DBI(dbi='sqlite', server=REPORT_SERVER)
 
     notes['report_status'] = notes['last_sched']
     del notes['last_sched']

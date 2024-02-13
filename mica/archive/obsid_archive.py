@@ -14,7 +14,8 @@ import astropy.io.fits as pyfits
 from pathlib import Path
 
 import Ska.arc5gl
-import Ska.DBI
+import ska_dbi
+from ska_dbi.sqsh import Sqsh
 from Chandra.Time import DateTime
 import Ska.File
 from astropy.table import Table
@@ -131,8 +132,6 @@ class ObsArchive:
         self._arc5 = Ska.arc5gl.Arc5gl()
         self._apstat = dict(dbi='sybase', server='sqlsao',
                             database='axafapstat')
-        self._aca_db = dict(dbi='sybase', server='sybase',
-                                   user='aca_read')
         config = self.config
         db_file = os.path.join(os.path.abspath(config['data_root']),
                                'archfiles.db3')
@@ -143,7 +142,7 @@ class ObsArchive:
                              % config['sql_def'])
             db_sql = Path(__file__).parent / config['sql_def']
             db_init_cmds = open(db_sql).read()
-            with Ska.DBI.DBI(dbi='sqlite', server=db_file,
+            with ska_dbi.DBI(dbi='sqlite', server=db_file,
                              autocommit=False) as db:
                 db.execute(db_init_cmds, commit=True)
         db = dict(dbi='sqlite', server=db_file,
@@ -235,7 +234,7 @@ class ObsArchive:
             else:
                 db_query += 'AND revision = %d ' % revision
         db_query += "order by tstart"
-        with Ska.DBI.DBI(**self._archfiles_db) as db:
+        with ska_dbi.DBI(**self._archfiles_db) as db:
             files = db.fetchall(db_query)
         # For the special case of "revision = last" without obsid, filter the results one a per-file
         # basis by obsid (could be multiple obsids in the date range)
@@ -339,7 +338,7 @@ class ObsArchive:
         arc5.sendline("cd %s" % tempdir)
         arc5.sendline("obsid=%d" % obsid)
 
-        with Ska.DBI.DBI(**apstat) as db:
+        with Sqsh(**apstat) as db:
             obis = db.fetchall(
                 "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
         if len(obis) > 1:
@@ -468,7 +467,7 @@ class ObsArchive:
         logger.info("retrieving data for %d in %s" % (obsid, tempdir))
         arc5.sendline("obsid=%d" % obsid)
         # if multi-obi, limit to just the first obi
-        with Ska.DBI.DBI(**apstat) as db:
+        with Sqsh(**apstat) as db:
             obis = db.fetchall(
                 "select distinct obi from obidet_0_5 where obsid = %d" % obsid)
         if len(obis) > 1:
@@ -487,7 +486,7 @@ class ObsArchive:
         archfiles = glob(os.path.join(tempdir, "*"))
         if not archfiles:
             raise ValueError("Retrieved no files")
-        with Ska.DBI.DBI(**self._archfiles_db) as db:
+        with ska_dbi.DBI(**self._archfiles_db) as db:
             existing = db.fetchall(
                 "select * from archfiles where obsid = %d and revision = '%s'"
                 % (obsid, version))
@@ -544,7 +543,7 @@ class ObsArchive:
         obs_ln_last = os.path.join(archive_dir, chunk_dir,
                                    "%05d_last" % obsid)
 
-        with Ska.DBI.DBI(**self._archfiles_db) as db:
+        with ska_dbi.DBI(**self._archfiles_db) as db:
             if default_ver is not None:
                 def_ver_dir = os.path.join(archive_dir, chunk_dir,
                                            '%05d_v%02d' % (obsid, default_ver))
@@ -689,7 +688,7 @@ class ObsArchive:
                                   order by %(apstat_id)s"""
                         % query_vars)
         logger.debug(apstat_query)
-        with Ska.DBI.DBI(**apstat) as db:
+        with Sqsh(**apstat) as db:
             todo = db.fetchall(apstat_query)
         for obs in todo:
             logger.info("running get_arch for obsid %d run on %s"
@@ -738,7 +737,7 @@ class ObsArchive:
         prov_data = self.get_todo_from_links(archive_dir)
         for obs in prov_data:
             # check again for multi-obis and limit to first one
-            with Ska.DBI.DBI(**apstat) as db:
+            with ska_dbi.DBI(**apstat) as db:
                 obis = db.fetchall(
                     "select distinct obi from obidet_0_5 where obsid = %d"
                     % obs['obsid'])
@@ -755,7 +754,7 @@ class ObsArchive:
                                and revision = %(revision)d"""
                             % query_vars)
             logger.debug(apstat_query)
-            with Ska.DBI.DBI(**apstat) as db:
+            with Sqsh(**apstat) as db:
                 current_status = db.fetchall(apstat_query)
             if len(current_status) == 0:
                 logger.warning(
@@ -770,7 +769,7 @@ class ObsArchive:
             # a query to get the quality from the max science_2 data that
             # used this aspect_solution.  Ugh.
             if config['apstat_table'] == 'aspect_1':
-                with Ska.DBI.DBI(**apstat) as db:
+                with Sqsh(**apstat) as db:
                     science_qual = db.fetchall(
                         """select quality from science_2 where science_2_id in (
                          select science_2_id from science_2_obi where science_1_id in (
@@ -787,10 +786,10 @@ class ObsArchive:
                 else:
                     # if there are no science_2 entries at all for the obsid
                     # see if it is discarded
-                    with Ska.DBI.DBI(dbi='sybase', server='sqlsao', database='axafocat') as db:
+                    with Sqsh(dbi='sybase', server='sqlsao', database='axafocat') as db:
                         target_status = db.fetchone(
                             "select status from target where obsid = {}".format(obs['obsid']))
-                        if target_status['status'] == 'discarded':
+                        if target_status and target_status['status'] == 'discarded':
                             logger.info("Skipping {}, obsid 'discarded'".format(
                                     obs['obsid']))
                             continue

@@ -10,7 +10,8 @@ from glob import glob
 import gzip
 from pathlib import Path
 
-import Ska.DBI
+import ska_dbi
+from ska_dbi.sqsh import Sqsh
 from Ska.File import get_globfiles
 
 from mica.common import MICA_ARCHIVE
@@ -42,11 +43,11 @@ def update(obsids, config=None):
             config['sql_def']))
         db_sql = Path(__file__).parent / config['sql_def']
         db_init_cmds = open(db_sql).read()
-        proc_db = Ska.DBI.DBI(dbi='sqlite', server=proc_db_file)
+        proc_db = ska_dbi.DBI(dbi='sqlite', server=proc_db_file)
         proc_db.execute(db_init_cmds)
     else:
-        proc_db = Ska.DBI.DBI(dbi='sqlite', server=proc_db_file)
-    archdb = Ska.DBI.DBI(dbi='sqlite',
+        proc_db = ska_dbi.DBI(dbi='sqlite', server=proc_db_file)
+    archdb = ska_dbi.DBI(dbi='sqlite',
                          server=os.path.join(config['data_root'],
                                              'archfiles.db3'))
     for obs in obsids:
@@ -70,7 +71,8 @@ def update(obsids, config=None):
             hdus = fits.open(sol)
             obi = hdus[1].header['OBI_NUM']
             revision = hdus[1].header['REVISION']
-            with Ska.DBI.DBI(**apstat_db) as db:
+
+            with Sqsh(**apstat_db) as db:
                 aspect_1 = db.fetchall("""SELECT * FROM aspect_1
                                              WHERE obsid = {obsid}
                                              AND obi = {obi}

@@ -3,7 +3,7 @@ import os
 import re
 
 import numpy as np
-import Ska.DBI
+import ska_dbi
 import astropy.units as u
 from astropy.table import Table
 
@@ -100,7 +100,7 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
         intended to fetch only ERs
 
     :param config: config dictionary. If supplied must include 'starcheck_db'
-                   key with a dictionary of the required arguments to Ska.DBI to connect
+                   key with a dictionary of the required arguments to ska_dbi to connect
                    to that database.
 
     :returns: astropy Table of monitor windows.  See
@@ -113,7 +113,7 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
 
     start_date = CxoTime(start or "1999:001:12:00:00").date
     stop_date = CxoTime(stop).date
-    with Ska.DBI.DBI(**config["starcheck_db"]) as db:
+    with ska_dbi.DBI(**config["starcheck_db"]) as db:
         mons = db.fetchall(
             f"""select obsid, mp_starcat_time as mp_starcat_date, type, sz, yang, zang, dir
                     from starcheck_catalog, starcheck_id
@@ -182,7 +182,7 @@ def get_starcheck_catalog_at_date(date, starcheck_db=None):
     """
     date = CxoTime(date)
     if starcheck_db is None:
-        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
+        starcheck_db = ska_dbi.DBI(**DEFAULT_CONFIG["starcheck_db"])
 
     # Get observations within +/- 7 days and find the one where ``date`` is between end
     # of the previous obs dwell through the end of the current obs dwell.
@@ -232,7 +232,7 @@ def get_mp_dir_from_starcheck_db(obsid, starcheck_db=None):
     :returns: directory, status, date
     """
     if starcheck_db is None:
-        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
+        starcheck_db = ska_dbi.DBI(**DEFAULT_CONFIG["starcheck_db"])
 
     starchecks = starcheck_db.fetchall(
         """select * from starcheck_obs, starcheck_id
@@ -317,7 +317,7 @@ def get_starcheck_db_obsid(mp_starcat_time, mp_dir, starcheck_db=None):
     :returns: obsid
     """
     if starcheck_db is None:
-        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
+        starcheck_db = ska_dbi.DBI(**DEFAULT_CONFIG["starcheck_db"])
 
     result = starcheck_db.fetchone(
         "SELECT starcheck_obs.obsid FROM starcheck_obs "
@@ -366,7 +366,7 @@ def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None):
         return OBS_CACHE[obsid, mp_dir]
 
     if starcheck_db is None:
-        starcheck_db = Ska.DBI.DBI(**DEFAULT_CONFIG["starcheck_db"])
+        starcheck_db = ska_dbi.DBI(**DEFAULT_CONFIG["starcheck_db"])
     status = None
     if mp_dir is None:
         mp_dir, status, obs_date = get_mp_dir(obsid)
