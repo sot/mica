@@ -689,7 +689,7 @@ def update(opt):
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, acq_stats, star_info, catalog, temp = calc_stats(obsid)
-        except ValueError as e:
+        except Exception as e:
             logger.info("Skipping obsid {}: {}".format(obsid, e))
             continue
         if not len(acq_stats):
