@@ -42,6 +42,7 @@ def test_make_acq_stats():
     # Get a temporary file, but then delete it, because _save_acq_stats will only
     # make a new table if the supplied file doesn't exist
     fh, fn = tempfile.mkstemp(suffix='.h5')
+    os.close(fh)
     os.unlink(fn)
     acq_stats.table_file = fn
     obsid = 20001
