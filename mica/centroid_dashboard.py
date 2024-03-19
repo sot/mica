@@ -435,7 +435,7 @@ def get_cd_dir(obsid, data_root):
     if obsid == -1:
         return ""
 
-    cd_obsid_root = os.path.join(data_root, np.str(obsid)[:2], f"{obsid}")
+    cd_obsid_root = os.path.join(data_root, str(obsid)[:2], f"{obsid}")
 
     if not os.path.exists(cd_obsid_root):
         os.makedirs(cd_obsid_root)
@@ -957,10 +957,10 @@ def make_html(row_obsid, rows_slot, obs_dir):
     aber_z = row_obsid['aber_z']
     mean_date = row_obsid['mean_date']
 
-    cd_preceding_root = os.path.join('../../', np.str(obsid_preceding)[:2], f"{obsid_preceding}")
-    cd_next_root = os.path.join('../../', np.str(obsid_next)[:2], f"{obsid_next}")
+    cd_preceding_root = os.path.join('../../', str(obsid_preceding)[:2], f"{obsid_preceding}")
+    cd_next_root = os.path.join('../../', str(obsid_next)[:2], f"{obsid_next}")
 
-    star_path_root = os.path.join(MICA_REPORTS, np.str(obsid)[:2], f"{obsid}")
+    star_path_root = os.path.join(MICA_REPORTS, str(obsid)[:2], f"{obsid}")
 
     if obsid_preceding == -9999:
         preceding_obsid_link = ""
@@ -1158,8 +1158,8 @@ def make_special_case_html(metrics_obsid, obs_dir, info=''):
     obsid_preceding = metrics_obsid['obsid_preceding']
     obsid_next = metrics_obsid['obsid_next']
 
-    cd_preceding_root = os.path.join('../../', np.str(obsid_preceding)[:2], f"{obsid_preceding}")
-    cd_next_root = os.path.join('../../', np.str(obsid_next)[:2], f"{obsid_next}")
+    cd_preceding_root = os.path.join('../../', str(obsid_preceding)[:2], f"{obsid_preceding}")
+    cd_next_root = os.path.join('../../', str(obsid_next)[:2], f"{obsid_next}")
 
     if obsid_preceding == -9999:
         preceding_obsid_link = ""
