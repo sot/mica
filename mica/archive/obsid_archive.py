@@ -737,7 +737,7 @@ class ObsArchive:
         prov_data = self.get_todo_from_links(archive_dir)
         for obs in prov_data:
             # check again for multi-obis and limit to first one
-            with ska_dbi.DBI(**apstat) as db:
+            with Sqsh(**apstat) as db:
                 obis = db.fetchall(
                     "select distinct obi from obidet_0_5 where obsid = %d"
                     % obs['obsid'])
