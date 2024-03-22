@@ -234,20 +234,22 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
             dat[temp] -= 273.15
 
     # Masked array col access ~100 times slower than ndarray so convert
-    dat = dat.filled(-9999)
+    # but keep track of those fill values
+    fill_vals = {col: dat[col].get_fill_value() for col in dat.dtype.names}
 
-    imgs = []
-    imgsizes = dat['IMGSIZE']
-    imgraws = dat['IMGRAW']
+    imgsizes = dat["IMGSIZE"].filled()
+    imgraws = dat["IMGRAW"].filled(-9999)
+    dat = dat[columns].filled()
     cols = {name: dat[name] for name in columns}
 
+    imgs = []
     for i, row in enumerate(dat):
         imgraw = imgraws[i].reshape(8, 8)
         sz = imgsizes[i]
         if sz < 8:
             imgraw = imgraw[:sz, :sz]
 
-        meta = {name: col[i] for name, col in cols.items() if col[i] != -9999}
+        meta = {name: col[i] for name, col in cols.items() if col[i] != fill_vals[name]}
         imgs.append(ACAImage(imgraw, meta=meta))
 
     return imgs
@@ -723,7 +725,7 @@ class Updater(object):
                 os.unlink(f)
 
     def _fetch_by_time(self, range_tstart, range_tstop):
-        logger.info("Fetching %s from %s to %s" 
+        logger.info("Fetching %s from %s to %s"
                     % ('ACA L0 Data',
                        DateTime(range_tstart).date,
                        DateTime(range_tstop).date))
