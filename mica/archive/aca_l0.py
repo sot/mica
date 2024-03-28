@@ -243,7 +243,7 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     imgraws = dat["IMGRAW"].filled()
 
     imgs = []
-    for row,  imgraw in zip(dat, imgraws):
+    for row, imgraw in zip(dat, imgraws):
         imgraw = imgraw.reshape(8, 8)
         sz = row["IMGSIZE"]
         if sz < 8:
