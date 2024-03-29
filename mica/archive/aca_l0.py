@@ -221,6 +221,11 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     if 'IMGCOL0' not in columns:
         columns.append('IMGCOL0')
 
+    # It doesn't make any sense to include IMGRAW in the meta-data columns
+    # of ACAImages so just remove it if the user has requested that.
+    if 'IMGRAW' in columns:
+        columns.remove('IMGRAW')
+
     slot_columns = list(set(columns + ['QUALITY', 'IMGRAW', 'IMGSIZE']))
     dat = get_slot_data(start, stop, slot, imgsize=imgsize, columns=slot_columns)
 
@@ -233,21 +238,17 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
         if temp in dat.dtype.names:
             dat[temp] -= 273.15
 
-    # Masked array col access ~100 times slower than ndarray so convert
-    dat = dat.filled(-9999)
+    dat["IMGRAW"].set_fill_value(-9999)
+    dat = dat[~dat["IMGSIZE"].mask]
+    imgraws = dat["IMGRAW"].filled()
 
     imgs = []
-    imgsizes = dat['IMGSIZE']
-    imgraws = dat['IMGRAW']
-    cols = {name: dat[name] for name in columns}
-
-    for i, row in enumerate(dat):
-        imgraw = imgraws[i].reshape(8, 8)
-        sz = imgsizes[i]
+    for row, imgraw in zip(dat, imgraws):
+        imgraw = imgraw.reshape(8, 8)
+        sz = row["IMGSIZE"]
         if sz < 8:
             imgraw = imgraw[:sz, :sz]
-
-        meta = {name: col[i] for name, col in cols.items() if col[i] != -9999}
+        meta = {name: row[name] for name in columns if not np.any(row.mask[name])}
         imgs.append(ACAImage(imgraw, meta=meta))
 
     return imgs
@@ -723,7 +724,7 @@ class Updater(object):
                 os.unlink(f)
 
     def _fetch_by_time(self, range_tstart, range_tstop):
-        logger.info("Fetching %s from %s to %s" 
+        logger.info("Fetching %s from %s to %s"
                     % ('ACA L0 Data',
                        DateTime(range_tstart).date,
                        DateTime(range_tstop).date))
