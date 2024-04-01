@@ -20,8 +20,8 @@ try:
 except Exception as e:
     HAS_SYBASE_ACCESS = False
 
-    # If the user should have access, warn about the issue.
-    if on_head_network():
+    # If the user should have access, warn about the issue. kadi user does not have access.
+    if on_head_network() and user != 'kadi':
         warn(f"On HEAD but Sqsh did not work. {e}")
 
 
