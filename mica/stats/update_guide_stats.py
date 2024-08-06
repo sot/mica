@@ -180,11 +180,10 @@ def _deltas_vs_obc_quat(vals, times, catalog):
         try:
             # This is not perfect for star catalogs for agasc 1.4 and 1.5
             star = agasc.get_star(agasc_id, date=times[0],
-                                  agasc_file='miniagasc_*',
+                                  agasc_file='agasc*',
                                   use_supplement=False)
-        except:
-            logger.info("agasc error on slot {}:{}".format(
-                    slot, sys.exc_info()[0]))
+        except Exception as e:
+            logger.info(f"agasc error on slot {slot} id {agasc_id} err {e} {type(e)}")
             continue
         ra = star['RA_PMCORR']
         dec = star['DEC_PMCORR']
