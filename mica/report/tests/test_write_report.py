@@ -3,13 +3,12 @@ import getpass
 import os
 import shutil
 import tempfile
-from pathlib import Path
 from warnings import warn
 
 import pytest
 from testr.test_helper import on_head_network
 
-from .. import report
+from mica.report import report
 
 user = getpass.getuser()
 

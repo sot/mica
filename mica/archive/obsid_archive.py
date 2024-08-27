@@ -1,7 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Generalized module for fetching and archiving obsid-organized
-telemetry such as asp_l1 and obspar products.
+Generalized module for fetching and archiving obsid-organized telemetry.
+
 """
 
 # borrowed from telem_archive
@@ -23,8 +23,6 @@ import ska_dbi
 from astropy.table import Table
 from Chandra.Time import DateTime
 from ska_dbi.sqsh import Sqsh
-
-import mica
 
 
 def parse_obspar(file):
@@ -56,8 +54,6 @@ def parse_obspar(file):
         row["name"] = row["name"].replace("-", "_")
         yield row
 
-    return
-
 
 def get_obspar(obsparfile):
     """Get the obspar for obsid starting at tstart.  Return as a dict."""
@@ -73,6 +69,8 @@ class ProductVersionError(Exception):
 
 class ObsArchive:
     """
+    Obsid Archive Class
+
     Object to store configuration, logging, and processing tasks
     to fetch obsid telemetry from the CXC archive and store in a Ska
     file archive, while logging the archive files to a file lookup
@@ -124,8 +122,7 @@ class ObsArchive:
 
     def set_env(self):
         """
-        Set environment included an arc5gl handle and
-        and a handle to the axafapstat database
+        Set environment included an arc5gl handle and and a handle to the axafapstat database
         """
         self._arc5 = Ska.arc5gl.Arc5gl()
         self._apstat = dict(dbi="sybase", server="sqlsao", database="axafapstat")
@@ -144,8 +141,7 @@ class ObsArchive:
 
     def set_read_env(self):
         """
-        Set environment included an arc5gl handle and
-        and a handle to the axafapstat database
+        Set environment included an arc5gl handle and and a handle to the axafapstat database
         """
         config = self.config
         db_file = os.path.join(os.path.abspath(config["data_root"]), "archfiles.db3")
@@ -154,6 +150,8 @@ class ObsArchive:
 
     def get_all_obspar_info(self, i, f, archfiles):
         """
+        Put together an obspar dictionary.
+
         Read obspar and add 'obsid' and 'filename' keys to the dictionary
         i and archfiles are just passed to make the logging prettier.
         """
@@ -191,7 +189,7 @@ class ObsArchive:
         tstart_pad = 10 * 86400
         if content is None:
             content = self.config["content_types"]
-        if type(content) == str:
+        if isinstance(content, str):
             content = [content]
         content_str = ",".join(["'%s'" % x for x in content])
         if obsid is None:
@@ -215,23 +213,22 @@ class ObsArchive:
             )
         if revision is None:
             db_query += "AND isdefault = 1 "
-        else:
-            if revision == "last":
-                if obsid is not None:
-                    db_query += (
-                        """AND revision in
-                               (SELECT max(revision) from archfiles
-                                WHERE obsid = %d)"""
-                        % obsid
-                    )
-                else:
-                    # The no-obsid case is handled below.  The has-obsid case
-                    # could probably be pushed down there too, but the db filter is OK.
-                    pass
-            elif revision == "all":
-                pass
+        elif revision == "last":
+            if obsid is not None:
+                db_query += (
+                    """AND revision in
+                            (SELECT max(revision) from archfiles
+                            WHERE obsid = %d)"""
+                    % obsid
+                )
             else:
-                db_query += "AND revision = %d " % revision
+                # The no-obsid case is handled below.  The has-obsid case
+                # could probably be pushed down there too, but the db filter is OK.
+                pass
+        elif revision == "all":
+            pass
+        else:
+            db_query += "AND revision = %d " % revision
         db_query += "order by tstart"
         with ska_dbi.DBI(**self._archfiles_db) as db:
             files = db.fetchall(db_query)
@@ -239,9 +236,9 @@ class ObsArchive:
         # basis by obsid (could be multiple obsids in the date range)
         if revision == "last" and obsid is None:
             max_rev = {}
-            for obsid in np.unique(files["obsid"]):
-                ok = files["obsid"] == obsid
-                max_rev[obsid] = np.max(files[ok]["revision"])
+            for u_obsid in np.unique(files["obsid"]):
+                ok = files["obsid"] == u_obsid
+                max_rev[u_obsid] = np.max(files[ok]["revision"])
             rev_ok = [f["revision"] == max_rev[f["obsid"]] for f in files]
             files = files[np.array(rev_ok)]
         return files
@@ -249,6 +246,7 @@ class ObsArchive:
     def get_dir(self, obsid):
         """
         Return the latest released directory for an obsid
+
         Return None if there are no 'default' / released products.
         """
         dirmap = self.get_obs_dirs(obsid)
@@ -260,6 +258,7 @@ class ObsArchive:
     def get_obs_dirs(self, obsid):
         """
         Return a dictionary of the directories available for an obsid.
+
         This is just done with a glob in the data directories.
         """
         data_root = self._config["data_root"]
@@ -281,14 +280,15 @@ class ObsArchive:
             dirmap["default"] = defdirs[0]
         if lastdirs:
             dirmap["last"] = lastdirs[0]
-        else:
-            if defdirs:
-                dirmap["last"] = defdirs[0]
+        elif defdirs:
+            dirmap["last"] = defdirs[0]
         return dirmap
 
     @staticmethod
     def get_file_ver(tempdir, fileglob, ver_regex):
         """
+        Get file version/revision.
+
         Determine the version/revision of a set of archived files from
         their file names.
 
@@ -316,6 +316,8 @@ class ObsArchive:
 
     def get_ver_num(self, obsid, version="default"):
         """
+        Get version number.
+
         Determine the version number associated with the current released
         products or with the products referenced by "version=last".
 
@@ -361,6 +363,8 @@ class ObsArchive:
 
     def get_fits_info(self, i, f, archfiles):
         """
+        Read header fits details.
+
         Read FITS file ``f`` with index ``i`` (position within list of
         filenames ``archfiles``) and get dictionary of values to store
         in file lookup database.  This values include all header key/value
@@ -408,6 +412,7 @@ class ObsArchive:
     def get_arch_info(self, i, f, archfiles):
         """
         Get information for a file for the file lookup table/database.
+
         For obspars, call the get_obspar_info() method.
         For FITS files, call get_fits_info() method.
         """
@@ -419,6 +424,8 @@ class ObsArchive:
 
     def get_arch(self, obsid, version="last"):
         """
+        Get CXC archive information for obsid.
+
         Retrieve telemetry for an observation from the CXC archive and
         store in the Ska file archive.
 
@@ -516,6 +523,8 @@ class ObsArchive:
     # this needs help
     def update_link(self, obsid):
         """
+        Make and update obsdir links.
+
         Create links in the obsid data directories to make it easy to find
         the current 'default'/released data, all versions that have been
         archived, and the 'last'/unreleased/provisional data if available.
@@ -592,14 +601,15 @@ class ObsArchive:
                 if os.path.islink(obs_ln_last):
                     os.unlink(obs_ln_last)
                 os.symlink(os.path.relpath(last_ver_dir, chunk_dir_path), obs_ln_last)
-        else:
-            # if default and last are now the same, delete last link
-            if os.path.exists(obs_ln_last):
-                logger.info("removing outdated link %s" % obs_ln_last)
-                os.remove(obs_ln_last)
+        # if default and last are now the same, delete last link
+        elif os.path.exists(obs_ln_last):
+            logger.info("removing outdated link %s" % obs_ln_last)
+            os.remove(obs_ln_last)
 
     def get_todo_from_links(self, archive_dir):
         """
+        Get list of directories "left to do".
+
         Return a list of all of the \\*_last directories in the file archive
         (and specify revision=default to attempt to get new released products
         for them).
@@ -680,13 +690,12 @@ class ObsArchive:
             last_id = int(last_id_fh.read().rstrip())
             logger.info("using %d for last_id" % last_id)
             last_id_fh.close()
-        else:
-            if not config.get("rebuild"):
-                raise ValueError(
-                    "last_id.txt not found.\n"
-                    + "To rebuild archive from obsid 1, "
-                    + "set rebuild=True in configuration"
-                )
+        elif not config.get("rebuild"):
+            raise ValueError(
+                "last_id.txt not found.\n"
+                "To rebuild archive from obsid 1, "
+                "set rebuild=True in configuration"
+            )
         query_vars = {
             "apstat_table": config["apstat_table"],
             "apstat_id": config["apstat_id"],
@@ -785,7 +794,8 @@ class ObsArchive:
                 continue
             if len(current_status) > 1:
                 logger.warning(
-                    "warning: obsid %(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
+                    "warning: obsid "
+                    "%(obsid)d revision %(revision)d multiple entries in %(apstat_table)s"
                     % query_vars
                 )
                 continue

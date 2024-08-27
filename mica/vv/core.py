@@ -11,8 +11,8 @@ from glob import glob
 
 import matplotlib
 import numpy as np
-import numpy.ma as ma
 import six
+from numpy import ma
 
 if __name__ == "__main__":
     matplotlib.use("Agg")
@@ -22,13 +22,13 @@ import Ska.Numpy
 from astropy.table import Table
 from astropy.units import UnitsWarning
 from Chandra.Time import DateTime
-from scipy.signal import medfilt as medfilt
+from scipy.signal import medfilt
 from scipy.stats import scoreatpercentile
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
 from ska_dbi.sqsh import Sqsh
 
-from mica.archive.obsid_archive import get_obspar, parse_obspar
+from mica.archive.obsid_archive import get_obspar
 
 warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
 
@@ -164,7 +164,7 @@ class Obi(object):
         slist = []
         for slot_id in range(0, 8):
             slot = self.slot[slot_id]
-            if not "n_pts" in slot:
+            if "n_pts" not in slot:
                 continue
             # ignore the arrays
             save = dict(
@@ -251,7 +251,7 @@ class Obi(object):
             aspect_1_id, ap_date = self._asp1_lookup(obsid, obi, revision)
             self._info["aspect_1_id"] = aspect_1_id
             self._info["ap_date"] = str(ap_date)
-        except:
+        except Exception:
             logger.warning("Could not determine aspect_1_id/date from Sybase database")
 
         # we don't care about the DateTimeType for ap_date,
@@ -535,6 +535,8 @@ class Obi(object):
 
     def _check_over_intervals(self):
         """
+        Check aspect intervals.
+
         Check all aspect intervals and confirm that they are consistent and that slots don't
         drop out, change status, or change type.
         """
@@ -555,13 +557,12 @@ class Obi(object):
                 )
                 self._errors.append(wtext)
                 logger.warning(wtext)
-        else:
-            if len(self.aiids) > 1:
-                wtext = "Warning: obsid {} has {} aspect intervals".format(
-                    obsid, len(self.aiids)
-                )
-                self._errors.append(wtext)
-                logger.warning(wtext)
+        elif len(self.aiids) > 1:
+            wtext = "Warning: obsid {} has {} aspect intervals".format(
+                obsid, len(self.aiids)
+            )
+            self._errors.append(wtext)
+            logger.warning(wtext)
 
         for t in ("gsprop", "fidprop"):
             if getattr(self.aspect_intervals[0], t) is None:
@@ -929,8 +930,6 @@ class AspectInterval(object):
         return (prop, info, header)
 
     def _read_ocat_stars(self):
-        import ska_dbi
-
         obsid = int(self.asol_header["OBS_ID"])
         obi = int(self.asol_header["OBI_NUM"])
         ocat_db = Sqsh(dbi="sybase", server="sqlsao", database="axafocat")
@@ -1041,7 +1040,7 @@ class AspectInterval(object):
 
         try:
             ocat_stars = self._read_ocat_stars()
-        except:
+        except Exception:
             logger.warning("Could not get OCAT stars from database")
             logger.warning("Skipping checks for missing slots")
             return
@@ -1049,7 +1048,6 @@ class AspectInterval(object):
         agasc_equinox = DateTime("2000:001:00:00:00.000")
         dyear = (DateTime(tstart) - agasc_equinox) / 365.25
         pm_to_degrees = dyear / (3600.0 * 1000.0)
-        missing_info = []
         for slot in missing_slots:
             # stype = self._identify_missing_slot(slot)
             # if stype is None:
@@ -1175,7 +1173,7 @@ class AspectInterval(object):
             except IOError:
                 lines = open(logfile).readlines()
             self.log = lines
-        except:
+        except Exception:
             logger.info("Did not find/read log file")
 
     def _calc_fid_deltas(self):
@@ -1331,8 +1329,8 @@ class AspectInterval(object):
 
     def _calc_sim_offset(self):
         mm2a = 20.0
-        abs_sim_dy0 = 10.0
-        abs_sim_dz0 = 10.0
+        # abs_sim_dy0 = 10.0
+        # abs_sim_dz0 = 10.0
         n_med = 21
         medf_dy = medfilt(self.asol["dy"] * mm2a, kernel_size=n_med)
         medf_dz = medfilt(self.asol["dz"] * mm2a, kernel_size=n_med)
@@ -1346,11 +1344,6 @@ class AspectInterval(object):
             d_dz=d_dz,
         )
 
-
-# import unittest
-# from nose.tools import eq_ as
-import operator as op
-from functools import partial
 
 high_limits = dict(
     fid=dict(dy_rms=0.05, dz_rms=0.05, dy_med=0.4, dz_med=0.4, rad_off=0.4),
@@ -1398,7 +1391,7 @@ class ObiTest(object):
         self.checks = obi_slot_check
 
     def slot_table(self):
-        checks = self.checks
+        checks = self.checks  # noqa
 
 
 #    def set_disposition(self, disp):

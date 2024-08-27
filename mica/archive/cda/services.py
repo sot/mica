@@ -1,5 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""Python interface to the Chandra Data Archive (CDA) web services and an
+"""
+Python Chandra Data Archive (CDA) interface.
+
+Python interface to the Chandra Data Archive (CDA) web services and an
 interface to a local disk copy of the Observation Catalog (Ocat).
 """
 

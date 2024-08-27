@@ -1,5 +1,4 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -9,9 +8,9 @@ from astropy.table import Table
 from kadi import events
 from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
-from testr import test_helper
+from testr import test_helper  # noqa
 
-from .. import asp_l1, obsid_archive
+from mica.archive import asp_l1, obsid_archive
 
 HAS_L1_ARCHIVE = Path(asp_l1.CONFIG["data_root"]).exists()
 
@@ -90,7 +89,7 @@ def test_update_l1_archive(tmp_path):
     config["obsid"] = 1
     config["version"] = 4
     archive = obsid_archive.ObsArchive(config)
-    obsids = archive.update()
+    obsids = archive.update()  # noqa
 
     with ska_dbi.DBI(dbi="sqlite", server=config["data_root"] / "archfiles.db3") as db:
         dat = Table(db.fetchall("select * from archfiles"))

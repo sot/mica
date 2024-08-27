@@ -4,8 +4,8 @@ import os
 import numpy as np
 import pytest
 
-from ... import common
-from .. import process, vv
+from mica import common
+from mica.vv import process, vv
 
 HAS_L1_ARCHIVE = os.path.exists(process.asp_l1_arch.CONFIG["data_root"])
 HAS_VV_ARCHIVE = (

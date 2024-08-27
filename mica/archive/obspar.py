@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Script to update Ska file archive obspars.  Module
-also provides methods to retrieve the directory (or directories)
+Script to update Ska file archive obspars.
+
+Module also provides methods to retrieve the directory (or directories)
 for an obsid.
 
 This uses the obsid_archive module with a configuration specific
@@ -339,6 +340,8 @@ def get_obsids(start=None, stop=None, revision=None):
 
 def main():
     """
+    Update the obspar archive.
+
     Run the update process to get new obspars, save them in the Ska
     file archive, and include new entries in the file lookup database.
     """

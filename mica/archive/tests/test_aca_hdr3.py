@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pytest
 
-from .. import aca_hdr3
+from mica.archive import aca_hdr3
 
 has_l0_2010_archive = os.path.exists(
     os.path.join(aca_hdr3.aca_l0.CONFIG["data_root"], "2010")

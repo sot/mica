@@ -7,8 +7,8 @@ import collections
 import re
 
 import numpy as np
-import numpy.ma as ma
 from Chandra.Time import DateTime
+from numpy import ma
 from scipy.interpolate import interp1d
 from Ska.Numpy import search_both_sorted
 
@@ -473,6 +473,8 @@ MSID_ALIASES = {HDR3_DEF[key]["msid"]: key for key in HDR3_DEF}
 
 class MSID(object):
     """
+    ACA header 3 data object.
+
     ACA header 3 data object to work with header 3 data from
     available 8x8 ACA L0 telemetry::
 
@@ -544,6 +546,8 @@ class MSID(object):
 
 class Msid(MSID):
     """
+    ACA header 3 data object.
+
     ACA header 3 data object to work with header 3 data from available 8x8 ACA L0
     telemetry.
 
@@ -568,18 +572,20 @@ class Msid(MSID):
 
 def confirm_msid(req_msid):
     """
-    Check to see if the 'MSID' is an alias or is in the HDR3_DEF
-    dictionary.  If in the aliases, return the unaliased value.
+
+    Check to see if the 'MSID' is an alias or is in the HDR3_DEF dictionary.
+
+    If in the aliases, return the unaliased value.
+
     :param req_msid: requested msid
     :return: hdr3_def MSID name
     """
     if req_msid in MSID_ALIASES:
         return MSID_ALIASES[req_msid]
+    elif req_msid not in HDR3_DEF:
+        raise MissingDataError("msid %s not found" % req_msid)
     else:
-        if req_msid not in HDR3_DEF:
-            raise MissingDataError("msid %s not found" % req_msid)
-        else:
-            return req_msid
+        return req_msid
 
 
 def slot_for_msid(msid):
@@ -593,6 +599,8 @@ def slot_for_msid(msid):
 
 class MSIDset(collections.OrderedDict):
     """
+    ACA header 3 data object
+
     ACA header 3 data object to work with header 3 data from
     available 8x8 ACA L0 telemetry.  An MSIDset works with multiple
     MSIDs simultaneously.
@@ -613,7 +621,7 @@ class MSIDset(collections.OrderedDict):
         self.datestart = DateTime(self.tstart).date
         self.datestop = DateTime(self.tstop).date
         slot_datas = {}
-        slots = set(slot_for_msid(confirm_msid(msid)) for msid in msids)
+        slots = set(slot_for_msid(confirm_msid(msid)) for msid in msids)  # noqa
         for slot in slots:
             # get the 8x8 data
             tstop = self.tstop + 33.0  # Major frame of padding

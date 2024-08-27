@@ -3,4 +3,4 @@
 # Original module has been moved over to the starcheck package.
 # Keep this import here for back-compatibility.
 
-from starcheck.parser import *
+from starcheck.parser import *  # noqa

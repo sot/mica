@@ -85,7 +85,8 @@ def get_options():
 def prune_dirs(dirs, regex):
     """
     Prune directories (in-place) that do not match ``regex``.
-    (borrowed from kadi)
+
+    This is (borrowed from kadi)
     """
     prunes = [x for x in dirs if not re.match(regex, x)]
     for prune in prunes:
@@ -94,13 +95,15 @@ def prune_dirs(dirs, regex):
 
 def get_new_starcheck_files(rootdir, mtime=0):
     """
+    Find new starcheck.txt files.
+
     Look for starcheck.txt files in a a given top-level SOT MP directory
     and return those with modification times at or after the optional supplied 'mtime'.
     """
     logger.info("Getting new starcheck.txt files from {}".format(rootdir))
     starchecks = []
-    for root, dirs, files in os.walk(rootdir):
-        root = root.rstrip("/")
+    for raw_root, dirs, raw_files in os.walk(rootdir):
+        root = raw_root.rstrip("/")
         depth = len(root.split("/")) - 1
         if depth == 3:
             prune_dirs(dirs, r"\d{4}$")
@@ -109,7 +112,7 @@ def get_new_starcheck_files(rootdir, mtime=0):
         elif depth == 5:
             prune_dirs(dirs, r"ofls[a-z]$")
         elif depth > 5:
-            files = [x for x in files if re.match(r"starcheck\.txt$", x)]
+            files = [x for x in raw_files if re.match(r"starcheck\.txt$", x)]
             if len(files):
                 starchecks.append(os.path.join(root, files[0]))
             while dirs:
@@ -179,8 +182,7 @@ def update(config=None):
 
 def main():
     """
-    Command line interface to update starcheck database from files
-    in MP directories
+    Command line interface to update starcheck database from files in MP directories
     """
     opt = get_options()
     update(config=vars(opt))

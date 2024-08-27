@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from .. import guide_stats, update_guide_stats
+from mica.stats import guide_stats, update_guide_stats
 
 HAS_GS_TABLE = os.path.exists(guide_stats.TABLE_FILE)
 

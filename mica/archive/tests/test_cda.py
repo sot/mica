@@ -6,8 +6,12 @@ import pytest
 import requests
 from astropy.table import Table
 
-from mica.archive.cda import (get_archive_file_list, get_ocat_local,
-                              get_ocat_web, get_proposal_abstract)
+from mica.archive.cda import (
+    get_archive_file_list,
+    get_ocat_local,
+    get_ocat_web,
+    get_proposal_abstract,
+)
 from mica.archive.cda.services import URL_CDA_SERVICES, update_ocat_local
 
 try:

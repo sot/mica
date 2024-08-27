@@ -127,7 +127,7 @@ def get_options():
         "--email",
         action="append",
         help="email warning recipient, specify multiple times "
-        + "for multiple recipients",
+        "for multiple recipients",
     )
     opt = parser.parse_args()
     return opt
@@ -245,8 +245,10 @@ def q_mult(q1, q2):
 
 def search_agasc(yang, zang, field_agasc, q_aca):
     """
-    Search the retrieved agasc region for a star at the specified
-    yang, zang, and return the star if there is a match.
+    Search the retrieved agasc region for a star.
+
+    This searches at the specified
+    yang, zang, and returns the star if there is a match.
 
     :param yang:
     :param zang:
@@ -274,8 +276,6 @@ def get_modern_data(manvr, dwell, starcheck):
     catalog = catalog[(catalog["type"] == "ACQ") | (catalog["type"] == "BOT")]
     slot_for_pos = [cat_row["slot"] for cat_row in catalog]
     pos_for_slot = dict([(slot, idx) for idx, slot in enumerate(slot_for_pos)])
-    # Also, save out the starcheck index for each slot for later
-    index_for_slot = dict([(cat_row["slot"], cat_row["idx"]) for cat_row in catalog])
 
     # Get telemetry
     msids = [
@@ -477,8 +477,8 @@ def _get_obsids_to_update(check_missing=False):
             h5 = tables.open_file(table_file, "r")
             tbl = h5.root.data[:]
             h5.close()
-        except:
-            raise ValueError
+        except Exception as err:
+            raise ValueError from err
         # get all obsids that aren't already in tbl
         obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl["obsid"]]
     else:
@@ -487,7 +487,7 @@ def _get_obsids_to_update(check_missing=False):
             tbl = h5.get_node("/", "data")
             last_tstart = tbl.cols.guide_tstart[tbl.colindexes["guide_tstart"][-1]]
             h5.close()
-        except:
+        except Exception:
             last_tstart = "2002:012:12:00:00"
         kadi_obsids = events.obsids.filter(start=last_tstart)
         # Skip the first obsid (as we already have it in the table)
@@ -497,6 +497,8 @@ def _get_obsids_to_update(check_missing=False):
 
 def warn_on_acq_anom(acqs, emails):
     """
+    Email and log warn on acq anomalies.
+
     Log and email warning about any acquisition stars with observed positions outside the
     expected search box (plus a pad).  For acquisition stars with tracked positions in the wrong
     search box, note the box (classic acquisition anomaly).
@@ -546,7 +548,7 @@ def warn_on_acq_anom(acqs, emails):
       Slot {slot} Observed (Y-Pos, Z-Pos) = ({yang_obs:.1f}, {zang_obs:.1f})
       Halfwidth {halfw:03d}        (dy, dz) = ({dy:.1f}, {dz:.1f})
 
-      Expected here is catalog Y-Pos/Z-pos.  dy, dz calculation corrects these for estimated attitude.
+      Expected here is catalog Y-Pos/Z-pos. dy, dz calculation corrects these for estimated attitude
 """.format(**output_dict)
         # Log and Send message for slot.  Obsid can have more than one email
         logger.warning(text)
@@ -591,7 +593,7 @@ def calc_stats(obsid):
     guide_start = manvr.guide_start
     try:
         starcheck = get_starcheck_catalog_at_date(manvr.acq_start)
-    except Exception:
+    except Exception as err:
         # No matching observations for some known observations with problems. Use
         # hard-coded input for get_starcheck_catalog.
         if obsid in [1966]:
@@ -607,7 +609,7 @@ def calc_stats(obsid):
         elif obsid in [60983]:
             starcheck = get_starcheck_catalog(obsid, mp_dir="/2002/OCT2102/oflsc/")
         elif obsid in [60640, 60639, 60638, 60637, 60636, 60635, 60634, 60633]:
-            raise ValueError("Starcheck not available for PCHECK_JUL2003")
+            raise ValueError("Starcheck not available for PCHECK_JUL2003") from err
         elif obsid in [60616, 60615]:
             starcheck = get_starcheck_catalog(obsid, mp_dir="/2003/JUL2103/oflsc/")
         elif obsid in [3911]:
@@ -623,7 +625,9 @@ def calc_stats(obsid):
         elif obsid in [7936, 7463]:
             starcheck = get_starcheck_catalog(obsid, mp_dir="/2007/MAY2807/oflsb/")
         else:
-            raise ValueError("Problem looking up starcheck for {}".format(obsid))
+            raise ValueError(
+                "Problem looking up starcheck for {}".format(obsid)
+            ) from err
     if starcheck is None or "cat" not in starcheck or not len(starcheck["cat"]):
         raise ValueError("No starcheck catalog found for {}".format(manvr.get_obsid()))
     starcat_time = DateTime(starcheck["cat"]["mp_starcat_time"][0]).secs

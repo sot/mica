@@ -111,7 +111,7 @@ if __name__ == "__main__":
     domain = list(range(5))
     from random import choice
 
-    for i in range(1000):
+    for _ in range(1000):
         r = f(choice(domain), choice(domain))
 
     print(f.hits, f.misses)
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     domain = list(range(5))
     from random import choice
 
-    for i in range(1000):
+    for _ in range(1000):
         r = f(choice(domain), choice(domain))
 
     print(f.hits, f.misses)

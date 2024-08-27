@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from .. import obspar
+from mica.archive import obspar
 
 HAS_OBSPAR_ARCHIVE = os.path.exists(obspar.CONFIG["data_root"])
 

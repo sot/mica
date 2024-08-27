@@ -6,7 +6,6 @@ import gzip
 import logging
 import os
 import re
-from glob import glob
 from pathlib import Path
 
 import ska_dbi

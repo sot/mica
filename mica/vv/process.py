@@ -124,14 +124,16 @@ def _file_vv(obi):
     obi.isdefault = isdefault
 
 
-def update(obsids=[]):
+def update(obsids=None):
     """
+    Run V&V process over obsids.
+
     For a list of obsids or for all new obsids, run V&V processing
     and save V&V info to archive.
 
     :param obsids: optional list of obsids
     """
-    if len(obsids) == 0:
+    if obsids is None:
         # If no obsid specified, run on all with vv_complete = 0 in
         # the local processing database.
         with ska_dbi.DBI(dbi="sqlite", server=FILES["asp1_proc_table"]) as db:
@@ -165,6 +167,8 @@ def update(obsids=[]):
 
 def get_arch_vv(obsid, version="last"):
     """
+    Retrieve and load archived V&V.
+
     Given obsid and version, find archived ASP1 and obspar products and
     run V&V.  Effort is made to find the obspar that was actually used during
     creation of the ASP1 products.
@@ -207,13 +211,15 @@ def get_arch_vv(obsid, version="last"):
         obspar_file = glob(
             os.path.join(obspar_dirs[asp_proc["obspar_version"]], "axaf*par*")
         )[0]
-    except IndexError:
-        raise LookupError(f"Requested version {version} not in obspar archive")
+    except IndexError as err:
+        raise LookupError(f"Requested version {version} not in obspar archive") from err
     return Obi(obspar_file, l1_dir, temproot=FILES["temp_root"])
 
 
 def process(obsid, version="last"):
     """
+    Run V&V process for an obsid.
+
     For requested obsid/version, run V&V, make plots,
     save plots and JSON, save info to shelve file, and
     update RMS HDF5.

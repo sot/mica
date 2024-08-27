@@ -19,7 +19,7 @@ for t in ["obspar", "asp1"]:
         chunk_dir = ("%05d" % obsid)[0:2]
         def_dir = os.path.join("/data/aca/archive", t, chunk_dir, "%05d" % obsid)
         realdefault = os.path.realpath(def_dir)
-        lmatch = re.search("(\d{5})_v(\d+)$", realdefault)
+        lmatch = re.search(r"(\d{5})_v(\d+)$", realdefault)
         if lmatch:
             default_ver = int(lmatch.group(2))
         else:
@@ -27,12 +27,12 @@ for t in ["obspar", "asp1"]:
             continue
         print("updating %d default %d" % (obsid, default_ver))
         db.execute(
-            """UPDATE archfiles SET isdefault = 1                           
+            """UPDATE archfiles SET isdefault = 1
                   WHERE obsid = %d and revision = %d"""
             % (obsid, default_ver)
         )
         db.execute(
-            """UPDATE archfiles SET isdefault = NULL                        
+            """UPDATE archfiles SET isdefault = NULL
                   WHERE obsid = %d and revision != %d"""
             % (obsid, default_ver)
         )

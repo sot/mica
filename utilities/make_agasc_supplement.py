@@ -32,8 +32,8 @@ sources = []
 lines = open(
     HOME / "git" / "starcheck" / "starcheck" / "data" / "agasc.bad", "r"
 ).readlines()
-for line in lines:
-    line = line.strip()
+for rawline in lines:
+    line = rawline.strip()
     if line.startswith("#"):
         continue
     agasc_ids.append(line.split()[0])

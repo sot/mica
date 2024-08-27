@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
+Update aspect archive L1 products.
+
 Script to update Ska file archive aspect L1 products.  Module
 also provides methods to retrieve the directory (or directories)
 for an obsid.
@@ -17,7 +19,7 @@ import numpy as np
 from astropy.table import Table
 from Quaternion import Quat
 
-from mica.archive import asp_l1_proc, obsid_archive
+from mica.archive import asp_l1_proc, obsid_archive  # noqa
 from mica.common import MICA_ARCHIVE
 
 # these columns are available in the headers of the fetched telemetry
@@ -96,8 +98,8 @@ without command-line options need to be changed.
         "--filecheck",
         action="store_true",
         help="for provisional data, download files and check"
-        + " that all are present.  If unset, proceed if dir"
-        + " exists",
+        " that all are present.  If unset, proceed if dir"
+        " exists",
     )
     parser.add_argument(
         "--rebuild",
@@ -181,6 +183,8 @@ def get_files(obsid=None, start=None, stop=None, revision=None, content=None):
 
 def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
     """
+    Get ground aspect attitudes
+
     Get the ground aspect solution quaternions and times covering obsid or start to stop,
     in the ACA frame.
 
@@ -188,9 +192,11 @@ def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
     :start: start time (DateTime compat)
     :stop: stop time (DateTime compat)
     :revision: aspect pipeline processing revision (integer version, None, or 'last')
-    :filter: boolean, true means returned values will not include quaternions during times when asp_sol_status is non-zero
+    :filter: boolean, true means returned values will not include quaternions during times
+                      when asp_sol_status is non-zero
 
-    :returns: Nx4 np.array of quaternions, np.array of N times, list of dict with header from each asol file.
+    :returns: Nx4 np.array of quaternions, np.array of N times, list of dict with header
+              from each asol file.
     """
     if revision == "all":
         raise ValueError("revision 'all' doesn't really make sense for this function")
@@ -209,16 +215,20 @@ def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
 
 def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
     """
-    From ASP1 source files (asol, acal, aqual) get the ground aspect solution quaternions and times covering
-    the range of asol_files in the ACA frame.  The asol, acl, and aqual files are assumed to have one-to-one correspondence
-    (though the asol to acal times are checked).
+    Get ground aspect attitudes from ASP1 source files.
+
+    From ASP1 source files (asol, acal, aqual) get the ground aspect solution quaternions
+    and times covering the range of asol_files in the ACA frame.  The asol, acl, and aqual files
+    are assumed to have one-to-one correspondence (though the asol to acal times are checked).
 
     :asol_files: list of aspect asol1 files
     :acal_files: list of acal1 files associated with asol_files
     :aqual_files: list of aqual files associated with asol_files
-    :filter: boolean, true means returned values will not include quaternions during times when asp_sol_status is non-zero
+    :filter: boolean, true means returned values will not include quaternions during times when
+                      asp_sol_status is non-zero
 
-    :returns: Nx4 np.array of quaternions, np.array of N times, list of dict with header from each asol file.
+    :returns: Nx4 np.array of quaternions, np.array of N times, list of dict with header
+              from each asol file.
     """
     # There should be one asol and one acal file for each aspect interval in the range
     att_chunks = []
@@ -264,6 +274,8 @@ def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
 
 def main():
     """
+    Run the ASP L1 update process.
+
     Run the update process to get new ASP L1 telemetry, save it in the Ska
     file archive, and include it in the file lookup database.
     """
@@ -272,7 +284,7 @@ def main():
     archive = obsid_archive.ObsArchive(config)
     archive.logger.setLevel(logging.INFO)
     archive.logger.addHandler(logging.StreamHandler())
-    obsids = archive.update()
+    obsids = archive.update()  # noqa
 
 
 if __name__ == "__main__":

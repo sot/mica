@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from .. import acq_stats as read_acq_stats
-from .. import update_acq_stats as acq_stats
+from mica.stats import acq_stats as read_acq_stats
+from mica.stats import update_acq_stats as acq_stats
 
 HAS_OBSPAR_ARCHIVE = (
     Path(acq_stats.mica.archive.obspar.CONFIG["data_root"]) / "00"

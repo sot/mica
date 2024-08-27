@@ -15,11 +15,11 @@ class IndexView(BaseView, TemplateView):
         if obsid is not None:
             try:
                 obsid = int(obsid)
-            except:
+            except Exception:
                 try:
                     obsids = events.obsids.filter(start=obsid)
                     obsid = obsids[0].obsid
-                except:
+                except Exception:
                     obsid = None
 
         context["obsid"] = obsid or ""
@@ -47,7 +47,7 @@ class StarHistView(BaseView, TemplateView):
         if agasc_id is not None:
             try:
                 agasc_id = int(agasc_id)
-            except:
+            except Exception:
                 agasc_id = None
         start = self.request.GET.get("start", None)
         stop = self.request.GET.get("stop", None)
@@ -73,7 +73,7 @@ class StarHistView(BaseView, TemplateView):
                 ]
             except IdNotFound:
                 context["star_info"] = []
-                pass
+
             acq_table, gui_table = mica.web.star_hist.get_star_stats(
                 agasc_id, start, stop
             )
@@ -83,7 +83,7 @@ class StarHistView(BaseView, TemplateView):
                 context["gui_table"] = gui_table
                 reports_url = (
                     "https://cxc.cfa.harvard.edu/mta/ASPECT/agasc/supplement_reports/stars/"
-                    + f"{int(agasc_id//1e7):03d}/{agasc_id}/index.html"
+                    f"{int(agasc_id//1e7):03d}/{agasc_id}/index.html"
                 )
                 context["reports_url"] = reports_url
         return context
@@ -100,7 +100,7 @@ class AcqView(BaseView, TemplateView):
         if obsid is not None:
             try:
                 obsid = int(obsid)
-            except:
+            except Exception:
                 obsid = None
 
         context["obsid"] = obsid or ""

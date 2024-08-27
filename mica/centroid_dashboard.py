@@ -99,8 +99,7 @@ def get_dr_dp_dy(refs, atts):
 
 def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
     """
-    Get OBC pitch, yaw, roll errors with respect to the ground
-    aspect solution
+    Get OBC pitch, yaw, roll errors with respect to the ground aspect solution
 
     :param obsid: obsid
     :param crs: dictionary with keys 'ground' and 'obc'. Values are also
@@ -126,9 +125,8 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
 
     if on_the_fly:
         crs = get_crs_per_obsid(obsid)
-    else:
-        if crs is None:
-            raise Exception("Provide crs if on_the_fly is False")
+    elif crs is None:
+        raise Exception("Provide crs if on_the_fly is False")
 
     if all([item is None for item in crs["ground"].values()]):
         # No good ground solution in any of the slots
@@ -187,8 +185,9 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
 
 def get_crs_per_obsid(obsid):
     """
-    Get OBC centroid residuals per obsid for all slots, with respect
-    to both the OBC and ground aspect solution
+    Get OBC centroid residuals per obsid for all slots.
+
+    This is with respect to both the OBC and ground aspect solution.
 
     :param obsid: obsid
     """
@@ -244,6 +243,8 @@ def get_ending_roll_err(obsid, metrics_file=None):
 
 def get_observed_metrics(obsid, metrics_file=None):
     """
+    Get observed metrics for a given obsid.
+
     Fetch manvr angle, one shot updates and aberration corrections,
     calculate centroid residuals and observed OBC roll error with
     respect to the ground (obc) solution for science (ER) observations
@@ -450,6 +451,8 @@ def get_n_kalman(start, stop):
 
 def get_cd_dir(obsid, data_root):
     """
+    Get Centroid dashboard directory.
+
     Check if the centroid dashbord directory exists for the requested obsid,
     and create it if needed
     """
@@ -485,9 +488,8 @@ def plot_att_errors_per_obsid(
         att_errors = get_observed_att_errors(obsid, on_the_fly=on_the_fly)
         if att_errors is None:
             return None
-    else:
-        if att_errors is None:
-            raise ValueError("Need to provide att_errors if on_the_fly is False")
+    elif att_errors is None:
+        raise ValueError("Need to provide att_errors if on_the_fly is False")
 
     errs = att_errors[coord]
     dates = DateTime(att_errors["time"])
@@ -527,8 +529,9 @@ def plot_att_errors_per_obsid(
 
 def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
     """
-    Make png plot of OBC centroid residuals in each slot. Residuals
-    computed using ground attitude solution for science observations
+    Make png plot of OBC centroid residuals in each slot.
+
+    Residuals computed using ground attitude solution for science observations
     and OBC attitude solution for ER observations.
 
     :param crs: dictionary with keys 'ground' and 'obc', dictionary values
@@ -540,9 +543,8 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
 
     if on_the_fly:
         crs = get_crs_per_obsid(obsid)
-    else:
-        if crs is None:
-            raise ValueError("Need to provide crs if on_the_fly is False")
+    elif crs is None:
+        raise ValueError("Need to provide crs if on_the_fly is False")
 
     crs_obc = crs["obc"]
     crs_grnd = crs["ground"]
@@ -620,8 +622,7 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
 
 def plot_n_kalman(obsid, plot_dir, save=False):
     """
-    Fetch and plot number of Kalman stars as function of time for
-    the requested obsid.
+    Fetch and plot number of Kalman stars for the obsid.
     """
     d = events.dwells.filter(obsid=obsid)[0]
     start = d.start
@@ -656,6 +657,8 @@ def plot_crs_visualization(
     obsid, plot_dir, crs=None, factor=20, save=False, on_the_fly=False
 ):
     """
+    Make visual plot of OBC centroid residuals.
+
     Plot visualization of OBC centroid residuals with respect to ground (obc)
     aspect solution for science (ER) observations in the yang/zang plain.
 
@@ -694,20 +697,16 @@ def plot_crs_visualization(
     ]
     stars = Table(names=cols)
     for star in cat:
-        row = []
         s = get_star(star["id"])
-        for col in cols:
-            row.append(s[col])
-        stars.add_row(row)
+        stars.add_row([s[col] for col in cols])
 
     fig = plot_stars(att, cat, stars)
     cs = ["orange", "forestgreen", "steelblue", "maroon", "gray"]
 
     if on_the_fly:
         crs = get_crs_per_obsid(obsid)
-    else:
-        if crs is None:
-            raise ValueError("Need to provide crs if on_the_fly is False")
+    elif crs is None:
+        raise ValueError("Need to provide crs if on_the_fly is False")
 
     if obsid > 40000:  # ERs
         crs_ref = crs["obc"]
@@ -757,6 +756,8 @@ def plot_observed_metrics(
     on_the_fly=False,
 ):
     """
+    Plot observed metrics.
+
     Generate plots of attitude errors, centroid residuals and number of Kalman stars
     for the centroid dashboard.
 
@@ -793,6 +794,8 @@ def plot_observed_metrics(
 
 def read_metrics_from_file(filename):
     """
+    Read processed metrics from file.
+
     Read in processed guide metrics (dr95, dr50, manvr_angle, ending dr,
     one shot updates, aber corrections) from file
     """
@@ -831,6 +834,8 @@ def update_observed_metrics(
     save=False,
 ):
     """
+    Update the observed metrics data tables.
+
     Update the ``GUIDE_METRICS_OBSID`` and ``GUIDE_METRICS_SLOT`` tables
     (ascii ECSV format) in place to reflect information about observed
     guide metrics: dr95, dr50, manvr angle, ending roll error, one shot
@@ -864,7 +869,7 @@ def update_observed_metrics(
 
     rows_obsid = []
     rows_slots = []
-    for obsid in obsids:
+    for obsid in obsids:  # noqa
         logger.info(f"Obsid={obsid}")
         obs_dir = get_cd_dir(obsid, data_root)
 
@@ -1183,7 +1188,7 @@ Next Observation
         else:
             id_ = (
                 f"<a href='{star_path_root}/star_{row['id']}.html' "
-                + f"'style='text-decoration: none;'>{row['id']}</a>"
+                f"'style='text-decoration: none;'>{row['id']}</a>"
             )
 
         string += f"""<td align='right'>{id_}</td>

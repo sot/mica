@@ -10,15 +10,16 @@ import six
 from astropy.io import ascii, fits
 from astropy.table import Column
 from chandra_aca.aca_image import ACAImage
-from chandra_aca.dark_model import DARK_SCALE_4C  # noqa
-from chandra_aca.dark_model import dark_temp_scale
+from chandra_aca.dark_model import (
+    DARK_SCALE_4C,  # noqa
+    dark_temp_scale,
+)
 from cxotime import CxoTime
 from six.moves import zip
 
+from mica.archive.aca_dark import file_defs
 from mica.cache import lru_cache
 from mica.common import MICA_ARCHIVE_PATH, MissingDataError
-
-from . import file_defs
 
 DARK_CAL = pyyaks.context.ContextDict("dark_cal")
 
@@ -64,8 +65,9 @@ def dark_id_to_date(dark_id):
 @lru_cache()
 def get_dark_cal_dirs(dark_cals_dir=MICA_FILES["dark_cals_dir"].abs):
     """
-    Get an ordered dict of directory paths containing dark current calibration files,
-    where the key is the dark cal identifier (YYYYDOY) and the value is the path.
+    Get an ordered dict of directory paths containing dark current calibration files.
+
+    The key is the dark cal identifier (YYYYDOY) and the value is the path.
 
     :param dark_cals_dir: directory containing dark cals.
     :returns: ordered dict of absolute directory paths
@@ -144,8 +146,8 @@ def _get_dark_cal_id_scalar(date, select="before", dark_cal_ids=None):
 
     try:
         out_dark_id = dark_cal_ids[ii]
-    except IndexError:
-        raise MissingDataError("No dark cal found {} {}".format(select, date))
+    except IndexError as err:
+        raise MissingDataError("No dark cal found {} {}".format(select, date)) from err
 
     return out_dark_id
 
@@ -160,8 +162,10 @@ def _get_dark_cal_image_props(
     date, select="before", t_ccd_ref=None, aca_image=False, allow_negative=False
 ):
     """
-    Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding
-    dark_props file.
+    Return the given dark cal image and props file.
+
+    Return the dark calibration image (e-/s) (before|nearest|after) ``date`` and
+    the corresponding dark_props file.
 
     :param date: date in any CxoTime format
     :param select: method to select dark cal (before|nearest|after)
@@ -263,7 +267,7 @@ def get_dark_cal_props(
     dark, props = _get_dark_cal_image_props(
         date,
         select=select,
-        t_ccd_ref=None,
+        t_ccd_ref=t_ccd_ref,
         aca_image=aca_image,
         allow_negative=allow_negative,
     )

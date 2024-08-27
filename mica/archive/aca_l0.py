@@ -13,7 +13,6 @@ from pathlib import Path
 
 import astropy.io.fits as pyfits
 import numpy as np
-import numpy.ma as ma
 import Ska.arc5gl
 import Ska.File
 import ska_dbi
@@ -21,6 +20,7 @@ import tables
 from astropy.table import Table
 from Chandra.Time import DateTime
 from chandra_aca.aca_image import ACAImage
+from numpy import ma
 
 from mica.common import MICA_ARCHIVE, MissingDataError
 
@@ -155,6 +155,8 @@ def get_slot_data(
     centered_8x8=False,
 ):
     """
+    Get slot data.
+
     For a the given parameters, retrieve telemetry and construct a
     masked array of the MSIDs available in that telemetry.
 
@@ -212,7 +214,7 @@ def get_slot_data(
         idx0, idx1 = rowcount, (rowcount + len(chunk))
         f_imgsize = int(np.sqrt(chunk[0]["IMGRAW"].size))
         for fname in all_rows.dtype.names:
-            if fname == "IMGRAW" or fname == "IMGSIZE":
+            if fname in ["IMGRAW", "IMGSIZE"]:
                 continue
             if fname in chunk.dtype.names:
                 all_rows[fname][idx0:idx1] = chunk[fname]
@@ -242,6 +244,8 @@ def get_slot_data(
 
 def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     """
+    Get ACA L0 Images.
+
     Get ACA L0 images for the given  ``start`` and ``stop`` times and
     the given ``slot``.  Optionally filter on image size via ``imgsize``
     or change the default image metadata via ``columns``.
@@ -301,8 +305,8 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     imgraws = dat["IMGRAW"].filled()
 
     imgs = []
-    for row, imgraw in zip(dat, imgraws):
-        imgraw = imgraw.reshape(8, 8)
+    for row, raw_imgraw in zip(dat, imgraws):
+        imgraw = raw_imgraw.reshape(8, 8)
         sz = row["IMGSIZE"]
         if sz < 8:
             imgraw = imgraw[:sz, :sz]
@@ -366,6 +370,8 @@ def get_files(
     obsid=None, start=None, stop=None, slots=None, imgsize=None, db=None, data_root=None
 ):
     """
+    Get list of ACA0 files.
+
     Retrieve list of files from ACA0 archive lookup table that
     match arguments.  The database query returns files with
 
@@ -427,6 +433,8 @@ def _get_file_records(
     start, stop=None, slots=None, imgsize=None, db=None, data_root=None
 ):
     """
+    Get list of ACA0 files records.
+
     Retrieve list of files from ACA0 archive lookup table that
     match arguments.  The database query returns files with
 
@@ -555,7 +563,7 @@ class Updater(object):
         logger.info("Checking for missing files from %s" % startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
-        for idate, backcnt in zip(ingested_files["ingest_date"][::-1], count(1)):
+        for idate, backcnt in zip(ingested_files["ingest_date"][::-1], count(1)):  # noqa
             if idate < startdate:
                 break
 
@@ -644,6 +652,8 @@ class Updater(object):
 
     def _read_archfile(self, i, f, archfiles):
         """
+        Read index fits file to get lookup data.
+
         Read FITS filename ``f`` with index ``i`` (position within list of
         filenames) and get dictionary of values to store in file lookup
         database.  These values include all header items in
@@ -773,6 +783,8 @@ class Updater(object):
 
     def _move_archive_files(self, archfiles):
         """
+        Move archive files where they should go.
+
         Move ACA L0 files into the file archive into directories
         by YYYY/DOY under the specified data_root
         """
@@ -858,6 +870,8 @@ class Updater(object):
 
     def update(self):
         """
+        Run ACA0 update process.
+
         Retrieve ACA0 telemetry files from the CXC archive, store in the
         Ska/ACA archive, and update database of files.
         """
@@ -892,7 +906,7 @@ class Updater(object):
                 if last_time is None:
                     raise ValueError(
                         "No files in archive to do update-since-last-run mode.\n"
-                        + "Please specify a time with --start"
+                        "Please specify a time with --start"
                     )
                 datestart = DateTime(last_time)
         datestop = DateTime(self.stop)
@@ -957,6 +971,8 @@ class Updater(object):
 
 def main():
     """
+    ACA L0 cmdline interface.
+
     Command line interface to fetch ACA L0 telemetry from the CXC Archive
     and store it in the Ska archive.
     """

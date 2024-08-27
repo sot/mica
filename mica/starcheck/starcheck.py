@@ -44,7 +44,9 @@ def get_starcat(obsid, mp_dir=None):
 
 def get_dither(obsid, mp_dir=None):
     """
-    Get the planned dither for an obsid.  Uses mica.starcheck database.  Note that this
+    Get the planned dither for an obsid.
+
+    This uses mica.starcheck database.  Note that this
     does not have dither values for ERs and for some early mission observations.
 
     Observations with dither dither disabled will have yaw and pitch amplitude set
@@ -152,6 +154,8 @@ def get_monitor_windows(start=None, stop=None, min_obsid=40000, config=None):
 
 def get_starcheck_catalog_at_date(date, starcheck_db=None):
     """
+    Get starcheck catalog dictionary at date.
+
     For a given date, return a dictionary describing the starcheck catalog that should
     apply. The content of that dictionary is from the database tables that parsed the
     starcheck report. A catalog is defined as applying, in this function, to any time
@@ -260,6 +264,8 @@ def get_mp_dir_from_starcheck_db(obsid, starcheck_db=None):
 
 def get_mp_dir(obsid, starcheck_db=None):
     """
+    Get mission planning directory for obsid.
+
     Get the mission planning directory for an obsid and some status information.
     If the obsid catalog was used more than once (multi-obi or rescheduled after
     being used in a vehicle-only interval), return the directory and details of
@@ -295,11 +301,10 @@ def get_mp_dir(obsid, starcheck_db=None):
         sc_date = obs.get("starcat_date")
         if sc_date is None:
             status = "no starcat"
+        elif sc_date < CxoTime.now().date:
+            status = "ran"
         else:
-            if sc_date < CxoTime.now().date:
-                status = "ran"
-            else:
-                status = "approved"
+            status = "approved"
         mp_dir = load_name_to_mp_dir(obs["source"])
 
     return mp_dir, status, sc_date
@@ -334,6 +339,8 @@ def get_starcheck_db_obsid(mp_starcat_time, mp_dir, starcheck_db=None):
 
 def get_starcheck_catalog(obsid, mp_dir=None, starcheck_db=None):
     """
+    Get starcheck catalog dictionary.
+
     For a given obsid, return a dictionary describing the starcheck catalog that should
     apply. The content of that dictionary is from the database tables of that parsed the
     starcheck report and has keys:

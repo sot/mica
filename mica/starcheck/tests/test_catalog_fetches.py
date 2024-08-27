@@ -10,9 +10,8 @@ from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
 from Ska.quatutil import radec2yagzag, yagzag2radec
 
+from mica.starcheck import starcheck
 from mica.utils import load_name_to_mp_dir
-
-from .. import starcheck
 
 HAS_SC_ARCHIVE = os.path.exists(starcheck.FILES["data_root"])
 
@@ -305,7 +304,7 @@ def test_get_starcheck_with_mp_dir():
 def test_get_starcheck_for_no_star_catalog():
     """Test getting starcheck by date for a time that has no star catalog (gyro hold)"""
     cat = starcheck.get_starcheck_catalog_at_date("2023:099:04:21:40.719")
-    exp = exp = {
+    exp = {
         "mp_dir": "/2023/APR0323/oflsa/",
         "status": "ran",
         "obs": {

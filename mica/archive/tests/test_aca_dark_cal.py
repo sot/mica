@@ -10,9 +10,8 @@ import numpy as np
 import pytest
 from chandra_aca.aca_image import ACAImage
 
+from mica.archive.aca_dark import dark_cal
 from mica.common import MissingDataError
-
-from ..aca_dark import dark_cal
 
 HAS_DARK_ARCHIVE = os.path.exists(dark_cal.MICA_FILES["dark_cals_dir"].abs)
 

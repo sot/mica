@@ -97,6 +97,7 @@ def starcheck_orig_link(obsid):
 def starcheck_link(obsid):
     """
     Construct/return a link to the starcheck printer CGI.
+
     Making these kind of links scales well, as there are no database lookup required for each
     obsid until the link is clicked.
     """
@@ -125,7 +126,7 @@ def get_star_acq_stats(id):
     acqs["obc_id"] = acqs["acqid"]
     acqs["tstart"] = acqs["guide_tstart"]
     n_acqs = len(acqs)
-    n_acq_noid = len(np.flatnonzero(acqs["acqid"] == False))
+    n_acq_noid = np.count_nonzero(~acqs["acqid"])  # count acqid False
     avg_mag = np.mean(acqs[acqs["mag_obs"] < 13.94]["mag_obs"])
     # make a list of dictionaries to make it easy to add values to the rows
     acqs = rec_to_dict_list(acqs)
@@ -216,7 +217,7 @@ def get_obs_trak_stats(obsid):
         return Table(guis)
 
 
-def get_obs_temps(obsid, outdir):
+def get_obs_temps(obsid):
     try:
         manvrs = events.manvrs.filter(obsid=obsid)
         dwells = events.dwells.filter(obsid=obsid)
@@ -380,7 +381,7 @@ def obs_links(obsid, sequence=None, plan=None):
                 dom = dtm.strftime("%d")
                 links["fot_daily"] = {
                     "label": "Daily Plots {}:{:03d}".format(year, int(doy)),
-                    "link": "{root}/{year}/{upper_month}/{lower_month}{day_of_month:02d}_{doy:03d}/".format(
+                    "link": "{root}/{year}/{upper_month}/{lower_month}{day_of_month:02d}_{doy:03d}/".format(  # noqa
                         root=DAILY_PLOT_ROOT,
                         year=year,
                         upper_month=month.upper(),
@@ -503,7 +504,7 @@ def get_star(id):
         agasc_info = agasc.get_star(id, agasc_file="miniagasc_*")
         agasc_list = [(key, agasc_info[key]) for key in agasc_info.dtype.names]
         return agasc_list
-    except:
+    except Exception:
         return []
 
 
@@ -565,7 +566,7 @@ def main(obsid):
     report_status = {}
 
     er = summary is None and obsid > 40000
-    progress = all_progress["er" if er else "science"]
+    progress = all_progress["er" if er else "science"]  # noqa
     if er:
         links = obs_links(obsid)
     else:
@@ -603,7 +604,7 @@ def main(obsid):
             )
             if plan_date.cxcsec > (CxoTime.now() + 21 * u.day).secs:
                 raise LookupError(
-                    "No starcheck expected for {} lts date".format(str(plan))
+                    "No starcheck expected for {} lts date".format(str(plan_date))
                 )
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         if status == "no starcat":
@@ -675,7 +676,7 @@ def main(obsid):
     logger.debug("Getting acq and trak stats")
     acqs = get_obs_acq_stats(obsid)
     trak = get_obs_trak_stats(obsid)
-    temps = get_obs_temps(obsid, outdir)
+    temps = get_obs_temps(obsid)
     pred_temp = sc.get("pred_temp")
     if acqs or trak:
         last_sched = "eng. data available"
@@ -696,7 +697,7 @@ def main(obsid):
         # obspar ingested
         try:
             run_obspar = obspar.get_obspar(obsid, version="last")
-        except:
+        except Exception:
             run_obspar = None
 
         # v&v available
@@ -779,7 +780,8 @@ def main(obsid):
             for rep in official_notes:
                 if rep["comments"] == "Hidden":
                     rep["comments"] = """
-<A target="_blank" HREF="{}">{}</A><BR>(<A target="_blank" HREF="https://icxc.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A> once first)</BR>""".format(
+<A target="_blank" HREF="{}">{}</A><BR>(<A target="_blank"
+HREF="https://icxc.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A> once first)</BR>""".format(
                         links["vv"]["link"], links["vv"]["label"]
                     )
         vv_template = jinja_env.get_template("vv.html")
@@ -836,11 +838,10 @@ def main(obsid):
                 )
             else:
                 cat_row["idlink"] = "&nbsp;"
+        elif "id" in row:
+            cat_row["idlink"] = int(row["id"])
         else:
-            if "id" in row:
-                cat_row["idlink"] = int(row["id"])
-            else:
-                cat_row["idlink"] = ""
+            cat_row["idlink"] = ""
     template = jinja_env.get_template("report.html")
 
     page = template.render(
@@ -963,7 +964,7 @@ def process_obsids(obsids, update=True, retry=False):
                 os.unlink(os.path.join(outdir, failfile))
         try:
             main(obsid)
-        except:
+        except Exception:
             import traceback
 
             etype, emess, trace = sys.exc_info()

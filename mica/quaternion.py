@@ -147,6 +147,7 @@ class Quat(object):
     def _set_q(self, q):
         """
         Set the value of the 4 element quaternion vector
+
         May be 4 element list or array or N x 4 element array.
 
         :param q: list or array of normalized quaternion elements
@@ -171,8 +172,9 @@ class Quat(object):
 
     def _get_q(self):
         """
-        Retrieve 4-vector of quaternion elements in [x, y, z, w] form
-        or N x 4-vector if N > 1.
+        Retrieve 4-vector of quaternion elements
+
+        In in [x, y, z, w] form or N x 4-vector if N > 1.
 
         :rtype: numpy array
 
@@ -193,6 +195,7 @@ class Quat(object):
     def _set_equatorial(self, equatorial):
         """
         Set the value of the 3 element equatorial coordinate list [RA,Dec,Roll]
+
         expects values in degrees
         bounds are not checked
 
@@ -202,7 +205,7 @@ class Quat(object):
         att = np.array(equatorial)
         if att.ndim == 1:
             att = att[np.newaxis]
-        ra, dec, roll = att[:, 0], att[:, 1], att[:, 2]
+        ra, _, roll = att[:, 0], att[:, 1], att[:, 2]
         self._ra0 = ra
         self._roll0 = roll
         self._ra0[ra > 180] = ra - 360
@@ -229,7 +232,7 @@ class Quat(object):
     def _get_ra(self):
         """Retrieve RA term from equatorial system in degrees"""
         if self._equatorial is None:
-            self.equatorial
+            self.equatorial  # noqa
         if self._equatorial.shape[0] == 1:
             return self._equatorial[:, 0][0]
         else:
@@ -238,7 +241,7 @@ class Quat(object):
     def _get_dec(self):
         """Retrieve Dec term from equatorial system in degrees"""
         if self._equatorial is None:
-            self.equatorial
+            self.equatorial  # noqa
         if self._equatorial.shape[0] == 1:
             return self._equatorial[:, 1][0]
         else:
@@ -247,7 +250,7 @@ class Quat(object):
     def _get_roll(self):
         """Retrieve Roll term from equatorial system in degrees"""
         if self._equatorial is None:
-            self.equatorial
+            self.equatorial  # noqa
         if self._equatorial.shape[0] == 1:
             return self._equatorial[:, 2][0]
         else:
@@ -289,8 +292,7 @@ class Quat(object):
 
     def _quat2equatorial(self):
         """
-        Determine Right Ascension, Declination, and Roll for the
-        object quaternion
+        Determine Right Ascension, Declination, and Roll for the object quaternion
 
         :returns: N x (RA, Dec, Roll)
         :rtype: numpy array [ra,dec,roll]
@@ -352,8 +354,9 @@ class Quat(object):
 
     def _quat2transform(self):
         """
-        Transform a unit quaternion into its corresponding rotation matrix (to
-        be applied on the right side).
+        Transform a unit quaternion into its corresponding rotation matrix
+
+        This should be applied on the right side.
 
         :returns: Nx3x3 transform matrix
         :rtype: numpy array

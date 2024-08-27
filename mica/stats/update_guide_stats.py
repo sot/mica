@@ -281,7 +281,7 @@ def consecutive(data, stepsize=1):
     return np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
 
 
-def calc_gui_stats(data, star_info):
+def calc_gui_stats(data):
     logger.info("calculating statistics")
     gui_stats = {}
     for slot in range(0, 8):
@@ -355,8 +355,8 @@ def calc_gui_stats(data, star_info):
             consecutive(np.flatnonzero(data["AOACFCT{}".format(slot)] == "TRAK"))
         )
 
-        # reduce this to just the samples that don't have IR or SP set and are in Kalman on guide stars
-        # and are after the first 60 seconds
+        # reduce this to just the samples that don't have IR or SP set and are
+        # in Kalman on guide stars and are after the first 60 seconds
         kal = trak[
             ok_flags
             & (trak["AOACASEQ"] == "KALM")
@@ -407,8 +407,8 @@ def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop
             h5 = tables.open_file(table_file, "r")
             tbl = h5.root.data[:]
             h5.close()
-        except:
-            raise ValueError
+        except Exception as err:
+            raise ValueError from err
         # get all obsids that aren't already in tbl
         obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl["obsid"]]
     else:
@@ -417,7 +417,7 @@ def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop
             tbl = h5.get_node("/", "data")
             last_tstart = tbl.cols.kalman_tstart[tbl.colindexes["kalman_tstart"][-1]]
             h5.close()
-        except:
+        except Exception:
             last_tstart = start if start is not None else "2002:012:12:00:00"
         kadi_obsids = events.obsids.filter(start=last_tstart, stop=stop)
         # Skip the first obsid (as we already have it in the table)
@@ -486,7 +486,7 @@ def calc_stats(obsid):
     vals, star_info = get_data(
         start=manvr.kalman_start, stop=next_nman_start, obsid=obsid, starcheck=starcheck
     )
-    gui_stats = calc_gui_stats(vals, star_info)
+    gui_stats = calc_gui_stats(vals)
     obsid_info = {
         "obsid": obsid,
         "obi": obspar["obi_num"],

@@ -30,6 +30,8 @@ logger.addHandler(logging.StreamHandler())
 
 def get_vv_dir(obsid, version="default"):
     """
+    Get directory containing V&V products.
+
     Get directory containing V&V products for a requested obsid/version,
     including plots and json.
 
@@ -38,7 +40,7 @@ def get_vv_dir(obsid, version="default"):
     :returns: directory name for obsid/version
     """
     num_version = None
-    if version == "last" or version == "default":
+    if version in ["last", "default"]:
         asp_l1_proc = ska_dbi.DBI(dbi="sqlite", server=FILES["asp1_proc_table"])
         if version == "default":
             obs = asp_l1_proc.fetchall(
