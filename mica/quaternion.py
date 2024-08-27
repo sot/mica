@@ -118,7 +118,7 @@ class Quat(object):
             # make it an array and check to see if it is a supported shape
             attitude = np.array(attitude)
             if (
-                attitude.shape == (3, 3) and (intype is None or intype == 'transform')
+                attitude.shape == (3, 3) and (intype is None or intype == "transform")
             ) or (
                 attitude.ndim == 3
                 and attitude.shape[-1] == 3
@@ -126,13 +126,13 @@ class Quat(object):
             ):
                 self._set_transform(attitude)
             elif (
-                intype == 'quaternion'
+                intype == "quaternion"
                 or attitude.shape == (4,)
                 or (attitude.ndim == 2 and attitude.shape[-1] == 4)
             ):
                 self._set_q(attitude)
             elif (
-                intype == 'equatorial'
+                intype == "equatorial"
                 or attitude.shape == (3,)
                 or (attitude.ndim == 2 and attitude.shape[-1] == 3)
             ):
@@ -156,8 +156,8 @@ class Quat(object):
             q = q[np.newaxis]
         if np.any((np.sum(q * q, axis=-1)[:, np.newaxis] - 1.0) > 1e-6):
             raise ValueError(
-                'Quaternions must be normalized so sum(q**2) == 1;'
-                ' use Quaternion.normalize'
+                "Quaternions must be normalized so sum(q**2) == 1;"
+                " use Quaternion.normalize"
             )
         self._q = q
         flip_q = q[:, 3] < 0

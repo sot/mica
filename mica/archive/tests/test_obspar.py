@@ -3,10 +3,10 @@ import os
 import pytest
 from .. import obspar
 
-HAS_OBSPAR_ARCHIVE = os.path.exists(obspar.CONFIG['data_root'])
+HAS_OBSPAR_ARCHIVE = os.path.exists(obspar.CONFIG["data_root"])
 
 
-@pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires obspar archive')
+@pytest.mark.skipif("not HAS_OBSPAR_ARCHIVE", reason="Test requires obspar archive")
 def test_get_obsids():
     """
     Test that archive.obspar.get_obsids gets a reasonable set of obsids.

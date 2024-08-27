@@ -17,7 +17,7 @@ from Ska.File import get_globfiles
 from mica.common import MICA_ARCHIVE
 
 DEFAULT_CONFIG = dict(
-    data_root=os.path.join(MICA_ARCHIVE, 'asp1'), sql_def='processing_asp_l1_def.sql'
+    data_root=os.path.join(MICA_ARCHIVE, "asp1"), sql_def="processing_asp_l1_def.sql"
 )
 
 
@@ -29,29 +29,29 @@ def update(obsids, config=None):
     """
     if config is None:
         config = DEFAULT_CONFIG
-    logger = logging.getLogger('asp 1 proc table')
+    logger = logging.getLogger("asp 1 proc table")
     logger.setLevel(logging.INFO)
     if not len(logger.handlers):
         logger.addHandler(logging.StreamHandler())
 
-    apstat_db = dict(dbi='sybase', server='sqlsao', database='axafapstat')
-    proc_db_file = os.path.join(MICA_ARCHIVE, 'asp1', 'processing_asp_l1.db3')
+    apstat_db = dict(dbi="sybase", server="sqlsao", database="axafapstat")
+    proc_db_file = os.path.join(MICA_ARCHIVE, "asp1", "processing_asp_l1.db3")
     if not os.path.exists(proc_db_file) or os.stat(proc_db_file).st_size == 0:
-        if not os.path.exists(config['data_root']):
-            os.makedirs(config['data_root'])
-        logger.info("creating aspect_1_proc db from {}".format(config['sql_def']))
-        db_sql = Path(__file__).parent / config['sql_def']
+        if not os.path.exists(config["data_root"]):
+            os.makedirs(config["data_root"])
+        logger.info("creating aspect_1_proc db from {}".format(config["sql_def"]))
+        db_sql = Path(__file__).parent / config["sql_def"]
         db_init_cmds = open(db_sql).read()
-        proc_db = ska_dbi.DBI(dbi='sqlite', server=proc_db_file)
+        proc_db = ska_dbi.DBI(dbi="sqlite", server=proc_db_file)
         proc_db.execute(db_init_cmds)
     else:
-        proc_db = ska_dbi.DBI(dbi='sqlite', server=proc_db_file)
+        proc_db = ska_dbi.DBI(dbi="sqlite", server=proc_db_file)
     archdb = ska_dbi.DBI(
-        dbi='sqlite', server=os.path.join(config['data_root'], 'archfiles.db3')
+        dbi="sqlite", server=os.path.join(config["data_root"], "archfiles.db3")
     )
     for obs in obsids:
         logger.info("Adding asp1 processing for obs {}".format(obs))
-        asols = asp_l1.get_files(obsid=obs, content='ASPSOL', revision='all')
+        asols = asp_l1.get_files(obsid=obs, content="ASPSOL", revision="all")
         for sol in asols:
             logger.info("\tprocessing {}".format(sol))
             procdir = os.path.dirname(sol)
@@ -62,15 +62,15 @@ def update(obsids, config=None):
             logfiles = get_globfiles(
                 os.path.join(procdir, "asp_l1_f*log*"), minfiles=1, maxfiles=None
             )
-            aspect_log = gzip.open(logfiles[0], 'rt').read()
+            aspect_log = gzip.open(logfiles[0], "rt").read()
 
             # read the obspar version with a regex from the log
             obspar_version = int(
                 re.search(r"axaff\d{5}_\d{3}N(\d{3})_obs0a\.par", aspect_log).group(1)
             )
             hdus = fits.open(sol)
-            obi = hdus[1].header['OBI_NUM']
-            revision = hdus[1].header['REVISION']
+            obi = hdus[1].header["OBI_NUM"]
+            revision = hdus[1].header["REVISION"]
 
             with Sqsh(**apstat_db) as db:
                 aspect_1 = db.fetchall(
@@ -87,7 +87,7 @@ def update(obsids, config=None):
             indb = proc_db.fetchall(
                 """SELECT * from aspect_1_proc
                                        WHERE aspect_1_id = {}
-                                    """.format(aspect_1[0]['aspect_1_id'])
+                                    """.format(aspect_1[0]["aspect_1_id"])
             )
             archrec = archdb.fetchall(
                 """select * from archfiles
@@ -114,16 +114,16 @@ def update(obsids, config=None):
             else:
                 proc_db.insert(
                     dict(
-                        aspect_1_id=aspect_1[0]['aspect_1_id'],
+                        aspect_1_id=aspect_1[0]["aspect_1_id"],
                         obsid=obs,
                         obi=obi,
                         revision=revision,
                         obspar_version=obspar_version,
-                        ap_date=str(aspect_1[0]['ap_date']),
+                        ap_date=str(aspect_1[0]["ap_date"]),
                     ),
-                    'aspect_1_proc',
+                    "aspect_1_proc",
                 )
-            isdefault = 'NULL' if archrec[0]['isdefault'] is None else 1
+            isdefault = "NULL" if archrec[0]["isdefault"] is None else 1
             proc_db.execute(f"""UPDATE aspect_1_proc SET isdefault = {isdefault}
                                 WHERE obsid = {obs}
                                 AND revision = {revision}

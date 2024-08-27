@@ -8,8 +8,8 @@ from glob import glob
 # Use Agg backend for command-line (non-interactive) operation
 import matplotlib
 
-if __name__ == '__main__':
-    matplotlib.use('Agg')
+if __name__ == "__main__":
+    matplotlib.use("Agg")
 import matplotlib.pylab as plt
 
 from kadi import events
@@ -31,8 +31,8 @@ from astropy.io import ascii
 import argparse
 import pyyaks.logger
 
-GUIDE_METRICS_OBSID = 'guide_metrics_obsid.dat'
-GUIDE_METRICS_SLOT = 'guide_metrics_slot.dat'
+GUIDE_METRICS_OBSID = "guide_metrics_obsid.dat"
+GUIDE_METRICS_SLOT = "guide_metrics_slot.dat"
 MICA_REPORTS = "https://icxc.harvard.edu/aspect/mica_reports/"
 MICA_PORTAL = "http://kadi.cfa.harvard.edu/mica/?obsid_or_date="
 CD_ROOT = "/proj/sot/ska/www/ASPECT_ICXC/centroid_reports"
@@ -40,7 +40,7 @@ CD_ROOT = "/proj/sot/ska/www/ASPECT_ICXC/centroid_reports"
 # Set up logging
 loglevel = pyyaks.logger.INFO
 logger = pyyaks.logger.get_logger(
-    name='centroid_dashboard', level=loglevel, format="%(asctime)s %(message)s"
+    name="centroid_dashboard", level=loglevel, format="%(asctime)s %(message)s"
 )
 
 # Update guide metrics file with new obsids between NOW and (NOW - NDAYS) days
@@ -48,7 +48,7 @@ NDAYS = 7
 
 
 def get_opt(args=None):
-    parser = argparse.ArgumentParser(description='Centroid dashboard')
+    parser = argparse.ArgumentParser(description="Centroid dashboard")
     parser.add_argument("--obsid", help="Processing obsid (default=None)")
     parser.add_argument(
         "--start", help=f"Processing start date (default=NOW - {NDAYS} days)"
@@ -60,22 +60,22 @@ def get_opt(args=None):
         help=f"Root directory for data files (default='{CD_ROOT}')",
     )
     add_bool_arg(
-        parser=parser, name='make_plots', help_="make plots if the option is included"
+        parser=parser, name="make_plots", help_="make plots if the option is included"
     )
     add_bool_arg(
-        parser=parser, name='save', help_="save plots if the option is included"
+        parser=parser, name="save", help_="save plots if the option is included"
     )
     add_bool_arg(
-        parser=parser, name='force', help_="force processing if the option is included"
+        parser=parser, name="force", help_="force processing if the option is included"
     )
     return parser.parse_args(args)
 
 
-def add_bool_arg(parser, name, default=True, help_=''):
+def add_bool_arg(parser, name, default=True, help_=""):
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument(f'--{name}', dest=name, action='store_true', help=help_)
+    group.add_argument(f"--{name}", dest=name, action="store_true", help=help_)
     group.add_argument(
-        f'--no-{name}', dest=name, action='store_false', help=f"Don't {help_}"
+        f"--no-{name}", dest=name, action="store_false", help=f"Don't {help_}"
     )
     parser.set_defaults(**{name: default})
 
@@ -92,9 +92,9 @@ def get_dr_dp_dy(refs, atts):
         dps.append(dq.pitch * 3600)
         dys.append(dq.yaw * 3600)
 
-    att_errors['dr'] = np.array(drs)
-    att_errors['dp'] = np.array(dps)
-    att_errors['dy'] = np.array(dys)
+    att_errors["dr"] = np.array(drs)
+    att_errors["dp"] = np.array(dps)
+    att_errors["dy"] = np.array(dys)
 
     return att_errors
 
@@ -118,7 +118,7 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
     if len(events.dwells.filter(obsid=obsid)) == 0:
         raise NoDwellError(f"No dwell for obsid={obsid}")
 
-    att_errors = {'dr': [], 'dy': [], 'dp': []}
+    att_errors = {"dr": [], "dy": [], "dp": []}
 
     # flag = 0 OK, ground aspect solution
     # flag = 1 'ground' is None for all slots, use obc solution
@@ -130,25 +130,25 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
         crs = get_crs_per_obsid(obsid)
     else:
         if crs is None:
-            raise Exception('Provide crs if on_the_fly is False')
+            raise Exception("Provide crs if on_the_fly is False")
 
-    if all([item is None for item in crs['ground'].values()]):
+    if all([item is None for item in crs["ground"].values()]):
         # No good ground solution in any of the slots
         # Use obc aspect solution
         flag = 1
-        crs_ref = crs['obc']
+        crs_ref = crs["obc"]
         logger.info(
-            f'No ground aspect solution for {obsid}. Using obc aspect solution for reference'
+            f"No ground aspect solution for {obsid}. Using obc aspect solution for reference"
         )
     else:
-        crs_ref = crs['ground']
+        crs_ref = crs["ground"]
 
     try:
         # Adjust time axis if needed
         # TODO: what if slot 3 is not tracking a star?
 
         ref_att_times = np.round(crs_ref[3].att_times, decimals=2)
-        obc_att_times = np.round(crs['obc'][3].att_times, decimals=2)
+        obc_att_times = np.round(crs["obc"][3].att_times, decimals=2)
 
         common_times, in_ref, in_obc = np.intersect1d(
             ref_att_times, obc_att_times, return_indices=True
@@ -156,32 +156,32 @@ def get_observed_att_errors(obsid, crs=None, on_the_fly=False):
         if len(common_times) == 0:
             # no common times for obc and grnd solutions
             flag = 2
-            raise ValueError('No common time vals for obc and ground att times')
+            raise ValueError("No common time vals for obc and ground att times")
 
         ref_att_times_adjusted = ref_att_times[in_ref]
         obc_att_times_adjusted = obc_att_times[in_obc]
         att_ref = crs_ref[3].atts[in_ref]
-        att_obc = crs['obc'][3].atts[in_obc]
+        att_obc = crs["obc"][3].atts[in_obc]
 
         if not np.all(obc_att_times_adjusted == ref_att_times_adjusted):
             flag = 3
-            raise ValueError('Could not align obc and ref aspect solution times')
+            raise ValueError("Could not align obc and ref aspect solution times")
 
     except Exception as err:
-        logger.info(f'ERROR get_observed_att_errors: {err}')
-        return {'obsid': obsid, 'flag': flag}
+        logger.info(f"ERROR get_observed_att_errors: {err}")
+        return {"obsid": obsid, "flag": flag}
 
     # Compute attitude errors
     att_errors = get_dr_dp_dy(att_ref, att_obc)
 
     out = {
-        'obsid': obsid,
-        'time': obc_att_times_adjusted,
-        'dr': att_errors['dr'],
-        'dy': att_errors['dy'],
-        'dp': att_errors['dp'],
-        'flag': flag,
-        'crs': crs,
+        "obsid": obsid,
+        "time": obc_att_times_adjusted,
+        "dr": att_errors["dr"],
+        "dy": att_errors["dy"],
+        "dp": att_errors["dp"],
+        "flag": flag,
+        "crs": crs,
     }
 
     return out
@@ -194,20 +194,20 @@ def get_crs_per_obsid(obsid):
 
     :param obsid: obsid
     """
-    crs = {'ground': {}, 'obc': {}}
-    att_sources = ['obc'] if int(obsid) > 40000 else ['ground', 'obc']
+    crs = {"ground": {}, "obc": {}}
+    att_sources = ["obc"] if int(obsid) > 40000 else ["ground", "obc"]
 
     cat = get_starcat(obsid)
 
     if cat is not None:
-        ok = (cat['type'] == 'BOT') | (cat['type'] == 'GUI')
+        ok = (cat["type"] == "BOT") | (cat["type"] == "GUI")
         cat = cat[ok]
 
-        cols = ['obsid', 'idx', 'slot', 'id', 'type', 'sz', 'mag', 'yang', 'zang']
-        crs['cat'] = cat[cols]
+        cols = ["obsid", "idx", "slot", "id", "type", "sz", "mag", "yang", "zang"]
+        crs["cat"] = cat[cols]
 
-        slots = cat['slot']
-        crs['slots'] = np.array(slots)
+        slots = cat["slot"]
+        crs["slots"] = np.array(slots)
 
         for att_source in att_sources:
             for slot in slots:
@@ -216,13 +216,13 @@ def get_crs_per_obsid(obsid):
                         obsid=obsid,
                         slot=slot,
                         att_source=att_source,
-                        centroid_source='obc',
+                        centroid_source="obc",
                     )
                     crs[att_source][slot] = cr
                 except Exception:
                     crs[att_source][slot] = None
                     logger.info(
-                        f'Could not compute crs for {obsid} slot {slot} (att_source={att_source})'
+                        f"Could not compute crs for {obsid} slot {slot} (att_source={att_source})"
                     )
 
     return crs
@@ -232,16 +232,16 @@ def get_ending_roll_err(obsid, metrics_file=None):
     # Check for the value in the obsid file, otherwise recalculate
     saved_metrics = []
     if metrics_file is not None and os.path.exists(metrics_file):
-        saved_metrics = Table.read(metrics_file, format='ascii.ecsv')
-    if len(saved_metrics) and obsid in saved_metrics['obsid']:
+        saved_metrics = Table.read(metrics_file, format="ascii.ecsv")
+    if len(saved_metrics) and obsid in saved_metrics["obsid"]:
         logger.info(f"Getting ending roll for {obsid} from file")
-        return saved_metrics[saved_metrics['obsid'] == obsid][0]['ending_roll_err']
+        return saved_metrics[saved_metrics["obsid"] == obsid][0]["ending_roll_err"]
     else:
         att_errors = get_observed_att_errors(obsid, on_the_fly=True)
         if att_errors is None:
             return -9999
         else:
-            return att_errors['dr'][-1]
+            return att_errors["dr"][-1]
 
 
 def get_observed_metrics(obsid, metrics_file=None):
@@ -283,16 +283,16 @@ def get_observed_metrics(obsid, metrics_file=None):
 
     # Attitude errors
     att_errors = get_observed_att_errors(obsid, on_the_fly=True)
-    att_flag = att_errors['flag']
+    att_flag = att_errors["flag"]
 
     if att_flag > 1:
         return (
             {
-                'obsid': obsid,
-                'obsid_preceding': obsid_preceding,
-                'obsid_next': obsid_next,
-                'att_flag': att_flag,
-                'dwell': True,
+                "obsid": obsid,
+                "obsid_preceding": obsid_preceding,
+                "obsid_next": obsid_next,
+                "att_flag": att_flag,
+                "dwell": True,
             },
             None,
         )
@@ -300,23 +300,23 @@ def get_observed_metrics(obsid, metrics_file=None):
     if att_errors is None:
         return (
             {
-                'obsid': obsid,
-                'obsid_preceding': obsid_preceding,
-                'obsid_next': obsid_next,
-                'att_flag': att_flag,
-                'dwell': False,
+                "obsid": obsid,
+                "obsid_preceding": obsid_preceding,
+                "obsid_next": obsid_next,
+                "att_flag": att_flag,
+                "dwell": False,
             },
             None,
         )
 
     # dr statistics
-    drs = att_errors['dr']
+    drs = att_errors["dr"]
     dr50 = float(np.percentile(np.abs(drs), 50))
     dr95 = float(np.percentile(np.abs(drs), 95))
-    mean_date = DateTime(0.5 * (att_errors['time'][0] + att_errors['time'][-1])).date
+    mean_date = DateTime(0.5 * (att_errors["time"][0] + att_errors["time"][-1])).date
 
     # Centroid residuals
-    crs = att_errors['crs']
+    crs = att_errors["crs"]
 
     # Roll error at end of preceding observation
     preceding_roll_err = get_ending_roll_err(obsid_preceding, metrics_file=metrics_file)
@@ -325,33 +325,33 @@ def get_observed_metrics(obsid, metrics_file=None):
     aber_flag = 0
     path_ = get_mp_dir(obsid)[0]
     if path_ is None:
-        logger.info(f'No mp_dir for {obsid}. Skipping aber correction')
+        logger.info(f"No mp_dir for {obsid}. Skipping aber correction")
         aber_y = -9999
         aber_z = -9999
         aber_flag = 1
     else:
         mp_dir = f"/data/mpcrit1/mplogs/{path_}"
-        manerr = glob(f'{mp_dir}/*ManErr.txt')
+        manerr = glob(f"{mp_dir}/*ManErr.txt")
 
         if len(manerr) == 0:
-            logger.info(f'No ManErr file for {obsid}. Skipping aber correction')
+            logger.info(f"No ManErr file for {obsid}. Skipping aber correction")
             aber_y = -9999
             aber_z = -9999
             aber_flag = 2
         else:
             dat = ascii.read(manerr[0], header_start=2, data_start=3)
-            ok = dat['obsid'] == obsid
+            ok = dat["obsid"] == obsid
 
             if np.sum(ok) > 1:
                 logger.info(
-                    f'More than one entry per {obsid}. Skipping aber correction'
+                    f"More than one entry per {obsid}. Skipping aber correction"
                 )
                 aber_y = -9999
                 aber_z = -9999
                 aber_flag = 3
             else:
-                aber_y = dat['aber-Y'][ok][0]
-                aber_z = dat['aber-Z'][ok][0]
+                aber_y = dat["aber-Y"][ok][0]
+                aber_z = dat["aber-Z"][ok][0]
 
     if aber_flag == 0:
         one_shot_aber_corrected = np.sqrt(
@@ -361,80 +361,80 @@ def get_observed_metrics(obsid, metrics_file=None):
         one_shot_aber_corrected = -9999
 
     out_obsid = {
-        'obsid': obsid,
-        'mean_date': mean_date,
-        'dr50': dr50,
-        'dr95': dr95,
-        'one_shot': one_shot,
-        'one_shot_pitch': one_shot_pitch,
-        'one_shot_yaw': one_shot_yaw,
-        'manvr_angle': manvr_angle,
-        'obsid_preceding': obsid_preceding,
-        'ending_roll_err': att_errors['dr'][-1],
-        'preceding_roll_err': preceding_roll_err,
-        'aber_y': aber_y,
-        'aber_z': aber_z,
-        'aber_flag': aber_flag,
-        'one_shot_aber_corrected': one_shot_aber_corrected,
-        'obsid_next': obsid_next,
-        'att_errors': att_errors,
-        'att_flag': att_flag,
-        'dwell': True,
+        "obsid": obsid,
+        "mean_date": mean_date,
+        "dr50": dr50,
+        "dr95": dr95,
+        "one_shot": one_shot,
+        "one_shot_pitch": one_shot_pitch,
+        "one_shot_yaw": one_shot_yaw,
+        "manvr_angle": manvr_angle,
+        "obsid_preceding": obsid_preceding,
+        "ending_roll_err": att_errors["dr"][-1],
+        "preceding_roll_err": preceding_roll_err,
+        "aber_y": aber_y,
+        "aber_z": aber_z,
+        "aber_flag": aber_flag,
+        "one_shot_aber_corrected": one_shot_aber_corrected,
+        "obsid_next": obsid_next,
+        "att_errors": att_errors,
+        "att_flag": att_flag,
+        "dwell": True,
     }
 
-    out_slot = {'obsid': obsid, 'slots': {k: {} for k in range(8)}}
+    out_slot = {"obsid": obsid, "slots": {k: {} for k in range(8)}}
 
-    cat = crs['cat']
+    cat = crs["cat"]
     d = events.dwells.filter(obsid=obsid)[0]
-    logger.info(f'Dwell at {d.start}')
+    logger.info(f"Dwell at {d.start}")
 
     for slot in range(8):
-        ok = cat['slot'] == slot
+        ok = cat["slot"] == slot
         out = {}
         if len(cat[ok]) > 0:
-            out['id'] = cat['id'][ok][0]
-            out['type'] = cat['type'][ok][0]
-            out['mag'] = cat['mag'][ok][0]
-            out['yang'] = cat['yang'][ok][0]
-            out['zang'] = cat['zang'][ok][0]
-            out['slot'] = slot
+            out["id"] = cat["id"][ok][0]
+            out["type"] = cat["type"][ok][0]
+            out["mag"] = cat["mag"][ok][0]
+            out["yang"] = cat["yang"][ok][0]
+            out["zang"] = cat["zang"][ok][0]
+            out["slot"] = slot
 
             if att_flag == 0:
                 # Ground solution exists
-                val = crs['ground'][slot]
+                val = crs["ground"][slot]
             else:
                 # Use obc solution
-                val = crs['obc'][slot]
+                val = crs["obc"][slot]
 
             if len(val.dyags) > 0 and len(val.dzags) > 0:
-                out['std_dy'] = np.std(val.dyags)
-                out['std_dz'] = np.std(val.dzags)
-                out['rms_dy'] = np.sqrt(np.mean(val.dyags**2))
-                out['rms_dz'] = np.sqrt(np.mean(val.dzags**2))
-                out['median_dy'] = np.median(val.dyags)
-                out['median_dz'] = np.median(val.dzags)
+                out["std_dy"] = np.std(val.dyags)
+                out["std_dz"] = np.std(val.dzags)
+                out["rms_dy"] = np.sqrt(np.mean(val.dyags**2))
+                out["rms_dz"] = np.sqrt(np.mean(val.dzags**2))
+                out["median_dy"] = np.median(val.dyags)
+                out["median_dz"] = np.median(val.dzags)
                 drs = np.sqrt((val.dyags**2) + (val.dzags**2))
-                for dist in ['1.5', '3.0', '5.0']:
-                    out[f'f_within_{dist}'] = np.count_nonzero(drs < float(dist)) / len(
+                for dist in ["1.5", "3.0", "5.0"]:
+                    out[f"f_within_{dist}"] = np.count_nonzero(drs < float(dist)) / len(
                         drs
                     )
             else:
                 for metric in [
-                    'std_dy',
-                    'std_dz',
-                    'rms_dy',
-                    'rms_dz',
-                    'median_dy',
-                    'median_dz',
+                    "std_dy",
+                    "std_dz",
+                    "rms_dy",
+                    "rms_dz",
+                    "median_dy",
+                    "median_dz",
                 ]:
                     out[metric] = -9999
-                for metric in ['f_within_5.0', 'f_within_3.0', 'f_within_1.5']:
+                for metric in ["f_within_5.0", "f_within_3.0", "f_within_1.5"]:
                     out[metric] = 0
 
-            mags = fetch.Msid(f'aoacmag{slot}', start=d.start, stop=d.stop)
-            out['median_mag'] = np.median(mags.vals)
+            mags = fetch.Msid(f"aoacmag{slot}", start=d.start, stop=d.stop)
+            out["median_mag"] = np.median(mags.vals)
 
-            out_slot['slots'][slot] = out
+            out_slot["slots"][slot] = out
 
     return out_obsid, out_slot
 
@@ -445,7 +445,7 @@ def get_n_kalman(start, stop):
     """
     start = DateTime(start).date
     stop = DateTime(stop).date
-    dat = fetch.Msid('aokalstr', start, stop)
+    dat = fetch.Msid("aokalstr", start, stop)
     dat.interpolate(1.025)
     return dat
 
@@ -462,13 +462,13 @@ def get_cd_dir(obsid, data_root):
 
     if not os.path.exists(cd_obsid_root):
         os.makedirs(cd_obsid_root)
-        logger.info(f'Creating directory {cd_obsid_root}')
+        logger.info(f"Creating directory {cd_obsid_root}")
 
     return cd_obsid_root
 
 
 def plot_att_errors_per_obsid(
-    obsid, plot_dir, coord='dr', att_errors=None, save=False, on_the_fly=False
+    obsid, plot_dir, coord="dr", att_errors=None, save=False, on_the_fly=False
 ):
     """
     Make png plot of att errors vs time per obsid.
@@ -480,8 +480,8 @@ def plot_att_errors_per_obsid(
                        attitude errors for the requested obsid.
     """
 
-    if coord not in ('dr', 'dp', 'dy'):
-        raise ValueError('Coordinate for att error should be dr, dp or dy')
+    if coord not in ("dr", "dp", "dy"):
+        raise ValueError("Coordinate for att error should be dr, dp or dy")
 
     if on_the_fly:
         att_errors = get_observed_att_errors(obsid, on_the_fly=on_the_fly)
@@ -489,10 +489,10 @@ def plot_att_errors_per_obsid(
             return None
     else:
         if att_errors is None:
-            raise ValueError('Need to provide att_errors if on_the_fly is False')
+            raise ValueError("Need to provide att_errors if on_the_fly is False")
 
     errs = att_errors[coord]
-    dates = DateTime(att_errors['time'])
+    dates = DateTime(att_errors["time"])
 
     plt.figure(figsize=(8, 2.5))
 
@@ -503,7 +503,7 @@ def plot_att_errors_per_obsid(
     else:
         ok = np.ones_like(dates.secs, dtype=bool)
 
-    plt.plot(dates.secs[ok] - dates.secs[ok][0], errs[ok], '-', lw=2, color='k')
+    plt.plot(dates.secs[ok] - dates.secs[ok][0], errs[ok], "-", lw=2, color="k")
 
     ylims = plt.ylim()
 
@@ -512,16 +512,16 @@ def plot_att_errors_per_obsid(
     else:
         plt.ylim(-100, 100)
 
-    plt.ylabel(f'{coord} (arcsec)')
-    plt.xlabel('Time (sec)')
-    plt.grid(ls=':')
+    plt.ylabel(f"{coord} (arcsec)")
+    plt.xlabel("Time (sec)")
+    plt.grid(ls=":")
 
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.25, top=0.95)
 
     if save:
-        outroot = os.path.join(plot_dir, f'observed_{coord}s_{obsid}')
-        logger.info(f'Writing plot file {outroot}.png')
-        plt.savefig(outroot + '.png')
+        outroot = os.path.join(plot_dir, f"observed_{coord}s_{obsid}")
+        logger.info(f"Writing plot file {outroot}.png")
+        plt.savefig(outroot + ".png")
         plt.close()
 
     return att_errors
@@ -544,31 +544,31 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
         crs = get_crs_per_obsid(obsid)
     else:
         if crs is None:
-            raise ValueError('Need to provide crs if on_the_fly is False')
+            raise ValueError("Need to provide crs if on_the_fly is False")
 
-    crs_obc = crs['obc']
-    crs_grnd = crs['ground']
+    crs_obc = crs["obc"]
+    crs_grnd = crs["ground"]
 
-    cs = {'yag': 'k', 'zag': 'slategray'}
+    cs = {"yag": "k", "zag": "slategray"}
 
     fig = plt.figure(figsize=(8, 7))
 
-    n = len(crs['slots'])
+    n = len(crs["slots"])
     legend = False
 
-    for ii, slot in enumerate(crs['slots']):
+    for ii, slot in enumerate(crs["slots"]):
         plt.subplot(n, 1, ii + 1)
 
-        for coord in ['yag', 'zag']:
-            resids_obc = getattr(crs_obc[slot], f'd{coord}s')
-            times_obc = getattr(crs_obc[slot], f'{coord}_times')
+        for coord in ["yag", "zag"]:
+            resids_obc = getattr(crs_obc[slot], f"d{coord}s")
+            times_obc = getattr(crs_obc[slot], f"{coord}_times")
 
             if slot not in crs_grnd or crs_grnd[slot] is None:
                 resids_ref = resids_obc
                 times_ref = times_obc
             else:
-                resids_ref = getattr(crs_grnd[slot], f'd{coord}s')
-                times_ref = getattr(crs_grnd[slot], f'{coord}_times')
+                resids_ref = getattr(crs_grnd[slot], f"d{coord}s")
+                times_ref = getattr(crs_grnd[slot], f"{coord}_times")
 
             if len(times_obc) == 0 or len(times_ref) == 0:
                 continue
@@ -581,18 +581,18 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
                 np.ma.array(resids_ref, mask=~ok),
                 color=cs[coord],
                 alpha=0.9,
-                label=f'd{coord}',
+                label=f"d{coord}",
             )
 
             if np.sum(~ok) > 0:
                 plt.plot(
                     times_ref - times_ref[0],
                     np.ma.array(resids_ref, mask=ok),
-                    color='crimson',
+                    color="crimson",
                     alpha=0.9,
                 )
 
-        plt.grid(ls=':')
+        plt.grid(ls=":")
         ylims = plt.ylim()
         if max(np.abs(ylims)) < 5:
             plt.ylim(-6, 6)
@@ -600,8 +600,8 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
         else:
             plt.ylim(-12, 12)
             plt.yticks([-10, -5, 0, 5, 10], ["-10", "-5", "0", "5", "10"])
-        plt.xlabel('Time (sec)')
-        plt.ylabel(f'Slot {slot}\n(arcsec)')
+        plt.xlabel("Time (sec)")
+        plt.ylabel(f"Slot {slot}\n(arcsec)")
         axs = fig.gca()
         axs.get_yaxis().set_label_coords(-0.065, 0.5)
         handles, labels = axs.get_legend_handles_labels()
@@ -612,9 +612,9 @@ def plot_crs_per_obsid(obsid, plot_dir, crs=None, save=False, on_the_fly=False):
     plt.subplots_adjust(left=0.1, right=0.95, hspace=0, bottom=0.08, top=0.98)
 
     if save:
-        outroot = os.path.join(plot_dir, f'crs_time_{obsid}')
-        logger.info(f'Writing plot file {outroot}.png')
-        plt.savefig(outroot + '.png')
+        outroot = os.path.join(plot_dir, f"crs_time_{obsid}")
+        logger.info(f"Writing plot file {outroot}.png")
+        plt.savefig(outroot + ".png")
         plt.close()
 
     return crs
@@ -636,21 +636,21 @@ def plot_n_kalman(obsid, plot_dir, save=False):
 
     # The Kalman vals are strings, so these can be out of order on y axis
     # if not handled as ints.
-    plot_cxctime(n_kalman.times, n_kalman.vals.astype(int), color='k')
-    plot_cxctime([t0, t0 + 1000], [0.5, 0.5], lw=3, color='orange')
+    plot_cxctime(n_kalman.times, n_kalman.vals.astype(int), color="k")
+    plot_cxctime([t0, t0 + 1000], [0.5, 0.5], lw=3, color="orange")
 
     plt.text(DateTime(t0).plotdate, 0.7, "1 ksec")
-    plt.ylabel('# Kalman stars')
+    plt.ylabel("# Kalman stars")
     ylims = plt.ylim()
     plt.ylim(-0.2, ylims[1] + 0.2)
-    plt.grid(ls=':')
+    plt.grid(ls=":")
 
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.25, top=0.95)
 
     if save:
-        outroot = os.path.join(plot_dir, f'n_kalman_{obsid}')
-        logger.info(f'Writing plot file {outroot}.png')
-        plt.savefig(outroot + '.png')
+        outroot = os.path.join(plot_dir, f"n_kalman_{obsid}")
+        logger.info(f"Writing plot file {outroot}.png")
+        plt.savefig(outroot + ".png")
         plt.close()
 
 
@@ -674,54 +674,54 @@ def plot_crs_visualization(
     cat = get_starcat(obsid)
 
     # keep only BOT and GUI entries
-    ok = (cat['type'] == 'BOT') | (cat['type'] == 'GUI')
+    ok = (cat["type"] == "BOT") | (cat["type"] == "GUI")
     cat = cat[ok]
-    cat['idx'] = cat['slot']  # so that the plot is numbered by slot
+    cat["idx"] = cat["slot"]  # so that the plot is numbered by slot
 
     # attitude
     att = get_att(obsid)
 
     # stars
     cols = [
-        'RA_PMCORR',
-        'DEC_PMCORR',
-        'MAG_ACA',
-        'MAG_ACA_ERR',
-        'CLASS',
-        'ASPQ1',
-        'ASPQ2',
-        'ASPQ3',
-        'VAR',
-        'POS_ERR',
+        "RA_PMCORR",
+        "DEC_PMCORR",
+        "MAG_ACA",
+        "MAG_ACA_ERR",
+        "CLASS",
+        "ASPQ1",
+        "ASPQ2",
+        "ASPQ3",
+        "VAR",
+        "POS_ERR",
     ]
     stars = Table(names=cols)
     for star in cat:
         row = []
-        s = get_star(star['id'])
+        s = get_star(star["id"])
         for col in cols:
             row.append(s[col])
         stars.add_row(row)
 
     fig = plot_stars(att, cat, stars)
-    cs = ['orange', 'forestgreen', 'steelblue', 'maroon', 'gray']
+    cs = ["orange", "forestgreen", "steelblue", "maroon", "gray"]
 
     if on_the_fly:
         crs = get_crs_per_obsid(obsid)
     else:
         if crs is None:
-            raise ValueError('Need to provide crs if on_the_fly is False')
+            raise ValueError("Need to provide crs if on_the_fly is False")
 
     if obsid > 40000:  # ERs
-        crs_ref = crs['obc']
+        crs_ref = crs["obc"]
     else:
-        crs_ref = crs['ground']
+        crs_ref = crs["ground"]
 
     ax = fig.axes[0]
 
-    for slot in cat['slot']:
-        ok = cat['slot'] == slot
-        yag = cat['yang'][ok]
-        zag = cat['zang'][ok]
+    for slot in cat["slot"]:
+        ok = cat["slot"] == slot
+        yag = cat["yang"][ok]
+        zag = cat["zang"][ok]
         yp, zp = yagzag_to_pixels(yag, zag)
         # 1 px -> factor px; 5 arcsec = 5 * factor arcsec
         try:
@@ -731,19 +731,19 @@ def plot_crs_visualization(
             """
             yy = yp - crs_ref[slot].dyags * factor
             zz = zp + crs_ref[slot].dzags * factor
-            ax.plot(yy, zz, alpha=0.3, marker=',', color=cs[slot - 3])
-            ax.plot([-1000, -1020], [2700, 2700], color='k', lw=3)
-            circle = plt.Circle((yp, zp), 5 * factor, color='darkorange', fill=False)
+            ax.plot(yy, zz, alpha=0.3, marker=",", color=cs[slot - 3])
+            ax.plot([-1000, -1020], [2700, 2700], color="k", lw=3)
+            circle = plt.Circle((yp, zp), 5 * factor, color="darkorange", fill=False)
             ax.add_artist(circle)
         except Exception:
             pass
 
-    plt.text(-511, 530, "ring radius = 5 arcsec (scaled)", color='darkorange')
+    plt.text(-511, 530, "ring radius = 5 arcsec (scaled)", color="darkorange")
 
     if save:
-        outroot = os.path.join(plot_dir, f'crs_vis_{obsid}')
-        logger.info(f'Writing plot file {outroot}.png')
-        plt.savefig(outroot + '.png')
+        outroot = os.path.join(plot_dir, f"crs_vis_{obsid}")
+        logger.info(f"Writing plot file {outroot}.png")
+        plt.savefig(outroot + ".png")
         plt.close()
 
     return crs
@@ -752,7 +752,7 @@ def plot_crs_visualization(
 def plot_observed_metrics(
     obsids,
     plot_dir,
-    coord='dr',
+    coord="dr",
     att_errors=None,
     factor=20,
     save=False,
@@ -772,21 +772,21 @@ def plot_observed_metrics(
     """
 
     if type(obsids) not in (int, set):
-        raise TypeError('obsids should be an int or a set')
+        raise TypeError("obsids should be an int or a set")
 
     if type(obsids) is int:
         obsids = {obsids}
 
     for obsid in list(obsids):
-        kwargs = {'save': save, 'on_the_fly': on_the_fly}
+        kwargs = {"save": save, "on_the_fly": on_the_fly}
         errs = plot_att_errors_per_obsid(
             obsid, coord=coord, att_errors=att_errors, plot_dir=plot_dir, **kwargs
         )
-        crs = errs['crs']
+        crs = errs["crs"]
 
         # To prevent another computation of crs
         if on_the_fly:
-            kwargs['on_the_fly'] = False
+            kwargs["on_the_fly"] = False
 
         plot_crs_per_obsid(obsid, plot_dir, crs=crs, **kwargs)
         plot_crs_visualization(obsid, plot_dir, factor=factor, crs=crs, **kwargs)
@@ -799,11 +799,11 @@ def read_metrics_from_file(filename):
     one shot updates, aber corrections) from file
     """
     if os.path.exists(filename):
-        logger.info(f'Reading {filename}')
-        dat_old = Table.read(filename, format='ascii.ecsv', guess=False)
-        processed_obsids = set(dat_old['obsid'])
+        logger.info(f"Reading {filename}")
+        dat_old = Table.read(filename, format="ascii.ecsv", guess=False)
+        processed_obsids = set(dat_old["obsid"])
     else:
-        logger.info(f'File {filename} does not exist')
+        logger.info(f"File {filename} does not exist")
         dat_old = None
         processed_obsids = set()
 
@@ -867,20 +867,20 @@ def update_observed_metrics(
     rows_obsid = []
     rows_slots = []
     for obsid in obsids:
-        logger.info(f'Obsid={obsid}')
+        logger.info(f"Obsid={obsid}")
         obs_dir = get_cd_dir(obsid, data_root)
 
         if obsid in processed_obsids:
             if not force:
-                logger.info(f'Skipping obsid {obsid}: already processed')
+                logger.info(f"Skipping obsid {obsid}: already processed")
                 continue
             else:
-                if obsid in dat_obsid_old['obsid']:
-                    idx = list(dat_obsid_old['obsid']).index(obsid)
+                if obsid in dat_obsid_old["obsid"]:
+                    idx = list(dat_obsid_old["obsid"]).index(obsid)
                     dat_obsid_old.remove_row(idx)
 
-                if obsid in dat_slot_old['obsid']:
-                    ok = dat_slot_old['obsid'] == obsid
+                if obsid in dat_slot_old["obsid"]:
+                    ok = dat_slot_old["obsid"] == obsid
                     dat_slot_old.remove_rows(ok)
 
         try:
@@ -888,64 +888,64 @@ def update_observed_metrics(
                 obsid, metrics_file=obsid_metrics_file
             )
 
-            if not metrics_obsid['dwell']:
-                logger.info(f'Skipping obsid {obsid}: not a dwell?')
-                info = 'Not a dwell'
+            if not metrics_obsid["dwell"]:
+                logger.info(f"Skipping obsid {obsid}: not a dwell?")
+                info = "Not a dwell"
                 make_special_case_html(metrics_obsid, obs_dir, info=info)
                 continue
 
-            if metrics_obsid['att_flag'] > 1:
+            if metrics_obsid["att_flag"] > 1:
                 logger.info(
-                    f'Skipping obsid {obsid}: problem matching obc/ground times'
+                    f"Skipping obsid {obsid}: problem matching obc/ground times"
                 )
-                info = 'Problem matching obc/ground att times'
+                info = "Problem matching obc/ground att times"
                 make_special_case_html(metrics_obsid, obs_dir, info=info)
                 continue
 
-            if obsid < 40000 and metrics_obsid['att_flag'] == 1:
+            if obsid < 40000 and metrics_obsid["att_flag"] == 1:
                 logger.info(
-                    f'Skipping science obsid {obsid}: no ground aspect solution'
+                    f"Skipping science obsid {obsid}: no ground aspect solution"
                 )
-                info = 'No ground aspect solution for science obsid'
+                info = "No ground aspect solution for science obsid"
                 make_special_case_html(metrics_obsid, obs_dir, info=info)
                 continue
 
             if make_plots:
-                kwargs = {'factor': factor, 'save': save}
+                kwargs = {"factor": factor, "save": save}
                 plot_observed_metrics(
                     obsid,
                     plot_dir=obs_dir,
-                    coord='dr',
-                    att_errors=metrics_obsid['att_errors'],
+                    coord="dr",
+                    att_errors=metrics_obsid["att_errors"],
                     **kwargs,
                 )
         except (NoObsidError, NoDwellError, NoManvrError) as err:
-            logger.info(f'Skipping obsid {obsid} missing data: {err}')
+            logger.info(f"Skipping obsid {obsid} missing data: {err}")
             continue
         except Exception as err:
-            logger.warning(f'Skipping obsid {obsid} ERROR: {err}')
+            logger.warning(f"Skipping obsid {obsid} ERROR: {err}")
             continue
 
         # Process entries for 'per obsid' metrics
 
         keys_obsid = (
-            'obsid',
-            'mean_date',
-            'att_flag',
-            'dr50',
-            'dr95',
-            'aber_y',
-            'aber_z',
-            'aber_flag',
-            'one_shot_pitch',
-            'one_shot_yaw',
-            'one_shot',
-            'one_shot_aber_corrected',
-            'manvr_angle',
-            'preceding_roll_err',
-            'ending_roll_err',
-            'obsid_preceding',
-            'obsid_next',
+            "obsid",
+            "mean_date",
+            "att_flag",
+            "dr50",
+            "dr95",
+            "aber_y",
+            "aber_z",
+            "aber_flag",
+            "one_shot_pitch",
+            "one_shot_yaw",
+            "one_shot",
+            "one_shot_aber_corrected",
+            "manvr_angle",
+            "preceding_roll_err",
+            "ending_roll_err",
+            "obsid_preceding",
+            "obsid_next",
         )
 
         row_obsid = {k: metrics_obsid[k] for k in keys_obsid}
@@ -955,20 +955,20 @@ def update_observed_metrics(
         row_slots = []
         for slot in range(8):
             out = {}
-            slot_data = metrics_slot['slots'][slot]
+            slot_data = metrics_slot["slots"][slot]
             if bool(slot_data):
-                out['obsid'] = obsid
-                out['slot'] = slot
-                out['mean_date'] = metrics_obsid['mean_date']
+                out["obsid"] = obsid
+                out["slot"] = slot
+                out["mean_date"] = metrics_obsid["mean_date"]
                 keys_slot = (
-                    'id',
-                    'type',
-                    'mag',
-                    'yang',
-                    'zang',
-                    'median_mag',
-                    'median_dy',
-                    'median_dz',
+                    "id",
+                    "type",
+                    "mag",
+                    "yang",
+                    "zang",
+                    "median_mag",
+                    "median_dy",
+                    "median_dz",
                 )
                 out.update({k: slot_data[k] for k in keys_slot})
                 # Needed to build html
@@ -981,12 +981,12 @@ def update_observed_metrics(
 
         # Update the 'per_obsid' table
         if rows_obsid:
-            sort_cols = ['mean_date']
+            sort_cols = ["mean_date"]
             update_data_table(rows_obsid, dat_obsid_old, obsid_metrics_file, sort_cols)
 
         # Update the 'per_slot' table
         if rows_slots:
-            sort_cols = ['mean_date', 'slot']
+            sort_cols = ["mean_date", "slot"]
             update_data_table(rows_slots, dat_slot_old, slot_metrics_file, sort_cols)
 
 
@@ -1003,10 +1003,10 @@ def update_data_table(rows, dat_old, metrics_file, sort_cols):
     if dat_old is not None:
         dat = vstack([dat_old, dat])
 
-    logger.info(f'Writing {metrics_file}')
+    logger.info(f"Writing {metrics_file}")
 
     dat.sort(sort_cols)
-    dat.write(metrics_file, format='ascii.ecsv', overwrite=True)
+    dat.write(metrics_file, format="ascii.ecsv", overwrite=True)
 
 
 def make_html(row_obsid, rows_slot, obs_dir):
@@ -1018,26 +1018,26 @@ def make_html(row_obsid, rows_slot, obs_dir):
     """
 
     # Build 'per obsid' part of the webpage
-    obsid = row_obsid['obsid']
-    obsid_preceding = row_obsid['obsid_preceding']
-    obsid_next = row_obsid['obsid_next']
-    ending_roll_err = row_obsid['ending_roll_err']
-    preceding_roll_err = row_obsid['preceding_roll_err']
-    one_shot_pitch = row_obsid['one_shot_pitch']
-    one_shot_yaw = row_obsid['one_shot_yaw']
-    one_shot = row_obsid['one_shot']
-    one_shot_aber_corrected = row_obsid['one_shot_aber_corrected']
-    manvr_angle = row_obsid['manvr_angle']
-    dr50 = row_obsid['dr50']
-    dr95 = row_obsid['dr95']
-    aber_y = row_obsid['aber_y']
-    aber_z = row_obsid['aber_z']
-    mean_date = row_obsid['mean_date']
+    obsid = row_obsid["obsid"]
+    obsid_preceding = row_obsid["obsid_preceding"]
+    obsid_next = row_obsid["obsid_next"]
+    ending_roll_err = row_obsid["ending_roll_err"]
+    preceding_roll_err = row_obsid["preceding_roll_err"]
+    one_shot_pitch = row_obsid["one_shot_pitch"]
+    one_shot_yaw = row_obsid["one_shot_yaw"]
+    one_shot = row_obsid["one_shot"]
+    one_shot_aber_corrected = row_obsid["one_shot_aber_corrected"]
+    manvr_angle = row_obsid["manvr_angle"]
+    dr50 = row_obsid["dr50"]
+    dr95 = row_obsid["dr95"]
+    aber_y = row_obsid["aber_y"]
+    aber_z = row_obsid["aber_z"]
+    mean_date = row_obsid["mean_date"]
 
     cd_preceding_root = os.path.join(
-        '../../', str(obsid_preceding)[:2], f"{obsid_preceding}"
+        "../../", str(obsid_preceding)[:2], f"{obsid_preceding}"
     )
-    cd_next_root = os.path.join('../../', str(obsid_next)[:2], f"{obsid_next}")
+    cd_next_root = os.path.join("../../", str(obsid_next)[:2], f"{obsid_next}")
 
     star_path_root = os.path.join(MICA_REPORTS, str(obsid)[:2], f"{obsid}")
 
@@ -1174,13 +1174,13 @@ Next Observation
     # Build 'per slot' part of the webpage
 
     t_slot = Table(rows_slot)
-    t_slot.sort('slot')
+    t_slot.sort("slot")
 
     for row in t_slot:
         string += f"""<tr>
 <td align='right'>{row['slot']}</td>
 """
-        if row['id'] < 100:
+        if row["id"] < 100:
             id_ = ""
         else:
             id_ = (
@@ -1222,12 +1222,12 @@ Next Observation
 </html>
 """
 
-    logger.info(f'Writing index.html for obsid {obsid}')
+    logger.info(f"Writing index.html for obsid {obsid}")
     with open(f"{obs_dir}/index.html", "w") as outfile:
         outfile.write(string)
 
 
-def make_special_case_html(metrics_obsid, obs_dir, info=''):
+def make_special_case_html(metrics_obsid, obs_dir, info=""):
     """
     Build html page
 
@@ -1235,14 +1235,14 @@ def make_special_case_html(metrics_obsid, obs_dir, info=''):
     """
 
     # Build 'per obsid' part of the webpage
-    obsid = metrics_obsid['obsid']
-    obsid_preceding = metrics_obsid['obsid_preceding']
-    obsid_next = metrics_obsid['obsid_next']
+    obsid = metrics_obsid["obsid"]
+    obsid_preceding = metrics_obsid["obsid_preceding"]
+    obsid_next = metrics_obsid["obsid_next"]
 
     cd_preceding_root = os.path.join(
-        '../../', str(obsid_preceding)[:2], f"{obsid_preceding}"
+        "../../", str(obsid_preceding)[:2], f"{obsid_preceding}"
     )
-    cd_next_root = os.path.join('../../', str(obsid_next)[:2], f"{obsid_next}")
+    cd_next_root = os.path.join("../../", str(obsid_next)[:2], f"{obsid_next}")
 
     if obsid_preceding == -9999:
         preceding_obsid_link = ""
@@ -1354,14 +1354,14 @@ Next Observation
 </html>
 """
 
-    logger.info(f'Writing index.html for obsid {obsid}')
+    logger.info(f"Writing index.html for obsid {obsid}")
     with open(f"{obs_dir}/index.html", "w") as outfile:
         outfile.write(string)
 
 
 def main():
     opt = get_opt()
-    logger.info('Centroid dashboard, started')
+    logger.info("Centroid dashboard, started")
     update_observed_metrics(
         obsid=opt.obsid,
         start=opt.start,
@@ -1371,8 +1371,8 @@ def main():
         make_plots=opt.make_plots,
         save=opt.save,
     )
-    logger.info('Centroid dashboard, ended')
+    logger.info("Centroid dashboard, ended")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

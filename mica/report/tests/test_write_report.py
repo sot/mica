@@ -17,25 +17,25 @@ try:
     import ska_dbi.sqsh
 
     with ska_dbi.sqsh.Sqsh(
-        server='sqlsao', dbi='sybase', user=user, database='axafvv'
+        server="sqlsao", dbi="sybase", user=user, database="axafvv"
     ) as db:
         HAS_SYBASE_ACCESS = True
 except Exception as e:
     HAS_SYBASE_ACCESS = False
 
     # If the user should have access, warn about the issue. kadi user does not have access.
-    if on_head_network() and user != 'kadi':
+    if on_head_network() and user != "kadi":
         warn(f"On HEAD but Sqsh did not work. {e}")
 
 
-HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES['data_root'])
+HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES["data_root"])
 
 
 @pytest.mark.skipif(
-    'not HAS_SYBASE_ACCESS', reason='Report test requires Sybase VV access'
+    "not HAS_SYBASE_ACCESS", reason="Report test requires Sybase VV access"
 )
 @pytest.mark.skipif(
-    'not HAS_SC_ARCHIVE', reason='Report test requires mica starcheck archive'
+    "not HAS_SC_ARCHIVE", reason="Report test requires mica starcheck archive"
 )
 def test_write_reports():
     """
@@ -44,7 +44,7 @@ def test_write_reports():
     tempdir = tempfile.mkdtemp()
     # Get a temporary file, but then delete it, because report.py will only
     # make a new table if the supplied file doesn't exist
-    fh, fn = tempfile.mkstemp(dir=tempdir, suffix='.db3')
+    fh, fn = tempfile.mkstemp(dir=tempdir, suffix=".db3")
     os.unlink(fn)
     report.REPORT_ROOT = tempdir
     report.REPORT_SERVER = fn

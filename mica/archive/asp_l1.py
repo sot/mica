@@ -23,43 +23,43 @@ from mica.common import MICA_ARCHIVE
 # these columns are available in the headers of the fetched telemetry
 # for this product (ASP L1) and will be included in the file lookup table
 ARCHFILES_HDR_COLS = (
-    'tstart',
-    'tstop',
-    'caldbver',
-    'content',
-    'ascdsver',
-    'revision',
-    'date',
+    "tstart",
+    "tstop",
+    "caldbver",
+    "content",
+    "ascdsver",
+    "revision",
+    "date",
 )
 
 # config = ConfigObj('asp1.conf')
 CONFIG = dict(
-    data_root=os.path.join(MICA_ARCHIVE, 'asp1'),
-    temp_root=os.path.join(MICA_ARCHIVE, 'temp'),
-    bad_obsids=os.path.join(MICA_ARCHIVE, 'asp1', 'asp_l1_bad_obsids.dat'),
-    sql_def='archfiles_asp_l1_def.sql',
-    apstat_table='aspect_1',
-    apstat_id='aspect_1_id',
-    label='asp_l1',
-    small='asp1{fidprops}',
-    small_glob='*fidpr*',
-    small_ver_regex=r'pcadf\d+N(\d{3})_',
-    delete=['kalm1', 'gdat', 'adat'],
-    full='asp1',
+    data_root=os.path.join(MICA_ARCHIVE, "asp1"),
+    temp_root=os.path.join(MICA_ARCHIVE, "temp"),
+    bad_obsids=os.path.join(MICA_ARCHIVE, "asp1", "asp_l1_bad_obsids.dat"),
+    sql_def="archfiles_asp_l1_def.sql",
+    apstat_table="aspect_1",
+    apstat_id="aspect_1_id",
+    label="asp_l1",
+    small="asp1{fidprops}",
+    small_glob="*fidpr*",
+    small_ver_regex=r"pcadf\d+N(\d{3})_",
+    delete=["kalm1", "gdat", "adat"],
+    full="asp1",
     filecheck=False,
     cols=ARCHFILES_HDR_COLS,
     content_types=[
-        'ASPQUAL',
-        'ASPSOL',
-        'ACADATA',
-        'GSPROPS',
-        'GYRODATA',
-        'KALMAN',
-        'ACACAL',
-        'ACACENT',
-        'FIDPROPS',
-        'GYROCAL',
-        'ACA_BADPIX',
+        "ASPQUAL",
+        "ASPSOL",
+        "ACADATA",
+        "GSPROPS",
+        "GYRODATA",
+        "KALMAN",
+        "ACACAL",
+        "ACACENT",
+        "FIDPROPS",
+        "GYROCAL",
+        "ACA_BADPIX",
     ],
 )
 
@@ -83,11 +83,11 @@ without command-line options need to be changed.
     parser.set_defaults(**defaults)
     parser.add_argument("--obsid", type=int, help="specific obsid to process")
     parser.add_argument(
-        "--version", default='last', help="specific processing version to retrieve"
+        "--version", default="last", help="specific processing version to retrieve"
     )
     parser.add_argument(
         "--firstrun",
-        action='store_true',
+        action="store_true",
         help="for archive init., ignore rev in aspect_1 table",
     )
     parser.add_argument("--data-root", help="parent directory for all data")
@@ -192,17 +192,17 @@ def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
 
     :returns: Nx4 np.array of quaternions, np.array of N times, list of dict with header from each asol file.
     """
-    if revision == 'all':
+    if revision == "all":
         raise ValueError("revision 'all' doesn't really make sense for this function")
     # These are in time order by default from get_files
     asol_files = get_files(
-        obsid=obsid, start=start, stop=stop, revision=revision, content=['ASPSOL']
+        obsid=obsid, start=start, stop=stop, revision=revision, content=["ASPSOL"]
     )
     acal_files = get_files(
-        obsid=obsid, start=start, stop=stop, revision=revision, content=['ACACAL']
+        obsid=obsid, start=start, stop=stop, revision=revision, content=["ACACAL"]
     )
     aqual_files = get_files(
-        obsid=obsid, start=start, stop=stop, revision=revision, content=['ASPQUAL']
+        obsid=obsid, start=start, stop=stop, revision=revision, content=["ASPQUAL"]
     )
     return get_atts_from_files(asol_files, acal_files, aqual_files, filter=filter)
 
@@ -230,31 +230,31 @@ def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
         aqual = Table.read(aqual_f, hdu=1)
         # Check that the time ranges match from the fits headers (meta in the table)
         if not np.allclose(
-            np.array([asol.meta['TSTART'], asol.meta['TSTOP']]),
-            np.array([acal.meta['TSTART'], acal.meta['TSTOP']]),
+            np.array([asol.meta["TSTART"], asol.meta["TSTOP"]]),
+            np.array([acal.meta["TSTART"], acal.meta["TSTOP"]]),
             atol=10,
         ):
             raise ValueError("ACAL and ASOL have mismatched time ranges")
-        if filter and np.any(aqual['asp_sol_status'] != 0):
+        if filter and np.any(aqual["asp_sol_status"] != 0):
             # For each sample with bad status find the overlapping time range in asol
             # and remove from set
-            for idx in np.flatnonzero(aqual['asp_sol_status']):
-                nok = (asol['time'] >= (aqual['time'][idx] - 1.025)) & (
-                    asol['time'] <= (aqual['time'][idx] + 1.025)
+            for idx in np.flatnonzero(aqual["asp_sol_status"]):
+                nok = (asol["time"] >= (aqual["time"][idx] - 1.025)) & (
+                    asol["time"] <= (aqual["time"][idx] + 1.025)
                 )
                 asol = asol[~nok]
 
         # Transpose of transform/rotation matrix is the inverse
-        aca_mis_inv = acal['aca_misalign'][0].transpose()
+        aca_mis_inv = acal["aca_misalign"][0].transpose()
 
         # Repeat the transform to match asol
         aca_mis_inv = np.repeat(aca_mis_inv[np.newaxis, ...], repeats=len(asol), axis=0)
         q_mis_inv = Quat(transform=aca_mis_inv)
 
         # Quaternion multiply the asol quats with that inv misalign and save
-        q_att_name = 'q_att_raw' if 'q_att_raw' in asol.colnames else 'q_att'
+        q_att_name = "q_att_raw" if "q_att_raw" in asol.colnames else "q_att"
         att_chunks.append((Quat(q=asol[q_att_name]) * q_mis_inv).q)
-        time_chunks.append(np.array(asol['time']))
+        time_chunks.append(np.array(asol["time"]))
         records.append(asol.meta)
     if len(att_chunks) > 0 and len(time_chunks) > 0:
         return np.vstack(att_chunks), np.hstack(time_chunks), records
@@ -275,5 +275,5 @@ def main():
     obsids = archive.update()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

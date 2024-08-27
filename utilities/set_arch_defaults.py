@@ -7,18 +7,18 @@ import ska_dbi
 import os
 import re
 
-for t in ['obspar', 'asp1']:
-    db = ska_dbi.DBI(dbi='sqlite', server='/data/aca/archive/%s/archfiles_redo.db3' % t)
+for t in ["obspar", "asp1"]:
+    db = ska_dbi.DBI(dbi="sqlite", server="/data/aca/archive/%s/archfiles_redo.db3" % t)
     db.execute("ALTER table archfiles add column isdefault int")
-    if t == 'obspar':
+    if t == "obspar":
         db.execute("ALTER table archfiles add column content text default 'OBSPAR'")
     obsids = db.fetchall("select distinct obsid from archfiles")
     for obs in obsids:
-        obsid = obs['obsid']
+        obsid = obs["obsid"]
         chunk_dir = ("%05d" % obsid)[0:2]
         def_dir = os.path.join("/data/aca/archive", t, chunk_dir, "%05d" % obsid)
         realdefault = os.path.realpath(def_dir)
-        lmatch = re.search('(\d{5})_v(\d+)$', realdefault)
+        lmatch = re.search("(\d{5})_v(\d+)$", realdefault)
         if lmatch:
             default_ver = int(lmatch.group(2))
         else:

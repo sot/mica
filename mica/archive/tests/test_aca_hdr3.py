@@ -10,21 +10,21 @@ import numpy as np
 from .. import aca_hdr3
 
 has_l0_2010_archive = os.path.exists(
-    os.path.join(aca_hdr3.aca_l0.CONFIG['data_root'], '2010')
+    os.path.join(aca_hdr3.aca_l0.CONFIG["data_root"], "2010")
 )
 
 
-@pytest.mark.skipif('not has_l0_2010_archive', reason='Test requires 2010 L0 archive')
+@pytest.mark.skipif("not has_l0_2010_archive", reason="Test requires 2010 L0 archive")
 def test_MSIDset():
     """
     Read all available MSIDs into a single MSIDset.  Use the empirically determined
     lengths as regression tests.
     """
-    msids = [hdr3['msid'] for hdr3 in aca_hdr3.HDR3_DEF.values() if 'value' in hdr3]
+    msids = [hdr3["msid"] for hdr3 in aca_hdr3.HDR3_DEF.values() if "value" in hdr3]
     msids = sorted(msids)
 
     # Read all MSIDs as a set
-    dat = aca_hdr3.MSIDset(msids, '2010:001:12:00:00', '2010:003:12:00:00')
+    dat = aca_hdr3.MSIDset(msids, "2010:001:12:00:00", "2010:003:12:00:00")
 
     val_lengths = np.array([len(dat[msid].vals) for msid in msids])
     time_lengths = np.array([len(dat[msid].times) for msid in msids])

@@ -3,7 +3,7 @@
 
 import matplotlib
 
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 import mica.report
 
 mica.report.update()

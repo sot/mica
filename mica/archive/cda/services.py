@@ -18,21 +18,21 @@ from mica.common import MICA_ARCHIVE
 
 
 __all__ = [
-    'get_archive_file_list',
-    'get_proposal_abstract',
-    'get_ocat_web',
-    'get_ocat_local',
+    "get_archive_file_list",
+    "get_proposal_abstract",
+    "get_ocat_web",
+    "get_ocat_local",
 ]
 
-OCAT_TABLE_PATH = Path(MICA_ARCHIVE) / 'ocat_target_table.h5'
+OCAT_TABLE_PATH = Path(MICA_ARCHIVE) / "ocat_target_table.h5"
 OCAT_TABLE_CACHE = {}
 
 URL_CDA_SERVICES = "https://cda.harvard.edu/srservices"
 CDA_SERVICES = {
-    'prop_abstract': 'propAbstract',
-    'ocat_summary': 'ocatList',
-    'ocat_details': 'ocatDetails',
-    'archive_file_list': 'archiveFileList',
+    "prop_abstract": "propAbstract",
+    "ocat_summary": "ocatList",
+    "ocat_details": "ocatDetails",
+    "archive_file_list": "archiveFileList",
 }
 
 # Units copied from https://github.com/jzuhone/pycda/blob/
@@ -170,19 +170,19 @@ COMMON_PARAM_DOCS = """:param target_name: str, optional
 def html_to_text(html):
     from bs4 import BeautifulSoup
 
-    soup = BeautifulSoup(html, features='lxml')
+    soup = BeautifulSoup(html, features="lxml")
     text = soup.get_text()
-    text = re.sub(r'\n+', '\n', text)
+    text = re.sub(r"\n+", "\n", text)
     return text
 
 
 def clean_text(text):
-    out = text.encode('ascii', errors='ignore').decode('ascii')
-    out = out.replace('\n', ' ').replace('\r', '').strip()
+    out = text.encode("ascii", errors="ignore").decode("ascii")
+    out = out.replace("\n", " ").replace("\r", "").strip()
     return out
 
 
-def get_archive_file_list(obsid, detector, level, dataset='flight', **params):
+def get_archive_file_list(obsid, detector, level, dataset="flight", **params):
     """
     Get list of archive files for given ``obsid``, ``detector``, ``level``, and ``dataset``.
 
@@ -224,18 +224,18 @@ def get_archive_file_list(obsid, detector, level, dataset='flight', **params):
     :return: astropy Table
         Table of archive files
     """
-    params['dataset'] = dataset
-    params['detector'] = detector
-    params['level'] = level
-    params['obsid'] = obsid
+    params["dataset"] = dataset
+    params["detector"] = detector
+    params["level"] = level
+    params["obsid"] = obsid
 
-    text = _get_cda_service_text('archive_file_list', **params)
+    text = _get_cda_service_text("archive_file_list", **params)
     dat = Table.read(
-        text.splitlines(), format='ascii.basic', delimiter='\t', guess=False
+        text.splitlines(), format="ascii.basic", delimiter="\t", guess=False
     )
     # Original Filesize has commas for the thousands like 11,233,456
-    filesize = [int(x.replace(',', '')) for x in dat['Filesize']]
-    dat['Filesize'] = filesize
+    filesize = [int(x.replace(",", "")) for x in dat["Filesize"]]
+    dat["Filesize"] = filesize
 
     return dat
 
@@ -256,32 +256,32 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=60):
     """
     params = {}
     if obsid is not None:
-        params['obsid'] = obsid
+        params["obsid"] = obsid
     if propnum is not None:
-        params['propNum'] = propnum
+        params["propNum"] = propnum
 
     if not params:
-        raise ValueError('must provide obsid or propnum')
+        raise ValueError("must provide obsid or propnum")
 
-    html = _get_cda_service_text('prop_abstract', timeout=timeout, **params)
+    html = _get_cda_service_text("prop_abstract", timeout=timeout, **params)
     text = html_to_text(html)
 
     # Return value is a text string with these section header lines. Use them
     # to split the text into sections.
     delims = [
-        'Proposal Title',
-        'Proposal Number',
-        'Principal Investigator',
-        'Abstract',
-        '',
+        "Proposal Title",
+        "Proposal Number",
+        "Principal Investigator",
+        "Abstract",
+        "",
     ]
     out = {}
     for delim0, delim1 in zip(delims[:-1], delims[1:]):
-        name = '_'.join(word.lower() for word in delim0.split())
-        if match := re.search(rf'{delim0}:(.+){delim1}:', text, re.DOTALL):
+        name = "_".join(word.lower() for word in delim0.split())
+        if match := re.search(rf"{delim0}:(.+){delim1}:", text, re.DOTALL):
             out[name] = clean_text(match.group(1))
         else:
-            warnings.warn(f'failed to find {delim0} in result')
+            warnings.warn(f"failed to find {delim0} in result")
 
     return out
 
@@ -291,25 +291,25 @@ def _update_params_from_kwargs(
 ):
     """Update params dict for CDA Ocat queries from specified keyword args."""
     if obsid is not None:
-        params['obsid'] = obsid
+        params["obsid"] = obsid
 
     if ra is not None:
-        params['lon'] = ra
+        params["lon"] = ra
     if dec is not None:
-        params['lat'] = dec
+        params["lat"] = dec
 
     if target_name is not None:
         if resolve_name:
             coord = SkyCoord.from_name(target_name)
-            params['lon'] = coord.ra.deg
-            params['lat'] = coord.dec.deg
+            params["lon"] = coord.ra.deg
+            params["lat"] = coord.dec.deg
         else:
             # SR services API uses "target" to select substrings of target_name
-            params['target'] = target_name
+            params["target"] = target_name
 
     # For any positional search include the radius
-    if 'lon' in params and 'lat' in params:
-        params['radius'] = radius
+    if "lon" in params and "lat" in params:
+        params["radius"] = radius
 
     return params
 
@@ -323,7 +323,7 @@ def get_ocat_web(
     ra=None,
     dec=None,
     radius=1.0,
-    return_type='auto',
+    return_type="auto",
     timeout=60,
     **params,
 ):
@@ -348,10 +348,10 @@ def get_ocat_web(
     :return: astropy Table or dict of the observation details
     """
     # These special params change the returned data and should always be a table
-    if set(['acisWindows', 'rollReqs', 'timeReqs']) & set(params):
-        return_type = 'table'
+    if set(["acisWindows", "rollReqs", "timeReqs"]) & set(params):
+        return_type = "table"
 
-    if return_type not in ('auto', 'table'):
+    if return_type not in ("auto", "table"):
         raise ValueError(
             f"invalid return_type {return_type!r}, must be 'auto' or 'table'"
         )
@@ -360,35 +360,35 @@ def get_ocat_web(
         params, obsid, target_name, resolve_name, ra, dec, radius
     )
 
-    params['format'] = 'text'
+    params["format"] = "text"
 
     # Force RA, Dec in sexagesimal because decimal returns only 3 decimal digits
     # which is insufficient.
-    params['outputCoordUnits'] = 'sexagesimal'
+    params["outputCoordUnits"] = "sexagesimal"
 
-    service = 'ocat_summary' if summary else 'ocat_details'
+    service = "ocat_summary" if summary else "ocat_details"
     text = _get_cda_service_text(service, timeout=timeout, **params)
-    dat = _get_table_or_dict_from_cda_rdb_text(text, return_type, params.get('obsid'))
+    dat = _get_table_or_dict_from_cda_rdb_text(text, return_type, params.get("obsid"))
 
     if dat is None:
         # Query returned no rows. If a single obsid was specified with return_type
         # of 'auto' then we would have expected to return a dict, but instead
         # raise a ValueError. Otherwise we return an empty table with the right
         # column names.
-        if return_type == 'auto' and _is_int(params.get('obsid')):
+        if return_type == "auto" and _is_int(params.get("obsid")):
             raise ValueError(f"failed to find obsid {params['obsid']}")
         else:
-            dat = get_ocat_web(summary=summary, return_type='table', obsid=8000)[0:0]
+            dat = get_ocat_web(summary=summary, return_type="table", obsid=8000)[0:0]
 
     # Change RA, Dec to decimal if those columns exist
     try:
-        ra, dec = dat['ra'], dat['dec']
+        ra, dec = dat["ra"], dat["dec"]
     except KeyError:
         pass
     else:
-        sc = SkyCoord(ra, dec, unit='hr,deg')
-        dat['ra'] = sc.ra.deg
-        dat['dec'] = sc.dec.deg
+        sc = SkyCoord(ra, dec, unit="hr,deg")
+        dat["ra"] = sc.ra.deg
+        dat["dec"] = sc.dec.deg
 
     return dat
 
@@ -416,20 +416,20 @@ def _get_cda_service_text(service, timeout=60, **params):
 
     if service not in CDA_SERVICES:
         raise ValueError(
-            f'unknown service {service!r}, must be one of {list(CDA_SERVICES)}'
+            f"unknown service {service!r}, must be one of {list(CDA_SERVICES)}"
         )
 
     # Query the service and check for errors
-    url = f'{URL_CDA_SERVICES}/{CDA_SERVICES[service]}.do'
-    verbose = params.pop('verbose', False)
+    url = f"{URL_CDA_SERVICES}/{CDA_SERVICES[service]}.do"
+    verbose = params.pop("verbose", False)
     resp = requests.get(url, timeout=timeout, params=params)
     if verbose:
-        print(f'GET {resp.url}')
+        print(f"GET {resp.url}")
 
     if not resp.ok:
         raise RuntimeError(
-            f'got error {resp.status_code} for {resp.url}\n'
-            f'{html_to_text(resp.text)}'
+            f"got error {resp.status_code} for {resp.url}\n"
+            f"{html_to_text(resp.text)}"
         )
 
     return resp.text
@@ -453,7 +453,7 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
     # Convert the type line to standard RDB
     # First find the line that begins the column descriptions
     for i, line in enumerate(lines):
-        if not line.startswith('#'):
+        if not line.startswith("#"):
             header_start = i
             break
     else:
@@ -469,28 +469,28 @@ def _get_table_or_dict_from_cda_rdb_text(text, return_type, obsid):
             ctypes[j] = ctype + "S"
     lines[header_start + 1] = "\t".join(ctypes)
 
-    dat = Table.read(lines, format='ascii.rdb', guess=False)
+    dat = Table.read(lines, format="ascii.rdb", guess=False)
 
     # Fix the column names
     # Transform summary names to corresponding detail names.
     trans = {
-        'obs_id': 'obsid',
-        'grating': 'grat',
-        'instrument': 'instr',
-        'appr_exp': 'app_exp',
-        'exposure': 'exp_time',
-        'data_mode': 'datamode',
-        'exp_mode': 'mode',
-        'avg_cnt_rate': 'count_rate',
-        'public_release_date': 'public_avail',
-        'proposal_num': 'pr_num',
-        'science_category': 'category',
-        'alternate_group': 'alt_group',
-        'appr._triggers': 'alt_trig',
+        "obs_id": "obsid",
+        "grating": "grat",
+        "instrument": "instr",
+        "appr_exp": "app_exp",
+        "exposure": "exp_time",
+        "data_mode": "datamode",
+        "exp_mode": "mode",
+        "avg_cnt_rate": "count_rate",
+        "public_release_date": "public_avail",
+        "proposal_num": "pr_num",
+        "science_category": "category",
+        "alternate_group": "alt_group",
+        "appr._triggers": "alt_trig",
     }
     names = (name.lower() for name in dat.colnames)
-    names = (name.replace(' (ks)', '') for name in names)
-    names = (name.replace(' ', '_') for name in names)
+    names = (name.replace(" (ks)", "") for name in names)
+    names = (name.replace(" ", "_") for name in names)
     names = [trans.get(name, name) for name in names]
     dat.rename_columns(dat.colnames, names)
 
@@ -516,12 +516,12 @@ def _is_int(val):
 def _get_table_or_dict(return_type, obsid, dat):
     # If obsid is a single integer and there was just one row then return the
     # row as a dict.
-    if return_type not in ('auto', 'table'):
+    if return_type not in ("auto", "table"):
         raise ValueError(
             f"invalid return_type {return_type!r}, must be 'auto' or 'table'"
         )
 
-    if return_type == 'auto' and _is_int(obsid):
+    if return_type == "auto" and _is_int(obsid):
         if len(dat) == 1:
             dat = dict(dat[0])
         else:
@@ -540,7 +540,7 @@ def main_update_ocat_local():
     from ska_helpers.retry import retry_call
 
     parser = argparse.ArgumentParser(description="Update target table")
-    parser.add_argument("--datafile", default='ocat_target_table.h5')
+    parser.add_argument("--datafile", default="ocat_target_table.h5")
     opt = parser.parse_args()
 
     retry_call(update_ocat_local, [opt.datafile], {"timeout": 120}, tries=3, delay=1)
@@ -557,15 +557,15 @@ def update_ocat_local(datafile, **params):
     # Encode unicode strings to bytes manually.  Fixed in numpy 1.20.
     # Eventually we will want just dat.convert_bytestring_to_unicode().
     for name, col in dat.columns.items():
-        if col.info.dtype.kind == 'U':
-            dat[name] = np.char.encode(col, 'utf-8')
+        if col.info.dtype.kind == "U":
+            dat[name] = np.char.encode(col, "utf-8")
 
     dat.write(
         datafile,
-        path='data',
+        path="data",
         serialize_meta=True,
         overwrite=True,
-        format='hdf5',
+        format="hdf5",
         compression=False,
     )
 
@@ -578,7 +578,7 @@ def get_ocat_local(
     ra=None,
     dec=None,
     radius=1.0,
-    return_type='auto',
+    return_type="auto",
     datafile=None,
     where=None,
     **params,
@@ -626,14 +626,14 @@ def get_ocat_local(
         # Use great-circle distance to find targets within radius. This is
         # accurate enough for this application.
         where = (
-            f'arccos(sin({ra * d2r})*sin(ra*{d2r}) + '
-            f'cos({ra * d2r})*cos(ra*{d2r})*cos({dec*d2r}-dec*{d2r}))'
-            f'< {radius / 60 * d2r}'
+            f"arccos(sin({ra * d2r})*sin(ra*{d2r}) + "
+            f"cos({ra * d2r})*cos(ra*{d2r})*cos({dec*d2r}-dec*{d2r}))"
+            f"< {radius / 60 * d2r}"
         )
         where_parts.append(where)
 
     for col_name, value in params.items():
-        where_parts.append(f'{col_name}=={value!r}')
+        where_parts.append(f"{col_name}=={value!r}")
 
     if where_parts:
         dat = _table_read_where(datafile, where_parts)
@@ -644,9 +644,9 @@ def get_ocat_local(
     # Eventually we will want just dat.convert_bytestring_to_unicode().
     for name, col in dat.columns.items():
         zero_length = len(dat) == 0
-        if col.info.dtype.kind == 'S':
+        if col.info.dtype.kind == "S":
             if zero_length:
-                dat[name] = col.astype('U')
+                dat[name] = col.astype("U")
             else:
                 # Try a faster way of converting to unicode for ASCII input.
                 # View the column as a numpy array of bytes and look for values
@@ -661,20 +661,20 @@ def get_ocat_local(
                     )
                     for ii in range(itemsize):
                         col_utf8[:, ii * 4] = col_bytes[:, ii]
-                    dat[name] = col_utf8.view(('U', itemsize)).flatten()
+                    dat[name] = col_utf8.view(("U", itemsize)).flatten()
                 else:
                     # Use the standard slow way for non-ASCII input. This is
                     # commonly run for pi_name and observer columns that have
                     # names with unicode characters, but it might run for other
                     # columns since we have no spec on OCAT data content.
-                    dat[name] = np.char.decode(col, 'utf-8')
+                    dat[name] = np.char.decode(col, "utf-8")
 
     # Match target_name as a substring of the table target_name column.
     if len(dat) > 0 and target_name is not None and not resolve_name:
-        target_name = target_name.lower().replace(' ', '')
+        target_name = target_name.lower().replace(" ", "")
         # Numpy bug: np.char.replace(dat['target_name'], ' ', '') returns float
         # array for a zero-length input, so we need the len(dat) > 0 above.
-        target_names = np.char.lower(np.char.replace(dat['target_name'], ' ', ''))
+        target_names = np.char.lower(np.char.replace(dat["target_name"], " ", ""))
         ok = np.char.find(target_names, target_name) != -1
         dat = dat[ok]
 
@@ -703,18 +703,18 @@ def _table_read_cached(datafile):
     """
     now_time = time.time()
     if datafile in OCAT_TABLE_CACHE:
-        last_time = OCAT_TABLE_CACHE[datafile]['last_time']
+        last_time = OCAT_TABLE_CACHE[datafile]["last_time"]
         if now_time - last_time < 3600:
-            return OCAT_TABLE_CACHE[datafile]['data']
+            return OCAT_TABLE_CACHE[datafile]["data"]
 
     dat = Table.read(datafile)
-    OCAT_TABLE_CACHE[datafile] = {'last_time': now_time, 'data': dat}
+    OCAT_TABLE_CACHE[datafile] = {"last_time": now_time, "data": dat}
     return dat
 
 
 def _table_read_where(datafile, where_parts):
     """Read HDF5 ``datafile`` using read_where() and ``where_parts``."""
-    where = '&'.join(f'({where})' for where in where_parts)
+    where = "&".join(f"({where})" for where in where_parts)
 
     with tables.open_file(datafile) as h5:
         # PyTables is unhappy with all the column names that cannot be an
@@ -727,7 +727,7 @@ def _table_read_where(datafile, where_parts):
     # Manually make MaskedColumn's as needed since we are not using Table.read()
     # which handles this. This assumes a correspondence betweeen <name>.mask
     # and <name>, but this is always true for the Ocat target table.
-    masked_names = [name for name in dat.colnames if name.endswith('.mask')]
+    masked_names = [name for name in dat.colnames if name.endswith(".mask")]
     for masked_name in masked_names:
         name = masked_name[:-5]
         dat[name] = MaskedColumn(

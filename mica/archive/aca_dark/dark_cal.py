@@ -20,9 +20,9 @@ from mica.cache import lru_cache
 from mica.common import MICA_ARCHIVE_PATH, MissingDataError
 from . import file_defs
 
-DARK_CAL = pyyaks.context.ContextDict('dark_cal')
+DARK_CAL = pyyaks.context.ContextDict("dark_cal")
 
-MICA_FILES = pyyaks.context.ContextDict('update_mica_files', basedir=MICA_ARCHIVE_PATH)
+MICA_FILES = pyyaks.context.ContextDict("update_mica_files", basedir=MICA_ARCHIVE_PATH)
 MICA_FILES.update(file_defs.MICA_FILES)
 
 
@@ -53,16 +53,16 @@ def dark_id_to_date(dark_id):
     """
     shape = np.shape(dark_id)
     if not shape:
-        return '{}:{}'.format(dark_id[:4], dark_id[4:])
+        return "{}:{}".format(dark_id[:4], dark_id[4:])
     b = np.atleast_1d(dark_id).view((str, 1)).reshape(-1, 7)
-    sep = np.array([':'] * len(b))[:, None]
+    sep = np.array([":"] * len(b))[:, None]
     b = np.hstack([b[:, :4], sep, b[:, 4:]])
     b = np.frombuffer(b.tobytes(), dtype=(str, 8))
     return b.reshape(shape)
 
 
 @lru_cache()
-def get_dark_cal_dirs(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
+def get_dark_cal_dirs(dark_cals_dir=MICA_FILES["dark_cals_dir"].abs):
     """
     Get an ordered dict of directory paths containing dark current calibration files,
     where the key is the dark cal identifier (YYYYDOY) and the value is the path.
@@ -71,14 +71,14 @@ def get_dark_cal_dirs(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     :returns: ordered dict of absolute directory paths
     """
     dark_cal_ids = sorted(
-        [fn for fn in os.listdir(dark_cals_dir) if re.match(r'[12]\d{6}$', fn)]
+        [fn for fn in os.listdir(dark_cals_dir) if re.match(r"[12]\d{6}$", fn)]
     )
     dark_cal_dirs = [os.path.join(dark_cals_dir, id_) for id_ in dark_cal_ids]
     return OrderedDict(zip(dark_cal_ids, dark_cal_dirs))
 
 
 @lru_cache()
-def get_dark_cal_ids(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
+def get_dark_cal_ids(dark_cals_dir=MICA_FILES["dark_cals_dir"].abs):
     """
     Get an ordered dict dates as keys and dark cal identifiers (YYYYDOY) as values.
 
@@ -86,13 +86,13 @@ def get_dark_cal_ids(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     :returns: ordered dict of absolute directory paths
     """
     dark_cal_ids = sorted(
-        [fn for fn in os.listdir(dark_cals_dir) if re.match(r'[12]\d{6}$', fn)]
+        [fn for fn in os.listdir(dark_cals_dir) if re.match(r"[12]\d{6}$", fn)]
     )
-    dates = [CxoTime(d[:4] + ':' + d[4:]).date for d in dark_cal_ids]
+    dates = [CxoTime(d[:4] + ":" + d[4:]).date for d in dark_cal_ids]
     return OrderedDict(zip(dates, dark_cal_ids))
 
 
-def get_dark_cal_id(date, select='before', dark_cal_ids=None):
+def get_dark_cal_id(date, select="before", dark_cal_ids=None):
     """
     Return the dark calibration id corresponding to ``date``.
 
@@ -112,7 +112,7 @@ def get_dark_cal_id(date, select='before', dark_cal_ids=None):
     return dark_id
 
 
-def _get_dark_cal_id_scalar(date, select='before', dark_cal_ids=None):
+def _get_dark_cal_id_scalar(date, select="before", dark_cal_ids=None):
     if dark_cal_ids is None:
         dark_cal_ids = list(get_dark_cal_dirs().keys())
     dark_id = date_to_dark_id(date)
@@ -127,11 +127,11 @@ def _get_dark_cal_id_scalar(date, select='before', dark_cal_ids=None):
         np.array([dark_id_to_date(id_) for id_ in dark_cal_ids])
     ).secs
 
-    if select == 'nearest':
+    if select == "nearest":
         ii = np.argmin(np.abs(dark_cal_secs - date_secs))
-    elif select in ('before', 'after'):
+    elif select in ("before", "after"):
         ii = np.searchsorted(dark_cal_secs, date_secs)
-        if select == 'before':
+        if select == "before":
             ii -= 1
     else:
         raise ValueError('select arg must be one of "nearest", "before", or "after"')
@@ -139,25 +139,25 @@ def _get_dark_cal_id_scalar(date, select='before', dark_cal_ids=None):
     if ii < 0:
         earliest = CxoTime(dark_cal_secs[0]).date[:8]
         raise MissingDataError(
-            f'No dark cal found before {earliest}' f'(requested dark cal on {date})'
+            f"No dark cal found before {earliest}" f"(requested dark cal on {date})"
         )
 
     try:
         out_dark_id = dark_cal_ids[ii]
     except IndexError:
-        raise MissingDataError('No dark cal found {} {}'.format(select, date))
+        raise MissingDataError("No dark cal found {} {}".format(select, date))
 
     return out_dark_id
 
 
 _get_dark_cal_id_vector = np.vectorize(
-    _get_dark_cal_id_scalar, excluded=['select', 'dark_cal_ids']
+    _get_dark_cal_id_scalar, excluded=["select", "dark_cal_ids"]
 )
 
 
 @DARK_CAL.cache
 def _get_dark_cal_image_props(
-    date, select='before', t_ccd_ref=None, aca_image=False, allow_negative=False
+    date, select="before", t_ccd_ref=None, aca_image=False, allow_negative=False
 ):
     """
     Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding
@@ -171,15 +171,15 @@ def _get_dark_cal_image_props(
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s, props dict
     """
-    DARK_CAL['id'] = get_dark_cal_id(date, select)
+    DARK_CAL["id"] = get_dark_cal_id(date, select)
 
-    with fits.open(MICA_FILES['dark_image.fits'].abs, memmap=False) as hdus:
+    with fits.open(MICA_FILES["dark_image.fits"].abs, memmap=False) as hdus:
         dark = hdus[0].data
         # Recast as native byte ordering since FITS is typically not. This
         # statement is normally the same as dark.astype(np.float32).
         dark = dark.astype(dark.dtype.type)
 
-    with open(MICA_FILES['dark_props.json'].abs, 'r') as fh:
+    with open(MICA_FILES["dark_props.json"].abs, "r") as fh:
         props = json.load(fh)
 
     # Change unicode to ascii at top level
@@ -195,7 +195,7 @@ def _get_dark_cal_image_props(
         # For t_ccds warmer than t_ccd_ref this scale factor is < 1, i.e. the
         # observed dark current is made smaller to match what it would be at the
         # lower reference temperature.
-        t_ccd = props['ccd_temp']
+        t_ccd = props["ccd_temp"]
         dark *= dark_temp_scale(t_ccd, t_ccd_ref)
 
     if not allow_negative:
@@ -208,7 +208,7 @@ def _get_dark_cal_image_props(
 
 
 def get_dark_cal_image(
-    date, select='before', t_ccd_ref=None, aca_image=False, allow_negative=False
+    date, select="before", t_ccd_ref=None, aca_image=False, allow_negative=False
 ):
     """
     Return the dark calibration image (e-/s) nearest to ``date``.
@@ -236,7 +236,7 @@ def get_dark_cal_image(
 
 def get_dark_cal_props(
     date,
-    select='before',
+    select="before",
     include_image=False,
     t_ccd_ref=None,
     aca_image=False,
@@ -269,7 +269,7 @@ def get_dark_cal_props(
     )
 
     if include_image:
-        props['image'] = dark
+        props["image"] = dark
 
     return props
 
@@ -292,7 +292,7 @@ def get_dark_cal_props_table(start=None, stop=None, include_image=False, as_tabl
 
     :returns: astropy Table or list of dark calibration properties
     """
-    start_id = date_to_dark_id('1999:001:12:00:00' if start is None else start)
+    start_id = date_to_dark_id("1999:001:12:00:00" if start is None else start)
     stop_id = date_to_dark_id(stop)
     dark_dirs = [
         dark_id
@@ -317,16 +317,16 @@ def get_dark_cal_props_table(start=None, stop=None, include_image=False, as_tabl
                     names.append(key)
 
         lines = []
-        lines.append(','.join(names))
+        lines.append(",".join(names))
         for prop in props:
-            vals = [str(prop.get(name, '')) for name in names]
-            lines.append(','.join(vals))
-        table_props = ascii.read(lines, format='csv')
+            vals = [str(prop.get(name, "")) for name in names]
+            lines.append(",".join(vals))
+        table_props = ascii.read(lines, format="csv")
 
         if include_image:
-            x = np.vstack([prop['image'][np.newaxis, :] for prop in props])
+            x = np.vstack([prop["image"][np.newaxis, :] for prop in props])
             images = Column(x)
-            table_props['image'] = images
+            table_props["image"] = images
         props = table_props
 
     return props

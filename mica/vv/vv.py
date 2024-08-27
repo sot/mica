@@ -13,17 +13,17 @@ import ska_dbi
 from mica.common import MICA_ARCHIVE
 
 FILES = dict(
-    data_root=os.path.join(MICA_ARCHIVE, 'vv'),
-    temp_root=os.path.join(MICA_ARCHIVE, 'tempvv'),
-    shelf_file=os.path.join(MICA_ARCHIVE, 'vv', 'vv_shelf'),
-    h5_file=os.path.join(MICA_ARCHIVE, 'vv', 'vv.h5'),
-    last_file=os.path.join(MICA_ARCHIVE, 'vv', 'last_id.txt'),
-    asp1_proc_table=os.path.join(MICA_ARCHIVE, 'asp1', 'processing_asp_l1.db3'),
-    bad_obsid_list=os.path.join(MICA_ARCHIVE, 'vv', 'bad_obsids.json'),
+    data_root=os.path.join(MICA_ARCHIVE, "vv"),
+    temp_root=os.path.join(MICA_ARCHIVE, "tempvv"),
+    shelf_file=os.path.join(MICA_ARCHIVE, "vv", "vv_shelf"),
+    h5_file=os.path.join(MICA_ARCHIVE, "vv", "vv.h5"),
+    last_file=os.path.join(MICA_ARCHIVE, "vv", "last_id.txt"),
+    asp1_proc_table=os.path.join(MICA_ARCHIVE, "asp1", "processing_asp_l1.db3"),
+    bad_obsid_list=os.path.join(MICA_ARCHIVE, "vv", "bad_obsids.json"),
 )
 
 
-logger = logging.getLogger('vv')
+logger = logging.getLogger("vv")
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
@@ -38,9 +38,9 @@ def get_vv_dir(obsid, version="default"):
     :returns: directory name for obsid/version
     """
     num_version = None
-    if version == 'last' or version == 'default':
-        asp_l1_proc = ska_dbi.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
-        if version == 'default':
+    if version == "last" or version == "default":
+        asp_l1_proc = ska_dbi.DBI(dbi="sqlite", server=FILES["asp1_proc_table"])
+        if version == "default":
             obs = asp_l1_proc.fetchall(
                 """select * from aspect_1_proc
                                           where obsid = {} and isdefault = 1
@@ -50,8 +50,8 @@ def get_vv_dir(obsid, version="default"):
                 raise LookupError(
                     "Version {} not found for obsid {}".format(version, obsid)
                 )
-            num_version = obs['revision'][0]
-        if version == 'last':
+            num_version = obs["revision"][0]
+        if version == "last":
             obs = asp_l1_proc.fetchall(
                 """select * from aspect_1_proc
                                           where obsid = {}
@@ -59,12 +59,12 @@ def get_vv_dir(obsid, version="default"):
             )
             if not len(obs):
                 raise LookupError("No entries found for obsid {}".format(obsid))
-            num_version = np.max(obs['revision'])
+            num_version = np.max(obs["revision"])
     else:
         num_version = version
     strobs = "%05d_v%02d" % (obsid, num_version)
     chunk_dir = strobs[0:2]
-    chunk_dir_path = os.path.join(FILES['data_root'], chunk_dir)
+    chunk_dir_path = os.path.join(FILES["data_root"], chunk_dir)
     obs_dir = os.path.join(chunk_dir_path, strobs)
     if not os.path.exists(obs_dir):
         raise LookupError("Expected vv archive dir {} not found".format(obs_dir))
@@ -104,7 +104,7 @@ def get_rms_data():
 
     :returns: numpy array of RMS data for each star/obsid/version
     """
-    tables_open_file = getattr(tables, 'open_file', None) or tables.openFile
-    with tables_open_file(FILES['h5_file'], 'r') as h5f:
+    tables_open_file = getattr(tables, "open_file", None) or tables.openFile
+    with tables_open_file(FILES["h5_file"], "r") as h5f:
         data = h5f.root.vv[:]
     return data

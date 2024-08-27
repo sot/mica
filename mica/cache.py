@@ -9,7 +9,7 @@ import six
 
 
 class Counter(dict):
-    'Mapping where default values are zero'
+    "Mapping where default values are zero"
 
     def __missing__(self, key):
         return 0
@@ -50,14 +50,14 @@ def lru_cache(maxsize=100):
 
 
 def lfu_cache(maxsize=100):
-    '''Least-frequenty-used cache decorator.
+    """Least-frequenty-used cache decorator.
 
     Arguments to the cached function must be hashable.
     Cache performance statistics stored in f.hits and f.misses.
     Clear the cache with f.clear().
     http://en.wikipedia.org/wiki/Least_Frequently_Used
 
-    '''
+    """
 
     def decorating_function(user_function):
         cache = {}  # mapping of args to results
@@ -102,7 +102,7 @@ def lfu_cache(maxsize=100):
 
 
 # Examples
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     @lru_cache(maxsize=20)
     def f(x, y):
