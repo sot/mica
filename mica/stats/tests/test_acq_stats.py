@@ -7,7 +7,9 @@ from pathlib import Path
 from .. import update_acq_stats as acq_stats
 from .. import acq_stats as read_acq_stats
 
-HAS_OBSPAR_ARCHIVE = (Path(acq_stats.mica.archive.obspar.CONFIG['data_root']) / '00').exists()
+HAS_OBSPAR_ARCHIVE = (
+    Path(acq_stats.mica.archive.obspar.CONFIG['data_root']) / '00'
+).exists()
 HAS_ACQ_TABLE = Path(read_acq_stats.TABLE_FILE).exists()
 
 

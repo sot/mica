@@ -42,7 +42,8 @@ version = mica.__version__
 warnings.filterwarnings(
     'ignore',
     message="using `oa_ndim == 0` when `op_axes` is NULL is deprecated.*",
-    category=DeprecationWarning)
+    category=DeprecationWarning,
+)
 
 
 WANT_VV_VERSION = 2
@@ -68,11 +69,8 @@ FILES = {'sql_def': 'report_processing.sql'}
 
 
 def get_options():
-    parser = argparse.ArgumentParser(
-        description="Create a mica report for an obsid")
-    parser.add_argument("obsid",
-                        help="obsid",
-                        type=int)
+    parser = argparse.ArgumentParser(description="Create a mica report for an obsid")
+    parser.add_argument("obsid", help="obsid", type=int)
     opt = parser.parse_args()
     return opt
 
@@ -91,9 +89,8 @@ def starcheck_orig_link(obsid):
     if mp_dir is None:
         return None
     starcheck_html = "{top}{mp_dir}starcheck.html#obsid{obsid}".format(
-        top="https://icxc.harvard.edu/mp/mplogs",
-        mp_dir=mp_dir,
-        obsid=str(obsid))
+        top="https://icxc.harvard.edu/mp/mplogs", mp_dir=mp_dir, obsid=str(obsid)
+    )
     return starcheck_html
 
 
@@ -104,9 +101,11 @@ def starcheck_link(obsid):
     obsid until the link is clicked.
     """
     icxc_cgi_bin = "https://icxc.harvard.edu/cgi-bin/aspect/"
-    starcheck_html = "{top}starcheck_print/starcheck_print.cgi?sselect=obsid;obsid1={obsid}".format(
-        obsid=obsid,
-        top=icxc_cgi_bin)
+    starcheck_html = (
+        "{top}starcheck_print/starcheck_print.cgi?sselect=obsid;obsid1={obsid}".format(
+            obsid=obsid, top=icxc_cgi_bin
+        )
+    )
     return starcheck_html
 
 
@@ -132,8 +131,8 @@ def get_star_acq_stats(id):
     acqs = rec_to_dict_list(acqs)
     for acq in acqs:
         acq['sc_link'] = '<A HREF="{link}">{obsid}</A>'.format(
-            link=starcheck_link(acq['obsid']),
-            obsid=acq['obsid'])
+            link=starcheck_link(acq['obsid']), obsid=acq['obsid']
+        )
     return acqs, {'n_acqs': n_acqs, 'n_acq_noid': n_acq_noid, 'avg_mag': avg_mag}
 
 
@@ -144,8 +143,13 @@ def get_star_trak_stats(id):
     tbl.close()
     hdu.close()
     if not len(traks):
-        return None, {'n_guis': 0, 'n_bad': 0, 'n_fail': 0,
-                      'n_obc_bad': 0, 'avg_mag': None}
+        return None, {
+            'n_guis': 0,
+            'n_bad': 0,
+            'n_fail': 0,
+            'n_obc_bad': 0,
+            'avg_mag': None,
+        }
     traks = Table(traks)
     n_guis = len(traks)
     n_bad = np.count_nonzero(traks['f_track'] < 0.95)
@@ -166,19 +170,30 @@ def get_star_trak_stats(id):
             'tstart': "{:11.1f}".format(trak['kalman_tstart']),
             'mag_obs': "{:6.3f}".format(trak['aoacmag_mean']),
             'mag_obs_std': "{:.3f}".format(trak['aoacmag_std']),
-            'trak_percent': "{:.1f}".format(100 * trak['f_track'])}
-        for stat in ['obc_bad',
-                     'def_pix', 'ion_rad', 'sat_pix',
-                     'mult_star', 'quad_bound', 'common_col']:
+            'trak_percent': "{:.1f}".format(100 * trak['f_track']),
+        }
+        for stat in [
+            'obc_bad',
+            'def_pix',
+            'ion_rad',
+            'sat_pix',
+            'mult_star',
+            'quad_bound',
+            'common_col',
+        ]:
             star[stat] = "{:.3f}".format(100 * trak["f_{}".format(stat)])
         star['obc_bad_percent'] = star['obc_bad']
         star['sc_link'] = '<A HREF="{link}">{obsid}</A>'.format(
-            link=starcheck_link(trak['obsid']),
-            obsid=trak['obsid'])
+            link=starcheck_link(trak['obsid']), obsid=trak['obsid']
+        )
         mytraks.append(star)
-    return mytraks, {'n_guis': n_guis, 'n_bad': n_bad,
-                     'n_fail': n_fail, 'n_obc_bad': n_obc_bad,
-                     'avg_mag': avg_mag}
+    return mytraks, {
+        'n_guis': n_guis,
+        'n_bad': n_bad,
+        'n_fail': n_fail,
+        'n_obc_bad': n_obc_bad,
+        'avg_mag': avg_mag,
+    }
 
 
 def get_obs_acq_stats(obsid):
@@ -211,35 +226,35 @@ def get_obs_temps(obsid, outdir):
         ccd_temp = fetch_sci.MSID('AACCCDPT', manvrs[0].stop, dwells[0].stop)
         if len(ccd_temp.vals) == 0:
             return None
-        return {'max': ccd_temp.vals.max(),
-                'mean': ccd_temp.vals.mean()}
-
+        return {'max': ccd_temp.vals.max(), 'mean': ccd_temp.vals.mean()}
 
 
 def target_summary(obsid):
-
-    with Sqsh(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as ocat_db:
-        ocat_info = ocat_db.fetchone("""select * from target inner join prop_info on
+    with Sqsh(
+        dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat'
+    ) as ocat_db:
+        ocat_info = ocat_db.fetchone(
+            """select * from target inner join prop_info on
                                     target.proposal_id = prop_info.proposal_id
-                                    and target.obsid = {}""".format(obsid))
+                                    and target.obsid = {}""".format(obsid)
+        )
         # If this target didn't have a proposal, just get whatever is there
         if ocat_info is None:
-            ocat_info = ocat_db.fetchone("""select * from target where
-                                    target.obsid = {}""".format(obsid))
+            ocat_info = ocat_db.fetchone(
+                """select * from target where
+                                    target.obsid = {}""".format(obsid)
+            )
     return ocat_info
 
 
 def guess_shortterm(mp_dir):
-#file:///proj/web-icxc/htdocs/mp/schedules/cycle14/JUL2213B.html
+    # file:///proj/web-icxc/htdocs/mp/schedules/cycle14/JUL2213B.html
     mp_short_top = '/proj/web-icxc/htdocs/mp/schedules'
     dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
     if not dir_match:
         return None
-    dir_string = "{}{}.html".format(
-        dir_match.group(1), dir_match.group(2).upper())
-    shortterm = glob(os.path.join(mp_short_top,
-                                  "cycle*",
-                                  dir_string))
+    dir_string = "{}{}.html".format(dir_match.group(1), dir_match.group(2).upper())
+    shortterm = glob(os.path.join(mp_short_top, "cycle*", dir_string))
     if not len(shortterm):
         return None
     return re.sub('/proj/web-icxc/htdocs', 'https://icxc.harvard.edu', shortterm[0])
@@ -249,29 +264,37 @@ def guess_fot_summary(mp_dir):
     dir_match = re.match(r'/(\d{4})/((\w{3})\d{4})/ofls(\w)', mp_dir)
     if not dir_match:
         return None
-    appr_loads = 'http://occweb.cfa.harvard.edu/occweb/FOT/mission_planning/PRODUCTS/APPR_LOADS'
+    appr_loads = (
+        'http://occweb.cfa.harvard.edu/occweb/FOT/mission_planning/PRODUCTS/APPR_LOADS'
+    )
     year = dir_match.group(1)
     week = dir_match.group(2) + dir_match.group(4).upper()
     mon = dir_match.group(3)
     dir_string = "{top}/{year}/{mon}/{week}/{week}.html".format(
-        top=appr_loads, year=year, week=week, mon=mon)
+        top=appr_loads, year=year, week=week, mon=mon
+    )
     return dir_string
-#http://occweb.cfa.harvard.edu/occweb/FOT/mission_planning/PRODUCTS/APPR_LOADS/2013/JUL/JUL1813A/JUL1813A.html
+
+
+# http://occweb.cfa.harvard.edu/occweb/FOT/mission_planning/PRODUCTS/APPR_LOADS/2013/JUL/JUL1813A/JUL1813A.html
 
 
 def official_vv(obsid):
     user = os.environ.get('USER') or os.environ.get('LOGNAME')
     vv_db = Sqsh(dbi='sybase', server='sqlsao', user=user, database='axafvv')
-    vv = vv_db.fetchone("""select vvid from vvreport where obsid = {obsid}
+    vv = vv_db.fetchone(
+        """select vvid from vvreport where obsid = {obsid}
                            and creation_date = (
                               select max(creation_date) from vvreport where obsid = {obsid})
-                        """.format(obsid=obsid))
+                        """.format(obsid=obsid)
+    )
     if vv:
-        vv_url = "https://icxc.cfa.harvard.edu/cgi-bin/vv/vv_report.cgi?vvid={}".format(vv['vvid'])
+        vv_url = "https://icxc.cfa.harvard.edu/cgi-bin/vv/vv_report.cgi?vvid={}".format(
+            vv['vvid']
+        )
         return vv_url, vv['vvid']
     else:
         return None, None
-
 
 
 def official_vv_notes(obsid, summary):
@@ -284,7 +307,9 @@ def official_vv_notes(obsid, summary):
     all_vv['aspect_review'] = None
 
     for report in all_vv:
-        aspect_rev = vv_db.fetchone(f"select * from vvreview where vvid = {report['vvid']}")
+        aspect_rev = vv_db.fetchone(
+            f"select * from vvreview where vvid = {report['vvid']}"
+        )
         report['aspect_review'] = aspect_rev
 
     if summary['status'] != 'archived' and summary['data_rights'] != 'N':
@@ -299,18 +324,25 @@ def obs_links(obsid, sequence=None, plan=None):
     links = {
         'obscat': {
             'label': "Target Param : {}".format(obsid),
-            'link': "https://icxc.cfa.harvard.edu/cgi-bin/mp/target_param.cgi?{}".format(obsid)},
+            'link': "https://icxc.cfa.harvard.edu/cgi-bin/mp/target_param.cgi?{}".format(
+                obsid
+            ),
+        },
         'mp_dir': None,
         'shortterm': None,
         'fot_dir': None,
         'fot_daily': None,
         'cen_dash': None,
         'starcheck_html': None,
-        'vv': None}
+        'vv': None,
+    }
     if sequence is not None:
         links['seq_sum'] = {
             'label': "Seq. Summary : {}".format(sequence),
-            'link': "https://icxc.harvard.edu/cgi-bin/mp/target.cgi?{}".format(sequence)}
+            'link': "https://icxc.harvard.edu/cgi-bin/mp/target.cgi?{}".format(
+                sequence
+            ),
+        }
     mp_dir = None
     # if this is a science observation, only try to get a star catalog if it has a home
     # in the schedule either in the past or the near future
@@ -325,16 +357,18 @@ def obs_links(obsid, sequence=None, plan=None):
     strobs = "%05d" % obsid
     chunk_dir = strobs[0:2]
     cen_dash_file = "{}/{}/index.html".format(chunk_dir, strobs)
-    if os.path.exists(os.path.join('/proj/sot/ska/www/ASPECT_ICXC/centroid_reports/',
-                                   cen_dash_file)):
+    if os.path.exists(
+        os.path.join('/proj/sot/ska/www/ASPECT_ICXC/centroid_reports/', cen_dash_file)
+    ):
         cen_url = 'https://icxc.cfa.harvard.edu/aspect/centroid_reports/'
-        links['cen_dash'] = {'link': "{}/{}".format(cen_url, cen_dash_file),
-                            'label': 'Centroid Dashboard'}
+        links['cen_dash'] = {
+            'link': "{}/{}".format(cen_url, cen_dash_file),
+            'label': 'Centroid Dashboard',
+        }
 
     if mp_dir is not None:
         dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
-        mp_label = "{}{}".format(dir_match.group(1),
-                                 dir_match.group(2).upper())
+        mp_label = "{}{}".format(dir_match.group(1), dir_match.group(2).upper())
         if mp_date is not None:
             mp_date_m = re.match(r'(\d{4}):(\d{3}):\d{2}:\d{2}:\d{2}\.\d{3}', mp_date)
             if mp_date_m:
@@ -347,19 +381,31 @@ def obs_links(obsid, sequence=None, plan=None):
                 links['fot_daily'] = {
                     'label': "Daily Plots {}:{:03d}".format(year, int(doy)),
                     'link': "{root}/{year}/{upper_month}/{lower_month}{day_of_month:02d}_{doy:03d}/".format(
-                        root=DAILY_PLOT_ROOT, year=year, upper_month=month.upper(),
-                        lower_month=month.lower(), day_of_month=int(dom), doy=int(doy))}
+                        root=DAILY_PLOT_ROOT,
+                        year=year,
+                        upper_month=month.upper(),
+                        lower_month=month.lower(),
+                        day_of_month=int(dom),
+                        doy=int(doy),
+                    ),
+                }
         vv, vvid = official_vv(obsid)
-        links['shortterm'] = {'link': guess_shortterm(mp_dir),
-                              'label': "Short Term Sched. {}".format(mp_label)}
-        links['fot_dir'] = {'link': guess_fot_summary(mp_dir),
-                            'label': "FOT Approved Sched. {}".format(mp_label)}
-        links['starcheck_html'] = {'link': "{top}{mp_dir}starcheck.html#obsid{obsid}".format(top="https://icxc.harvard.edu/mp/mplogs", obsid=obsid, mp_dir=mp_dir),
-                                   'label': "Starcheck obsid {}".format(obsid)}
-        links['mp_dir'] = {'link': mp_dir,
-                           'label': "Starcheck obsid {}".format(obsid)}
-        links['vv'] = {'link': vv,
-                       'label': "CXCDS V&V (id={})".format(vvid)}
+        links['shortterm'] = {
+            'link': guess_shortterm(mp_dir),
+            'label': "Short Term Sched. {}".format(mp_label),
+        }
+        links['fot_dir'] = {
+            'link': guess_fot_summary(mp_dir),
+            'label': "FOT Approved Sched. {}".format(mp_label),
+        }
+        links['starcheck_html'] = {
+            'link': "{top}{mp_dir}starcheck.html#obsid{obsid}".format(
+                top="https://icxc.harvard.edu/mp/mplogs", obsid=obsid, mp_dir=mp_dir
+            ),
+            'label': "Starcheck obsid {}".format(obsid),
+        }
+        links['mp_dir'] = {'link': mp_dir, 'label': "Starcheck obsid {}".format(obsid)}
+        links['vv'] = {'link': vv, 'label': "CXCDS V&V (id={})".format(vvid)}
     return links
 
 
@@ -368,24 +414,22 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
     sc = ['idx', 'slot', 'id', 'type', 'sz', 'mag', 'yang', 'zang']
     for row in starcheck_cat:
         sc_row = dict([(i, row[i]) for i in sc])
-        sc_row['pass_notes'] = "{}{}".format(row['pass'] or '',
-                                             row['notes'] or '')
+        sc_row['pass_notes'] = "{}{}".format(row['pass'] or '', row['notes'] or '')
         table.append(sc_row)
 
     if acqs is not None and len(acqs):
         for row in acqs:
             for sc_row in table:
-                if ((sc_row['slot'] == row['slot'])
-                    and ((sc_row['type'] == 'ACQ')
-                         or (sc_row['type'] == 'BOT'))):
+                if (sc_row['slot'] == row['slot']) and (
+                    (sc_row['type'] == 'ACQ') or (sc_row['type'] == 'BOT')
+                ):
                     sc_row['mag_obs'] = row['mag_obs']
                     sc_row['obc_id'] = row['acqid']
                     sc_row['mag_source'] = 'acq'
     if trak is not None and len(trak):
         for row in trak:
             for sc_row in table:
-                if ((sc_row['slot'] == row['slot'])
-                    and (sc_row['type'] != 'ACQ')):
+                if (sc_row['slot'] == row['slot']) and (sc_row['type'] != 'ACQ'):
                     sc_row['mag_obs'] = row['aoacmag_mean']
                     sc_row['trak_percent'] = 100 * row['f_track']
                     sc_row['obc_bad_percent'] = 100 * row['f_obc_bad']
@@ -403,7 +447,6 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
                     sc_row['dz_mean'] = vvslot['dz_mean']
                     sc_row['id_status'] = vvslot.get('id_status')
                     sc_row['cel_loc_flag'] = vvslot.get('cel_loc_flag')
-
 
     # let's explicitly reformat everything
     format_spec = {
@@ -428,18 +471,30 @@ def catalog_info(starcheck_cat, acqs=None, trak=None, vv=None):
         'dy_rms': "{:6.3f}",
         'dy_mean': "{:6.3f}",
         'dz_mean': "{:6.3f}",
-        }
+    }
 
-    opt_elem = ['mag_obs', 'obc_id', 'trak_percent', 'obc_bad_percent', 'mag_source',
-                'dr_rms', 'dz_rms', 'dy_rms', 'dy_mean', 'dz_mean',
-                'pass_notes', 'id_status', 'cel_loc_flag']
+    opt_elem = [
+        'mag_obs',
+        'obc_id',
+        'trak_percent',
+        'obc_bad_percent',
+        'mag_source',
+        'dr_rms',
+        'dz_rms',
+        'dy_rms',
+        'dy_mean',
+        'dz_mean',
+        'pass_notes',
+        'id_status',
+        'cel_loc_flag',
+    ]
     sc.extend(opt_elem)
     for sc_row in table:
         for k in sc:
             if k in sc_row and sc_row[k] is not None:
                 sc_row[k] = format_spec[k].format(sc_row[k])
             else:
-                sc_row[k] = '&nbsp;';
+                sc_row[k] = '&nbsp;'
     return table
 
 
@@ -456,17 +511,20 @@ def star_info(id):
     agasc_info = get_star(id)
     acqs, agg_acq = get_star_acq_stats(id)
     traks, agg_trak = get_star_trak_stats(id)
-    return {'agasc_info': agasc_info,
-            'acqs': acqs,
-            'agg_acq': agg_acq,
-            'traks': traks,
-            'agg_trak': agg_trak}
+    return {
+        'agasc_info': agasc_info,
+        'acqs': acqs,
+        'agg_acq': agg_acq,
+        'traks': traks,
+        'agg_trak': agg_trak,
+    }
+
 
 def get_aiprops(obsid):
     ACA_DB = Sqsh(dbi='sybase', server='sybase', database='aca', user='aca_read')
     aiprops = ACA_DB.fetchall(
-        "select * from aiprops where obsid = {} order by tstart".format(
-            obsid))
+        "select * from aiprops where obsid = {} order by tstart".format(obsid)
+    )
     return aiprops
 
 
@@ -480,8 +538,7 @@ def main(obsid):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    jinja_env = jinja2.Environment(
-        loader=jinja2.PackageLoader('mica.report'))
+    jinja_env = jinja2.Environment(loader=jinja2.PackageLoader('mica.report'))
     jinja_env.line_comment_prefix = '##'
     jinja_env.line_statement_prefix = '#'
 
@@ -491,13 +548,20 @@ def main(obsid):
     # Links
     logger.debug("Looking up obsid links")
 
-    all_progress = {'science': ['ocat',
-                                 'long_term', 'short_term',
-                                 'starcheck', 'observed',
-                                 'engineering', 'aspect_1',
-                                 'cxcds_vv', 'released'],
-                    'er': ['starcheck', 'observed',
-                           'engineering', 'cxcds_vv']}
+    all_progress = {
+        'science': [
+            'ocat',
+            'long_term',
+            'short_term',
+            'starcheck',
+            'observed',
+            'engineering',
+            'aspect_1',
+            'cxcds_vv',
+            'released',
+        ],
+        'er': ['starcheck', 'observed', 'engineering', 'cxcds_vv'],
+    }
     report_status = {}
 
     er = summary is None and obsid > 40000
@@ -510,40 +574,46 @@ def main(obsid):
         report_status['ocat'] = summary['status']
         links = obs_links(obsid, summary['seq_nbr'], summary['lts_lt_plan'])
 
-    if not er and (summary['status'] in
-                   ['canceled', 'unobserved', 'untriggered']):
+    if not er and (summary['status'] in ['canceled', 'unobserved', 'untriggered']):
         logger.debug(
             "Obsid {obsid} has status {status}".format(
-                obsid=obsid, status=summary['status']))
+                obsid=obsid, status=summary['status']
+            )
+        )
 
     if summary is not None:
         if summary['lts_lt_plan'] is not None:
             report_status['long_term'] = summary['lts_lt_plan']
         if summary['soe_st_sched_date']:
-            report_status['short_term'] =  summary['soe_st_sched_date']
+            report_status['short_term'] = summary['soe_st_sched_date']
 
     last_sched = ''
     if not er:
         if summary['lts_lt_plan']:
-            last_sched = "in LTS for {}".format(
-                str(summary['lts_lt_plan']))
+            last_sched = "in LTS for {}".format(str(summary['lts_lt_plan']))
         if summary['soe_st_sched_date']:
-            last_sched = "in ST sched for {}".format(
-                str(summary['soe_st_sched_date']))
+            last_sched = "in ST sched for {}".format(str(summary['soe_st_sched_date']))
 
     ## Starcheck
     logger.debug("Fetching starcheck catalog")
     try:
         if summary is not None and summary['lts_lt_plan'] is not None:
-            plan_date = Time(datetime.datetime.strptime(
-                summary['lts_lt_plan'], "%b %d %Y %I:%M%p"))
+            plan_date = Time(
+                datetime.datetime.strptime(summary['lts_lt_plan'], "%b %d %Y %I:%M%p")
+            )
             if plan_date.cxcsec > (CxoTime.now() + 21 * u.day).secs:
-                raise LookupError("No starcheck expected for {} lts date".format(str(plan)))
+                raise LookupError(
+                    "No starcheck expected for {} lts date".format(str(plan))
+                )
         mp_dir, status, mp_date = starcheck.get_mp_dir(obsid)
         if status == 'no starcat':
             raise LookupError("No starcat")
         obs_sc, mp_dir, status = get_starcheck(obsid)
-        logger.debug("Plotting starcheck catalog to {}".format(os.path.join(outdir, 'starcheck.png')))
+        logger.debug(
+            "Plotting starcheck catalog to {}".format(
+                os.path.join(outdir, 'starcheck.png')
+            )
+        )
         if obs_sc['obs']['point_ra'] is None:
             raise LookupError("Observation has no pointing.")
         if len(obs_sc['cat']) == 0:
@@ -556,47 +626,48 @@ def main(obsid):
         logger.info("No starcheck catalog or no starcat.  Writing out OCAT info only")
         logger.info(detail)
         template = jinja_env.get_template('report.html')
-        page = template.render(obsid=obsid,
-                               target=summary,
-                               links=links,
-                               temps=None,
-                               pred_temp=None,
-                               cat_table=None,
-                               er=er if er else None,
-                               last_sched=last_sched,
-                               obs=None,
-                               version=version)
+        page = template.render(
+            obsid=obsid,
+            target=summary,
+            links=links,
+            temps=None,
+            pred_temp=None,
+            cat_table=None,
+            er=er if er else None,
+            last_sched=last_sched,
+            obs=None,
+            version=version,
+        )
         full_report_file = os.path.join(outdir, 'index.html')
         logger.info("Writing out full report to {}".format(full_report_file))
         f = open(full_report_file, 'w')
         f.write(page)
         f.close()
-        notes = {'report_version': REPORT_VERSION,
-                 'vv_version': None,
-                 'vv_revision': None,
-                 'aspect_1_id': None,
-                 'last_sched': last_sched,
-                 'ocat_status': report_status.get('ocat'),
-                 'long_term': str(report_status.get('long_term')),
-                 'short_term': str(report_status.get('short_term')),
-                 'starcheck': report_status.get('starcheck'),
-                 'obsid': obsid,
-                 'checked_date': CxoTime.now().date}
+        notes = {
+            'report_version': REPORT_VERSION,
+            'vv_version': None,
+            'vv_revision': None,
+            'aspect_1_id': None,
+            'last_sched': last_sched,
+            'ocat_status': report_status.get('ocat'),
+            'long_term': str(report_status.get('long_term')),
+            'short_term': str(report_status.get('short_term')),
+            'starcheck': report_status.get('starcheck'),
+            'obsid': obsid,
+            'checked_date': CxoTime.now().date,
+        }
         f = open(os.path.join(outdir, 'notes.json'), 'w')
-        f.write(json.dumps(notes,
-                           sort_keys=True,
-                           indent=4))
+        f.write(json.dumps(notes, sort_keys=True, indent=4))
         f.close()
         save_state_in_db(obsid, notes)
         return
 
     if not er and 'shortterm' in links:
         dir_match = re.match(r'/\d{4}/(\w{3}\d{4})/ofls(\w)', mp_dir)
-        mp_label = "{}{}".format(dir_match.group(1),
-                                 dir_match.group(2).upper())
+        mp_label = "{}{}".format(dir_match.group(1), dir_match.group(2).upper())
         last_sched = 'in <A HREF="{}">{}</A> at {}'.format(
-            links['shortterm']['link'], mp_label, str(obs_sc['obs']['mp_starcat_time']))
-
+            links['shortterm']['link'], mp_label, str(obs_sc['obs']['mp_starcat_time'])
+        )
 
     report_status['starcheck'] = mp_dir
 
@@ -611,10 +682,12 @@ def main(obsid):
 
     er_status = None
     if er:
-        stat_map = {'ran': 'ran on',
-                    'approved': 'approved for',
-                    'ran_pre_commands': 'ran on',
-                    'planned': 'planned for'}
+        stat_map = {
+            'ran': 'ran on',
+            'approved': 'approved for',
+            'ran_pre_commands': 'ran on',
+            'planned': 'planned for',
+        }
         er_status = "{} {}".format(stat_map[status], obs_sc['obs']['mp_starcat_time'])
         run_obspar = None
         vv = None
@@ -633,7 +706,11 @@ def main(obsid):
             vv = None
 
         try:
-            if vv is None or 'vv_version' not in vv or vv['vv_version'] < WANT_VV_VERSION:
+            if (
+                vv is None
+                or 'vv_version' not in vv
+                or vv['vv_version'] < WANT_VV_VERSION
+            ):
                 mica.vv.process.process(obsid, version="last")
                 vv = get_vv(obsid, version='last')
             for slot in vv['slots']:
@@ -690,9 +767,7 @@ def main(obsid):
             if 'n_pts' not in vv['slots'][slot]:
                 continue
             slot_template = jinja_env.get_template('vv_slots_single.html')
-            slot_page = slot_template.render(obsid=obsid,
-                                             vv=vv,
-                                             slot=slot)
+            slot_page = slot_template.render(obsid=obsid, vv=vv, slot=slot)
             slot_page_file = os.path.join(outdir, "slot_{}.html".format(slot))
             logger.debug("VV SLOT report to {}".format(slot_page_file))
             f = open(slot_page_file, 'w')
@@ -704,14 +779,17 @@ def main(obsid):
             for rep in official_notes:
                 if rep['comments'] == 'Hidden':
                     rep['comments'] = """
-<A target="_blank" HREF="{}">{}</A><BR>(<A target="_blank" HREF="https://icxc.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A> once first)</BR>""".format(links['vv']['link'], links['vv']['label'])
+<A target="_blank" HREF="{}">{}</A><BR>(<A target="_blank" HREF="https://icxc.cfa.harvard.edu/soft/vv/vv_login.html">LOGIN</A> once first)</BR>""".format(
+                        links['vv']['link'], links['vv']['label']
+                    )
         vv_template = jinja_env.get_template('vv.html')
         vv['has_errors'] = (('errors' in vv) and (len(vv['errors']))) or None
-        vv_page = vv_template.render(obsid=obsid,
-                                     vv=vv,
-                                     obspar=run_obspar,
-                                     official_vv_notes=official_notes,
-                                     )
+        vv_page = vv_template.render(
+            obsid=obsid,
+            vv=vv,
+            obspar=run_obspar,
+            official_vv_notes=official_notes,
+        )
         vv_page_file = os.path.join(outdir, 'vv.html')
         logger.debug("VV report to {}".format(vv_page_file))
         f = open(vv_page_file, 'w')
@@ -730,7 +808,8 @@ def main(obsid):
                     acqs=s['acqs'],
                     traks=s['traks'],
                     agg_acq=s['agg_acq'],
-                    agg_trak=s['agg_trak'])
+                    agg_trak=s['agg_trak'],
+                )
                 star_page_file = os.path.join(outdir, 'star_%d.html' % int(row['id']))
                 logger.debug("Writing out star info to {}".format(star_page_file))
                 f = open(star_page_file, 'w')
@@ -742,16 +821,19 @@ def main(obsid):
                     '(\'ACQ total:{n_acq} noid:{n_noid} <BR /> '
                     'GUI total:{n_gui} bad:{n_bad} fail:{n_fail} obc_bad:{n_obc_bad} '
                     '<BR /> Avg Mag {avg_mag:4.2f}\', WIDTH, 220);", ONMOUSEOUT="return nd();"> '
-                    '{id}</A>'.format(id=int(row['id']),
-                                      n_acq=s['agg_acq']['n_acqs'],
-                                      n_noid=s['agg_acq']['n_acq_noid'],
-                                      n_gui=s['agg_trak']['n_guis'],
-                                      n_bad=s['agg_trak']['n_bad'],
-                                      n_fail=s['agg_trak']['n_fail'],
-                                      n_obc_bad=s['agg_trak']['n_obc_bad'],
-                                      avg_mag=(s['agg_trak']['avg_mag']
-                                               or s['agg_acq']['avg_mag']
-                                               or 13.94)))
+                    '{id}</A>'.format(
+                        id=int(row['id']),
+                        n_acq=s['agg_acq']['n_acqs'],
+                        n_noid=s['agg_acq']['n_acq_noid'],
+                        n_gui=s['agg_trak']['n_guis'],
+                        n_bad=s['agg_trak']['n_bad'],
+                        n_fail=s['agg_trak']['n_fail'],
+                        n_obc_bad=s['agg_trak']['n_obc_bad'],
+                        avg_mag=(
+                            s['agg_trak']['avg_mag'] or s['agg_acq']['avg_mag'] or 13.94
+                        ),
+                    )
+                )
             else:
                 cat_row['idlink'] = "&nbsp;"
         else:
@@ -761,19 +843,21 @@ def main(obsid):
                 cat_row['idlink'] = ''
     template = jinja_env.get_template('report.html')
 
-    page = template.render(cat_table=cat_table,
-                           obs=obs,
-                           sc=obs_sc,
-                           vv=vv,
-                           links=links,
-                           target=summary,
-                           temps=temps,
-                           pred_temp=pred_temp,
-                           er=er if er else None,
-                           er_status=er_status,
-                           last_sched=last_sched,
-                           obsid=obsid,
-                           version=version)
+    page = template.render(
+        cat_table=cat_table,
+        obs=obs,
+        sc=obs_sc,
+        vv=vv,
+        links=links,
+        target=summary,
+        temps=temps,
+        pred_temp=pred_temp,
+        er=er if er else None,
+        er_status=er_status,
+        last_sched=last_sched,
+        obsid=obsid,
+        version=version,
+    )
     full_report_file = os.path.join(outdir, 'index.html')
     logger.info("Writing out full report to {}".format(full_report_file))
     f = open(full_report_file, 'w')
@@ -785,33 +869,31 @@ def main(obsid):
     f.write(json.dumps(cat_table, sort_keys=True, indent=4))
     f.close()
 
-    notes = {'report_version': REPORT_VERSION,
-             'vv_version': None,
-             'vv_revision': None,
-             'aspect_1_id': None,
-             'last_sched': last_sched,
-             'ocat_status': report_status.get('ocat'),
-             'long_term': str(report_status.get('long_term')),
-             'short_term': str(report_status.get('short_term')),
-             'starcheck': report_status.get('starcheck'),
-             'obsid': obsid,
-             'checked_date': CxoTime.now().date}
+    notes = {
+        'report_version': REPORT_VERSION,
+        'vv_version': None,
+        'vv_revision': None,
+        'aspect_1_id': None,
+        'last_sched': last_sched,
+        'ocat_status': report_status.get('ocat'),
+        'long_term': str(report_status.get('long_term')),
+        'short_term': str(report_status.get('short_term')),
+        'starcheck': report_status.get('starcheck'),
+        'obsid': obsid,
+        'checked_date': CxoTime.now().date,
+    }
     if vv:
         notes['vv_version'] = vv.get('vv_version')
         notes['vv_revision'] = vv.get('revision')
         notes['aspect_1_id'] = vv.get('aspect_1_id')
     f = open(os.path.join(outdir, 'notes.json'), 'w')
-    f.write(json.dumps(notes,
-                       sort_keys=True,
-                       indent=4))
+    f.write(json.dumps(notes, sort_keys=True, indent=4))
     f.close()
     save_state_in_db(obsid, notes)
 
 
 def save_state_in_db(obsid, notes):
-
-    if (not os.path.exists(REPORT_SERVER)
-        or os.stat(REPORT_SERVER).st_size == 0):
+    if not os.path.exists(REPORT_SERVER) or os.stat(REPORT_SERVER).st_size == 0:
         if not os.path.exists(os.path.dirname(REPORT_SERVER)):
             os.makedirs(os.path.dirname(REPORT_SERVER))
         db_sql = Path(__file__).parent / FILES['sql_def']
@@ -827,25 +909,27 @@ def save_state_in_db(obsid, notes):
     idcheck = db.fetchone(
         "select * from report_proc "
         "where obsid = '{}' "
-        "and report_version = '{}'".format(obsid,
-                                           REPORT_VERSION))
+        "and report_version = '{}'".format(obsid, REPORT_VERSION)
+    )
 
     if idcheck is None:
         db.insert(notes, 'report_proc')
     else:
-        db.execute("UPDATE report_proc SET "
-                   "checked_date = '{checked_date}', "
-                   "ocat_status = '{ocat_status}', "
-                   "report_status = '{report_status}', "
-                   "vv_version = '{vv_version}', "
-                   "vv_revision = '{vv_revision}', "
-                   "aspect_1_id = '{aspect_1_id}', "
-                   "report_version = '{report_version}', "
-                   "long_term = '{long_term}', "
-                   "short_term = '{short_term}', "
-                   "starcheck = '{starcheck}' "
-                   "where obsid = '{obsid}' "
-                   "and report_version = '{report_version}'".format(**notes))
+        db.execute(
+            "UPDATE report_proc SET "
+            "checked_date = '{checked_date}', "
+            "ocat_status = '{ocat_status}', "
+            "report_status = '{report_status}', "
+            "vv_version = '{vv_version}', "
+            "vv_revision = '{vv_revision}', "
+            "aspect_1_id = '{aspect_1_id}', "
+            "report_version = '{report_version}', "
+            "long_term = '{long_term}', "
+            "short_term = '{short_term}', "
+            "starcheck = '{starcheck}' "
+            "where obsid = '{obsid}' "
+            "and report_version = '{report_version}'".format(**notes)
+        )
     db.conn.close()
 
 
@@ -854,7 +938,7 @@ def update():
         start=CxoTime.now() - 7 * u.day, state_keys=['obsid'], merge_identical=True
     )
     for obs in recent_obs['obsid']:
-        process_obsids([int(obs)]) # the int() is here to keep json happy downstream
+        process_obsids([int(obs)])  # the int() is here to keep json happy downstream
 
 
 def process_obsids(obsids, update=True, retry=False):
@@ -881,6 +965,7 @@ def process_obsids(obsids, update=True, retry=False):
             main(obsid)
         except:
             import traceback
+
             etype, emess, trace = sys.exc_info()
             logger.warning("Failed report on {}".format(obsid))
             # Make an empty file to record the error status
@@ -891,32 +976,29 @@ def process_obsids(obsids, update=True, retry=False):
             traceback.print_tb(trace, file=trace_file)
             trace_file.close()
             # Write out a notes jason file
-            notes = {'report_version': REPORT_VERSION,
-                     'obsid': obsid,
-                     'checked_date': CxoTime.now().date,
-                     'last_sched': "{}".format(str(emess)),
-                     'vv_version': None,
-                     'vv_revision': None,
-                     'aspect_1_id': None,
-                     'ocat_status': None,
-                     'long_term': None,
-                     'short_term': None,
-                     'starcheck': None}
+            notes = {
+                'report_version': REPORT_VERSION,
+                'obsid': obsid,
+                'checked_date': CxoTime.now().date,
+                'last_sched': "{}".format(str(emess)),
+                'vv_version': None,
+                'vv_revision': None,
+                'aspect_1_id': None,
+                'ocat_status': None,
+                'long_term': None,
+                'short_term': None,
+                'starcheck': None,
+            }
             f = open(os.path.join(outdir, 'notes.json'), 'w')
-            f.write(json.dumps(notes,
-                               sort_keys=True,
-                               indent=4))
+            f.write(json.dumps(notes, sort_keys=True, indent=4))
             f.close()
             # Make a stub html page
             proc_date = CxoTime.now().date
-            jinja_env = jinja2.Environment(
-                loader=jinja2.PackageLoader('mica.report'))
+            jinja_env = jinja2.Environment(loader=jinja2.PackageLoader('mica.report'))
             jinja_env.line_comment_prefix = '##'
             jinja_env.line_statement_prefix = '#'
             template = jinja_env.get_template('proc_error.html')
-            page = template.render(obsid=obsid,
-                                   proc_date=proc_date,
-                                   version=version)
+            page = template.render(obsid=obsid, proc_date=proc_date, version=version)
             full_report_file = os.path.join(outdir, 'index.html')
             logger.info("Writing out error stub report to {}".format(full_report_file))
             f = open(full_report_file, 'w')

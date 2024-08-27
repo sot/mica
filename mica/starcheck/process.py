@@ -52,7 +52,7 @@ def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
             obsid=obs["obsid"],
             obs_idx=obs_idx,
             mp_starcat_time=obs["obs"]["mp_starcat_time"],
-            **star
+            **star,
         )
         logger.debug("inserting %s idx of catalog" % star["idx"])
         db.insert(star_d, "starcheck_catalog")

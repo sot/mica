@@ -2,11 +2,13 @@
 """
 Common definitions for Mica subpackages
 """
+
 import os
 
 
 class MissingDataError(Exception):
     pass
+
 
 FLIGHT_MICA_ARCHIVE = os.path.join(os.environ['SKA'], 'data', 'mica', 'archive')
 

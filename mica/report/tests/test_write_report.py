@@ -15,7 +15,10 @@ user = getpass.getuser()
 
 try:
     import ska_dbi.sqsh
-    with ska_dbi.sqsh.Sqsh(server='sqlsao', dbi='sybase', user=user, database='axafvv') as db:
+
+    with ska_dbi.sqsh.Sqsh(
+        server='sqlsao', dbi='sybase', user=user, database='axafvv'
+    ) as db:
         HAS_SYBASE_ACCESS = True
 except Exception as e:
     HAS_SYBASE_ACCESS = False
@@ -28,8 +31,12 @@ except Exception as e:
 HAS_SC_ARCHIVE = os.path.exists(report.starcheck.FILES['data_root'])
 
 
-@pytest.mark.skipif('not HAS_SYBASE_ACCESS', reason='Report test requires Sybase VV access')
-@pytest.mark.skipif('not HAS_SC_ARCHIVE', reason='Report test requires mica starcheck archive')
+@pytest.mark.skipif(
+    'not HAS_SYBASE_ACCESS', reason='Report test requires Sybase VV access'
+)
+@pytest.mark.skipif(
+    'not HAS_SC_ARCHIVE', reason='Report test requires mica starcheck archive'
+)
 def test_write_reports():
     """
     Make a report and database

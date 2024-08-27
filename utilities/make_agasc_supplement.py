@@ -15,6 +15,7 @@ stars from two sources:
         GAIA guide star crossmatch.ipynb
 
 """
+
 import os
 from pathlib import Path
 
@@ -29,7 +30,9 @@ agasc_ids = []
 sources = []
 
 # Starcheck bad star list is not installed anywhere so just grab from local git repo
-lines = open(HOME / 'git' / 'starcheck' / 'starcheck' / 'data' / 'agasc.bad', 'r').readlines()
+lines = open(
+    HOME / 'git' / 'starcheck' / 'starcheck' / 'data' / 'agasc.bad', 'r'
+).readlines()
 for line in lines:
     line = line.strip()
     if line.startswith('#'):

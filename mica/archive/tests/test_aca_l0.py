@@ -16,20 +16,26 @@ def test_l0_images_meta():
     Confirm meta values match reference/regress values
     """
     imgs = aca_l0.get_l0_images(467055635, 467055639, slot=7)
-    assert imgs[0].meta == {'BGDAVG': 253,
-                            'IMGCOL0': 7,
-                            'IMGFUNC1': 2,
-                            'IMGROW0': -12,
-                            'IMGSIZE': 8,
-                            'IMGSTAT': 0,
-                            'IMGSCALE': 1025,
-                            'INTEG': np.float32(1.696),
-                            'TIME': np.float64(467055637.49031752)}
+    assert imgs[0].meta == {
+        'BGDAVG': 253,
+        'IMGCOL0': 7,
+        'IMGFUNC1': 2,
+        'IMGROW0': -12,
+        'IMGSIZE': 8,
+        'IMGSTAT': 0,
+        'IMGSCALE': 1025,
+        'INTEG': np.float32(1.696),
+        'TIME': np.float64(467055637.49031752),
+    }
+
 
 has_l0_2007_archive = os.path.exists(os.path.join(aca_l0.CONFIG['data_root'], '2007'))
 has_asp_l1 = os.path.exists(os.path.join(asp_l1.CONFIG['data_root']))
 
-@pytest.mark.skipif('not has_l0_2007_archive or not has_asp_l1', reason='Test requires 2007 L0 archive')
+
+@pytest.mark.skipif(
+    'not has_l0_2007_archive or not has_asp_l1', reason='Test requires 2007 L0 archive'
+)
 def test_get_l0_images():
     """
     Do a validation test of get_l0_images:
@@ -77,7 +83,9 @@ def test_get_l0_images():
     assert np.all(np.abs(ccen - ccs) < 0.05)
 
 
-@pytest.mark.skipif('not has_l0_2007_archive or not has_asp_l1', reason='Test requires 2007 L0 archive')
+@pytest.mark.skipif(
+    'not has_l0_2007_archive or not has_asp_l1', reason='Test requires 2007 L0 archive'
+)
 def test_get_slot_data_8x8():
     """
     Do a validation test of get_l0_images:

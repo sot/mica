@@ -30,77 +30,128 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 # borrowed from eng_archive
-ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'startmjf', 'startmnf',
-                      'stopmjf', 'stopmnf',
-                      'tlmver', 'ascdsver', 'revision', 'date',
-                      'imgsize')
+ARCHFILES_HDR_COLS = (
+    'tstart',
+    'tstop',
+    'startmjf',
+    'startmnf',
+    'stopmjf',
+    'stopmnf',
+    'tlmver',
+    'ascdsver',
+    'revision',
+    'date',
+    'imgsize',
+)
 
-FILETYPE = {'level': 'L0',
-            'instrum': 'PCAD',
-            'content': 'ACADATA',
-            'arc5gl_query': 'ACA0',
-            'fileglob': 'aca*fits*'}
+FILETYPE = {
+    'level': 'L0',
+    'instrum': 'PCAD',
+    'content': 'ACADATA',
+    'arc5gl_query': 'ACA0',
+    'fileglob': 'aca*fits*',
+}
 
-ACA_DTYPE = (('TIME', '>f8'), ('QUALITY', '>i4'), ('MJF', '>i4'),
-             ('MNF', '>i4'),
-             ('END_INTEG_TIME', '>f8'), ('INTEG', '>f4'), ('GLBSTAT', '|u1'),
-             ('COMMCNT', '|u1'), ('COMMPROG', '|u1'), ('IMGFID1', '|u1'),
-             ('IMGNUM1', '|u1'), ('IMGFUNC1', '|u1'), ('IMGSTAT', '|u1'),
-             ('IMGROW0', '>i2'), ('IMGCOL0', '>i2'), ('IMGSCALE', '>i2'),
-             ('BGDAVG', '>i2'), ('IMGFID2', '|u1'), ('IMGNUM2', '|u1'),
-             ('IMGFUNC2', '|u1'), ('BGDRMS', '>i2'), ('TEMPCCD', '>f4'),
-             ('TEMPHOUS', '>f4'), ('TEMPPRIM', '>f4'), ('TEMPSEC', '>f4'),
-             ('BGDSTAT', '|u1'), ('IMGFID3', '|u1'), ('IMGNUM3', '|u1'),
-             ('IMGFUNC3', '|u1'), ('IMGFID4', '|u1'), ('IMGNUM4', '|u1'),
-             ('IMGFUNC4', '|u1'), ('IMGRAW', '>f4', (64,)),
-             ('HD3TLM62', '|u1'),
-             ('HD3TLM63', '|u1'), ('HD3TLM64', '|u1'), ('HD3TLM65', '|u1'),
-             ('HD3TLM66', '|u1'), ('HD3TLM67', '|u1'), ('HD3TLM72', '|u1'),
-             ('HD3TLM73', '|u1'), ('HD3TLM74', '|u1'), ('HD3TLM75', '|u1'),
-             ('HD3TLM76', '|u1'), ('HD3TLM77', '|u1'),
-             ('IMGSIZE', '>i4'), ('FILENAME', '<U128'))
+ACA_DTYPE = (
+    ('TIME', '>f8'),
+    ('QUALITY', '>i4'),
+    ('MJF', '>i4'),
+    ('MNF', '>i4'),
+    ('END_INTEG_TIME', '>f8'),
+    ('INTEG', '>f4'),
+    ('GLBSTAT', '|u1'),
+    ('COMMCNT', '|u1'),
+    ('COMMPROG', '|u1'),
+    ('IMGFID1', '|u1'),
+    ('IMGNUM1', '|u1'),
+    ('IMGFUNC1', '|u1'),
+    ('IMGSTAT', '|u1'),
+    ('IMGROW0', '>i2'),
+    ('IMGCOL0', '>i2'),
+    ('IMGSCALE', '>i2'),
+    ('BGDAVG', '>i2'),
+    ('IMGFID2', '|u1'),
+    ('IMGNUM2', '|u1'),
+    ('IMGFUNC2', '|u1'),
+    ('BGDRMS', '>i2'),
+    ('TEMPCCD', '>f4'),
+    ('TEMPHOUS', '>f4'),
+    ('TEMPPRIM', '>f4'),
+    ('TEMPSEC', '>f4'),
+    ('BGDSTAT', '|u1'),
+    ('IMGFID3', '|u1'),
+    ('IMGNUM3', '|u1'),
+    ('IMGFUNC3', '|u1'),
+    ('IMGFID4', '|u1'),
+    ('IMGNUM4', '|u1'),
+    ('IMGFUNC4', '|u1'),
+    ('IMGRAW', '>f4', (64,)),
+    ('HD3TLM62', '|u1'),
+    ('HD3TLM63', '|u1'),
+    ('HD3TLM64', '|u1'),
+    ('HD3TLM65', '|u1'),
+    ('HD3TLM66', '|u1'),
+    ('HD3TLM67', '|u1'),
+    ('HD3TLM72', '|u1'),
+    ('HD3TLM73', '|u1'),
+    ('HD3TLM74', '|u1'),
+    ('HD3TLM75', '|u1'),
+    ('HD3TLM76', '|u1'),
+    ('HD3TLM77', '|u1'),
+    ('IMGSIZE', '>i4'),
+    ('FILENAME', '<U128'),
+)
 
-ACA_DTYPE_8x8 = tuple((dt[0], dt[1], (8, 8)) if dt[0] == 'IMGRAW' else dt
-                      for dt in ACA_DTYPE)
+ACA_DTYPE_8x8 = tuple(
+    (dt[0], dt[1], (8, 8)) if dt[0] == 'IMGRAW' else dt for dt in ACA_DTYPE
+)
 
 ACA_DTYPE_NAMES = tuple([k[0] for k in ACA_DTYPE])
 
-CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'aca0'),
-              temp_root=os.path.join(MICA_ARCHIVE, 'temp'),
-              days_at_once=30.0,
-              sql_def='archfiles_aca_l0_def.sql',
-              cda_table='cda_aca0.h5')
+CONFIG = dict(
+    data_root=os.path.join(MICA_ARCHIVE, 'aca0'),
+    temp_root=os.path.join(MICA_ARCHIVE, 'temp'),
+    days_at_once=30.0,
+    sql_def='archfiles_aca_l0_def.sql',
+    cda_table='cda_aca0.h5',
+)
 
 
 def get_options():
     parser = argparse.ArgumentParser(
-        description="Fetch aca level 0 products and make a file archive")
+        description="Fetch aca level 0 products and make a file archive"
+    )
     defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
-    parser.add_argument("--data-root",
-                        help="parent directory for all data")
-    parser.add_argument("--temp-root",
-                        help="parent temp directory")
-    parser.add_argument("--start",
-                        help="start date for retrieve "
-                        + "(defaults to max date of archived files)")
-    parser.add_argument("--stop",
-                        help="stop date for retrieve "
-                        + "(defaults to now)")
-    parser.add_argument("--days-at-once",
-                        type=float,
-                        help="if over this number, "
-                        + "bin to chunks of this number of days")
-    parser.add_argument("--cda-table",
-                        help="file name for h5 list from Chandra Archive")
+    parser.add_argument("--data-root", help="parent directory for all data")
+    parser.add_argument("--temp-root", help="parent temp directory")
+    parser.add_argument(
+        "--start",
+        help="start date for retrieve " + "(defaults to max date of archived files)",
+    )
+    parser.add_argument("--stop", help="stop date for retrieve " + "(defaults to now)")
+    parser.add_argument(
+        "--days-at-once",
+        type=float,
+        help="if over this number, " + "bin to chunks of this number of days",
+    )
+    parser.add_argument(
+        "--cda-table", help="file name for h5 list from Chandra Archive"
+    )
     opt = parser.parse_args()
     return opt
 
 
-def get_slot_data(start, stop, slot, imgsize=None,
-                  db=None, data_root=None, columns=None,
-                  centered_8x8=False
-                  ):
+def get_slot_data(
+    start,
+    stop,
+    slot,
+    imgsize=None,
+    db=None,
+    data_root=None,
+    columns=None,
+    centered_8x8=False,
+):
     """
     For a the given parameters, retrieve telemetry and construct a
     masked array of the MSIDs available in that telemetry.
@@ -136,9 +187,9 @@ def get_slot_data(start, stop, slot, imgsize=None,
         dbfile = os.path.join(data_root, 'archfiles.db3')
         db = dict(dbi='sqlite', server=dbfile)
 
-    data_files = _get_file_records(start, stop, slots=[slot],
-                                    imgsize=imgsize, db=db,
-                                    data_root=data_root)
+    data_files = _get_file_records(
+        start, stop, slots=[slot], imgsize=imgsize, db=db, data_root=data_root
+    )
     aca_dtype = ACA_DTYPE_8x8 if centered_8x8 else ACA_DTYPE
     dtype = [k for k in aca_dtype if k[0] in columns]
 
@@ -151,10 +202,9 @@ def get_slot_data(start, stop, slot, imgsize=None,
     all_rows = zero_row.repeat(rows)
     rowcount = 0
     for f in data_files:
-        fp = os.path.join(data_root,
-                          str(f['year']),
-                          "{0:03d}".format(f['doy']),
-                          f['filename'])
+        fp = os.path.join(
+            data_root, str(f['year']), "{0:03d}".format(f['doy']), f['filename']
+        )
         hdu = pyfits.open(fp)
         chunk = hdu[1].data
         idx0, idx1 = rowcount, (rowcount + len(chunk))
@@ -163,30 +213,28 @@ def get_slot_data(start, stop, slot, imgsize=None,
             if fname == 'IMGRAW' or fname == 'IMGSIZE':
                 continue
             if fname in chunk.dtype.names:
-                all_rows[fname][idx0: idx1] \
-                    = chunk[fname]
+                all_rows[fname][idx0:idx1] = chunk[fname]
         if 'IMGSIZE' in columns:
-            all_rows['IMGSIZE'][idx0: idx1] = f_imgsize
+            all_rows['IMGSIZE'][idx0:idx1] = f_imgsize
         if 'FILENAME' in columns:
-            all_rows['FILENAME'][idx0: idx1] = f['filename']
+            all_rows['FILENAME'][idx0:idx1] = f['filename']
         if 'IMGRAW' in columns:
             if centered_8x8:
                 if f_imgsize == 8:
-                    all_rows['IMGRAW'][idx0: idx1] = chunk['IMGRAW']
+                    all_rows['IMGRAW'][idx0:idx1] = chunk['IMGRAW']
                 else:
                     i = (8 - f_imgsize) // 2
-                    all_rows['IMGRAW'][idx0: idx1, i:-i, i:-i] = \
-                        chunk['IMGRAW']
+                    all_rows['IMGRAW'][idx0:idx1, i:-i, i:-i] = chunk['IMGRAW']
             else:
                 all_rows['IMGRAW'].reshape(rows, 8, 8)[
-                    idx0: idx1, 0:f_imgsize, 0:f_imgsize] = (
-                    chunk['IMGRAW'].reshape(len(chunk),
-                                                  f_imgsize, f_imgsize))
+                    idx0:idx1, 0:f_imgsize, 0:f_imgsize
+                ] = chunk['IMGRAW'].reshape(len(chunk), f_imgsize, f_imgsize)
         rowcount += len(chunk)
 
     # just include the rows in the requested time range in the returned data
-    oktime = ((all_rows['TIME'] >= DateTime(start).secs)
-               & (all_rows['TIME'] <= DateTime(stop).secs))
+    oktime = (all_rows['TIME'] >= DateTime(start).secs) & (
+        all_rows['TIME'] <= DateTime(stop).secs
+    )
     return all_rows[oktime]
 
 
@@ -215,7 +263,15 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     :returns: list of ACAImage objects
     """
     if columns is None:
-        columns = ['TIME', 'BGDAVG', 'IMGSTAT', 'IMGFUNC1', 'IMGSIZE', 'IMGSCALE', 'INTEG']
+        columns = [
+            'TIME',
+            'BGDAVG',
+            'IMGSTAT',
+            'IMGFUNC1',
+            'IMGSIZE',
+            'IMGSCALE',
+            'INTEG',
+        ]
     if 'IMGROW0' not in columns:
         columns.append('IMGROW0')
     if 'IMGCOL0' not in columns:
@@ -230,7 +286,7 @@ def get_l0_images(start, stop, slot, imgsize=None, columns=None):
     dat = get_slot_data(start, stop, slot, imgsize=imgsize, columns=slot_columns)
 
     ok = dat['QUALITY'] == 0
-    if not(np.all(ok)):
+    if not (np.all(ok)):
         dat = dat[ok]
 
     # Convert temperatures from K to degC
@@ -272,8 +328,12 @@ class MSID(object):
 
     def _get_data(self):
         slot_data = get_slot_data(
-            self.tstart, self.tstop, self.slot, imgsize=[8],
-            columns=['TIME', self.msid.upper()])
+            self.tstart,
+            self.tstop,
+            self.slot,
+            imgsize=[8],
+            columns=['TIME', self.msid.upper()],
+        )
         self.vals = slot_data[self.msid.upper()]
         self.times = slot_data['TIME']
 
@@ -291,6 +351,7 @@ class MSIDset(collections.OrderedDict):
 
 def obsid_times(obsid):
     from kadi import events  # Kadi is a big import so defer
+
     dwells = events.dwells.filter(obsid=obsid)
     n_dwells = len(dwells)
     tstart = dwells[0].tstart
@@ -299,8 +360,9 @@ def obsid_times(obsid):
     return tstart, tstop
 
 
-def get_files(obsid=None, start=None, stop=None,
-              slots=None, imgsize=None, db=None, data_root=None):
+def get_files(
+    obsid=None, start=None, stop=None, slots=None, imgsize=None, db=None, data_root=None
+):
     """
     Retrieve list of files from ACA0 archive lookup table that
     match arguments.  The database query returns files with
@@ -347,19 +409,21 @@ def get_files(obsid=None, start=None, stop=None,
     else:
         start, stop = obsid_times(obsid)
 
-    file_records = _get_file_records(start, stop,
-                                     slots=slots, imgsize=imgsize, db=db,
-                                     data_root=data_root)
-    files = [os.path.join(data_root,
-                          "%04d" % f['year'],
-                          "%03d" % f['doy'],
-                          str(f['filename']))
-             for f in file_records]
+    file_records = _get_file_records(
+        start, stop, slots=slots, imgsize=imgsize, db=db, data_root=data_root
+    )
+    files = [
+        os.path.join(
+            data_root, "%04d" % f['year'], "%03d" % f['doy'], str(f['filename'])
+        )
+        for f in file_records
+    ]
     return files
 
 
-def _get_file_records(start, stop=None, slots=None,
-                       imgsize=None, db=None, data_root=None):
+def _get_file_records(
+    start, stop=None, slots=None, imgsize=None, db=None, data_root=None
+):
     """
     Retrieve list of files from ACA0 archive lookup table that
     match arguments.  The database query returns files with
@@ -404,33 +468,41 @@ def _get_file_records(start, stop=None, slots=None,
     # miss the case where tstart is in the middle of an interval, but
     # drastically reduces the size of the bsearch on the tstop index
     tstart_pad = 10 * 86400
-    db_query = ('SELECT * FROM archfiles '
-                'WHERE tstart >= %f - %f '
-                'AND tstart < %f '
-                'AND tstop > %f '
-                'AND slot in (%s) '
-                'AND imgsize in (%s) '
-                'order by filetime asc '
-                % (tstart, tstart_pad, tstop, tstart, slot_str, imgsize_str))
+    db_query = (
+        'SELECT * FROM archfiles '
+        'WHERE tstart >= %f - %f '
+        'AND tstart < %f '
+        'AND tstop > %f '
+        'AND slot in (%s) '
+        'AND imgsize in (%s) '
+        'order by filetime asc '
+        % (tstart, tstart_pad, tstop, tstart, slot_str, imgsize_str)
+    )
     with ska_dbi.DBI(**db) as db:
         files = db.fetchall(db_query)
     return files
 
 
 class Updater(object):
-    def __init__(self,
-                 db=None,
-                 data_root=None,
-                 temp_root=None,
-                 days_at_once=None,
-                 sql_def=None,
-                 cda_table=None,
-                 filetype=None,
-                 start=None,
-                 stop=None,
-                 ):
-        for init_opt in ['data_root', 'temp_root', 'days_at_once',
-                         'sql_def', 'cda_table']:
+    def __init__(
+        self,
+        db=None,
+        data_root=None,
+        temp_root=None,
+        days_at_once=None,
+        sql_def=None,
+        cda_table=None,
+        filetype=None,
+        start=None,
+        stop=None,
+    ):
+        for init_opt in [
+            'data_root',
+            'temp_root',
+            'days_at_once',
+            'sql_def',
+            'cda_table',
+        ]:
             setattr(self, init_opt, vars()[init_opt] or CONFIG[init_opt])
         self.data_root = os.path.abspath(self.data_root)
         self.temp_root = os.path.abspath(self.temp_root)
@@ -442,48 +514,46 @@ class Updater(object):
         self.start = start
         self.stop = stop
 
-#def _rebuild_database(db=None, db_file=None,
-#                      data_root=config['data_root'],
-#                      sql_def=config['sql_def']):
-#    """
-#    Utility routine to rebuild the file lookup database using the
-#    package defaults and the files in the archive.
-#    """
-#    if db is None and db_file is None:
-#        raise ValueError
-#    if db is None and db_file is not None:
-#        logger.info("creating archfiles db from %s"
-#                    % sql_def)
-#        db_sql = os.path.join(os.environ['SKA_DATA'],
-#                              'mica', sql_def)
-#        db_init_cmds = file(db_sql).read()
-#        db = ska_dbi.DBI(dbi='sqlite', server=db_file,
-#                         autocommit=False)
-#        db.execute(db_init_cmds, commit=True)
-#    year_dirs = sorted(glob(
-#            os.path.join(data_root, '[12][0-9][0-9][0-9]')))
-#    for ydir in year_dirs:
-#        day_dirs = sorted(glob(
-#                os.path.join(ydir, '[0-3][0-9][0-9]')))
-#        for ddir in day_dirs:
-#            archfiles = sorted(glob(
-#                    os.path.join(ddir, '*_img0*')))
-#            db.execute("begin transaction")
-#            for i, f in enumerate(archfiles):
-#                arch_info = read_archfile(i, f, archfiles, db)
-#                if arch_info:
-#                    db.insert(arch_info, 'archfiles')
-#            db.commit()
+    # def _rebuild_database(db=None, db_file=None,
+    #                      data_root=config['data_root'],
+    #                      sql_def=config['sql_def']):
+    #    """
+    #    Utility routine to rebuild the file lookup database using the
+    #    package defaults and the files in the archive.
+    #    """
+    #    if db is None and db_file is None:
+    #        raise ValueError
+    #    if db is None and db_file is not None:
+    #        logger.info("creating archfiles db from %s"
+    #                    % sql_def)
+    #        db_sql = os.path.join(os.environ['SKA_DATA'],
+    #                              'mica', sql_def)
+    #        db_init_cmds = file(db_sql).read()
+    #        db = ska_dbi.DBI(dbi='sqlite', server=db_file,
+    #                         autocommit=False)
+    #        db.execute(db_init_cmds, commit=True)
+    #    year_dirs = sorted(glob(
+    #            os.path.join(data_root, '[12][0-9][0-9][0-9]')))
+    #    for ydir in year_dirs:
+    #        day_dirs = sorted(glob(
+    #                os.path.join(ydir, '[0-3][0-9][0-9]')))
+    #        for ddir in day_dirs:
+    #            archfiles = sorted(glob(
+    #                    os.path.join(ddir, '*_img0*')))
+    #            db.execute("begin transaction")
+    #            for i, f in enumerate(archfiles):
+    #                arch_info = read_archfile(i, f, archfiles, db)
+    #                if arch_info:
+    #                    db.insert(arch_info, 'archfiles')
+    #            db.commit()
 
     def _get_missing_archive_files(self, start, only_new=False):
         ingested_files = self._get_arc_ingested_files()
         startdate = DateTime(start).date
-        logger.info("Checking for missing files from %s" %
-                    startdate)
+        logger.info("Checking for missing files from %s" % startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
-        for idate, backcnt in zip(ingested_files['ingest_date'][::-1],
-                                   count(1)):
+        for idate, backcnt in zip(ingested_files['ingest_date'][::-1], count(1)):
             if idate < startdate:
                 break
 
@@ -496,13 +566,13 @@ class Updater(object):
                 filename = file['filename']
                 db_match = db.fetchall(
                     "select * from archfiles where "
-                    + "filename = '%s' or filename = '%s.gz'"
-                    % (filename, filename))
+                    + "filename = '%s' or filename = '%s.gz'" % (filename, filename)
+                )
                 if len(db_match):
                     continue
                 file_re = re.search(
-                    r'acaf(\d+)N(\d{3})_(\d)_img0.fits(\.gz)?',
-                    filename)
+                    r'acaf(\d+)N(\d{3})_(\d)_img0.fits(\.gz)?', filename
+                )
                 if not file_re:
                     continue
                 slot = int(file_re.group(3))
@@ -512,7 +582,9 @@ class Updater(object):
                 range_match = db.fetchall(
                     """SELECT * from archfiles
                        WHERE filetime = %(filetime)d
-                       and slot = %(slot)d""" % dict(filetime=filetime, slot=slot))
+                       and slot = %(slot)d"""
+                    % dict(filetime=filetime, slot=slot)
+                )
                 if range_match and only_new:
                     continue
                 # if there is a newer file there already
@@ -521,7 +593,8 @@ class Updater(object):
                        WHERE filetime = %(filetime)d
                        and slot = %(slot)d
                        and revision >= %(version)d"""
-                    % dict(slot=slot, version=version, filetime=filetime))
+                    % dict(slot=slot, version=version, filetime=filetime)
+                )
                 if version_match:
                     continue
                 # and if made it this far add the file to the list
@@ -529,8 +602,7 @@ class Updater(object):
                 # and update the date through which data is complete to
                 # the time of the previous file ingest
                 if last_ok_date is None:
-                    last_ok_date = \
-                        ingested_files['ingest_date'][-backcnt:][idx - 1]
+                    last_ok_date = ingested_files['ingest_date'][-backcnt:][idx - 1]
 
         if last_ok_date is None:
             last_ok_date = ingested_files['ingest_date'][-1]
@@ -590,10 +662,12 @@ class Updater(object):
         # If so then delete temporary file and abort further processing.
         filename = os.path.basename(f)
         with ska_dbi.DBI(**self.db) as db:
-            if db.fetchall('SELECT filename FROM archfiles WHERE filename=?',
-                           (filename,)):
+            if db.fetchall(
+                'SELECT filename FROM archfiles WHERE filename=?', (filename,)
+            ):
                 logger.debug(
-                    'File %s already in archfiles - unlinking and skipping' % f)
+                    'File %s already in archfiles - unlinking and skipping' % f
+                )
                 os.unlink(f)
                 return None
 
@@ -604,20 +678,21 @@ class Updater(object):
         # Accumlate relevant info about archfile that will be ingested
         # (this is borrowed from eng-archive but is set to archive to a
         # database table instead of an h5 table in this version)
-        archfiles_row = dict((x, hdu.header.get(x.upper()))
-                             for x in ARCHFILES_HDR_COLS)
+        archfiles_row = dict((x, hdu.header.get(x.upper())) for x in ARCHFILES_HDR_COLS)
         archfiles_row['checksum'] = hdu.header.get('checksum') or hdu._checksum
         imgsize = hdu.data[0]['IMGRAW'].shape[0]
         archfiles_row['imgsize'] = int(imgsize)
-        archfiles_row['slot'] = int(re.search(
-                r'acaf\d+N\d{3}_(\d)_img0.fits(\.gz)?',
-                filename).group(1))
+        archfiles_row['slot'] = int(
+            re.search(r'acaf\d+N\d{3}_(\d)_img0.fits(\.gz)?', filename).group(1)
+        )
         archfiles_row['filename'] = filename
         archfiles_row['filetime'] = int(
-            re.search(r'(\d+)', archfiles_row['filename']).group(1))
+            re.search(r'(\d+)', archfiles_row['filename']).group(1)
+        )
         filedate = DateTime(archfiles_row['filetime']).date
-        year, doy = (int(x) for x in
-                     re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups())
+        year, doy = (
+            int(x) for x in re.search(r'(\d\d\d\d):(\d\d\d)', filedate).groups()
+        )
         archfiles_row['year'] = year
         archfiles_row['doy'] = doy
         archfiles_row['rows'] = len(hdu.data)
@@ -631,62 +706,65 @@ class Updater(object):
                    and slot = %(slot)d
                    and startmjf = %(startmjf)d and startmnf = %(startmnf)d
                    and stopmjf = %(stopmjf)d and stopmnf = %(stopmnf)d """
-                % archfiles_row)
+                % archfiles_row
+            )
             if len(oldmatches):
                 self._arch_remove(oldmatches)
 
-        interval_matches = _get_file_records(archfiles_row['tstart'],
-                                              archfiles_row['tstop'],
-                                              slots=[archfiles_row['slot']])
+        interval_matches = _get_file_records(
+            archfiles_row['tstart'],
+            archfiles_row['tstop'],
+            slots=[archfiles_row['slot']],
+        )
         if len(interval_matches):
             # if there are files there that still overlap the new file
             # and they are all older, remove the old files.
-            if np.all(interval_matches['revision']
-                      < archfiles_row['revision']):
-                logger.info(
-                    "removing overlapping files at older revision(s)")
+            if np.all(interval_matches['revision'] < archfiles_row['revision']):
+                logger.info("removing overlapping files at older revision(s)")
                 logger.info(interval_matches)
                 self._arch_remove(interval_matches)
             # if the overlapping files are all from the same revision
             # just ingest them and hope for the best
-            elif np.all(interval_matches['revision']
-                        == archfiles_row['revision']):
+            elif np.all(interval_matches['revision'] == archfiles_row['revision']):
                 logger.info("ignoring overlap for same process revision")
             # if the files that overlap are all newer, let's not ingest
             # the "missing" file
-            elif np.all(interval_matches['revision']
-                        > archfiles_row['revision']):
+            elif np.all(interval_matches['revision'] > archfiles_row['revision']):
                 return None
             else:
                 logger.error(archfiles_row)
                 logger.error(interval_matches)
                 # throw an error if there is still overlap
-                raise ValueError("Cannot ingest %s, overlaps existing files"
-                                 % filename)
+                raise ValueError("Cannot ingest %s, overlaps existing files" % filename)
 
         return archfiles_row
 
     def _arch_remove(self, defunct_matches):
         with ska_dbi.DBI(**self.db) as db:
             for file_record in defunct_matches:
-                query = ("""delete from archfiles
+                query = (
+                    """delete from archfiles
                               WHERE filetime = %(filetime)d
                               and slot = %(slot)d
                               and startmjf = %(startmjf)d
                               and startmnf = %(startmnf)d
                               and stopmjf = %(stopmjf)d
                               and stopmnf = %(stopmnf)d """
-                           % file_record)
+                    % file_record
+                )
                 logger.info(query)
                 db.execute(query)
                 db.commit()
-                archdir = os.path.abspath(os.path.join(
+                archdir = os.path.abspath(
+                    os.path.join(
                         self.data_root,
                         str(file_record['year']),
-                        "{0:03d}".format(file_record['doy'])
-                        ))
-                logger.info("deleting %s" %
-                            os.path.join(archdir, file_record['filename']))
+                        "{0:03d}".format(file_record['doy']),
+                    )
+                )
+                logger.info(
+                    "deleting %s" % os.path.join(archdir, file_record['filename'])
+                )
                 real_file = os.path.join(archdir, file_record['filename'])
                 if os.path.exists(real_file):
                     os.unlink(real_file)
@@ -708,9 +786,7 @@ class Updater(object):
             tstart = re.search(r'(\d+)', str(basename)).group(1)
             datestart = DateTime(tstart).date
             year, doy = re.search(r'(\d\d\d\d):(\d\d\d)', datestart).groups()
-            archdir = os.path.abspath(os.path.join(data_root,
-                                                   year,
-                                                   doy))
+            archdir = os.path.abspath(os.path.join(data_root, year, doy))
             # construct the destination filepath/name
             archfile = os.path.abspath(os.path.join(archdir, basename))
             if not os.path.exists(archdir):
@@ -724,18 +800,20 @@ class Updater(object):
                 os.unlink(f)
 
     def _fetch_by_time(self, range_tstart, range_tstop):
-        logger.info("Fetching %s from %s to %s"
-                    % ('ACA L0 Data',
-                       DateTime(range_tstart).date,
-                       DateTime(range_tstop).date))
-        archfiles = self._get_archive_files(DateTime(range_tstart),
-                                            DateTime(range_tstop))
+        logger.info(
+            "Fetching %s from %s to %s"
+            % ('ACA L0 Data', DateTime(range_tstart).date, DateTime(range_tstop).date)
+        )
+        archfiles = self._get_archive_files(
+            DateTime(range_tstart), DateTime(range_tstop)
+        )
         return archfiles
 
     def _fetch_individual_files(self, files):
         arc5 = Ska.arc5gl.Arc5gl(echo=True)
-        logger.info('********** %s %s **********'
-                    % (self.filetype['content'], time.ctime()))
+        logger.info(
+            '********** %s %s **********' % (self.filetype['content'], time.ctime())
+        )
         fetched_files = []
         ingest_dates = []
         # get the files, store in file archive, and record in database
@@ -790,8 +868,7 @@ class Updater(object):
         # if the database of the archived files does not exist,
         # or is empty, make it
         if not os.path.exists(archdb) or os.stat(archdb).st_size == 0:
-            logger.info("creating archfiles db from %s"
-                        % self.sql_def)
+            logger.info("creating archfiles db from %s" % self.sql_def)
             db_sql = Path(__file__).parent / self.sql_def
             db_init_cmds = open(db_sql).read()
             with ska_dbi.DBI(**self.db) as db:
@@ -802,21 +879,29 @@ class Updater(object):
             # Get datestart as the most-recent file time from archfiles table
             # will need min-of-max-slot-datestart
             with ska_dbi.DBI(**self.db) as db:
-                last_time = min([db.fetchone(
-                            "select max(filetime) from archfiles where slot = %d"
-                            % s)['max(filetime)'] for s in range(0, 8)])
+                last_time = min(
+                    [
+                        db.fetchone(
+                            "select max(filetime) from archfiles where slot = %d" % s
+                        )['max(filetime)']
+                        for s in range(0, 8)
+                    ]
+                )
                 if last_time is None:
                     raise ValueError(
                         "No files in archive to do update-since-last-run mode.\n"
-                        + "Please specify a time with --start")
+                        + "Please specify a time with --start"
+                    )
                 datestart = DateTime(last_time)
         datestop = DateTime(self.stop)
         padding_seconds = 10000
         # loop over the specified time range in chunks of
         # days_at_once in seconds with some padding
-        for tstart in np.arange(datestart.day_start().secs,
-                                datestop.day_end().secs,
-                                self.days_at_once * 86400):
+        for tstart in np.arange(
+            datestart.day_start().secs,
+            datestop.day_end().secs,
+            self.days_at_once * 86400,
+        ):
             # set times for a chunk
             range_tstart = tstart - padding_seconds
             range_tstop = tstart + self.days_at_once * 86400
@@ -836,29 +921,28 @@ class Updater(object):
         # get list of missing files since the last time the tool ingested
         # files.  If this is first run of the tool, check from the start of
         # the requested time range
-        if (os.path.exists(timestamp_file)
-                and os.stat(timestamp_file).st_size > 0):
+        if os.path.exists(timestamp_file) and os.stat(timestamp_file).st_size > 0:
             cda_checked_timestamp = open(timestamp_file).read().rstrip()
         else:
             cda_checked_timestamp = DateTime(self.start).date
         missing_datetime = DateTime(cda_checked_timestamp)
-        missing_files, last_ingest_date = \
-            self._get_missing_archive_files(missing_datetime,
-                                            only_new=True)
+        missing_files, last_ingest_date = self._get_missing_archive_files(
+            missing_datetime, only_new=True
+        )
         # update the file to have up through the last confirmed good file
         # even before we try to fetch missing ones
         open(timestamp_file, 'w').write("%s" % last_ingest_date)
 
         if len(missing_files):
-            logger.info("Found %d missing individual files"
-                        % len(missing_files))
+            logger.info("Found %d missing individual files" % len(missing_files))
             # make a temporary directory
             tmpdir = Ska.File.TempDir(dir=self.temp_root)
             dirname = tmpdir.name
             logger.info("File save to temp dir %s" % dirname)
             with Ska.File.chdir(dirname):
-                fetched_files, ingest_times = \
-                    self._fetch_individual_files(missing_files)
+                fetched_files, ingest_times = self._fetch_individual_files(
+                    missing_files
+                )
                 self._insert_files(fetched_files)
 
             last_ingest_date = missing_files[-1]['ingest_date']
@@ -878,6 +962,7 @@ def main():
     kwargs = vars(opt)
     updater = Updater(**kwargs)
     updater.update()
+
 
 if __name__ == '__main__':
     main()

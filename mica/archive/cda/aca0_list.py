@@ -31,9 +31,11 @@ from Chandra.Time import DateTime
 
 from mica.common import MICA_ARCHIVE
 
-CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'aca0'),
-              cda_fetch_url='https://icxc.harvard.edu/dbtm/CDA/cgi/aspect_fetch.cgi',
-              cda_table='cda_aca0.h5')
+CONFIG = dict(
+    data_root=os.path.join(MICA_ARCHIVE, 'aca0'),
+    cda_fetch_url='https://icxc.harvard.edu/dbtm/CDA/cgi/aspect_fetch.cgi',
+    cda_table='cda_aca0.h5',
+)
 
 logger = logging.getLogger('CDA ACA0 file list update')
 logger.setLevel(logging.INFO)
@@ -42,28 +44,28 @@ logger.addHandler(logging.StreamHandler())
 
 def get_options():
     parser = argparse.ArgumentParser(
-        description="Update table of list of CDA ingested ACA0 files")
+        description="Update table of list of CDA ingested ACA0 files"
+    )
     defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
-    parser.add_argument("--data-root",
-                        help="parent directory for all data")
-    parser.add_argument("--cda-fetch-url",
-                        help="URL for CDA CGI")
+    parser.add_argument("--data-root", help="parent directory for all data")
+    parser.add_argument("--cda-fetch-url", help="URL for CDA CGI")
     opt = parser.parse_args()
     return opt
 
 
 def make_data_table(lines):
-    files = Table.read(lines, format='ascii.csv', guess=False,
-                       names=['filename', 'status', 'ingest_time'])
+    files = Table.read(
+        lines,
+        format='ascii.csv',
+        guess=False,
+        names=['filename', 'status', 'ingest_time'],
+    )
     # replace variable spaces with single spaces and then strptime
-    ingest_dates = [time.strftime(
-            "%Y:%j:%H:%M:%S.000",
-            time.strptime(
-                t, '%b %d %Y %I:%M%p'))
-                    for t in
-                    [' '.join(f.split())
-                     for f in files['ingest_time']]]
+    ingest_dates = [
+        time.strftime("%Y:%j:%H:%M:%S.000", time.strptime(t, '%b %d %Y %I:%M%p'))
+        for t in [' '.join(f.split()) for f in files['ingest_time']]
+    ]
     files['ingest_date'] = ingest_dates
     file_re = re.compile(r'acaf(\d{9,})N(\d{3})_(\d)_img0.fits(\.gz)?')
     files['aca_ingest'] = np.repeat(DateTime().date, len(ingest_dates))
@@ -72,22 +74,34 @@ def make_data_table(lines):
     files.sort(['aca_ingest', 'ingest_date', 'filename'])
     return files
 
-TABLE_DTYPE = np.dtype([('filename', 'S29'), ('status', 'S1'),
-                        ('ingest_time', 'S19'), ('ingest_date', 'S21'),
-                        ('aca_ingest', 'S21'), ('filetime', '<i8'), ('version', '<i8')])
+
+TABLE_DTYPE = np.dtype(
+    [
+        ('filename', 'S29'),
+        ('status', 'S1'),
+        ('ingest_time', 'S19'),
+        ('ingest_date', 'S21'),
+        ('aca_ingest', 'S21'),
+        ('filetime', '<i8'),
+        ('version', '<i8'),
+    ]
+)
+
 
 def make_table_from_scratch(table_file, cda_fetch_url, start='2020:320:12:00:00'):
     logger.info("Fetching new CDA list from %s" % start)
     ct_start = DateTime(start)
-    query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
-            ct_start.mon, ct_start.day, ct_start.year))
+    query = "?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
+        ct_start.mon, ct_start.day, ct_start.year
+    )
     url = cda_fetch_url + query
     logger.info("URL for fetch {}".format(url))
     new_lines = urllib.request.urlopen(url).read().decode().splitlines()
     files = make_data_table(new_lines)
     logger.info("Creating new table at %s" % table_file)
-    h5f = tables.open_file(table_file, 'a',
-                          filters=tables.Filters(complevel=5, complib='zlib'))
+    h5f = tables.open_file(
+        table_file, 'a', filters=tables.Filters(complevel=5, complib='zlib')
+    )
     desc, bo = tables.table.descr_from_dtype(TABLE_DTYPE)
     tbl = h5f.create_table('/', 'data', desc)
     for file in files:
@@ -103,9 +117,7 @@ def make_table_from_scratch(table_file, cda_fetch_url, start='2020:320:12:00:00'
     h5f.close()
 
 
-def update_cda_table(data_root=None,
-                     cda_table=None,
-                     cda_fetch_url=None):
+def update_cda_table(data_root=None, cda_table=None, cda_fetch_url=None):
     if data_root is None:
         data_root = CONFIG['data_root']
     if cda_table is None:
@@ -129,8 +141,9 @@ def update_cda_table(data_root=None,
 
     # Get new data
     logger.info("Fetching new CDA list from %s" % lastdate.date)
-    query = ("?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
-            lastdate.mon, lastdate.day, lastdate.year))
+    query = "?tstart={:02d}-{:02d}-{:04d}&pattern=acaimgc%%25&submit=Search".format(
+        lastdate.mon, lastdate.day, lastdate.year
+    )
     url = cda_fetch_url + query
     logger.info("URL for fetch {}".format(url))
     try:
@@ -153,8 +166,9 @@ def update_cda_table(data_root=None,
     if i_diff < len(files):
         with tables.open_file(table_file, 'a') as h5f:
             tbl = h5f.get_node('/', 'data')
-            logger.info("Updating %s with %d new rows"
-                        % (table_file, len(files[i_diff:])))
+            logger.info(
+                "Updating %s with %d new rows" % (table_file, len(files[i_diff:]))
+            )
             for file in files[i_diff:]:
                 logger.debug(file)
                 row = tbl.row

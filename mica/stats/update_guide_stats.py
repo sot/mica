@@ -25,7 +25,8 @@ from chandra_aca.transform import radec_to_eci
 warnings.filterwarnings(
     'ignore',
     message="using `oa_ndim == 0` when `op_axes` is NULL is deprecated.*",
-    category=DeprecationWarning)
+    category=DeprecationWarning,
+)
 
 
 logger = logging.getLogger('star_stats')
@@ -43,7 +44,8 @@ GUIDE_COLS = {
         ('npnt_tstop', 'float'),
         ('kalman_datestart', 'S21'),
         ('npnt_datestop', 'S21'),
-        ('revision', 'S15')],
+        ('revision', 'S15'),
+    ],
     'cat': [
         ('slot', 'int'),
         ('idx', 'int'),
@@ -51,7 +53,8 @@ GUIDE_COLS = {
         ('yang', 'float'),
         ('zang', 'float'),
         ('sz', 'S4'),
-        ('mag', 'float')],
+        ('mag', 'float'),
+    ],
     'stat': [
         ('n_samples', 'int'),
         ('n_track', 'int'),
@@ -103,7 +106,7 @@ GUIDE_COLS = {
         ('n_long_no_track_interv', 'int'),
         ('n_racq_interv', 'int'),
         ('n_srch_interv', 'int'),
-        ],
+    ],
     'agasc': [
         ('agasc_id', 'int'),
         ('color', 'float'),
@@ -123,32 +126,31 @@ GUIDE_COLS = {
         ('aspq3', 'int'),
         ('acqq1', 'int'),
         ('acqq2', 'int'),
-        ('acqq4', 'int')],
+        ('acqq4', 'int'),
+    ],
     'temp': [
         ('n100_warm_frac', 'float'),
         ('tccd_mean', 'float'),
-        ('tccd_max', 'float')],
-    'bad': [
-        ('known_bad', 'bool'),
-        ('bad_comment', 'S15')],
-
-    }
+        ('tccd_max', 'float'),
+    ],
+    'bad': [('known_bad', 'bool'), ('bad_comment', 'S15')],
+}
 
 
 def get_options():
-    parser = argparse.ArgumentParser(
-        description="Update guide stats table")
-    parser.add_argument("--check-missing",
-                        action='store_true',
-                        help="check for missing observations in table and reprocess")
-    parser.add_argument("--obsid",
-                        help="specific obsid to process.  Not required in regular update mode")
-    parser.add_argument("--start",
-                        help="start time for processing")
-    parser.add_argument("--stop",
-                        help="stop time for processing")
-    parser.add_argument("--datafile",
-                        default="gs.h5")
+    parser = argparse.ArgumentParser(description="Update guide stats table")
+    parser.add_argument(
+        "--check-missing",
+        action='store_true',
+        help="check for missing observations in table and reprocess",
+    )
+    parser.add_argument(
+        "--obsid",
+        help="specific obsid to process.  Not required in regular update mode",
+    )
+    parser.add_argument("--start", help="start time for processing")
+    parser.add_argument("--stop", help="stop time for processing")
+    parser.add_argument("--datafile", default="gs.h5")
     opt = parser.parse_args()
     return opt
 
@@ -156,10 +158,11 @@ def get_options():
 def _deltas_vs_obc_quat(vals, times, catalog):
     # Misalign is the identity matrix because this is the OBC quaternion
     aca_misalign = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    q_att = Quat(q=np.array([vals['AOATTQT1'],
-                             vals['AOATTQT2'],
-                             vals['AOATTQT3'],
-                             vals['AOATTQT4']]).transpose())
+    q_att = Quat(
+        q=np.array(
+            [vals['AOATTQT1'], vals['AOATTQT2'], vals['AOATTQT3'], vals['AOATTQT4']]
+        ).transpose()
+    )
     Ts = q_att.transform
     acqs = catalog
 
@@ -179,17 +182,18 @@ def _deltas_vs_obc_quat(vals, times, catalog):
             continue
         try:
             # This is not perfect for star catalogs for agasc 1.4 and 1.5
-            star = agasc.get_star(agasc_id, date=times[0],
-                                  agasc_file='agasc*',
-                                  use_supplement=False)
+            star = agasc.get_star(
+                agasc_id, date=times[0], agasc_file='agasc*', use_supplement=False
+            )
         except Exception as e:
             logger.info(f"agasc error on slot {slot} id {agasc_id} err {e} {type(e)}")
             continue
         ra = star['RA_PMCORR']
         dec = star['DEC_PMCORR']
         star_pos_eci = radec_to_eci(ra, dec)
-        d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
-                       star_pos_eci).transpose()
+        d_aca = np.dot(
+            np.dot(aca_misalign, Ts.transpose(0, 2, 1)), star_pos_eci
+        ).transpose()
         yag[slot] = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
         zag[slot] = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
         dy[slot] = vals['AOACYAN{}'.format(slot)] - yag[slot]
@@ -201,24 +205,47 @@ def _deltas_vs_obc_quat(vals, times, catalog):
 
 def get_data(start, stop, obsid=None, starcheck=None):
     # Get telemetry
-    msids = ['AOACASEQ', 'AOACQSUC', 'AOFREACQ', 'AOFWAIT', 'AOREPEAT',
-             'AOACSTAT', 'AOACHIBK', 'AOFSTAR', 'AOFATTMD', 'AOACPRGS',
-             'AOATUPST', 'AONSTARS', 'AOPCADMD', 'AORFSTR1', 'AORFSTR2',
-             'AOATTQT1', 'AOATTQT2', 'AOATTQT3', 'AOATTQT4']
-    per_slot = ['AOACQID', 'AOACFCT', 'AOIMAGE',
-                'AOACMAG', 'AOACYAN', 'AOACZAN',
-                'AOACICC', 'AOACIDP', 'AOACIIR', 'AOACIMS',
-                'AOACIQB', 'AOACISP']
-    slot_msids = [field + '%s' % slot
-                  for field in per_slot
-                  for slot in range(0, 8)]
+    msids = [
+        'AOACASEQ',
+        'AOACQSUC',
+        'AOFREACQ',
+        'AOFWAIT',
+        'AOREPEAT',
+        'AOACSTAT',
+        'AOACHIBK',
+        'AOFSTAR',
+        'AOFATTMD',
+        'AOACPRGS',
+        'AOATUPST',
+        'AONSTARS',
+        'AOPCADMD',
+        'AORFSTR1',
+        'AORFSTR2',
+        'AOATTQT1',
+        'AOATTQT2',
+        'AOATTQT3',
+        'AOATTQT4',
+    ]
+    per_slot = [
+        'AOACQID',
+        'AOACFCT',
+        'AOIMAGE',
+        'AOACMAG',
+        'AOACYAN',
+        'AOACZAN',
+        'AOACICC',
+        'AOACIDP',
+        'AOACIIR',
+        'AOACIMS',
+        'AOACIQB',
+        'AOACISP',
+    ]
+    slot_msids = [field + '%s' % slot for field in per_slot for slot in range(0, 8)]
 
     start_time = DateTime(start).secs
     stop_time = DateTime(stop)
 
-    dat = fetch.MSIDset(msids + slot_msids,
-                        start_time,
-                        stop_time)
+    dat = fetch.MSIDset(msids + slot_msids, start_time, stop_time)
     if len(dat['AOACASEQ']) == 0:
         raise ValueError("No telemetry for obsid {}".format(obsid))
     # Interpolate the MSIDset onto the original time grid (which shouldn't do much)
@@ -252,7 +279,7 @@ def get_data(start, stop, obsid=None, starcheck=None):
 
 
 def consecutive(data, stepsize=1):
-        return np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
+    return np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
 
 
 def calc_gui_stats(data, star_info):
@@ -277,45 +304,71 @@ def calc_gui_stats(data, star_info):
             continue
 
         trak = data[aoacfct == 'TRAK']
-        ok_flags = ((trak['AOACIIR{}'.format(slot)] == 'OK ')
-                    & (trak['AOACISP{}'.format(slot)] == 'OK '))
+        ok_flags = (trak['AOACIIR{}'.format(slot)] == 'OK ') & (
+            trak['AOACISP{}'.format(slot)] == 'OK '
+        )
         stats['n_kalman'] = np.count_nonzero(ok_flags)
         stats['no_track'] = (stats['n_samples'] - stats['n_track']) / stats['n_samples']
         stats['f_obc_bad'] = (stats['n_track'] - stats['n_kalman']) / stats['n_track']
-        stats['f_common_col'] = np.count_nonzero(trak['AOACICC{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['f_sat_pix'] = np.count_nonzero(trak['AOACISP{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['f_def_pix'] = np.count_nonzero(trak['AOACIDP{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['f_ion_rad'] = np.count_nonzero(trak['AOACIIR{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['f_mult_star'] = np.count_nonzero(trak['AOACIMS{}'.format(slot)] == 'ERR') / stats['n_track']
-        stats['f_quad_bound'] = np.count_nonzero(trak['AOACIQB{}'.format(slot)] == 'ERR') / stats['n_track']
+        stats['f_common_col'] = (
+            np.count_nonzero(trak['AOACICC{}'.format(slot)] == 'ERR') / stats['n_track']
+        )
+        stats['f_sat_pix'] = (
+            np.count_nonzero(trak['AOACISP{}'.format(slot)] == 'ERR') / stats['n_track']
+        )
+        stats['f_def_pix'] = (
+            np.count_nonzero(trak['AOACIDP{}'.format(slot)] == 'ERR') / stats['n_track']
+        )
+        stats['f_ion_rad'] = (
+            np.count_nonzero(trak['AOACIIR{}'.format(slot)] == 'ERR') / stats['n_track']
+        )
+        stats['f_mult_star'] = (
+            np.count_nonzero(trak['AOACIMS{}'.format(slot)] == 'ERR') / stats['n_track']
+        )
+        stats['f_quad_bound'] = (
+            np.count_nonzero(trak['AOACIQB{}'.format(slot)] == 'ERR') / stats['n_track']
+        )
 
-        track_interv = consecutive(np.flatnonzero(
-                data['AOACFCT{}'.format(slot)] == 'TRAK'))
+        track_interv = consecutive(
+            np.flatnonzero(data['AOACFCT{}'.format(slot)] == 'TRAK')
+        )
         stats['n_track_interv'] = len(track_interv)
         track_interv_durations = np.array([len(interv) for interv in track_interv])
         stats['n_long_track_interv'] = np.count_nonzero(track_interv_durations > 60)
 
-        not_track_interv = consecutive(np.flatnonzero(
-                data['AOACFCT{}'.format(slot)] != 'TRAK'))
-        not_track_interv_durations = np.array([len(interv) for interv in not_track_interv])
-        stats['n_long_no_track_interv'] = np.count_nonzero(not_track_interv_durations > 60)
+        not_track_interv = consecutive(
+            np.flatnonzero(data['AOACFCT{}'.format(slot)] != 'TRAK')
+        )
+        not_track_interv_durations = np.array(
+            [len(interv) for interv in not_track_interv]
+        )
+        stats['n_long_no_track_interv'] = np.count_nonzero(
+            not_track_interv_durations > 60
+        )
 
-        stats['n_racq_interv'] = len(consecutive(np.flatnonzero(
-                    data['AOACFCT{}'.format(slot)] == 'RACQ')))
-        stats['n_srch_interv'] = len(consecutive(np.flatnonzero(
-                    data['AOACFCT{}'.format(slot)] == 'SRCH')))
-        stats['n_track_interv'] = len(consecutive(np.flatnonzero(
-                    data['AOACFCT{}'.format(slot)] == 'TRAK')))
-
+        stats['n_racq_interv'] = len(
+            consecutive(np.flatnonzero(data['AOACFCT{}'.format(slot)] == 'RACQ'))
+        )
+        stats['n_srch_interv'] = len(
+            consecutive(np.flatnonzero(data['AOACFCT{}'.format(slot)] == 'SRCH'))
+        )
+        stats['n_track_interv'] = len(
+            consecutive(np.flatnonzero(data['AOACFCT{}'.format(slot)] == 'TRAK'))
+        )
 
         # reduce this to just the samples that don't have IR or SP set and are in Kalman on guide stars
         # and are after the first 60 seconds
-        kal = trak[ok_flags & (trak['AOACASEQ'] == 'KALM') & (trak['AOPCADMD'] == 'NPNT')
-                   & (trak['AOFSTAR'] == 'GUID') & (trak['time'] > (data['time'][0] + 60))]
+        kal = trak[
+            ok_flags
+            & (trak['AOACASEQ'] == 'KALM')
+            & (trak['AOPCADMD'] == 'NPNT')
+            & (trak['AOFSTAR'] == 'GUID')
+            & (trak['time'] > (data['time'][0] + 60))
+        ]
         dy = kal['dy{}'.format(slot)]
         dz = kal['dz{}'.format(slot)]
         # cheating here and ignoring spherical trig
-        dr = (dy ** 2 + dz ** 2) ** .5
+        dr = (dy**2 + dz**2) ** 0.5
         stats['star_tracked'] = np.any(dr < 5.0)
         stats['spoiler_tracked'] = np.any(dr > 5.0)
         deltas = {'dy': dy, 'dz': dz, 'dr': dr}
@@ -337,7 +390,9 @@ def calc_gui_stats(data, star_info):
         stats['aoaczan_mean'] = np.mean(kal['AOACZAN{}'.format(slot)])
 
         for dist in ['0.3', '1', '3', '5']:
-            stats['f_within_{}'.format(dist)] = np.count_nonzero(dr < float(dist)) / len(kal)
+            stats['f_within_{}'.format(dist)] = np.count_nonzero(
+                dr < float(dist)
+            ) / len(kal)
         stats['f_outside_5'] = np.count_nonzero(dr > 5) / len(kal)
 
         gui_stats[slot] = stats
@@ -364,7 +419,7 @@ def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop
             last_tstart = tbl.cols.kalman_tstart[tbl.colindexes['kalman_tstart'][-1]]
             h5.close()
         except:
-            last_tstart = start if start is not None else  '2002:012:12:00:00'
+            last_tstart = start if start is not None else '2002:012:12:00:00'
         kadi_obsids = events.obsids.filter(start=last_tstart, stop=stop)
         # Skip the first obsid (as we already have it in the table)
         obsids = [o.obsid for o in kadi_obsids][1:]
@@ -395,8 +450,9 @@ def calc_stats(obsid):
             manvr = manvrs[0]
             dwell = dwells[0]
     except ValueError:
-        multi_manvr = events.manvrs.filter(start=obspar['tstart'] - 100000,
-                                           stop=obspar['tstart'] + 100000)
+        multi_manvr = events.manvrs.filter(
+            start=obspar['tstart'] - 100000, stop=obspar['tstart'] + 100000
+        )
         multi = multi_manvr.select_overlapping(events.obsids(obsid=obsid))
         deltas = [np.abs(m.tstart - obspar['tstart']) for m in multi]
         manvr = multi[np.argmin(deltas)]
@@ -411,33 +467,36 @@ def calc_stats(obsid):
     if not manvr.kalman_start:
         raise ValueError("No Kalman transition for {}".format(obsid))
 
-
     logger.info("Found obsid manvr at {}".format(manvr.start))
     logger.info("Found dwell at {}".format(dwell.start))
     starcheck = get_starcheck_catalog_at_date(manvr.guide_start)
     if starcheck is None or 'cat' not in starcheck or not len(starcheck['cat']):
-        raise ValueError('No starcheck catalog found for {}'.format(
-                manvr.get_obsid()))
+        raise ValueError('No starcheck catalog found for {}'.format(manvr.get_obsid()))
     starcat_time = DateTime(starcheck['cat']['mp_starcat_time'][0]).secs
     starcat_dtime = starcat_time - DateTime(manvr.start).secs
     # If it looks like the wrong starcheck by time, give up
     if abs(starcat_dtime) > 300:
         raise ValueError("Starcheck cat time delta is {}".format(starcat_dtime))
     if abs(starcat_dtime) > 30:
-        logger.warning("Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime)))
+        logger.warning(
+            "Starcheck cat time delta of {} is > 30 sec".format(abs(starcat_dtime))
+        )
     # The NPNT dwell should end when the next maneuver starts, but explicitly confirm via pcadmd
     pcadmd = fetch.Msid('AOPCADMD', manvr.kalman_start, manvr.get_next().tstart + 20)
     next_nman_start = pcadmd.times[pcadmd.vals != 'NPNT'][0]
-    vals, star_info = get_data(start=manvr.kalman_start, stop=next_nman_start,
-                               obsid=obsid, starcheck=starcheck)
+    vals, star_info = get_data(
+        start=manvr.kalman_start, stop=next_nman_start, obsid=obsid, starcheck=starcheck
+    )
     gui_stats = calc_gui_stats(vals, star_info)
-    obsid_info = {'obsid': obsid,
-                  'obi': obspar['obi_num'],
-                  'kalman_datestart': manvr.kalman_start,
-                  'kalman_tstart': DateTime(manvr.kalman_start).secs,
-                  'npnt_tstop': DateTime(next_nman_start).secs,
-                  'npnt_datestop': DateTime(next_nman_start).date,
-                  'revision': STAT_VERSION}
+    obsid_info = {
+        'obsid': obsid,
+        'obi': obspar['obi_num'],
+        'kalman_datestart': manvr.kalman_start,
+        'kalman_tstart': DateTime(manvr.kalman_start).secs,
+        'npnt_tstop': DateTime(next_nman_start).secs,
+        'npnt_datestop': DateTime(next_nman_start).date,
+        'revision': STAT_VERSION,
+    }
     catalog = Table(starcheck['cat'])
     catalog.sort('idx')
     guide_catalog = catalog[(catalog['type'] == 'GUI') | (catalog['type'] == 'BOT')]
@@ -446,15 +505,20 @@ def calc_stats(obsid):
     tccd_mean = np.mean(aacccdpt.vals)
     tccd_max = np.max(aacccdpt.vals)
     warm_frac = dark_model.get_warm_fracs(warm_threshold, manvr.start, tccd_mean)
-    temps = {'tccd_mean': tccd_mean, 'n100_warm_frac': warm_frac,
-             'tccd_max': tccd_max}
+    temps = {'tccd_mean': tccd_mean, 'n100_warm_frac': warm_frac, 'tccd_max': tccd_max}
     return obsid_info, gui_stats, star_info, guide_catalog, temps
 
 
 def table_gui_stats(obsid_info, gui_stats, star_info, catalog, temp):
     logger.info("arranging stats into tabular data")
-    cols = (GUIDE_COLS['obs'] + GUIDE_COLS['cat'] + GUIDE_COLS['stat']
-            + GUIDE_COLS['agasc'] + GUIDE_COLS['temp'] + GUIDE_COLS['bad'])
+    cols = (
+        GUIDE_COLS['obs']
+        + GUIDE_COLS['cat']
+        + GUIDE_COLS['stat']
+        + GUIDE_COLS['agasc']
+        + GUIDE_COLS['temp']
+        + GUIDE_COLS['bad']
+    )
 
     # Initialize all values to zero
     table = Table(np.zeros((1, 8), dtype=cols).flatten())
@@ -501,13 +565,18 @@ def _save_gui_stats(t, table_file=None):
     if table_file is None:
         return
     if not os.path.exists(table_file):
-        cols = (GUIDE_COLS['obs'] + GUIDE_COLS['cat'] + GUIDE_COLS['stat']
-                + GUIDE_COLS['agasc'] + GUIDE_COLS['temp'] + GUIDE_COLS['bad'])
+        cols = (
+            GUIDE_COLS['obs']
+            + GUIDE_COLS['cat']
+            + GUIDE_COLS['stat']
+            + GUIDE_COLS['agasc']
+            + GUIDE_COLS['temp']
+            + GUIDE_COLS['bad']
+        )
         desc, byteorder = tables.descr_from_dtype(np.dtype(cols))
         filters = tables.Filters(complevel=5, complib='zlib')
         h5 = tables.open_file(table_file, 'a')
-        tbl = h5.create_table('/', 'data', desc, filters=filters,
-                             expectedrows=1e6)
+        tbl = h5.create_table('/', 'data', desc, filters=filters, expectedrows=1e6)
         tbl.cols.obsid.create_index()
         tbl.cols.kalman_tstart.create_csindex()
         tbl.cols.agasc_id.create_index()
@@ -516,14 +585,14 @@ def _save_gui_stats(t, table_file=None):
     h5 = tables.open_file(table_file, 'a')
     tbl = h5.get_node('/', 'data')
     have_obsid_coord = tbl.get_where_list(
-        '(obsid == {}) & (obi == {})'.format(
-            t[0]['obsid'], t[0]['obi']), sort=True)
+        '(obsid == {}) & (obi == {})'.format(t[0]['obsid'], t[0]['obi']), sort=True
+    )
     if len(have_obsid_coord):
         obsid_rec = tbl.read_coordinates(have_obsid_coord)
         if len(obsid_rec) != len(t):
             raise ValueError(
-                "Could not update {}; different number of slots".format(
-                    t[0]['obsid']))
+                "Could not update {}; different number of slots".format(t[0]['obsid'])
+            )
         # preserve any 'known_bad' status
         for row in obsid_rec:
             slot = row['slot']
@@ -542,21 +611,26 @@ def update(opt):
     if opt.obsid:
         obsids = [int(opt.obsid)]
     else:
-        obsids = _get_obsids_to_update(table_file=opt.datafile, check_missing=opt.check_missing,
-                                        start=opt.start, stop=opt.stop)
+        obsids = _get_obsids_to_update(
+            table_file=opt.datafile,
+            check_missing=opt.check_missing,
+            start=opt.start,
+            stop=opt.stop,
+        )
     for obsid in obsids:
-
         logger.info("Processing obsid {}".format(obsid))
         try:
             obsid_info, gui_stats, star_info, guide_catalog, temp = calc_stats(obsid)
         except Exception as e:
             open(os.path.splitext(opt.datafile)[0] + '_skipped.dat', 'a').write(
-                "{}: {}\n".format(obsid, e))
+                "{}: {}\n".format(obsid, e)
+            )
             logger.info("Skipping obsid {}: {}".format(obsid, e))
             continue
         if not len(gui_stats):
             open(os.path.splitext(opt.datafile)[0] + '_skipped.dat', 'a').write(
-                "{}: No stats\n".format(obsid))
+                "{}: No stats\n".format(obsid)
+            )
             logger.info("Skipping obsid {}, no stats determined".format(obsid))
             continue
         t = table_gui_stats(obsid_info, gui_stats, star_info, guide_catalog, temp)

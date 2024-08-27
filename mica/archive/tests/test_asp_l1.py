@@ -81,7 +81,6 @@ def test_get_atts_time():
 
 @pytest.mark.skipif("not test_helper.on_head_network()", reason="Not on HEAD network")
 def test_update_l1_archive(tmp_path):
-
     config = asp_l1.CONFIG.copy()
     config["data_root"] = tmp_path / "asp1"
     config["temp_root"] = tmp_path / "temp"
@@ -93,9 +92,7 @@ def test_update_l1_archive(tmp_path):
     archive = obsid_archive.ObsArchive(config)
     obsids = archive.update()
 
-    with ska_dbi.DBI(
-        dbi="sqlite", server=config["data_root"] / "archfiles.db3"
-    ) as db:
+    with ska_dbi.DBI(dbi="sqlite", server=config["data_root"] / "archfiles.db3") as db:
         dat = Table(db.fetchall("select * from archfiles"))
         dat.sort("filename")
         assert dat[

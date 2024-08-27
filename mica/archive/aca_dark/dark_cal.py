@@ -22,8 +22,7 @@ from . import file_defs
 
 DARK_CAL = pyyaks.context.ContextDict('dark_cal')
 
-MICA_FILES = pyyaks.context.ContextDict('update_mica_files',
-                                        basedir=MICA_ARCHIVE_PATH)
+MICA_FILES = pyyaks.context.ContextDict('update_mica_files', basedir=MICA_ARCHIVE_PATH)
 MICA_FILES.update(file_defs.MICA_FILES)
 
 
@@ -71,10 +70,10 @@ def get_dark_cal_dirs(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     :param dark_cals_dir: directory containing dark cals.
     :returns: ordered dict of absolute directory paths
     """
-    dark_cal_ids = sorted([fn for fn in os.listdir(dark_cals_dir)
-                           if re.match(r'[12]\d{6}$', fn)])
-    dark_cal_dirs = [os.path.join(dark_cals_dir, id_)
-                     for id_ in dark_cal_ids]
+    dark_cal_ids = sorted(
+        [fn for fn in os.listdir(dark_cals_dir) if re.match(r'[12]\d{6}$', fn)]
+    )
+    dark_cal_dirs = [os.path.join(dark_cals_dir, id_) for id_ in dark_cal_ids]
     return OrderedDict(zip(dark_cal_ids, dark_cal_dirs))
 
 
@@ -86,8 +85,9 @@ def get_dark_cal_ids(dark_cals_dir=MICA_FILES['dark_cals_dir'].abs):
     :param dark_cals_dir: directory containing dark cals.
     :returns: ordered dict of absolute directory paths
     """
-    dark_cal_ids = sorted([fn for fn in os.listdir(dark_cals_dir)
-                           if re.match(r'[12]\d{6}$', fn)])
+    dark_cal_ids = sorted(
+        [fn for fn in os.listdir(dark_cals_dir) if re.match(r'[12]\d{6}$', fn)]
+    )
     dates = [CxoTime(d[:4] + ':' + d[4:]).date for d in dark_cal_ids]
     return OrderedDict(zip(dates, dark_cal_ids))
 
@@ -123,7 +123,9 @@ def _get_dark_cal_id_scalar(date, select='before', dark_cal_ids=None):
         return dark_id
 
     date_secs = CxoTime(date).secs
-    dark_cal_secs = CxoTime(np.array([dark_id_to_date(id_) for id_ in dark_cal_ids])).secs
+    dark_cal_secs = CxoTime(
+        np.array([dark_id_to_date(id_) for id_ in dark_cal_ids])
+    ).secs
 
     if select == 'nearest':
         ii = np.argmin(np.abs(dark_cal_secs - date_secs))
@@ -137,8 +139,7 @@ def _get_dark_cal_id_scalar(date, select='before', dark_cal_ids=None):
     if ii < 0:
         earliest = CxoTime(dark_cal_secs[0]).date[:8]
         raise MissingDataError(
-            f'No dark cal found before {earliest}'
-            f'(requested dark cal on {date})'
+            f'No dark cal found before {earliest}' f'(requested dark cal on {date})'
         )
 
     try:
@@ -149,12 +150,15 @@ def _get_dark_cal_id_scalar(date, select='before', dark_cal_ids=None):
     return out_dark_id
 
 
-_get_dark_cal_id_vector = np.vectorize(_get_dark_cal_id_scalar, excluded=['select', 'dark_cal_ids'])
+_get_dark_cal_id_vector = np.vectorize(
+    _get_dark_cal_id_scalar, excluded=['select', 'dark_cal_ids']
+)
 
 
 @DARK_CAL.cache
-def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=False,
-                              allow_negative=False):
+def _get_dark_cal_image_props(
+    date, select='before', t_ccd_ref=None, aca_image=False, allow_negative=False
+):
     """
     Return the dark calibration image (e-/s) nearest to ``date`` and the corresponding
     dark_props file.
@@ -203,8 +207,9 @@ def _get_dark_cal_image_props(date, select='before', t_ccd_ref=None, aca_image=F
     return dark, props
 
 
-def get_dark_cal_image(date, select='before', t_ccd_ref=None, aca_image=False,
-                       allow_negative=False):
+def get_dark_cal_image(
+    date, select='before', t_ccd_ref=None, aca_image=False, allow_negative=False
+):
     """
     Return the dark calibration image (e-/s) nearest to ``date``.
 
@@ -219,14 +224,24 @@ def get_dark_cal_image(date, select='before', t_ccd_ref=None, aca_image=False,
 
     :returns: 1024 x 1024 ndarray with dark cal image in e-/s
     """
-    dark, props = _get_dark_cal_image_props(date, select=select, t_ccd_ref=t_ccd_ref,
-                                            aca_image=aca_image,
-                                            allow_negative=allow_negative)
+    dark, props = _get_dark_cal_image_props(
+        date,
+        select=select,
+        t_ccd_ref=t_ccd_ref,
+        aca_image=aca_image,
+        allow_negative=allow_negative,
+    )
     return dark
 
 
-def get_dark_cal_props(date, select='before', include_image=False, t_ccd_ref=None,
-                       aca_image=False, allow_negative=False):
+def get_dark_cal_props(
+    date,
+    select='before',
+    include_image=False,
+    t_ccd_ref=None,
+    aca_image=False,
+    allow_negative=False,
+):
     """
     Return a dark calibration properties structure for ``date``
 
@@ -245,9 +260,13 @@ def get_dark_cal_props(date, select='before', include_image=False, t_ccd_ref=Non
 
     :returns: dict of dark calibration properties
     """
-    dark, props = _get_dark_cal_image_props(date, select=select, t_ccd_ref=None,
-                                            aca_image=aca_image,
-                                            allow_negative=allow_negative)
+    dark, props = _get_dark_cal_image_props(
+        date,
+        select=select,
+        t_ccd_ref=None,
+        aca_image=aca_image,
+        allow_negative=allow_negative,
+    )
 
     if include_image:
         props['image'] = dark
@@ -275,11 +294,17 @@ def get_dark_cal_props_table(start=None, stop=None, include_image=False, as_tabl
     """
     start_id = date_to_dark_id('1999:001:12:00:00' if start is None else start)
     stop_id = date_to_dark_id(stop)
-    dark_dirs = [dark_id for dark_id in get_dark_cal_dirs()
-                 if dark_id >= start_id and dark_id <= stop_id]
+    dark_dirs = [
+        dark_id
+        for dark_id in get_dark_cal_dirs()
+        if dark_id >= start_id and dark_id <= stop_id
+    ]
 
     # Get the list of properties structures
-    props = [get_dark_cal_props(dark_id, include_image=include_image) for dark_id in dark_dirs]
+    props = [
+        get_dark_cal_props(dark_id, include_image=include_image)
+        for dark_id in dark_dirs
+    ]
 
     if as_table:
         # Get rid of a non-scalar data structures and collect col names

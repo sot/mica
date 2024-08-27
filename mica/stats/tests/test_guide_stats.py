@@ -23,7 +23,8 @@ def test_read_stats():
 
 
 HAS_OBSPAR_ARCHIVE = (
-    Path(update_guide_stats.mica.archive.obspar.CONFIG['data_root']) / '00').exists()
+    Path(update_guide_stats.mica.archive.obspar.CONFIG['data_root']) / '00'
+).exists()
 
 
 @pytest.mark.skipif('not HAS_OBSPAR_ARCHIVE', reason='Test requires mica obspars')

@@ -40,69 +40,72 @@ import warnings
 
 class Quat(object):
     """
-    Quaternion class
+     Quaternion class
 
-    Example usage::
+     Example usage::
 
-     >>> from Quaternion import Quat
-     >>> quat = Quat((12,45,45))
-     >>> quat.ra, quat.dec, quat.roll
-     (12, 45, 45)
-     >>> quat.q
-     array([ 0.38857298, -0.3146602 ,  0.23486498,  0.8335697 ])
-     >>> q2 = Quat(quat.q)
-     >>> q2.ra
-     12.0
+      >>> from Quaternion import Quat
+      >>> quat = Quat((12,45,45))
+      >>> quat.ra, quat.dec, quat.roll
+      (12, 45, 45)
+      >>> quat.q
+      array([ 0.38857298, -0.3146602 ,  0.23486498,  0.8335697 ])
+      >>> q2 = Quat(quat.q)
+      >>> q2.ra
+      12.0
 
-    Multiplication and division operators are overloaded for the class to
-    perform appropriate quaternion multiplication and division.
+     Multiplication and division operators are overloaded for the class to
+     perform appropriate quaternion multiplication and division.
 
-    Quaternion composition as a multiplication q = q1 * q2 is equivalent to
-    applying the q2 transform followed by the q1 transform.  Another way to
-    express this is::
+     Quaternion composition as a multiplication q = q1 * q2 is equivalent to
+     applying the q2 transform followed by the q1 transform.  Another way to
+     express this is::
 
-     q = Quat(numpy.dot(q1.transform, q2.transform))
+      q = Quat(numpy.dot(q1.transform, q2.transform))
 
-    Example usage::
+     Example usage::
 
-     >>> q1 = Quat((20, 30, 0))
-     >>> q2 = Quat((0, 0, 40))
-     >>> (q1 * q2).equatorial
-     array([20., 30., 40.])
+      >>> q1 = Quat((20, 30, 0))
+      >>> q2 = Quat((0, 0, 40))
+      >>> (q1 * q2).equatorial
+      array([20., 30., 40.])
 
-   This example first rolls about X by 40 degrees, then rotates that rolled
-   frame to RA=20 and Dec=30.  Doing the composition in the other order does
-   a roll about (the original) X-axis of the (RA, Dec) = (20, 30) frame,
-   yielding a non-intuitive though correct result::
+    This example first rolls about X by 40 degrees, then rotates that rolled
+    frame to RA=20 and Dec=30.  Doing the composition in the other order does
+    a roll about (the original) X-axis of the (RA, Dec) = (20, 30) frame,
+    yielding a non-intuitive though correct result::
 
-     >>> (q2 * q1).equatorial
-     array([ 353.37684725,   34.98868888,   47.499696  ])
+      >>> (q2 * q1).equatorial
+      array([ 353.37684725,   34.98868888,   47.499696  ])
 
 
-   :param attitude: initialization attitude for quat
+    :param attitude: initialization attitude for quat
 
-   ``attitude`` may be:
-     * another Quat
-     * a 4 element array (expects x,y,z,w quat form)
-     * a 3 element array (expects ra,dec,roll in degrees)
-     * a 3x3 transform/rotation matrix
-    N x those types :
-     * an N x 4 element array ( N by x,y,z,w quat form)
-     * an N x 3 element array ( N by ra, dec, roll in degrees,
-       if N == 3, the optional 'intype = 'equatorial' may be used to differentiate,
-       this from a transform matrix)
-     * an N x 3x3
-       
-   :param intype: optional type to describe input attitude
-   
-   ``intype`` may be:
-     * transform
-     * equatorial
-     * quaternion
+    ``attitude`` may be:
+      * another Quat
+      * a 4 element array (expects x,y,z,w quat form)
+      * a 3 element array (expects ra,dec,roll in degrees)
+      * a 3x3 transform/rotation matrix
+     N x those types :
+      * an N x 4 element array ( N by x,y,z,w quat form)
+      * an N x 3 element array ( N by ra, dec, roll in degrees,
+        if N == 3, the optional 'intype = 'equatorial' may be used to differentiate,
+        this from a transform matrix)
+      * an N x 3x3
+
+    :param intype: optional type to describe input attitude
+
+    ``intype`` may be:
+      * transform
+      * equatorial
+      * quaternion
 
     """
+
     def __init__(self, attitude, intype=None):
-        warnings.warn("mica.quaternion is deprecated as of Quaternion 3.5.0", FutureWarning)
+        warnings.warn(
+            "mica.quaternion is deprecated as of Quaternion 3.5.0", FutureWarning
+        )
         self._q = None
         self._equatorial = None
         self._ra0 = None
@@ -114,20 +117,31 @@ class Quat(object):
         else:
             # make it an array and check to see if it is a supported shape
             attitude = np.array(attitude)
-            if ((attitude.shape == (3, 3)
-                 and (intype is None or intype == 'transform'))
-                or (attitude.ndim == 3 and attitude.shape[-1] == 3
-                    and attitude.shape[-2] == 3)):
+            if (
+                attitude.shape == (3, 3) and (intype is None or intype == 'transform')
+            ) or (
+                attitude.ndim == 3
+                and attitude.shape[-1] == 3
+                and attitude.shape[-2] == 3
+            ):
                 self._set_transform(attitude)
-            elif (intype == 'quaternion' or attitude.shape == (4,)
-                  or (attitude.ndim == 2 and attitude.shape[-1] == 4)):
+            elif (
+                intype == 'quaternion'
+                or attitude.shape == (4,)
+                or (attitude.ndim == 2 and attitude.shape[-1] == 4)
+            ):
                 self._set_q(attitude)
-            elif (intype == 'equatorial' or attitude.shape == (3,)
-                  or (attitude.ndim == 2 and attitude.shape[-1] == 3)):
+            elif (
+                intype == 'equatorial'
+                or attitude.shape == (3,)
+                or (attitude.ndim == 2 and attitude.shape[-1] == 3)
+            ):
                 self._set_equatorial(attitude)
             else:
-                raise TypeError("attitude is not one of possible types"
-                                " (3 or 4 elements, Quat, or 3x3 matrix or N x (those types))")
+                raise TypeError(
+                    "attitude is not one of possible types"
+                    " (3 or 4 elements, Quat, or 3x3 matrix or N x (those types))"
+                )
 
     def _set_q(self, q):
         """
@@ -143,7 +157,8 @@ class Quat(object):
         if np.any((np.sum(q * q, axis=-1)[:, np.newaxis] - 1.0) > 1e-6):
             raise ValueError(
                 'Quaternions must be normalized so sum(q**2) == 1;'
-                ' use Quaternion.normalize')
+                ' use Quaternion.normalize'
+            )
         self._q = q
         flip_q = q[:, 3] < 0
         self._q[flip_q] = -1 * q[flip_q]
@@ -157,7 +172,7 @@ class Quat(object):
         """
         Retrieve 4-vector of quaternion elements in [x, y, z, w] form
         or N x 4-vector if N > 1.
-        
+
         :rtype: numpy array
 
         """
@@ -283,7 +298,7 @@ class Quat(object):
         q = self.q
         if q.ndim == 1:
             q = q[np.newaxis]
-        q2 = q ** 2
+        q2 = q**2
 
         ## calculate direction cosine matrix elements from $quaternions
         xa = q2[:, 0] - q2[:, 1] - q2[:, 2] + q2[:, 3]
@@ -294,45 +309,45 @@ class Quat(object):
 
         ##; calculate RA, Dec, Roll from cosine matrix elements
         ra = np.degrees(np.arctan2(xb, xa))
-        dec = np.degrees(np.arctan2(xn, np.sqrt(1 - xn ** 2)))
+        dec = np.degrees(np.arctan2(xn, np.sqrt(1 - xn**2)))
         roll = np.degrees(np.arctan2(yn, zn))
 
         ra[ra < 0] = ra[ra < 0] + 360
         roll[roll < 0] = roll[roll < 0] + 360
         return np.array([ra, dec, roll]).transpose()
 
-#  _quat2transform is largely from Enthought's quaternion.rotmat, though this math is
-#  probably from Hamilton.
-#  License included for completeness
-#
-#This software is OSI Certified Open Source Software.
-#OSI Certified is a certification mark of the Open Source Initiative.
-#
-#Copyright (c) 2006, Enthought, Inc.
-#All rights reserved.
-#
-#Redistribution and use in source and binary forms, with or without
-#modification, are permitted provided that the following conditions are met:
-#
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# * Neither the name of Enthought, Inc. nor the names of its contributors may
-#   be used to endorse or promote products derived from this software without
-#   specific prior written permission.
-#
-#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-#ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-#WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-#DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-#ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-#(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-#LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-#ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-#(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-#SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    #  _quat2transform is largely from Enthought's quaternion.rotmat, though this math is
+    #  probably from Hamilton.
+    #  License included for completeness
+    #
+    # This software is OSI Certified Open Source Software.
+    # OSI Certified is a certification mark of the Open Source Initiative.
+    #
+    # Copyright (c) 2006, Enthought, Inc.
+    # All rights reserved.
+    #
+    # Redistribution and use in source and binary forms, with or without
+    # modification, are permitted provided that the following conditions are met:
+    #
+    # * Redistributions of source code must retain the above copyright notice, this
+    #   list of conditions and the following disclaimer.
+    # * Redistributions in binary form must reproduce the above copyright notice,
+    #   this list of conditions and the following disclaimer in the documentation
+    #   and/or other materials provided with the distribution.
+    # * Neither the name of Enthought, Inc. nor the names of its contributors may
+    #   be used to endorse or promote products derived from this software without
+    #   specific prior written permission.
+    #
+    # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    # DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+    # ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    # (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    # LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+    # ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     def _quat2transform(self):
         """
@@ -359,15 +374,15 @@ class Quat(object):
         wx2 = 2 * w * x
 
         rmat = np.empty((len(q), 3, 3), float)
-        rmat[:, 0, 0] = 1. - yy2 - zz2
+        rmat[:, 0, 0] = 1.0 - yy2 - zz2
         rmat[:, 0, 1] = xy2 - wz2
         rmat[:, 0, 2] = zx2 + wy2
         rmat[:, 1, 0] = xy2 + wz2
-        rmat[:, 1, 1] = 1. - xx2 - zz2
+        rmat[:, 1, 1] = 1.0 - xx2 - zz2
         rmat[:, 1, 2] = yz2 - wx2
         rmat[:, 2, 0] = zx2 - wy2
         rmat[:, 2, 1] = yz2 + wx2
-        rmat[:, 2, 2] = 1. - xx2 - yy2
+        rmat[:, 2, 2] = 1.0 - xx2 - yy2
 
         return rmat
 
@@ -399,9 +414,12 @@ class Quat(object):
         # This is the transpose of the transformation matrix (related to
         # translation of original perl code
         rmat = np.array(
-            [[ca * cd,                  sa * cd,                sd     ],
-             [-ca * sd * sr - sa * cr, -sa * sd * sr + ca * cr, cd * sr],
-             [-ca * sd * cr + sa * sr, -sa * sd * cr - ca * sr, cd * cr]])
+            [
+                [ca * cd, sa * cd, sd],
+                [-ca * sd * sr - sa * cr, -sa * sd * sr + ca * cr, cd * sr],
+                [-ca * sd * cr + sa * sr, -sa * sd * cr - ca * sr, cd * cr],
+            ]
+        )
 
         return rmat.transpose()
 
@@ -418,10 +436,13 @@ class Quat(object):
         T = transform.transpose(0, 2, 1)
         # Code was copied from perl PDL code that uses backwards index ordering
         den = np.array(
-            [1.0 + T[:, 0, 0] - T[:, 1, 1] - T[:, 2, 2],
-             1.0 - T[:, 0, 0] + T[:, 1, 1] - T[:, 2, 2],
-             1.0 - T[:, 0, 0] - T[:, 1, 1] + T[:, 2, 2],
-             1.0 + T[:, 0, 0] + T[:, 1, 1] + T[:, 2, 2]])
+            [
+                1.0 + T[:, 0, 0] - T[:, 1, 1] - T[:, 2, 2],
+                1.0 - T[:, 0, 0] + T[:, 1, 1] - T[:, 2, 2],
+                1.0 - T[:, 0, 0] - T[:, 1, 1] + T[:, 2, 2],
+                1.0 + T[:, 0, 0] + T[:, 1, 1] + T[:, 2, 2],
+            ]
+        )
 
         half_rt_q_max = 0.5 * np.sqrt(np.max(den, axis=0))
         max_idx = np.argmax(den, axis=0)
@@ -429,28 +450,44 @@ class Quat(object):
         denom = 4.0 * half_rt_q_max
         poss_quat[0] = np.transpose(
             np.array(
-                [half_rt_q_max,
-                 (T[:, 1, 0] + T[:, 0, 1]) / denom,
-                 (T[:, 2, 0] + T[:, 0, 2]) / denom,
-                 -(T[:, 2, 1] - T[:, 1, 2]) / denom]))
+                [
+                    half_rt_q_max,
+                    (T[:, 1, 0] + T[:, 0, 1]) / denom,
+                    (T[:, 2, 0] + T[:, 0, 2]) / denom,
+                    -(T[:, 2, 1] - T[:, 1, 2]) / denom,
+                ]
+            )
+        )
         poss_quat[1] = np.transpose(
             np.array(
-                [(T[:, 1, 0] + T[:, 0, 1]) / denom,
-                 half_rt_q_max,
-                 (T[:, 2, 1] + T[:, 1, 2]) / denom,
-                 -(T[:, 0, 2] - T[:, 2, 0]) / denom]))
+                [
+                    (T[:, 1, 0] + T[:, 0, 1]) / denom,
+                    half_rt_q_max,
+                    (T[:, 2, 1] + T[:, 1, 2]) / denom,
+                    -(T[:, 0, 2] - T[:, 2, 0]) / denom,
+                ]
+            )
+        )
         poss_quat[2] = np.transpose(
             np.array(
-                [(T[:, 2, 0] + T[:, 0, 2]) / denom,
-                 (T[:, 2, 1] + T[:, 1, 2]) / denom,
-                 half_rt_q_max,
-                 -(T[:, 1, 0] - T[:, 0, 1]) / denom]))
+                [
+                    (T[:, 2, 0] + T[:, 0, 2]) / denom,
+                    (T[:, 2, 1] + T[:, 1, 2]) / denom,
+                    half_rt_q_max,
+                    -(T[:, 1, 0] - T[:, 0, 1]) / denom,
+                ]
+            )
+        )
         poss_quat[3] = np.transpose(
             np.array(
-                [-(T[:, 2, 1] - T[:, 1, 2]) / denom,
-                  -(T[:, 0, 2] - T[:, 2, 0]) / denom,
-                  -(T[:, 1, 0] - T[:, 0, 1]) / denom,
-                  half_rt_q_max]))
+                [
+                    -(T[:, 2, 1] - T[:, 1, 2]) / denom,
+                    -(T[:, 0, 2] - T[:, 2, 0]) / denom,
+                    -(T[:, 1, 0] - T[:, 0, 1]) / denom,
+                    half_rt_q_max,
+                ]
+            )
+        )
 
         q = np.zeros((len(T), 4))
         for idx in range(0, 4):
@@ -479,9 +516,7 @@ class Quat(object):
         """
         return self * quat2.inv()
 
-
     __truediv__ = __div__
-
 
     def __mul__(self, quat2):
         """
@@ -493,7 +528,7 @@ class Quat(object):
 
           q = Quat(numpy.dot(q1.transform, q2.transform))
 
-        (though numpy.dot is not used because it is awkward in the vector case 
+        (though numpy.dot is not used because it is awkward in the vector case
         when the transforms are of the shape Nx3x3)
 
         Example usage::
@@ -522,10 +557,30 @@ class Quat(object):
         if q2.ndim == 1:
             q2 = q2[np.newaxis]
         mult = np.zeros((len(q1), 4))
-        mult[:,0] =  q1[:,3]*q2[:,0] - q1[:,2]*q2[:,1] + q1[:,1]*q2[:,2] + q1[:,0]*q2[:,3]
-        mult[:,1] =  q1[:,2]*q2[:,0] + q1[:,3]*q2[:,1] - q1[:,0]*q2[:,2] + q1[:,1]*q2[:,3]
-        mult[:,2] = -q1[:,1]*q2[:,0] + q1[:,0]*q2[:,1] + q1[:,3]*q2[:,2] + q1[:,2]*q2[:,3]
-        mult[:,3] = -q1[:,0]*q2[:,0] - q1[:,1]*q2[:,1] - q1[:,2]*q2[:,2] + q1[:,3]*q2[:,3]
+        mult[:, 0] = (
+            q1[:, 3] * q2[:, 0]
+            - q1[:, 2] * q2[:, 1]
+            + q1[:, 1] * q2[:, 2]
+            + q1[:, 0] * q2[:, 3]
+        )
+        mult[:, 1] = (
+            q1[:, 2] * q2[:, 0]
+            + q1[:, 3] * q2[:, 1]
+            - q1[:, 0] * q2[:, 2]
+            + q1[:, 1] * q2[:, 3]
+        )
+        mult[:, 2] = (
+            -q1[:, 1] * q2[:, 0]
+            + q1[:, 0] * q2[:, 1]
+            + q1[:, 3] * q2[:, 2]
+            + q1[:, 2] * q2[:, 3]
+        )
+        mult[:, 3] = (
+            -q1[:, 0] * q2[:, 0]
+            - q1[:, 1] * q2[:, 1]
+            - q1[:, 2] * q2[:, 2]
+            + q1[:, 3] * q2[:, 3]
+        )
         return Quat(mult)
 
     def inv(self):
@@ -538,8 +593,7 @@ class Quat(object):
         q = self.q
         if q.ndim == 1:
             q = q[np.newaxis]
-        return Quat(np.array([q[:, 0], q[:, 1],
-                              q[:, 2], -1.0 * q[:, 3]]).transpose())
+        return Quat(np.array([q[:, 0], q[:, 1], q[:, 2], -1.0 * q[:, 3]]).transpose())
 
 
 def normalize(array):

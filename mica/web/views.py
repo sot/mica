@@ -4,6 +4,7 @@ from django.views.generic import TemplateView
 from kadi import events
 from kadi.events.views import BaseView
 
+
 class IndexView(BaseView, TemplateView):
     template_name = 'mica/index.html'
 
@@ -26,8 +27,11 @@ class IndexView(BaseView, TemplateView):
 
         if obsid:
             obsid = format(obsid, '05d')
-            url = ('https://icxc.harvard.edu/aspect/mica_reports/{}/{}/index.html'
-                   .format(obsid[:2], obsid))
+            url = (
+                'https://icxc.harvard.edu/aspect/mica_reports/{}/{}/index.html'.format(
+                    obsid[:2], obsid
+                )
+            )
             context['mica_url'] = url
 
         return context
@@ -61,23 +65,28 @@ class StarHistView(BaseView, TemplateView):
             import mica.web.star_hist
             import agasc
             from agasc.agasc import IdNotFound
+
             try:
                 agasc_info = agasc.get_star(agasc_id, agasc_file='miniagasc_*')
-                context['star_info'] = [(key, agasc_info[key]) for key in agasc_info.dtype.names]
+                context['star_info'] = [
+                    (key, agasc_info[key]) for key in agasc_info.dtype.names
+                ]
             except IdNotFound:
                 context['star_info'] = []
                 pass
-            acq_table, gui_table = mica.web.star_hist.get_star_stats(agasc_id, start, stop)
+            acq_table, gui_table = mica.web.star_hist.get_star_stats(
+                agasc_id, start, stop
+            )
             if len(acq_table):
                 context['acq_table'] = acq_table
             if len(gui_table):
                 context['gui_table'] = gui_table
                 reports_url = (
                     "https://cxc.cfa.harvard.edu/mta/ASPECT/agasc/supplement_reports/stars/"
-                    + f'{int(agasc_id//1e7):03d}/{agasc_id}/index.html')
+                    + f'{int(agasc_id//1e7):03d}/{agasc_id}/index.html'
+                )
                 context['reports_url'] = reports_url
         return context
-
 
 
 class AcqView(BaseView, TemplateView):
@@ -98,6 +107,7 @@ class AcqView(BaseView, TemplateView):
 
         if obsid:
             import mica.web.pcad_table
+
             obsid = format(obsid, '05d')
             pcad_data = mica.web.pcad_table.get_acq_table(obsid)
             context['pcad_data'] = pcad_data

@@ -9,6 +9,7 @@ This uses the obsid_archive module with a configuration specific
 to the aspect L1 products.
 
 """
+
 import os
 import logging
 import numpy as np
@@ -21,33 +22,52 @@ from mica.common import MICA_ARCHIVE
 
 # these columns are available in the headers of the fetched telemetry
 # for this product (ASP L1) and will be included in the file lookup table
-ARCHFILES_HDR_COLS = ('tstart', 'tstop', 'caldbver', 'content',
-                      'ascdsver', 'revision', 'date')
+ARCHFILES_HDR_COLS = (
+    'tstart',
+    'tstop',
+    'caldbver',
+    'content',
+    'ascdsver',
+    'revision',
+    'date',
+)
 
-#config = ConfigObj('asp1.conf')
-CONFIG = dict(data_root=os.path.join(MICA_ARCHIVE, 'asp1'),
-              temp_root=os.path.join(MICA_ARCHIVE, 'temp'),
-              bad_obsids=os.path.join(MICA_ARCHIVE, 'asp1', 'asp_l1_bad_obsids.dat'),
-              sql_def='archfiles_asp_l1_def.sql',
-              apstat_table='aspect_1',
-              apstat_id='aspect_1_id',
-              label='asp_l1',
-              small='asp1{fidprops}',
-              small_glob='*fidpr*',
-              small_ver_regex=r'pcadf\d+N(\d{3})_',
-              delete=['kalm1', 'gdat', 'adat'],
-              full='asp1',
-              filecheck=False,
-              cols=ARCHFILES_HDR_COLS,
-              content_types=['ASPQUAL', 'ASPSOL', 'ACADATA', 'GSPROPS',
-                             'GYRODATA', 'KALMAN', 'ACACAL', 'ACACENT',
-                             'FIDPROPS', 'GYROCAL', 'ACA_BADPIX'])
+# config = ConfigObj('asp1.conf')
+CONFIG = dict(
+    data_root=os.path.join(MICA_ARCHIVE, 'asp1'),
+    temp_root=os.path.join(MICA_ARCHIVE, 'temp'),
+    bad_obsids=os.path.join(MICA_ARCHIVE, 'asp1', 'asp_l1_bad_obsids.dat'),
+    sql_def='archfiles_asp_l1_def.sql',
+    apstat_table='aspect_1',
+    apstat_id='aspect_1_id',
+    label='asp_l1',
+    small='asp1{fidprops}',
+    small_glob='*fidpr*',
+    small_ver_regex=r'pcadf\d+N(\d{3})_',
+    delete=['kalm1', 'gdat', 'adat'],
+    full='asp1',
+    filecheck=False,
+    cols=ARCHFILES_HDR_COLS,
+    content_types=[
+        'ASPQUAL',
+        'ASPSOL',
+        'ACADATA',
+        'GSPROPS',
+        'GYRODATA',
+        'KALMAN',
+        'ACACAL',
+        'ACACENT',
+        'FIDPROPS',
+        'GYROCAL',
+        'ACA_BADPIX',
+    ],
+)
 
 
 def get_options():
     import argparse
-    desc = \
-"""
+
+    desc = """
 Run the update process to get new ASP L1 telemetry, save it in the Ska
 file archive, and include it in the file lookup database.  This is intended
 to be run as a cron task, and in regular processing, the update will fetch
@@ -61,29 +81,32 @@ without command-line options need to be changed.
     parser = argparse.ArgumentParser(description=desc)
     defaults = dict(CONFIG)
     parser.set_defaults(**defaults)
-    parser.add_argument("--obsid",
-                        type=int,
-                        help="specific obsid to process")
-    parser.add_argument("--version",
-                        default='last',
-                        help="specific processing version to retrieve")
-    parser.add_argument("--firstrun",
-                        action='store_true',
-                        help="for archive init., ignore rev in aspect_1 table")
-    parser.add_argument("--data-root",
-                        help="parent directory for all data")
-    parser.add_argument("--temp-root",
-                        help="parent temp directory")
-    parser.add_argument("--filecheck",
-                        action="store_true",
-                        help="for provisional data, download files and check"
-                        + " that all are present.  If unset, proceed if dir"
-                        + " exists")
-    parser.add_argument("--rebuild",
-                        action="store_true",
-                        help="Allow update to rebuild archive from obsid 1")
+    parser.add_argument("--obsid", type=int, help="specific obsid to process")
+    parser.add_argument(
+        "--version", default='last', help="specific processing version to retrieve"
+    )
+    parser.add_argument(
+        "--firstrun",
+        action='store_true',
+        help="for archive init., ignore rev in aspect_1 table",
+    )
+    parser.add_argument("--data-root", help="parent directory for all data")
+    parser.add_argument("--temp-root", help="parent temp directory")
+    parser.add_argument(
+        "--filecheck",
+        action="store_true",
+        help="for provisional data, download files and check"
+        + " that all are present.  If unset, proceed if dir"
+        + " exists",
+    )
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Allow update to rebuild archive from obsid 1",
+    )
     opt = parser.parse_args()
     return opt
+
 
 # set up an archive object with default config for use by the other
 # get_* methods
@@ -127,8 +150,7 @@ def get_obs_dirs(obsid):
     return archive.get_obs_dirs(obsid)
 
 
-def get_files(obsid=None, start=None, stop=None,
-              revision=None, content=None):
+def get_files(obsid=None, start=None, stop=None, revision=None, content=None):
     """
     List asp_l1 files for an obsid or a time range.
 
@@ -152,8 +174,9 @@ def get_files(obsid=None, start=None, stop=None,
                     defaults to all available ASP1 types
     :returns: full path of files matching query
     """
-    return archive.get_files(obsid=obsid, start=start, stop=stop,
-                             revision=revision, content=content)
+    return archive.get_files(
+        obsid=obsid, start=start, stop=stop, revision=revision, content=content
+    )
 
 
 def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
@@ -172,12 +195,15 @@ def get_atts(obsid=None, start=None, stop=None, revision=None, filter=True):
     if revision == 'all':
         raise ValueError("revision 'all' doesn't really make sense for this function")
     # These are in time order by default from get_files
-    asol_files = get_files(obsid=obsid, start=start, stop=stop,
-                           revision=revision, content=['ASPSOL'])
-    acal_files = get_files(obsid=obsid, start=start, stop=stop,
-                           revision=revision, content=['ACACAL'])
-    aqual_files = get_files(obsid=obsid, start=start, stop=stop,
-                            revision=revision, content=['ASPQUAL'])
+    asol_files = get_files(
+        obsid=obsid, start=start, stop=stop, revision=revision, content=['ASPSOL']
+    )
+    acal_files = get_files(
+        obsid=obsid, start=start, stop=stop, revision=revision, content=['ACACAL']
+    )
+    aqual_files = get_files(
+        obsid=obsid, start=start, stop=stop, revision=revision, content=['ASPQUAL']
+    )
     return get_atts_from_files(asol_files, acal_files, aqual_files, filter=filter)
 
 
@@ -203,16 +229,19 @@ def get_atts_from_files(asol_files, acal_files, aqual_files, filter=True):
         acal = Table.read(acal_f, hdu=1)
         aqual = Table.read(aqual_f, hdu=1)
         # Check that the time ranges match from the fits headers (meta in the table)
-        if not np.allclose(np.array([asol.meta['TSTART'], asol.meta['TSTOP']]),
-                           np.array([acal.meta['TSTART'], acal.meta['TSTOP']]),
-                           atol=10):
+        if not np.allclose(
+            np.array([asol.meta['TSTART'], asol.meta['TSTOP']]),
+            np.array([acal.meta['TSTART'], acal.meta['TSTOP']]),
+            atol=10,
+        ):
             raise ValueError("ACAL and ASOL have mismatched time ranges")
         if filter and np.any(aqual['asp_sol_status'] != 0):
             # For each sample with bad status find the overlapping time range in asol
             # and remove from set
             for idx in np.flatnonzero(aqual['asp_sol_status']):
-                nok = ((asol['time'] >= (aqual['time'][idx] - 1.025))
-                       & (asol['time'] <= (aqual['time'][idx] + 1.025)))
+                nok = (asol['time'] >= (aqual['time'][idx] - 1.025)) & (
+                    asol['time'] <= (aqual['time'][idx] + 1.025)
+                )
                 asol = asol[~nok]
 
         # Transpose of transform/rotation matrix is the inverse
@@ -244,6 +273,7 @@ def main():
     archive.logger.setLevel(logging.INFO)
     archive.logger.addHandler(logging.StreamHandler())
     obsids = archive.update()
+
 
 if __name__ == '__main__':
     main()

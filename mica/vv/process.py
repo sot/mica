@@ -20,24 +20,46 @@ from .vv import FILES
 
 
 VV_DTYPE = np.dtype(
-    [('obsid', '<i4'),
-     ('revision', '<i4'),
-     ('isdefault', '<i4'),
-     ('aspect_1_id', '<i4'),
-     ('used', '<i4'), ('vv_version', '<i4'),
-     ('ap_date', '|S21'),
-     ('tstart', '<f8'), ('tstop', '<f8'),
-     ('sim_z', '<f8'), ('sim_z_offset', '<f8'), ('instrument', '|S10'),
-     ('ra_pnt', '<f8'), ('dec_pnt', '<f8'), ('roll_pnt', '<f8'),
-     ('slot', '<i4'), ('type', '|S10'),
-     ('n_pts', '<i4'), ('rad_off', '<f8'),
-     ('frac_dy_big', '<f8'), ('frac_dz_big', '<f8'), ('frac_mag_big', '<f8'),
-     ('mean_y', '<f8'), ('mean_z', '<f8'),
-     ('dy_mean', '<f8'), ('dy_med', '<f8'), ('dy_rms', '<f8'),
-     ('dz_mean', '<f8'), ('dz_med', '<f8'), ('dz_rms', '<f8'),
-     ('dr_mean', '<f8'), ('dr_med', '<f8'), ('dr_rms', '<f8'),
-     ('mag_mean', '<f8'), ('mag_med', '<f8'), ('mag_rms', '<f8'),
-     ('mean_aacccdpt', '<f8')])
+    [
+        ('obsid', '<i4'),
+        ('revision', '<i4'),
+        ('isdefault', '<i4'),
+        ('aspect_1_id', '<i4'),
+        ('used', '<i4'),
+        ('vv_version', '<i4'),
+        ('ap_date', '|S21'),
+        ('tstart', '<f8'),
+        ('tstop', '<f8'),
+        ('sim_z', '<f8'),
+        ('sim_z_offset', '<f8'),
+        ('instrument', '|S10'),
+        ('ra_pnt', '<f8'),
+        ('dec_pnt', '<f8'),
+        ('roll_pnt', '<f8'),
+        ('slot', '<i4'),
+        ('type', '|S10'),
+        ('n_pts', '<i4'),
+        ('rad_off', '<f8'),
+        ('frac_dy_big', '<f8'),
+        ('frac_dz_big', '<f8'),
+        ('frac_mag_big', '<f8'),
+        ('mean_y', '<f8'),
+        ('mean_z', '<f8'),
+        ('dy_mean', '<f8'),
+        ('dy_med', '<f8'),
+        ('dy_rms', '<f8'),
+        ('dz_mean', '<f8'),
+        ('dz_med', '<f8'),
+        ('dz_rms', '<f8'),
+        ('dr_mean', '<f8'),
+        ('dr_med', '<f8'),
+        ('dr_rms', '<f8'),
+        ('mag_mean', '<f8'),
+        ('mag_med', '<f8'),
+        ('mag_rms', '<f8'),
+        ('mean_aacccdpt', '<f8'),
+    ]
+)
 
 
 KNOWN_BAD_OBSIDS = []
@@ -72,31 +94,31 @@ def _file_vv(obi):
     logger.info("removed directory {}".format(obi.tempdir))
     # make any desired link
     obs_ln = os.path.join(FILES['data_root'], chunk_dir, "%05d" % obsid)
-    obs_ln_last = os.path.join(
-        FILES['data_root'], chunk_dir, "%05d_last" % obsid)
+    obs_ln_last = os.path.join(FILES['data_root'], chunk_dir, "%05d_last" % obsid)
     obsdirs = asp_l1_arch.get_obs_dirs(obsid)
     isdefault = 0
     if 'default' in obsdirs:
-        if (os.path.realpath(obsdirs[version])
-                == os.path.realpath(obsdirs['default'])):
+        if os.path.realpath(obsdirs[version]) == os.path.realpath(obsdirs['default']):
             if os.path.islink(obs_ln):
                 os.unlink(obs_ln)
             os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln)
             isdefault = 1
     if 'last' in obsdirs:
-        if ('default' in obsdirs
-                and (os.path.realpath(obsdirs['last'])
-                     != os.path.realpath(obsdirs['default']))
-                or 'default' not in obsdirs):
-            if (os.path.realpath(obsdirs[version])
-                    == os.path.realpath(obsdirs['last'])):
+        if (
+            'default' in obsdirs
+            and (
+                os.path.realpath(obsdirs['last'])
+                != os.path.realpath(obsdirs['default'])
+            )
+            or 'default' not in obsdirs
+        ):
+            if os.path.realpath(obsdirs[version]) == os.path.realpath(obsdirs['last']):
                 if os.path.islink(obs_ln_last):
                     os.unlink(obs_ln_last)
-                os.symlink(os.path.relpath(obs_dir, chunk_dir_path),
-                           obs_ln_last)
-        if ('default' in obsdirs
-            and (os.path.realpath(obsdirs['last'])
-                 == os.path.realpath(obsdirs['default']))):
+                os.symlink(os.path.relpath(obs_dir, chunk_dir_path), obs_ln_last)
+        if 'default' in obsdirs and (
+            os.path.realpath(obsdirs['last']) == os.path.realpath(obsdirs['default'])
+        ):
             if os.path.exists(obs_ln_last):
                 os.unlink(obs_ln_last)
     obi.isdefault = isdefault
@@ -110,18 +132,19 @@ def update(obsids=[]):
     :param obsids: optional list of obsids
     """
     if len(obsids) == 0:
-
         # If no obsid specified, run on all with vv_complete = 0 in
         # the local processing database.
         with ska_dbi.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
             obsids = db.fetchall(
                 """SELECT * FROM aspect_1_proc
                 where vv_complete = 0
-                order by aspect_1_id""")['obsid']
+                order by aspect_1_id"""
+            )['obsid']
     for obsid in obsids:
         with ska_dbi.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
             proc = db.fetchall(
-                f"SELECT obsid, revision, ap_date FROM aspect_1_proc where obsid = {obsid}")
+                f"SELECT obsid, revision, ap_date FROM aspect_1_proc where obsid = {obsid}"
+            )
         for obs in proc:
             if obsid in KNOWN_BAD_OBSIDS:
                 logger.info(f"Skipping known bad obsid {obsid}")
@@ -130,11 +153,10 @@ def update(obsids=[]):
             try:
                 process(obsid, version=obs['revision'])
             except LookupError:
-                logger.warn(
-                    f"Skipping obs:ver {obsid}:{obs['revision']}. Missing data")
+                logger.warn(f"Skipping obs:ver {obsid}:{obs['revision']}. Missing data")
                 continue
-            update_str = (f"""UPDATE aspect_1_proc set vv_complete = {VV_VERSION}
-                              where obsid = {obsid} and revision = {obs['revision']}""")
+            update_str = f"""UPDATE aspect_1_proc set vv_complete = {VV_VERSION}
+                              where obsid = {obsid} and revision = {obs['revision']}"""
 
             logger.info(update_str)
             with ska_dbi.DBI(dbi='sqlite', server=FILES['asp1_proc_table']) as db:
@@ -160,14 +182,13 @@ def get_arch_vv(obsid, version='last'):
     # this is in the aspect processing table
     asp_l1_proc = ska_dbi.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
     asp_obs = asp_l1_proc.fetchall(
-        "SELECT * FROM aspect_1_proc where obsid = {}".format(
-            obsid))
+        "SELECT * FROM aspect_1_proc where obsid = {}".format(obsid)
+    )
     asp_proc = None
     if len(asp_obs) == 0:
         return None
     if version == 'last':
-        asp_proc = asp_obs[asp_obs['aspect_1_id']
-                           == np.max(asp_obs['aspect_1_id'])][0]
+        asp_proc = asp_obs[asp_obs['aspect_1_id'] == np.max(asp_obs['aspect_1_id'])][0]
     if version == 'default':
         asp_proc = asp_obs[asp_obs['isdefault'] == 1][0]
     if asp_proc is None:
@@ -183,8 +204,9 @@ def get_arch_vv(obsid, version='last'):
         oa.update()
         obspar_dirs = obspar_arch.get_obs_dirs(obsid)
     try:
-        obspar_file = glob(os.path.join(obspar_dirs[asp_proc['obspar_version']],
-                                        'axaf*par*'))[0]
+        obspar_file = glob(
+            os.path.join(obspar_dirs[asp_proc['obspar_version']], 'axaf*par*')
+        )[0]
     except IndexError:
         raise LookupError(f"Requested version {version} not in obspar archive")
     return Obi(obspar_file, l1_dir, temproot=FILES['temp_root'])

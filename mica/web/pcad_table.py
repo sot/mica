@@ -15,26 +15,53 @@ import Ska.quatutil
 import mica.starcheck
 import agasc
 
-msids = ['AOACASEQ', 'AOACQSUC', 'AOFREACQ', 'AOFWAIT', 'AOREPEAT',
-         'AOACSTAT', 'AOACHIBK', 'AOFSTAR', 'AOFATTMD', 'AOACPRGS',
-         'AOATUPST', 'AONSTARS', 'AOPCADMD', 'AORFSTR1', 'AORFSTR2',
-         'AOATTQT1', 'AOATTQT2', 'AOATTQT3', 'AOATTQT4']
-per_slot = ['AOACQID', 'AOACFCT', 'AOIMAGE',
-            'AOACMAG', 'AOACYAN', 'AOACZAN',
-            'AOACICC', 'AOACIDP', 'AOACIIR', 'AOACIMS',
-            'AOACIQB', 'AOACISP']
+msids = [
+    'AOACASEQ',
+    'AOACQSUC',
+    'AOFREACQ',
+    'AOFWAIT',
+    'AOREPEAT',
+    'AOACSTAT',
+    'AOACHIBK',
+    'AOFSTAR',
+    'AOFATTMD',
+    'AOACPRGS',
+    'AOATUPST',
+    'AONSTARS',
+    'AOPCADMD',
+    'AORFSTR1',
+    'AORFSTR2',
+    'AOATTQT1',
+    'AOATTQT2',
+    'AOATTQT3',
+    'AOATTQT4',
+]
+per_slot = [
+    'AOACQID',
+    'AOACFCT',
+    'AOIMAGE',
+    'AOACMAG',
+    'AOACYAN',
+    'AOACZAN',
+    'AOACICC',
+    'AOACIDP',
+    'AOACIIR',
+    'AOACIMS',
+    'AOACIQB',
+    'AOACISP',
+]
 
-slot_msids = [field + '%s' % slot
-              for field in per_slot
-              for slot in range(0, 8)]
+slot_msids = [field + '%s' % slot for field in per_slot for slot in range(0, 8)]
+
 
 def deltas_vs_obc_quat(vals, times, catalog):
     # Ignore misalign
-    aca_misalign = np.array([[1.0,0,0], [0,1,0],[0,0,1]])
-    q_att = Quat(np.array([vals['AOATTQT1'],
-                           vals['AOATTQT2'],
-                           vals['AOATTQT3'],
-                           vals['AOATTQT4']]).transpose())
+    aca_misalign = np.array([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]])
+    q_att = Quat(
+        np.array(
+            [vals['AOATTQT1'], vals['AOATTQT2'], vals['AOATTQT3'], vals['AOATTQT4']]
+        ).transpose()
+    )
     Ts = q_att.transform
     acqs = catalog[(catalog['type'] == 'BOT') | (catalog['type'] == 'ACQ')]
 
@@ -43,7 +70,7 @@ def deltas_vs_obc_quat(vals, times, catalog):
     # is dyear * (degrees / milliarcsec)
     agasc_equinox = DateTime('2000:001:00:00:00.000')
     dyear = (DateTime(times[0]) - agasc_equinox) / 365.25
-    pm_to_degrees = dyear / (3600. * 1000.)
+    pm_to_degrees = dyear / (3600.0 * 1000.0)
     R2A = 206264.81
 
     dy = {}
@@ -58,7 +85,9 @@ def deltas_vs_obc_quat(vals, times, catalog):
         if star['PM_DEC'] != -9999:
             dec = star['DEC'] + star['PM_DEC'] * pm_to_degrees
         star_pos_eci = Ska.quatutil.radec2eci(ra, dec)
-        d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)), star_pos_eci).transpose()
+        d_aca = np.dot(
+            np.dot(aca_misalign, Ts.transpose(0, 2, 1)), star_pos_eci
+        ).transpose()
         yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
         zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
         dy[slot] = vals['AOACYAN{}'.format(slot)] - yag
@@ -66,8 +95,8 @@ def deltas_vs_obc_quat(vals, times, catalog):
 
     return dy, dz
 
-def get_acq_table(obsid):
 
+def get_acq_table(obsid):
     manvrs = events.manvrs.filter(obsid=obsid)
     if not len(manvrs):
         return None
@@ -119,17 +148,20 @@ def get_acq_table(obsid):
             kalm_start = trow['time']
         if (kalm_start is not None) and (trow['time'] > kalm_start + 5):
             continue
-        slot_data = {'slots': [],
-                     'time': trow['time'],
-                     'aorfstr1_slot': slot_for_pos[int(drow['AORFSTR1'])],
-                     'aorfstr2_slot': slot_for_pos[int(drow['AORFSTR2'])],
-                     }
+        slot_data = {
+            'slots': [],
+            'time': trow['time'],
+            'aorfstr1_slot': slot_for_pos[int(drow['AORFSTR1'])],
+            'aorfstr2_slot': slot_for_pos[int(drow['AORFSTR2'])],
+        }
         for m in msids:
             slot_data[m] = drow[m]
         for slot in range(0, 8):
-            row_dict = {'slot': slot,
-                        'catpos': pos_for_slot[slot],
-                        'index': index_for_slot[slot]}
+            row_dict = {
+                'slot': slot,
+                'catpos': pos_for_slot[slot],
+                'index': index_for_slot[slot],
+            }
             for col in per_slot:
                 if col not in ['AOACQID']:
                     row_dict[col] = drow['{}{}'.format(col, slot)]
@@ -140,8 +172,3 @@ def get_acq_table(obsid):
         simple_data.append(slot_data)
 
     return simple_data
-
-
-
-
-

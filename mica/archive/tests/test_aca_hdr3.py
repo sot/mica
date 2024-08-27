@@ -2,13 +2,16 @@
 """
 Basic functionality and regression tests for ACA hdr3 (diagnostic) telemetry.
 """
+
 import os
 import pytest
 import numpy as np
 
 from .. import aca_hdr3
 
-has_l0_2010_archive = os.path.exists(os.path.join(aca_hdr3.aca_l0.CONFIG['data_root'], '2010'))
+has_l0_2010_archive = os.path.exists(
+    os.path.join(aca_hdr3.aca_l0.CONFIG['data_root'], '2010')
+)
 
 
 @pytest.mark.skipif('not has_l0_2010_archive', reason='Test requires 2010 L0 archive')
@@ -33,6 +36,29 @@ def test_MSIDset():
     val_lengths = np.array([len(dat[msid].vals) for msid in msids])
     time_lengths = np.array([len(dat[msid].times) for msid in msids])
     assert np.all(val_lengths == time_lengths)
-    assert np.all(val_lengths == [10679, 40991, 40991, 40528, 40514, 40514, 40991, 40991, 40514,
-                                  40991, 40514, 40514, 40991, 40514, 10731, 40528, 40528, 40528,
-                                  10679, 10760, 10679])
+    assert np.all(
+        val_lengths
+        == [
+            10679,
+            40991,
+            40991,
+            40528,
+            40514,
+            40514,
+            40991,
+            40991,
+            40514,
+            40991,
+            40514,
+            40514,
+            40991,
+            40514,
+            10731,
+            40528,
+            40528,
+            40528,
+            10679,
+            10760,
+            10679,
+        ]
+    )

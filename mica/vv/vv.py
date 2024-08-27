@@ -19,7 +19,8 @@ FILES = dict(
     h5_file=os.path.join(MICA_ARCHIVE, 'vv', 'vv.h5'),
     last_file=os.path.join(MICA_ARCHIVE, 'vv', 'last_id.txt'),
     asp1_proc_table=os.path.join(MICA_ARCHIVE, 'asp1', 'processing_asp_l1.db3'),
-    bad_obsid_list=os.path.join(MICA_ARCHIVE, 'vv', 'bad_obsids.json'))
+    bad_obsid_list=os.path.join(MICA_ARCHIVE, 'vv', 'bad_obsids.json'),
+)
 
 
 logger = logging.getLogger('vv')
@@ -40,20 +41,24 @@ def get_vv_dir(obsid, version="default"):
     if version == 'last' or version == 'default':
         asp_l1_proc = ska_dbi.DBI(dbi="sqlite", server=FILES['asp1_proc_table'])
         if version == 'default':
-            obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
+            obs = asp_l1_proc.fetchall(
+                """select * from aspect_1_proc
                                           where obsid = {} and isdefault = 1
-                                       """.format(obsid))
+                                       """.format(obsid)
+            )
             if not len(obs):
-                raise LookupError("Version {} not found for obsid {}".format(
-                    version, obsid))
+                raise LookupError(
+                    "Version {} not found for obsid {}".format(version, obsid)
+                )
             num_version = obs['revision'][0]
         if version == 'last':
-            obs = asp_l1_proc.fetchall("""select * from aspect_1_proc
+            obs = asp_l1_proc.fetchall(
+                """select * from aspect_1_proc
                                           where obsid = {}
-                                       """.format(obsid))
+                                       """.format(obsid)
+            )
             if not len(obs):
-                raise LookupError("No entries found for obsid {}".format(
-                    obsid))
+                raise LookupError("No entries found for obsid {}".format(obsid))
             num_version = np.max(obs['revision'])
     else:
         num_version = version
@@ -103,4 +108,3 @@ def get_rms_data():
     with tables_open_file(FILES['h5_file'], 'r') as h5f:
         data = h5f.root.vv[:]
     return data
-
