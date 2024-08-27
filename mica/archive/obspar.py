@@ -10,10 +10,10 @@ to the obspar products.
 
 """
 
-import os
 import logging
-from glob import glob
+import os
 import re
+from glob import glob
 
 from mica.archive import obsid_archive
 from mica.archive.obsid_archive import parse_obspar

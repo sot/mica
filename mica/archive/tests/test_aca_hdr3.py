@@ -4,8 +4,9 @@ Basic functionality and regression tests for ACA hdr3 (diagnostic) telemetry.
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 from .. import aca_hdr3
 

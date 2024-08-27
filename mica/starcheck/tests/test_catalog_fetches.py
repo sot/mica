@@ -10,8 +10,9 @@ from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
 from Ska.quatutil import radec2yagzag, yagzag2radec
 
-from .. import starcheck
 from mica.utils import load_name_to_mp_dir
+
+from .. import starcheck
 
 HAS_SC_ARCHIVE = os.path.exists(starcheck.FILES["data_root"])
 

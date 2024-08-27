@@ -4,9 +4,10 @@ import sys
 
 sys.path.insert(0, "..")
 
-from mica.archive import aca_hdr3
 from astropy.table import Table
 from astropy.table.pprint import _pformat_table
+
+from mica.archive import aca_hdr3
 
 hdr3 = aca_hdr3.HDR3_DEF
 m_ids = sorted(hdr3)

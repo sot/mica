@@ -3,19 +3,18 @@
 interface to a local disk copy of the Observation Catalog (Ocat).
 """
 
-from pathlib import Path
 import re
-import warnings
 import time
+import warnings
+from pathlib import Path
 
-import requests
 import numpy as np
+import requests
 import tables
-from astropy.table import Table, MaskedColumn
 from astropy.coordinates import SkyCoord
+from astropy.table import MaskedColumn, Table
 
 from mica.common import MICA_ARCHIVE
-
 
 __all__ = [
     "get_archive_file_list",
@@ -537,6 +536,7 @@ def main_update_ocat_local():
     This overwrites the file from scratch each time.
     """
     import argparse
+
     from ska_helpers.retry import retry_call
 
     parser = argparse.ArgumentParser(description="Update target table")

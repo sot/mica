@@ -1,12 +1,12 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import tempfile
 import os
-import numpy as np
-import pytest
+import tempfile
 from pathlib import Path
 
-from .. import guide_stats
-from .. import update_guide_stats
+import numpy as np
+import pytest
+
+from .. import guide_stats, update_guide_stats
 
 HAS_GS_TABLE = os.path.exists(guide_stats.TABLE_FILE)
 

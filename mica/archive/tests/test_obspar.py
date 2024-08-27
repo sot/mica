@@ -1,6 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
+
 import pytest
+
 from .. import obspar
 
 HAS_OBSPAR_ARCHIVE = os.path.exists(obspar.CONFIG["data_root"])

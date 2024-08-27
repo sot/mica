@@ -1,6 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from django.views.generic import TemplateView
-
 from kadi import events
 from kadi.events.views import BaseView
 
@@ -62,9 +61,10 @@ class StarHistView(BaseView, TemplateView):
         context["stop"] = stop or ""
 
         if agasc_id:
-            import mica.web.star_hist
             import agasc
             from agasc.agasc import IdNotFound
+
+            import mica.web.star_hist
 
             try:
                 agasc_info = agasc.get_star(agasc_id, agasc_file="miniagasc_*")

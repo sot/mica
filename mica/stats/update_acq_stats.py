@@ -1,25 +1,25 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import os
-import sys
 import argparse
-import agasc
-from kadi import events
-from Ska.engarchive import fetch, fetch_sci
-from astropy.table import Table, Column
-from Chandra.Time import DateTime
-import mica.archive.obspar
-from mica.starcheck import get_starcheck_catalog, get_starcheck_catalog_at_date
-import tables
-import numpy as np
-import Ska.astro
-from Quaternion import Quat
-from chandra_aca import dark_model
-from chandra_aca.transform import radec_to_eci, yagzag_to_radec
 import logging
+import os
 import smtplib
+import warnings
 from email.mime.text import MIMEText
 
-import warnings
+import agasc
+import numpy as np
+import Ska.astro
+import tables
+from astropy.table import Column, Table
+from Chandra.Time import DateTime
+from chandra_aca import dark_model
+from chandra_aca.transform import radec_to_eci, yagzag_to_radec
+from kadi import events
+from Quaternion import Quat
+from Ska.engarchive import fetch, fetch_sci
+
+import mica.archive.obspar
+from mica.starcheck import get_starcheck_catalog, get_starcheck_catalog_at_date
 
 # Ignore known numexpr.necompiler and table.conditions warning
 warnings.filterwarnings(

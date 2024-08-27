@@ -16,18 +16,18 @@ The list of files in cda_aca0.h5 is compared against the list of files that have
 MICA_ARCHIVE so that none are missed.
 """
 
+import argparse
+import logging
 import os
 import re
+import time
+import urllib
+
+import numpy as np
 import tables
 from astropy.table import Table
-import numpy as np
-import urllib
-import logging
-import argparse
-import time
-
-from ska_helpers.retry import retry_call
 from Chandra.Time import DateTime
+from ska_helpers.retry import retry_call
 
 from mica.common import MICA_ARCHIVE
 

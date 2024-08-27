@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import os
 import argparse
+import os
 
-from mica.stats import update_guide_stats
 import mica.stats.guide_stats
+from mica.stats import update_guide_stats
 
 # Cheat and pass options directly.  Needs entrypoint scripts
 opt = argparse.Namespace(

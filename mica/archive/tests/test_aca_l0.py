@@ -1,11 +1,14 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import division
+
 import os
+
+import numpy as np
 import pytest
 from astropy.table import Table
-import numpy as np
-from mica.archive import aca_l0, asp_l1
 from Ska.Numpy import interpolate
+
+from mica.archive import aca_l0, asp_l1
 
 has_l0_2012_archive = os.path.exists(os.path.join(aca_l0.CONFIG["data_root"], "2012"))
 

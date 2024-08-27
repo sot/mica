@@ -1,10 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
-import pytest
+
 import numpy as np
-from .. import vv
-from .. import process
+import pytest
+
 from ... import common
+from .. import process, vv
 
 HAS_L1_ARCHIVE = os.path.exists(process.asp_l1_arch.CONFIG["data_root"])
 HAS_VV_ARCHIVE = (

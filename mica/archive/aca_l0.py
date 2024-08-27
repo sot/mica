@@ -1,29 +1,31 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import os
-from glob import glob
-import re
-import logging
-import shutil
-import time
-import gzip
-from astropy.table import Table
-import astropy.io.fits as pyfits
-import numpy as np
-import numpy.ma as ma
 import argparse
 import collections
-import tables
+import gzip
+import logging
+import os
+import re
+import shutil
+import time
+from glob import glob
 from itertools import count
 from pathlib import Path
 
-import ska_dbi
+import astropy.io.fits as pyfits
+import numpy as np
+import numpy.ma as ma
 import Ska.arc5gl
-from Chandra.Time import DateTime
 import Ska.File
+import ska_dbi
+import tables
+from astropy.table import Table
+from Chandra.Time import DateTime
 from chandra_aca.aca_image import ACAImage
-# import kadi later in obsid_times
 
 from mica.common import MICA_ARCHIVE, MissingDataError
+
+# import kadi later in obsid_times
+
 
 logger = logging.getLogger("aca0 fetch")
 logger.setLevel(logging.INFO)

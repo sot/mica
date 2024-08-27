@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from astropy.table import Table
 from Chandra.Time import DateTime
+
 from mica.stats import acq_stats, guide_stats
 
 

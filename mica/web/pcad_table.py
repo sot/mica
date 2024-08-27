@@ -1,19 +1,21 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
+import agasc
 import kadi.events.query as events
+import numpy as np
+import Ska.quatutil
+from astropy.table import Column, Table
+from Chandra.Time import DateTime
+from Ska.engarchive import fetch
+
+import mica.starcheck
+from mica.quaternion import Quat
+
 # This import style (instead of "from kadi import events") is required due to a
 # conflict with how the django app is initialized and standalone usage since
 # django 2+. Basically `events/__init__.py` in a django app does not get the
 # auto-generated query references because DJANGO_SETTINGS_MODULE is set.
 
-import numpy as np
-from Chandra.Time import DateTime
-from Ska.engarchive import fetch
-from astropy.table import Table, Column
-from mica.quaternion import Quat
-import Ska.quatutil
-import mica.starcheck
-import agasc
 
 msids = [
     "AOACASEQ",

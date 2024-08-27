@@ -1,12 +1,12 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import tempfile
-import os
-from pathlib import Path
 import getpass
+import os
 import shutil
-import pytest
+import tempfile
+from pathlib import Path
 from warnings import warn
 
+import pytest
 from testr.test_helper import on_head_network
 
 from .. import report

@@ -2,17 +2,17 @@
 # make a table to assist in cron job V&V processing
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
+import gzip
+import logging
 import os
 import re
-import logging
-from astropy.io import fits
 from glob import glob
-import gzip
 from pathlib import Path
 
 import ska_dbi
-from ska_dbi.sqsh import Sqsh
+from astropy.io import fits
 from Ska.File import get_globfiles
+from ska_dbi.sqsh import Sqsh
 
 from mica.common import MICA_ARCHIVE
 

@@ -4,28 +4,27 @@ Generalized module for fetching and archiving obsid-organized
 telemetry such as asp_l1 and obspar products.
 """
 
-import os
-import tempfile
-from glob import glob
-import re
-import logging
-import shutil
-import numpy as np
-import astropy.io.fits as pyfits
-from pathlib import Path
-
-import Ska.arc5gl
-import ska_dbi
-from ska_dbi.sqsh import Sqsh
-from Chandra.Time import DateTime
-import Ska.File
-from astropy.table import Table
-import mica
-
-
 # borrowed from telem_archive
 import csv
 import gzip
+import logging
+import os
+import re
+import shutil
+import tempfile
+from glob import glob
+from pathlib import Path
+
+import astropy.io.fits as pyfits
+import numpy as np
+import Ska.arc5gl
+import Ska.File
+import ska_dbi
+from astropy.table import Table
+from Chandra.Time import DateTime
+from ska_dbi.sqsh import Sqsh
+
+import mica
 
 
 def parse_obspar(file):

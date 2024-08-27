@@ -3,9 +3,10 @@
 # files in the same directories
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import ska_dbi
 import os
 import re
+
+import ska_dbi
 
 for t in ["obspar", "asp1"]:
     db = ska_dbi.DBI(dbi="sqlite", server="/data/aca/archive/%s/archfiles_redo.db3" % t)

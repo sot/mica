@@ -1,25 +1,24 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import division
-import os
-import time
-import sys
+
 import argparse
+import logging
+import os
+import warnings
+
+import agasc
 import numpy as np
 import tables
 from astropy.table import Table
-import logging
-import warnings
-
 from Chandra.Time import DateTime
-import agasc
-from kadi import events
-from Ska.engarchive import fetch, fetch_sci
-import mica.archive.obspar
-from mica.starcheck.starcheck import get_starcheck_catalog_at_date
-import Ska.astro
-from Quaternion import Quat
 from chandra_aca import dark_model
 from chandra_aca.transform import radec_to_eci
+from kadi import events
+from Quaternion import Quat
+from Ska.engarchive import fetch, fetch_sci
+
+import mica.archive.obspar
+from mica.starcheck.starcheck import get_starcheck_catalog_at_date
 
 # Ignore known numexpr.necompiler and table.conditions warning
 warnings.filterwarnings(

@@ -13,8 +13,8 @@ update another table with effective mags based on acq / guide history.
 For process instructions see: https://github.com/sot/mica/wiki/AGASC-supplement
 """
 
-import os
 import argparse
+import os
 from pathlib import Path
 
 import pyyaks.logger

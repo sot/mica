@@ -1,11 +1,12 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import tempfile
 import os
-import pytest
+import tempfile
 from pathlib import Path
 
-from .. import update_acq_stats as acq_stats
+import pytest
+
 from .. import acq_stats as read_acq_stats
+from .. import update_acq_stats as acq_stats
 
 HAS_OBSPAR_ARCHIVE = (
     Path(acq_stats.mica.archive.obspar.CONFIG["data_root"]) / "00"

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
-from mica.stats import update_acq_stats
+
 import mica.stats.acq_stats
+from mica.stats import update_acq_stats
 
 update_acq_stats.main()
 

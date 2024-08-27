@@ -1,13 +1,13 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
 
-import Quaternion
 import agasc
+import Quaternion
 from Chandra.Time import DateTime
 from chandra_aca.plot import plot_stars
 
-from mica.starcheck import get_starcheck_catalog
 from mica.common import MICA_ARCHIVE
+from mica.starcheck import get_starcheck_catalog
 
 CONFIG = dict(
     data_root=os.path.join(MICA_ARCHIVE, "starcheck"),

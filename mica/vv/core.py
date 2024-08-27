@@ -1,36 +1,34 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import warnings
-import os
-import re
-import six
-import pickle
-import json
-import csv
 import gzip
+import json
 import logging
+import os
+import pickle
+import re
+import warnings
 from glob import glob
+
+import matplotlib
 import numpy as np
 import numpy.ma as ma
-import tempfile
-import matplotlib
+import six
 
 if __name__ == "__main__":
     matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from scipy.signal import medfilt as medfilt
-from scipy.stats import scoreatpercentile
 import astropy.io.fits as pyfits
+import matplotlib.pyplot as plt
+import Ska.Numpy
 from astropy.table import Table
 from astropy.units import UnitsWarning
-
-import Ska.Numpy
 from Chandra.Time import DateTime
+from scipy.signal import medfilt as medfilt
+from scipy.stats import scoreatpercentile
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
 from ska_dbi.sqsh import Sqsh
 
-from mica.archive.obsid_archive import parse_obspar, get_obspar
+from mica.archive.obsid_archive import get_obspar, parse_obspar
 
 warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
 

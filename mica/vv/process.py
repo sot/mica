@@ -1,23 +1,23 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import division
 
-import os
-import tempfile
 import json
-import tables
-import shutil
 import logging
+import os
+import shutil
+import tempfile
 from glob import glob
-import numpy as np
 
+import numpy as np
 import ska_dbi
+import tables
 
 import mica.archive.asp_l1 as asp_l1_arch
 import mica.archive.obspar as obspar_arch
 from mica.archive import obsid_archive
-from .core import Obi, VV_VERSION
-from .vv import FILES
 
+from .core import VV_VERSION, Obi
+from .vv import FILES
 
 VV_DTYPE = np.dtype(
     [

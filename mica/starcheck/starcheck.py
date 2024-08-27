@@ -2,11 +2,10 @@
 import os
 import re
 
+import astropy.units as u
 import numpy as np
 import ska_dbi
-import astropy.units as u
 from astropy.table import Table
-
 from cxotime import CxoTime
 from kadi.commands import get_observations
 

@@ -1,4 +1,5 @@
 import os
+
 import tables
 
 SKA = os.environ.get("SKA", "/proj/sot/ska")

@@ -1,8 +1,9 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import sys
 import os
-from setuptools import setup
+import sys
 from pathlib import Path
+
+from setuptools import setup
 
 license = """\
 New BSD/3-clause BSD License

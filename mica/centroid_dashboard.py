@@ -1,35 +1,33 @@
 #!/usr/bin/env python
 
 import os
-import numpy as np
 from glob import glob
 
 # Matplotlib setup
 # Use Agg backend for command-line (non-interactive) operation
 import matplotlib
+import numpy as np
 
 if __name__ == "__main__":
     matplotlib.use("Agg")
+import argparse
+
 import matplotlib.pylab as plt
-
-from kadi import events
-from chandra_aca.centroid_resid import CentroidResiduals
-from chandra_aca.transform import yagzag_to_pixels
-from chandra_aca.plot import plot_stars
-from mica.starcheck import get_mp_dir, get_starcat, get_att
+import pyyaks.logger
 from agasc import get_star
-
-from Ska.Matplotlib import plot_cxctime
-from Ska.engarchive import fetch
-from Quaternion import Quat
+from astropy.io import ascii
+from astropy.table import Table, vstack
 from Chandra.Time import DateTime
+from chandra_aca.centroid_resid import CentroidResiduals
+from chandra_aca.plot import plot_stars
+from chandra_aca.transform import yagzag_to_pixels
+from kadi import events
+from Quaternion import Quat
+from Ska.engarchive import fetch
+from Ska.Matplotlib import plot_cxctime
 from Ska.Numpy import interpolate
 
-from astropy.table import Table, vstack
-from astropy.io import ascii
-
-import argparse
-import pyyaks.logger
+from mica.starcheck import get_att, get_mp_dir, get_starcat
 
 GUIDE_METRICS_OBSID = "guide_metrics_obsid.dat"
 GUIDE_METRICS_SLOT = "guide_metrics_slot.dat"

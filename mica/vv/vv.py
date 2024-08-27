@@ -1,14 +1,14 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import division
 
-import os
 import json
-import tables
 import logging
+import os
 from glob import glob
-import numpy as np
 
+import numpy as np
 import ska_dbi
+import tables
 
 from mica.common import MICA_ARCHIVE
 
@@ -86,6 +86,7 @@ def get_vv_files(obsid, version="default"):
 def get_vv(obsid, version="default"):
     """
     Retrieve V&V data for an obsid/version.
+
     This reads the saved JSON and returns the previously-
     calculated V&V data.
 

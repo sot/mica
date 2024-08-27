@@ -10,14 +10,14 @@ to the aspect L1 products.
 
 """
 
-import os
 import logging
+import os
+
 import numpy as np
 from astropy.table import Table
 from Quaternion import Quat
 
-from mica.archive import obsid_archive
-from mica.archive import asp_l1_proc
+from mica.archive import asp_l1_proc, obsid_archive
 from mica.common import MICA_ARCHIVE
 
 # these columns are available in the headers of the fetched telemetry

@@ -3,17 +3,17 @@
 Experimental/alpha code to work with ACA L0 Header 3 data
 """
 
+import collections
 import re
+
 import numpy as np
 import numpy.ma as ma
-import collections
-from scipy.interpolate import interp1d
 from Chandra.Time import DateTime
+from scipy.interpolate import interp1d
 from Ska.Numpy import search_both_sorted
 
 from mica.archive import aca_l0
 from mica.common import MissingDataError
-
 
 # In case it isn't obvious, for an MSID of HD3TLM<I><W> in ACA image data
 # for slot <S>, that maps to table 11.1 like:

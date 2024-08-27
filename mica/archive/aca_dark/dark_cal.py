@@ -1,23 +1,23 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-import re
-import os
-from collections import OrderedDict
 import json
-
-import six
-from six.moves import zip
+import os
+import re
+from collections import OrderedDict
 
 import numpy as np
-from astropy.io import fits, ascii
-from astropy.table import Column
 import pyyaks.context
-from cxotime import CxoTime
+import six
+from astropy.io import ascii, fits
+from astropy.table import Column
 from chandra_aca.aca_image import ACAImage
-
-from chandra_aca.dark_model import dark_temp_scale
 from chandra_aca.dark_model import DARK_SCALE_4C  # noqa
+from chandra_aca.dark_model import dark_temp_scale
+from cxotime import CxoTime
+from six.moves import zip
+
 from mica.cache import lru_cache
 from mica.common import MICA_ARCHIVE_PATH, MissingDataError
+
 from . import file_defs
 
 DARK_CAL = pyyaks.context.ContextDict("dark_cal")

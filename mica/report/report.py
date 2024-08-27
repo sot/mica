@@ -1,40 +1,40 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+import argparse
+import datetime
+import gzip
+import json
+import logging
 import os
+import re
 import sys
 import warnings
-import re
-import logging
-import gzip
-import jinja2
-import datetime
-import json
 from glob import glob
-import argparse
-import matplotlib.pyplot as plt
-import numpy as np
-import tables
-from six.moves import zip
 from pathlib import Path
-from astropy.table import Table
-from astropy.time import Time
-import astropy.units as u
 
 import agasc
+import astropy.units as u
+import jinja2
+import matplotlib.pyplot as plt
+import numpy as np
 import ska_dbi
-from ska_dbi.sqsh import Sqsh
+import tables
+from astropy.table import Table
+from astropy.time import Time
 from cxotime import CxoTime
-from Ska.engarchive import fetch_sci
 from kadi import events
 from kadi.commands.states import get_states
+from six.moves import zip
+from Ska.engarchive import fetch_sci
+from ska_dbi.sqsh import Sqsh
+
 import mica
-from mica.archive import obspar
-from mica.catalog import catalog
-from mica.starcheck import starcheck
-from mica.archive import asp_l1
 import mica.vv
-from mica.vv import get_vv, get_vv_files
+from mica.archive import asp_l1, obspar
+from mica.catalog import catalog
 from mica.common import MICA_ARCHIVE
+from mica.starcheck import starcheck
 from mica.stats import acq_stats, guide_stats
+from mica.vv import get_vv, get_vv_files
 
 version = mica.__version__
 
