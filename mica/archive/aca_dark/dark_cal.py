@@ -11,7 +11,7 @@ from astropy.io import ascii, fits
 from astropy.table import Column
 from chandra_aca.aca_image import ACAImage
 from chandra_aca.dark_model import (
-    DARK_SCALE_4C,  # noqa
+    DARK_SCALE_4C,  # noqa: F401 imported but unused
     dark_temp_scale,
 )
 from cxotime import CxoTime

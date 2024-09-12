@@ -563,7 +563,7 @@ class Updater(object):
         logger.info("Checking for missing files from %s" % startdate)
         # find the index in the cda archive list that matches
         # the first entry with the "start" date
-        for idate, backcnt in zip(ingested_files["ingest_date"][::-1], count(1)):  # noqa
+        for idate, backcnt in zip(ingested_files["ingest_date"][::-1], count(1)):  # noqa: B007 backcnt not used in loop
             if idate < startdate:
                 break
 

@@ -232,7 +232,7 @@ class Quat(object):
     def _get_ra(self):
         """Retrieve RA term from equatorial system in degrees"""
         if self._equatorial is None:
-            self.equatorial  # noqa
+            self.equatorial  # noqa: B018 useless expression
         if self._equatorial.shape[0] == 1:
             return self._equatorial[:, 0][0]
         else:
@@ -241,7 +241,7 @@ class Quat(object):
     def _get_dec(self):
         """Retrieve Dec term from equatorial system in degrees"""
         if self._equatorial is None:
-            self.equatorial  # noqa
+            self.equatorial  # noqa: B018 useless expression
         if self._equatorial.shape[0] == 1:
             return self._equatorial[:, 1][0]
         else:
@@ -250,7 +250,7 @@ class Quat(object):
     def _get_roll(self):
         """Retrieve Roll term from equatorial system in degrees"""
         if self._equatorial is None:
-            self.equatorial  # noqa
+            self.equatorial  # noqa: B018 useless expression
         if self._equatorial.shape[0] == 1:
             return self._equatorial[:, 2][0]
         else:

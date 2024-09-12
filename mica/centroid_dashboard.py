@@ -869,7 +869,7 @@ def update_observed_metrics(
 
     rows_obsid = []
     rows_slots = []
-    for obsid in obsids:  # noqa
+    for obsid in obsids:  # noqa: PLR1704 redefining obsid
         logger.info(f"Obsid={obsid}")
         obs_dir = get_cd_dir(obsid, data_root)
 

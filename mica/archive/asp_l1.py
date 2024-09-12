@@ -19,7 +19,7 @@ import numpy as np
 from astropy.table import Table
 from Quaternion import Quat
 
-from mica.archive import asp_l1_proc, obsid_archive  # noqa
+from mica.archive import asp_l1_proc, obsid_archive  # noqa: F401 imported but unused
 from mica.common import MICA_ARCHIVE
 
 # these columns are available in the headers of the fetched telemetry
@@ -284,7 +284,7 @@ def main():
     archive = obsid_archive.ObsArchive(config)
     archive.logger.setLevel(logging.INFO)
     archive.logger.addHandler(logging.StreamHandler())
-    obsids = archive.update()  # noqa
+    obsids = archive.update()  # noqa: F841 assigned but not used
 
 
 if __name__ == "__main__":

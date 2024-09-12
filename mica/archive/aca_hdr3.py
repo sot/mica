@@ -621,7 +621,7 @@ class MSIDset(collections.OrderedDict):
         self.datestart = DateTime(self.tstart).date
         self.datestop = DateTime(self.tstop).date
         slot_datas = {}
-        slots = set(slot_for_msid(confirm_msid(msid)) for msid in msids)  # noqa
+        slots = set(slot_for_msid(confirm_msid(msid)) for msid in msids)  # noqa: C401 unnecessary generator
         for slot in slots:
             # get the 8x8 data
             tstop = self.tstop + 33.0  # Major frame of padding

@@ -8,7 +8,7 @@ from astropy.table import Table
 from kadi import events
 from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
-from testr import test_helper  # noqa
+from testr import test_helper  # noqa: F401 imported unused (but used by pytest)
 
 from mica.archive import asp_l1, obsid_archive
 
@@ -89,7 +89,7 @@ def test_update_l1_archive(tmp_path):
     config["obsid"] = 1
     config["version"] = 4
     archive = obsid_archive.ObsArchive(config)
-    obsids = archive.update()  # noqa
+    obsids = archive.update()  # noqa: F841 assigned but not used
 
     with ska_dbi.DBI(dbi="sqlite", server=config["data_root"] / "archfiles.db3") as db:
         dat = Table(db.fetchall("select * from archfiles"))

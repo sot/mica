@@ -1391,7 +1391,7 @@ class ObiTest(object):
         self.checks = obi_slot_check
 
     def slot_table(self):
-        checks = self.checks  # noqa
+        checks = self.checks  # noqa: F841 variable never used
 
 
 #    def set_disposition(self, disp):

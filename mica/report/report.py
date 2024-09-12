@@ -381,7 +381,7 @@ def obs_links(obsid, sequence=None, plan=None):
                 dom = dtm.strftime("%d")
                 links["fot_daily"] = {
                     "label": "Daily Plots {}:{:03d}".format(year, int(doy)),
-                    "link": "{root}/{year}/{upper_month}/{lower_month}{day_of_month:02d}_{doy:03d}/".format(  # noqa
+                    "link": "{root}/{year}/{upper_month}/{lower_month}{day_of_month:02d}_{doy:03d}/".format(  # noqa: E501 line too long
                         root=DAILY_PLOT_ROOT,
                         year=year,
                         upper_month=month.upper(),
@@ -566,7 +566,7 @@ def main(obsid):
     report_status = {}
 
     er = summary is None and obsid > 40000
-    progress = all_progress["er" if er else "science"]  # noqa
+    progress = all_progress["er" if er else "science"]  # noqa: F841 variable never used
     if er:
         links = obs_links(obsid)
     else:
