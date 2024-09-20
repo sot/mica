@@ -52,6 +52,17 @@ def test_get_aca_images():
         assert np.all(imgs_table_maude[col] == imgs_table_maude[col])
 
 
+@pytest.mark.skipif(not has_l0_2012_archive, reason="Test requires 2012 L0 archive")
+def test_get_aca_images_empty():
+    """
+    Confirm that get_aca_images returns an empty table when no images are found
+    """
+    tstart = CxoTime("2012:180").secs
+    # select on a non-sensical imgsize to ensure no images are found
+    imgs_table_mica = aca_l0.get_aca_images(tstart, tstart + 30, imgsize=[7])
+    assert len(imgs_table_mica) == 0
+
+
 has_l0_2007_archive = os.path.exists(os.path.join(aca_l0.CONFIG["data_root"], "2007"))
 has_asp_l1 = os.path.exists(os.path.join(asp_l1.CONFIG["data_root"]))
 

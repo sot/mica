@@ -213,12 +213,16 @@ def get_aca_images(start: CxoTimeLike, stop: CxoTimeLike, imgsize=None, columns=
         slot_data["IMGCOL0_8X8"] = IMGCOL0_8X8
         slot_data.rename_column("IMGRAW", "IMG")
 
-        # Add slot number (this could also be fetched as IMGNUM1 but this is easier)
-        slot_data["IMGNUM"] = slot
+        # Add slot number if there are any rows
+        if len(slot_data) > 0:
+            slot_data["IMGNUM"] = slot
         img_data.append(slot_data)
 
     combined_data = vstack(img_data)
-    combined_data.sort(keys=["TIME", "IMGNUM"])
+
+    # And sort if there are any rows
+    if len(combined_data) > 0:
+        combined_data.sort(keys=["TIME", "IMGNUM"])
     return combined_data
 
 
