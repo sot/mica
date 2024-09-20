@@ -17,9 +17,10 @@ import Ska.arc5gl
 import Ska.File
 import ska_dbi
 import tables
-from astropy.table import Table
+from astropy.table import Table, vstack
 from Chandra.Time import DateTime
 from chandra_aca.aca_image import ACAImage
+from cxotime import CxoTimeLike
 from numpy import ma
 
 from mica.common import MICA_ARCHIVE, MissingDataError
@@ -142,6 +143,83 @@ def get_options():
     )
     opt = parser.parse_args()
     return opt
+
+
+def get_aca_images(start: CxoTimeLike, stop: CxoTimeLike, imgsize=None, columns=None):
+    """
+    Get ACA images in a table from mica l0 archive for a given time range.
+
+    This is a convenience method to get a table of images that should be very similar to
+    that from maude_decom.get_aca_images. These mica images are centered in the 8x8 images
+    via the centered_8x8=True option to aca_l0.get_slot_data to match the maude images.
+
+    Parameters
+    ----------
+    start : CxoTimeLike
+        Start time of the time range.
+    stop : CxoTimeLike
+        Stop time of the time range.
+
+
+    Returns
+    -------
+    astropy.table.Table
+
+    """
+    if imgsize is None:
+        imgsize = [4, 6, 8]
+
+    if columns is None:
+        columns = [
+            "TIME",
+            "QUALITY",
+            "MJF",
+            "MNF",
+            "IMGFUNC1",
+            "IMGRAW",
+            "IMGSIZE",
+            "IMGROW0",
+            "IMGCOL0",
+            "BGDAVG",
+            "INTEG",
+        ]
+    else:
+        # Require that these columns are present
+        for col in ["TIME", "IMGRAW", "IMGROW0", "IMGCOL0"]:
+            if col not in columns:
+                columns.append(col)
+
+    img_data = []
+    for slot in range(8):
+        slot_data_raw = get_slot_data(
+            start,
+            stop,
+            imgsize=imgsize,
+            slot=slot,
+            columns=columns,
+            centered_8x8=True,
+        )
+        # Convert from numpy array to astropy table
+        slot_data = Table(slot_data_raw)
+
+        # Rename and rejigger colums to match maude
+        IMGROW0_8X8 = slot_data["IMGROW0"].copy()
+        IMGCOL0_8X8 = slot_data["IMGCOL0"].copy()
+        IMGROW0_8X8[slot_data["IMGSIZE"] == 6] -= 1
+        IMGCOL0_8X8[slot_data["IMGSIZE"] == 6] -= 1
+        IMGROW0_8X8[slot_data["IMGSIZE"] == 4] -= 2
+        IMGCOL0_8X8[slot_data["IMGSIZE"] == 4] -= 2
+        slot_data["IMGROW0_8X8"] = IMGROW0_8X8
+        slot_data["IMGCOL0_8X8"] = IMGCOL0_8X8
+        slot_data.rename_column("IMGRAW", "IMG")
+
+        # Add slot number (this could also be fetched as IMGNUM1 but this is easier)
+        slot_data["IMGNUM"] = slot
+        img_data.append(slot_data)
+
+    combined_data = vstack(img_data)
+    combined_data.sort(keys=["TIME", "IMGNUM"])
+    return combined_data
 
 
 def get_slot_data(

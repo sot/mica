@@ -6,6 +6,8 @@ import os
 import numpy as np
 import pytest
 from astropy.table import Table
+from chandra_aca import maude_decom
+from cxotime import CxoTime
 from Ska.Numpy import interpolate
 
 from mica.archive import aca_l0, asp_l1
@@ -32,12 +34,31 @@ def test_l0_images_meta():
     }
 
 
+@pytest.mark.skipif(not has_l0_2012_archive, reason="Test requires 2012 L0 archive")
+def test_get_aca_images():
+    """
+    Confirm mica and maude images sources agree for a small time range.
+    """
+    tstart = CxoTime("2012:180").secs
+    imgs_table_maude = maude_decom.get_aca_images(tstart, tstart + 30)
+    imgs_table_maude.sort(keys=["TIME", "IMGNUM"])
+    imgs_table_mica = aca_l0.get_aca_images(tstart, tstart + 30)
+    assert len(imgs_table_maude) == len(imgs_table_mica)
+    for col in ["IMG", "IMGROW0_8X8", "IMGCOL0_8X8", "TIME"]:
+        assert np.allclose(
+            imgs_table_maude[col], imgs_table_mica[col], atol=0.1, rtol=0
+        )
+    for col in ["IMGNUM"]:
+        assert np.all(imgs_table_maude[col] == imgs_table_maude[col])
+
+
 has_l0_2007_archive = os.path.exists(os.path.join(aca_l0.CONFIG["data_root"], "2007"))
 has_asp_l1 = os.path.exists(os.path.join(asp_l1.CONFIG["data_root"]))
 
 
 @pytest.mark.skipif(
-    "not has_l0_2007_archive or not has_asp_l1", reason="Test requires 2007 L0 archive"
+    "not has_l0_2007_archive or not has_asp_l1",
+    reason="Test requires 2007 L0 archive and L1 aspect archive",
 )
 def test_get_l0_images():
     """
@@ -87,7 +108,8 @@ def test_get_l0_images():
 
 
 @pytest.mark.skipif(
-    "not has_l0_2007_archive or not has_asp_l1", reason="Test requires 2007 L0 archive"
+    "not has_l0_2007_archive or not has_asp_l1",
+    reason="Test requires 2007 L0 archive and L1 aspect archive",
 )
 def test_get_slot_data_8x8():
     """
