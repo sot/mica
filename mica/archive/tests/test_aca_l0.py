@@ -60,7 +60,26 @@ def test_get_aca_images_empty():
     tstart = CxoTime("2012:180").secs
     # select on a non-sensical imgsize to ensure no images are found
     imgs_table_mica = aca_l0.get_aca_images(tstart, tstart + 30, imgsize=[7])
+
+    # Assert it has no rows
     assert len(imgs_table_mica) == 0
+    # assert that it is an astropy table
+    assert type(imgs_table_mica) is Table
+    assert imgs_table_mica.colnames == [
+        "TIME",
+        "QUALITY",
+        "MJF",
+        "MNF",
+        "INTEG",
+        "IMGFUNC1",
+        "IMGROW0",
+        "IMGCOL0",
+        "BGDAVG",
+        "IMG",
+        "IMGSIZE",
+        "IMGROW0_8X8",
+        "IMGCOL0_8X8",
+    ]
 
 
 has_l0_2007_archive = os.path.exists(os.path.join(aca_l0.CONFIG["data_root"], "2007"))
