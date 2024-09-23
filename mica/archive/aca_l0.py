@@ -159,11 +159,21 @@ def get_aca_images(start: CxoTimeLike, stop: CxoTimeLike, imgsize=None, columns=
         Start time of the time range.
     stop : CxoTimeLike
         Stop time of the time range.
+    imgsize : list of int, optional
+        List of integers of desired image sizes (passed to get_slot_data which defaults
+        to [4, 6, 8] if None).
+    columns : list of str, optional
+        List of desired columns in the ACA0 telemetry. If None defaults to a reasonable
+        minimal list ('TIME', 'QUALITY', 'MJF', 'MNF', 'IMGFUNC1', 'IMGSIZE',
+        'IMGRAW', 'IMGROW0', 'IMGCOL0', 'BGDAVG', 'INTEG').
 
 
     Returns
     -------
-    astropy.table.Table
+    astropy.table.Table of ACA images and accompanying data.
+        Note that IMGRAW is renamed to IMG.
+        IMGNUM is included (same as slot number)
+        IMGROW0_8X8 and IMGCOL0_8X8 are added to the table to match maude_decom.
 
     """
     if imgsize is None:
