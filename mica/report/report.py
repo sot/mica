@@ -521,14 +521,6 @@ def star_info(id):
     }
 
 
-def get_aiprops(obsid):
-    ACA_DB = Sqsh(dbi="sybase", server="sybase", database="aca", user="aca_read")
-    aiprops = ACA_DB.fetchall(
-        "select * from aiprops where obsid = {} order by tstart".format(obsid)
-    )
-    return aiprops
-
-
 def main(obsid):
     report_root = REPORT_ROOT
     strobs = "%05d" % obsid
@@ -746,15 +738,6 @@ def main(obsid):
                     f.writelines(logtext)
                     f.close()
                 interval["loglink"] = newlogname
-
-        aiprops = get_aiprops(obsid)
-        aiprops_template = jinja_env.get_template("aiprops.html")
-        aiprops_page = aiprops_template.render(obsid=obsid, aiprops=aiprops)
-        aiprops_page_file = os.path.join(outdir, "aiprops.html")
-        logger.debug("AIPROPS report to {}".format(aiprops_page_file))
-        f = open(aiprops_page_file, "w")
-        f.write(aiprops_page)
-        f.close()
 
         props_template = jinja_env.get_template("props.html")
         props_page = props_template.render(obsid=obsid, vv=vv)
