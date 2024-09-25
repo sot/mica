@@ -16,7 +16,7 @@ lint.extend-ignore = [
   # "PLR0911", # Too many returns
   "PLR0912", # Too many branches
   "PLR0915", # Too many statements
-  # "PGH004", # Use specific rule codes when using `noqa`
+  "PGH004", # Use specific rule codes when using `noqa`
   # "C401", # Unnecessary generator (rewrite as a `set` comprehension)
   "C402", # Unnecessary generator (rewrite as a dict comprehension)
   "C404", # Unnecessary `list` comprehension (rewrite as a `dict` comprehension)
