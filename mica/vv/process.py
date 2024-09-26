@@ -211,7 +211,7 @@ def get_arch_vv(obsid, version="last"):
         obspar_file = glob(
             os.path.join(obspar_dirs[asp_proc["obspar_version"]], "axaf*par*")
         )[0]
-    except IndexError as err:
+    except IndexError:
         raise LookupError(f"Requested version {version} not in obspar archive") from None
     return Obi(obspar_file, l1_dir, temproot=FILES["temp_root"])
 
