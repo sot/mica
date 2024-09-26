@@ -69,7 +69,7 @@ class ProductVersionError(Exception):
 
 class ObsArchive:
     """
-    Obsid Archive Class
+    Obsid Archive Class.
 
     Object to store configuration, logging, and processing tasks
     to fetch obsid telemetry from the CXC archive and store in a Ska
