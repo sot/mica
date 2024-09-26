@@ -146,7 +146,7 @@ def _get_dark_cal_id_scalar(date, select="before", dark_cal_ids=None):
 
     try:
         out_dark_id = dark_cal_ids[ii]
-    except IndexError as err:
+    except IndexError:
         raise MissingDataError(
             f"No dark cal found {select} {date} (no '{ii}' key in dark cal IDs) "
         ) from None
