@@ -604,7 +604,7 @@ def calc_stats(obsid):
         elif obsid in [60983]:
             starcheck = get_starcheck_catalog(obsid, mp_dir="/2002/OCT2102/oflsc/")
         elif obsid in [60640, 60639, 60638, 60637, 60636, 60635, 60634, 60633]:
-            raise ValueError("Starcheck not available for PCHECK_JUL2003") from err
+            raise ValueError("Starcheck not available for PCHECK_JUL2003") from None
         elif obsid in [60616, 60615]:
             starcheck = get_starcheck_catalog(obsid, mp_dir="/2003/JUL2103/oflsc/")
         elif obsid in [3911]:
@@ -622,7 +622,7 @@ def calc_stats(obsid):
         else:
             raise ValueError(
                 "Problem looking up starcheck for {}".format(obsid)
-            ) from err
+            ) from None
     if starcheck is None or "cat" not in starcheck or not len(starcheck["cat"]):
         raise ValueError("No starcheck catalog found for {}".format(manvr.get_obsid()))
     starcat_time = DateTime(starcheck["cat"]["mp_starcat_time"][0]).secs
