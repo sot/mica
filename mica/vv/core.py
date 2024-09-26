@@ -1,41 +1,41 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import warnings
-import os
-import re
-import six
-import pickle
-import json
-import csv
 import gzip
+import json
 import logging
+import os
+import pickle
+import re
+import warnings
 from glob import glob
-import numpy as np
-import numpy.ma as ma
-import tempfile
+
 import matplotlib
-if __name__ == '__main__':
-    matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from scipy.signal import medfilt as medfilt
-from scipy.stats import scoreatpercentile
+import numpy as np
+import six
+from numpy import ma
+
+if __name__ == "__main__":
+    matplotlib.use("Agg")
 import astropy.io.fits as pyfits
+import matplotlib.pyplot as plt
+import Ska.Numpy
 from astropy.table import Table
 from astropy.units import UnitsWarning
-
-import Ska.Numpy
 from Chandra.Time import DateTime
+from scipy.signal import medfilt
+from scipy.stats import scoreatpercentile
 from Ska.astro import sph_dist
 from Ska.engarchive import fetch
 from ska_dbi.sqsh import Sqsh
 
-from mica.archive.obsid_archive import parse_obspar, get_obspar
+from mica.archive.obsid_archive import get_obspar
 
 warnings.filterwarnings("ignore", message=".*marcsec.*", category=UnitsWarning)
 
+
 class NumpyAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if hasattr(obj, 'tolist'):
+        if hasattr(obj, "tolist"):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
@@ -43,10 +43,11 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
 class InconsistentAspectIntervals(ValueError):
     pass
 
+
 # integer code version for lightweight database tracking
 VV_VERSION = 4
 
-logger = logging.getLogger('vv')
+logger = logging.getLogger("vv")
 
 
 R2A = 206264.81
@@ -64,13 +65,33 @@ enc_rad_2 = 0.99
 dyz_big_lim = 0.7
 frac_dyz_lim = 0.05
 
-DATA_COLS = ['qual', 'dy', 'dz', 'dr', 'mag', 'time', 'yag', 'zag',
-             'ang_y_sm', 'ang_y', 'ang_z_sm', 'ang_z']
+DATA_COLS = [
+    "qual",
+    "dy",
+    "dz",
+    "dr",
+    "mag",
+    "time",
+    "yag",
+    "zag",
+    "ang_y_sm",
+    "ang_y",
+    "ang_z_sm",
+    "ang_z",
+]
 
-save_asol_header = ['ASCDSVER', 'CALDBVER', 'DATE', 'OBI_NUM', 'OBS_ID',
-                    'REVISION', 'TSTART', 'TSTOP']
+save_asol_header = [
+    "ASCDSVER",
+    "CALDBVER",
+    "DATE",
+    "OBI_NUM",
+    "OBS_ID",
+    "REVISION",
+    "TSTART",
+    "TSTOP",
+]
 
-#def rms(data, median):
+# def rms(data, median):
 #    return np.sqrt(np.mean((data - median) ** 2))
 
 
@@ -113,7 +134,7 @@ class Obi(object):
         for slot in self.all_slot_data:
             self.plot_slot(slot, save=True, close=True, singles=True)
 
-    def set_dbh(self, dbhandle, slot_table='vv_slots'):
+    def set_dbh(self, dbhandle, slot_table="vv_slots"):
         self.db = dbhandle
         self.slot_table = slot_table
 
@@ -125,8 +146,8 @@ class Obi(object):
         save the slot residuals as a pkl
         """
         if file is None:
-            file = os.path.join(self.tempdir, 'vv_slot.pkl')
-        pickle.dump(self.all_slot_data, open(file, 'w'))
+            file = os.path.join(self.tempdir, "vv_slot.pkl")
+        pickle.dump(self.all_slot_data, open(file, "w"))
 
     def _set_default(self, isdefault):
         self._isdefault = isdefault
@@ -143,11 +164,14 @@ class Obi(object):
         slist = []
         for slot_id in range(0, 8):
             slot = self.slot[slot_id]
-            if not 'n_pts' in slot:
+            if "n_pts" not in slot:
                 continue
             # ignore the arrays
-            save = dict((k, v) for k, v in six.iteritems(slot)
-                        if type(v) not in [np.ndarray, np.ma.core.MaskedArray])
+            save = dict(
+                (k, v)
+                for k, v in six.iteritems(slot)
+                if type(v) not in [np.ndarray, np.ma.core.MaskedArray]
+            )
             slist.append(save)
         return slist
 
@@ -167,104 +191,109 @@ class Obi(object):
             slist.append(save)
         return slist
 
-# this should probably be handled in mica.archive.asp_l1
+    # this should probably be handled in mica.archive.asp_l1
     @staticmethod
     def _asp1_lookup(obsid, obi, revision):
-        apstat = Sqsh(dbi='sybase',
-                             server='sqlsao',
-                             database='axafapstat')
+        apstat = Sqsh(dbi="sybase", server="sqlsao", database="axafapstat")
         # take these from the first aspect solution file header
-        aspect_1 = apstat.fetchall("""SELECT * FROM aspect_1
+        aspect_1 = apstat.fetchall(
+            """SELECT * FROM aspect_1
                                       WHERE obsid = {obsid}
                                       AND obi = {obi}
                                       AND revision = {revision}
-                                   """.format(obsid=obsid,
-                                              obi=obi,
-                                              revision=revision))
+                                   """.format(obsid=obsid, obi=obi, revision=revision)
+        )
         apstat.conn.close()
         if len(aspect_1) > 1:
-            raise ValueError(
-                "More than one entry found for obsid/obi/rev in aspect_1")
+            raise ValueError("More than one entry found for obsid/obi/rev in aspect_1")
         if len(aspect_1) == 0:
             logger.warning("obsid / revision not in axafapstat.aspect_1")
             return (None, None)
-        return aspect_1[0]['aspect_1_id'], aspect_1[0]['ap_date']
+        return aspect_1[0]["aspect_1_id"], aspect_1[0]["ap_date"]
 
     def _get_info(self):
         """
         get labels for top level
         """
         ai_list = self._aiid_info()
-        obsid = ai_list[0]['OBS_ID']
-        revision = ai_list[0]['REVISION']
-        obi = ai_list[0]['OBI_NUM']
-        fidprops = [[dict(zip(r.dtype.names, r)) for r in getattr(ai, 'fidprop')]
-                    for ai in self.aspect_intervals]
-        gsprops = [[dict(zip(r.dtype.names, r)) for r in getattr(ai, 'gsprop')]
-                   for ai in self.aspect_intervals]
-        self._info = {'obsid': int(obsid),
-                     'revision': revision,
-                     'tstart': self.obspar['tstart'],
-                     'tstop': self.obspar['tstop'],
-                      'fidprops': fidprops,
-                      'gsprops': gsprops,
-                     'sim_z': self.obspar['sim_z'],
-                     'sim_z_offset': self.obspar['sim_z_offset'],
-                     'ra_pnt': self.obspar['ra_pnt'],
-                     'dec_pnt': self.obspar['dec_pnt'],
-                     'roll_pnt': self.obspar['roll_pnt'],
-                     'instrument': self.obspar['detnam'],
-                     'intervals': ai_list,
-                     'slots': self.slot_report,
-                     'sim': self.sim_report,
-                      'vv_version': VV_VERSION,
-                      'errors': [str(e) for e in self._errors]}
+        obsid = ai_list[0]["OBS_ID"]
+        revision = ai_list[0]["REVISION"]
+        obi = ai_list[0]["OBI_NUM"]
+        fidprops = [
+            [dict(zip(r.dtype.names, r)) for r in getattr(ai, "fidprop")]
+            for ai in self.aspect_intervals
+        ]
+        gsprops = [
+            [dict(zip(r.dtype.names, r)) for r in getattr(ai, "gsprop")]
+            for ai in self.aspect_intervals
+        ]
+        self._info = {
+            "obsid": int(obsid),
+            "revision": revision,
+            "tstart": self.obspar["tstart"],
+            "tstop": self.obspar["tstop"],
+            "fidprops": fidprops,
+            "gsprops": gsprops,
+            "sim_z": self.obspar["sim_z"],
+            "sim_z_offset": self.obspar["sim_z_offset"],
+            "ra_pnt": self.obspar["ra_pnt"],
+            "dec_pnt": self.obspar["dec_pnt"],
+            "roll_pnt": self.obspar["roll_pnt"],
+            "instrument": self.obspar["detnam"],
+            "intervals": ai_list,
+            "slots": self.slot_report,
+            "sim": self.sim_report,
+            "vv_version": VV_VERSION,
+            "errors": [str(e) for e in self._errors],
+        }
 
         try:
             aspect_1_id, ap_date = self._asp1_lookup(obsid, obi, revision)
-            self._info['aspect_1_id'] =  aspect_1_id
-            self._info['ap_date'] =  str(ap_date)
-        except:
+            self._info["aspect_1_id"] = aspect_1_id
+            self._info["ap_date"] = str(ap_date)
+        except Exception:
             logger.warning("Could not determine aspect_1_id/date from Sybase database")
 
         # we don't care about the DateTimeType for ap_date,
         # so just cast to a string
 
-
     def _save_info_json(self, file=None):
         if file is None:
-            file = os.path.join(self.tempdir, 'vv_report.json')
+            file = os.path.join(self.tempdir, "vv_report.json")
         save = self.info()
-        with open(file, 'w') as jfile:
-            jfile.write(json.dumps(save, sort_keys=True, indent=4,
-                                   cls=NumpyAwareJSONEncoder))
+        with open(file, "w") as jfile:
+            jfile.write(
+                json.dumps(save, sort_keys=True, indent=4, cls=NumpyAwareJSONEncoder)
+            )
             jfile.close()
         logger.info("Saved JSON to {}".format(file))
 
-
-
     def slots_to_db(self):
-        if self.info()['aspect_1_id'] is None:
-            logger.warning("Database save not implemented for obsids without aspect_1_ids")
+        if self.info()["aspect_1_id"] is None:
+            logger.warning(
+                "Database save not implemented for obsids without aspect_1_ids"
+            )
             return
         save = self.info()
-        in_db = self.db.fetchall("""select * from %s where
+        in_db = self.db.fetchall(
+            """select * from %s where
                                     obsid = %d and revision = %d"""
-                                 % (self.slot_table,
-                                    save['obsid'], save['revision']))
+            % (self.slot_table, save["obsid"], save["revision"])
+        )
         if len(in_db):
-            self.db.execute("""delete from %s where
+            self.db.execute(
+                """delete from %s where
                                obsid = %d and revision = %d"""
-                            % (self.slot_table,
-                               save['obsid'], save['revision']))
-        for slot in save['slots']:
-            slot.update(obsid=save['obsid'])
-            slot.update(revision=save['revision'])
+                % (self.slot_table, save["obsid"], save["revision"])
+            )
+        for slot in save["slots"]:
+            slot.update(obsid=save["obsid"])
+            slot.update(revision=save["revision"])
             self.db.insert(slot, self.slot_table)
 
     @staticmethod
     def _get_ccd_temp(tstart, tstop):
-        temps = fetch.MSID('AACCCDPT', tstart, tstop)
+        temps = fetch.MSID("AACCCDPT", tstart, tstop)
         if not len(temps.vals):
             return None
         else:
@@ -272,54 +301,61 @@ class Obi(object):
 
     def slots_to_table(self):
         save = self.info()
-        if save['aspect_1_id'] is None:
+        if save["aspect_1_id"] is None:
             logger.warning("Table save not implemented for obsids without aspect_1_ids")
             return
-        mean_aacccdpt = self._get_ccd_temp(save['tstart'], save['tstop'])
+        mean_aacccdpt = self._get_ccd_temp(save["tstart"], save["tstop"])
         if mean_aacccdpt is None:
             logger.warning(
-                "No AACCCDPT data for {}.  Skipping HDF5 ingest".format(
-                    save['obsid']))
+                "No AACCCDPT data for {}.  Skipping HDF5 ingest".format(save["obsid"])
+            )
             return
         # add obsid and revision to the slot dict
-        for slot_str in save['slots']:
-            slot = save['slots'][slot_str]
-            slot.update(dict((k, save[k])
-                             for k in self.table.dtype.names
-                             if k in save))
+        for slot_str in save["slots"]:
+            slot = save["slots"][slot_str]
+            slot.update(dict((k, save[k]) for k in self.table.dtype.names if k in save))
             slot.update(dict(mean_aacccdpt=mean_aacccdpt))
             slot.update(isdefault=self.isdefault)
-            if (save['slots'][slot_str]['type'] == 'FID'):
-                save['slots'][slot_str]['used'] = 1
+            if save["slots"][slot_str]["type"] == "FID":
+                save["slots"][slot_str]["used"] = 1
             else:
-                save['slots'][slot_str]['used'] = save['slots'][slot_str]['cel_loc_flag']
+                save["slots"][slot_str]["used"] = save["slots"][slot_str][
+                    "cel_loc_flag"
+                ]
         # make a recarray
         save_rec = np.rec.fromrecords(
-            [tuple([save['slots'][slot_str].get(k) for k in self.table.dtype.names])
-             for slot_str in save['slots'] if 'n_pts' in save['slots'][slot_str]],
-            dtype=self.table.dtype)
-        have_obsid_coord = self.table.get_where_list('(obsid == %d)'
-                                                   % (save['obsid']),
-                                                   sort=True)
+            [
+                tuple([save["slots"][slot_str].get(k) for k in self.table.dtype.names])
+                for slot_str in save["slots"]
+                if "n_pts" in save["slots"][slot_str]
+            ],
+            dtype=self.table.dtype,
+        )
+        have_obsid_coord = self.table.get_where_list(
+            "(obsid == %d)" % (save["obsid"]), sort=True
+        )
         # if there are previous records for this obsid
         if len(have_obsid_coord):
-            logger.info("obsid %d is in table" % save['obsid'])
+            logger.info("obsid %d is in table" % save["obsid"])
             obsid_rec = self.table.read_coordinates(have_obsid_coord)
             # if the current entry is default, mark other entries as
             # not-default
             if self.isdefault:
-                obsid_rec['isdefault'] = 0
+                obsid_rec["isdefault"] = 0
                 self.table.modify_coordinates(have_obsid_coord, obsid_rec)
 
             # if we already have the revision, try to update in place.
-            if np.any(obsid_rec['revision'] == save['revision']):
+            if np.any(obsid_rec["revision"] == save["revision"]):
                 rev_coord = self.table.get_where_list(
-                    '(obsid == %d) & (revision == %d)'
-                    % (save['obsid'], save['revision']),
-                    sort=True)
+                    "(obsid == %d) & (revision == %d)"
+                    % (save["obsid"], save["revision"]),
+                    sort=True,
+                )
                 if len(rev_coord) == len(save_rec):
-                    logger.info("updating obsid %d rev %d in place"
-                                % (save['obsid'], save['revision']))
+                    logger.info(
+                        "updating obsid %d rev %d in place"
+                        % (save["obsid"], save["revision"])
+                    )
                     self.table.modify_coordinates(rev_coord, save_rec)
 
                 # If there was some mismatch with previous V&V processing of
@@ -337,35 +373,34 @@ class Obi(object):
     def _aiid_from_asol(self, asol_file, obsdir):
         hdulist = pyfits.open(asol_file)
         header = hdulist[1].header
-            # skip files that aren't in the obspar range
-        if ((self.obspar['tstart'] >= header['TSTOP'])
-            or (self.obspar['tstop'] <= header['TSTART'])):
+        # skip files that aren't in the obspar range
+        if (self.obspar["tstart"] >= header["TSTOP"]) or (
+            self.obspar["tstop"] <= header["TSTART"]
+        ):
             return None
-        aiid_match = re.search(r'(pcadf\d+[^_]*)_', asol_file)
+        aiid_match = re.search(r"(pcadf\d+[^_]*)_", asol_file)
         if aiid_match:
-            return dict(id=aiid_match.group(1),
-                        dir=obsdir)
+            return dict(id=aiid_match.group(1), dir=obsdir)
 
     def _find_aspect_intervals(self):
         obsdir = self.obsdir
-        asol_files = sorted(glob(os.path.join(obsdir, 'pcad*asol*')))
+        asol_files = sorted(glob(os.path.join(obsdir, "pcad*asol*")))
         self.aiids = []
 
         # Infer an aspect interval from each aspect solution, but
         # exclude the combined aspect solution by CONTENT type.
         if len(asol_files):
             for file in asol_files:
-                if pyfits.open(file)[1].header['CONTENT'] != 'ASPSOLOBI':
+                if pyfits.open(file)[1].header["CONTENT"] != "ASPSOLOBI":
                     self.aiids.append(self._aiid_from_asol(file, obsdir))
-        ASP_dirs = sorted(glob(os.path.join(obsdir, 'ASP_L1_*')))
+        ASP_dirs = sorted(glob(os.path.join(obsdir, "ASP_L1_*")))
         if len(ASP_dirs):
             for dir in ASP_dirs:
-                max_out = max(sorted(glob(os.path.join(dir, 'out*'))))
-                asol_files = sorted(glob(os.path.join(max_out, 'pcad*asol*')))
+                max_out = max(sorted(glob(os.path.join(dir, "out*"))))
+                asol_files = sorted(glob(os.path.join(max_out, "pcad*asol*")))
                 if len(asol_files):
                     for file in asol_files:
                         self.aiids.append(self._aiid_from_asol(file, max_out))
-
 
     def _sim_data(self):
         ai_0 = self.aspect_intervals[0]
@@ -374,45 +409,45 @@ class Obi(object):
         for d in sim_keys:
             if len(ai_0.sim[d]):
                 if isinstance(ai_0.sim[d], np.ma.MaskedArray):
-                    all_sim[d] = ma.concatenate([
-                        ai.sim[d] for ai in self.aspect_intervals])
+                    all_sim[d] = ma.concatenate(
+                        [ai.sim[d] for ai in self.aspect_intervals]
+                    )
                 else:
-                    all_sim[d] = np.concatenate([
-                        ai.sim[d] for ai in self.aspect_intervals])
+                    all_sim[d] = np.concatenate(
+                        [ai.sim[d] for ai in self.aspect_intervals]
+                    )
         self.sim_data = all_sim
-        self.sim_report = dict(max_medf_dy=np.max(all_sim['medf_dy']),
-                               min_medf_dy=np.min(all_sim['medf_dy']),
-                               max_medf_dz=np.max(all_sim['medf_dz']),
-                               min_medf_dz=np.min(all_sim['medf_dz']),
-                               max_d_dy=np.max(all_sim['d_dy']),
-                               max_d_dz=np.max(all_sim['d_dz']))
-
-
-
+        self.sim_report = dict(
+            max_medf_dy=np.max(all_sim["medf_dy"]),
+            min_medf_dy=np.min(all_sim["medf_dy"]),
+            max_medf_dz=np.max(all_sim["medf_dz"]),
+            min_medf_dz=np.min(all_sim["medf_dz"]),
+            max_d_dy=np.max(all_sim["d_dy"]),
+            max_d_dz=np.max(all_sim["d_dz"]),
+        )
 
     def _process_aspect_intervals(self):
         self.aspect_intervals = []
         for aiid in self.aiids:
-            self.aspect_intervals.append(
-                AspectInterval(aiid['id'], aiid['dir']))
+            self.aspect_intervals.append(AspectInterval(aiid["id"], aiid["dir"]))
 
     def _concat_slot_data(self):
         slot_data = dict()
         for slot in range(0, 8):
             cslot = dict()
             for d in DATA_COLS:
-                slotval = [i.deltas[slot][d] for i in self.aspect_intervals
-                           if slot in i.deltas]
+                slotval = [
+                    i.deltas[slot][d] for i in self.aspect_intervals if slot in i.deltas
+                ]
                 if len(slotval):
                     if isinstance(slotval[0], np.ma.MaskedArray):
                         cslot[d] = ma.concatenate(slotval)
                     else:
                         cslot[d] = np.concatenate(slotval)
             # only make a top-level slot key if there is some kind of data
-            if len(cslot.keys()) and len(cslot['time']):
+            if len(cslot.keys()) and len(cslot["time"]):
                 slot_data[slot] = cslot
         self.all_slot_data = slot_data
-
 
     def _agg_slot_data(self):
         all_slot = self.all_slot_data
@@ -423,136 +458,153 @@ class Obi(object):
             # get status info from guide or fid props
             # just use the first aspect interval and assume the rest are the
             # same (checked with _check_over_intervals)
-            if slot_report['type'] == 'FID':
+            if slot_report["type"] == "FID":
                 slot_fidprop = self.aspect_intervals[0].fidprop[
-                    self.aspect_intervals[0].fidprop['slot'] == slot_id][0]
-                slot_report['id_status'] = slot_fidprop['id_status'].strip()
+                    self.aspect_intervals[0].fidprop["slot"] == slot_id
+                ][0]
+                slot_report["id_status"] = slot_fidprop["id_status"].strip()
             else:
                 slot_gsprop = self.aspect_intervals[0].gsprop[
-                    self.aspect_intervals[0].gsprop['slot'] == slot_id][0]
-                slot_report['id_status'] = slot_gsprop['id_status'].strip()
-                slot_report['cel_loc_flag'] = slot_gsprop['cel_loc_flag']
+                    self.aspect_intervals[0].gsprop["slot"] == slot_id
+                ][0]
+                slot_report["id_status"] = slot_gsprop["id_status"].strip()
+                slot_report["cel_loc_flag"] = slot_gsprop["cel_loc_flag"]
 
             if slot_id not in all_slot:
                 continue
             slot_data = all_slot[slot_id]
-            if not ('dy' in slot_data and 'dz' in slot_data and 'mag' in slot_data):
+            if not ("dy" in slot_data and "dz" in slot_data and "mag" in slot_data):
                 continue
             # these should only be calculated over good data, right?
-            qual = dict(dy=slot_data['qual'],
-                        dz=slot_data['qual'],
-                        dr=slot_data['qual'])
-            for axdir in ['dr', 'dy', 'dz', 'mag']:
-                if axdir == 'mag':
-                    data = slot_data['mag']
+            qual = dict(
+                dy=slot_data["qual"], dz=slot_data["qual"], dr=slot_data["qual"]
+            )
+            for axdir in ["dr", "dy", "dz", "mag"]:
+                if axdir == "mag":
+                    data = slot_data["mag"]
                 else:
                     data = ma.array(slot_data[axdir])
                     data[qual[axdir] != 0] = ma.masked
-                slot_report['%s_n_samples' % axdir] = len(data)
-                slot_report['%s_bad_samples' % axdir] = len(np.flatnonzero(data.mask))
+                slot_report["%s_n_samples" % axdir] = len(data)
+                slot_report["%s_bad_samples" % axdir] = len(np.flatnonzero(data.mask))
                 smean = ma.mean(data)
-                slot_report['%s_mean' % axdir] = smean
+                slot_report["%s_mean" % axdir] = smean
                 med = ma.median(data)
-                slot_report['%s_med' % axdir] = med.item()
+                slot_report["%s_med" % axdir] = med.item()
                 srms = ma.sqrt(ma.mean((data - med) ** 2))
-                slot_report['%s_rms' % axdir] = srms
+                slot_report["%s_rms" % axdir] = srms
                 bad_frac = frac_bad(data, med, dyz_big_lim)
-                slot_report['frac_%s_big' % axdir] = bad_frac
-            slot_report['frac_%s_big' % axdir] = bad_frac
-            slot_report['rad_off'] = np.sqrt(slot_report['dy_med'] ** 2
-                                      + slot_report['dz_med'] ** 2)
-            slot_report['n_pts'] = len(slot_data['dy'])
-            if slot_report['type'] == 'FID':
-                slot_report['mean_y'] = np.mean(slot_data['ang_y_sm'])
-                slot_report['mean_z'] = np.mean(slot_data['ang_z_sm'])
-                slot_report['enc_rad1'] = scoreatpercentile(slot_data['dr'],
-                                                            fidDrEncFrac1 * 100)
-                slot_report['enc_rad2'] = scoreatpercentile(slot_data['dr'],
-                                                            fidDrEncFrac2 * 100)
+                slot_report["frac_%s_big" % axdir] = bad_frac
+            slot_report["frac_%s_big" % axdir] = bad_frac
+            slot_report["rad_off"] = np.sqrt(
+                slot_report["dy_med"] ** 2 + slot_report["dz_med"] ** 2
+            )
+            slot_report["n_pts"] = len(slot_data["dy"])
+            if slot_report["type"] == "FID":
+                slot_report["mean_y"] = np.mean(slot_data["ang_y_sm"])
+                slot_report["mean_z"] = np.mean(slot_data["ang_z_sm"])
+                slot_report["enc_rad1"] = scoreatpercentile(
+                    slot_data["dr"], fidDrEncFrac1 * 100
+                )
+                slot_report["enc_rad2"] = scoreatpercentile(
+                    slot_data["dr"], fidDrEncFrac2 * 100
+                )
             else:
-                slot_report['mean_y'] = np.mean(slot_data['ang_y'])
-                slot_report['mean_z'] = np.mean(slot_data['ang_z'])
-                slot_report['enc_rad1'] = scoreatpercentile(slot_data['dr'],
-                                                            starDrEncFrac1 * 100)
-                slot_report['enc_rad2'] = scoreatpercentile(slot_data['dr'],
-                                                            starDrEncFrac2 * 100)
-
-
-
+                slot_report["mean_y"] = np.mean(slot_data["ang_y"])
+                slot_report["mean_z"] = np.mean(slot_data["ang_z"])
+                slot_report["enc_rad1"] = scoreatpercentile(
+                    slot_data["dr"], starDrEncFrac1 * 100
+                )
+                slot_report["enc_rad2"] = scoreatpercentile(
+                    slot_data["dr"], starDrEncFrac2 * 100
+                )
 
     def _label_slots(self):
         ai = self.aspect_intervals[0]
-        self.guide_list = list(getattr(ai, 'gsprop')['slot'])
-        for gs in getattr(ai, 'gsprop'):
-            self.slot_report[str(gs['slot'])] = dict(
-                slot=gs['slot'],
-                type=gs['type'].rstrip())
-        if getattr(ai, 'fidprop') is not None:
-            self.fid_list = list(getattr(ai, 'fidprop')['slot'])
-            for fl in getattr(ai, 'fidprop'):
-                self.slot_report[str(fl['slot'])] = dict(
-                    slot=fl['slot'],
-                    type='FID')
+        self.guide_list = list(getattr(ai, "gsprop")["slot"])
+        for gs in getattr(ai, "gsprop"):
+            self.slot_report[str(gs["slot"])] = dict(
+                slot=gs["slot"], type=gs["type"].rstrip()
+            )
+        if getattr(ai, "fidprop") is not None:
+            self.fid_list = list(getattr(ai, "fidprop")["slot"])
+            for fl in getattr(ai, "fidprop"):
+                self.slot_report[str(fl["slot"])] = dict(slot=fl["slot"], type="FID")
         else:
             self.fid_list = []
 
     def _check_over_intervals(self):
         """
+        Check aspect intervals.
+
         Check all aspect intervals and confirm that they are consistent and that slots don't
         drop out, change status, or change type.
         """
         ai_list = self._aiid_info()
-        obsid = ai_list[0]['OBS_ID']
-        revision = ai_list[0]['REVISION']
+        obsid = ai_list[0]["OBS_ID"]
+        revision = ai_list[0]["REVISION"]
         for ai in ai_list:
-            if ai['OBS_ID'] != obsid:
+            if ai["OBS_ID"] != obsid:
                 raise ValueError("aspect interval obsids don't match")
-            if ai['REVISION'] != revision:
+            if ai["REVISION"] != revision:
                 raise ValueError("aspect interval revisions don't match")
-        if '7' in self.slot_report and self.slot_report['7']['type'] == 'MONITOR':
+        if "7" in self.slot_report and self.slot_report["7"]["type"] == "MONITOR":
             if len(self.aiids) != 2:
-                wtext = "Warning: monitor window obsid {} has {} aspect intervals".format(
-                    obsid, len(self.aiids))
+                wtext = (
+                    "Warning: monitor window obsid {} has {} aspect intervals".format(
+                        obsid, len(self.aiids)
+                    )
+                )
                 self._errors.append(wtext)
                 logger.warning(wtext)
-        else:
-            if len(self.aiids) > 1:
-                wtext = "Warning: obsid {} has {} aspect intervals".format(
-                    obsid, len(self.aiids))
-                self._errors.append(wtext)
-                logger.warning(wtext)
+        elif len(self.aiids) > 1:
+            wtext = "Warning: obsid {} has {} aspect intervals".format(
+                obsid, len(self.aiids)
+            )
+            self._errors.append(wtext)
+            logger.warning(wtext)
 
-        for t in ('gsprop', 'fidprop'):
+        for t in ("gsprop", "fidprop"):
             if getattr(self.aspect_intervals[0], t) is None:
                 continue
-            slot_id = getattr(self.aspect_intervals[0], t)['slot']
-            slot_status = getattr(self.aspect_intervals[0], t)['id_status']
-            slot_type = 'FID'
-            if t == 'gsprop':
-                slot_type = getattr(self.aspect_intervals[0], t)['type']
-                slot_cel_loc_flag = getattr(self.aspect_intervals[0], t)['cel_loc_flag']
+            slot_id = getattr(self.aspect_intervals[0], t)["slot"]
+            slot_status = getattr(self.aspect_intervals[0], t)["id_status"]
+            slot_type = "FID"
+            if t == "gsprop":
+                slot_type = getattr(self.aspect_intervals[0], t)["type"]
+                slot_cel_loc_flag = getattr(self.aspect_intervals[0], t)["cel_loc_flag"]
             for ai in self.aspect_intervals[1:]:
-                if len(slot_id) != len(getattr(ai, t)['slot']):
+                if len(slot_id) != len(getattr(ai, t)["slot"]):
                     raise InconsistentAspectIntervals(
-                        "differing %s slots across aspect intervals" % t)
-                if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
-                    (not np.all([slot_id == getattr(ai, t)['slot']]))):
+                        "differing %s slots across aspect intervals" % t
+                    )
+                if (len(slot_id) == len(getattr(ai, t)["slot"])) & (
+                    not np.all([slot_id == getattr(ai, t)["slot"]])
+                ):
                     raise InconsistentAspectIntervals(
-                        "differing %s slots across aspect intervals" % t)
-                if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
-                    (not np.all([slot_status == getattr(ai, t)['id_status']]))):
+                        "differing %s slots across aspect intervals" % t
+                    )
+                if (len(slot_id) == len(getattr(ai, t)["slot"])) & (
+                    not np.all([slot_status == getattr(ai, t)["id_status"]])
+                ):
                     raise InconsistentAspectIntervals(
-                        "differing %s status across aspect intervals" % t)
-                if t == 'gsprop':
-                    if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
-                        (not np.all([slot_type == getattr(ai, t)['type']]))):
+                        "differing %s status across aspect intervals" % t
+                    )
+                if t == "gsprop":
+                    if (len(slot_id) == len(getattr(ai, t)["slot"])) & (
+                        not np.all([slot_type == getattr(ai, t)["type"]])
+                    ):
                         raise InconsistentAspectIntervals(
-                            "differing %s type across aspect intervals" % t)
-                    if ((len(slot_id) == len(getattr(ai, t)['slot'])) &
-                        (not np.all([slot_cel_loc_flag == getattr(ai, t)['cel_loc_flag']]))):
+                            "differing %s type across aspect intervals" % t
+                        )
+                    if (len(slot_id) == len(getattr(ai, t)["slot"])) & (
+                        not np.all(
+                            [slot_cel_loc_flag == getattr(ai, t)["cel_loc_flag"]]
+                        )
+                    ):
                         raise InconsistentAspectIntervals(
-                            "differing %s cel_loc_flag across aspect intervals" % t)
-
+                            "differing %s cel_loc_flag across aspect intervals" % t
+                        )
 
     def plot_slot(self, slot_num, plotdir=None, save=False, close=False, singles=False):
         if plotdir is None and save:
@@ -560,32 +612,34 @@ class Obi(object):
         y = None
         z = None
         xy_range = None
-        fid_plot = (slot_num in self.fid_list)
+        fid_plot = slot_num in self.fid_list
         if slot_num not in self.all_slot_data:
             logger.info("Nothing to plot for slot %d" % slot_num)
             return None, None
         (qual, dy, dz, mag, time) = [
-            self.all_slot_data[slot_num][x] for x in
-            ['qual', 'dy', 'dz', 'mag', 'time']]
+            self.all_slot_data[slot_num][x] for x in ["qual", "dy", "dz", "mag", "time"]
+        ]
         if not fid_plot:
             (yag, zag, ang_y_sm, ang_z_sm) = [
-                self.all_slot_data[slot_num][x] for x in
-                ['yag', 'zag', 'ang_y_sm', 'ang_z_sm']]
-        ai_starts = [interv.deltas[slot_num]['time'][0]
-                     for interv in self.aspect_intervals
-                     if slot_num in interv.deltas
-                     and len(interv.deltas[slot_num]['time'])]
+                self.all_slot_data[slot_num][x]
+                for x in ["yag", "zag", "ang_y_sm", "ang_z_sm"]
+            ]
+        ai_starts = [
+            interv.deltas[slot_num]["time"][0]
+            for interv in self.aspect_intervals
+            if slot_num in interv.deltas and len(interv.deltas[slot_num]["time"])
+        ]
         time0 = time[0]
         dy0 = np.median(dy)
         dz0 = np.median(dz)
 
-        #fid_plot = np.abs(np.max(y) - np.min(y)) > 1e-6
+        # fid_plot = np.abs(np.max(y) - np.min(y)) > 1e-6
         ok = qual == 0
         bad = qual != 0
 
         if fid_plot:
-            y = self.all_slot_data[slot_num]['ang_y_sm']
-            z = self.all_slot_data[slot_num]['ang_z_sm']
+            y = self.all_slot_data[slot_num]["ang_y_sm"]
+            z = self.all_slot_data[slot_num]["ang_z_sm"]
 
         if fid_plot and not xy_range:
             xy_range = 0.1
@@ -596,14 +650,14 @@ class Obi(object):
 
         #    xmarg = [10, 10]
         #    ystyl = 8
-        #else:
+        # else:
         #    xmarg = [10, 3]
         #    ystyl = 1
 
         if time0 is not None:
-            plottime = (time - time0) / 1000.
+            plottime = (time - time0) / 1000.0
         else:
-            plottime = time / 1000.
+            plottime = time / 1000.0
         timepad = 0.05 * (plottime[-1] - plottime[0])
         labelfontsize = 10
         axes = dict()
@@ -621,23 +675,23 @@ class Obi(object):
         plot_dict = dict()
 
         if singles:
-            fig1 = plt.figure(figsize=(3,3))
+            fig1 = plt.figure(figsize=(3, 3))
             ayz = plt.subplot(1, 1, 1)
-            plot_dict['ayz'] = fig1
+            plot_dict["ayz"] = fig1
         else:
             fig = plt.figure(figsize=(14, 10))
-            ayz = fig.add_axes([.05, .7, .20, .20], aspect='equal')
-            plot_dict['all'] = fig
-        axes['yz'] = ayz
-        ayz.plot(dy[ok], dz[ok], 'g.', markersize=1)
-        ayz.plot(dy[bad], dz[bad], 'r.', markersize=1)
+            ayz = fig.add_axes([0.05, 0.7, 0.20, 0.20], aspect="equal")
+            plot_dict["all"] = fig
+        axes["yz"] = ayz
+        ayz.plot(dy[ok], dz[ok], "g.", markersize=1)
+        ayz.plot(dy[bad], dz[bad], "r.", markersize=1)
         ayz.grid()
         plt.setp(ayz.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayz.get_xticklabels(), fontsize=labelfontsize)
         plt.setp(ayz.get_xticklabels(), rotation=30)
-        plt.setp(ayz.get_xticklabels(), horizontalalignment='right')
-        ayz.set_xlabel('Y offset (arcsec)')
-        ayz.set_ylabel('Z offset (arcsec)')
+        plt.setp(ayz.get_xticklabels(), horizontalalignment="right")
+        ayz.set_xlabel("Y offset (arcsec)")
+        ayz.set_ylabel("Z offset (arcsec)")
         # set limits to include all of the "ok" data
         # use the middle of the range of the data, not the median
         ayz.set_xlim(ymid - extent, ymid + extent)
@@ -646,32 +700,30 @@ class Obi(object):
         if singles:
             plt.tight_layout()
             if save:
-                plotfile = os.path.join(self.tempdir,
-                                        "slot_{}_yz.png".format(slot_num))
+                plotfile = os.path.join(self.tempdir, "slot_{}_yz.png".format(slot_num))
                 plt.savefig(plotfile)
                 logger.info("Saved plot {}".format(plotfile))
             if close:
                 plt.close(fig1)
 
-
         if singles:
-            fig2 = plt.figure(figsize=(3,3))
+            fig2 = plt.figure(figsize=(3, 3))
             ayzf = plt.subplot(1, 1, 1)
-            plot_dict['ayzf'] = fig2
+            plot_dict["ayzf"] = fig2
         else:
-            ayzf = fig.add_axes([.05, .25, .20, .20], aspect='equal')
-        axes['yz_fixed'] = ayzf
-        ayzf.plot(dy[ok], dz[ok], 'g.', markersize=1)
-        ayzf.plot(dy[bad], dz[bad], 'r.', markersize=1)
+            ayzf = fig.add_axes([0.05, 0.25, 0.20, 0.20], aspect="equal")
+        axes["yz_fixed"] = ayzf
+        ayzf.plot(dy[ok], dz[ok], "g.", markersize=1)
+        ayzf.plot(dy[bad], dz[bad], "r.", markersize=1)
         ayzf.grid()
         plt.setp(ayzf.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ayzf.get_xticklabels(), fontsize=labelfontsize)
         plt.setp(ayzf.get_xticklabels(), rotation=30)
-        plt.setp(ayzf.get_xticklabels(), horizontalalignment='right')
+        plt.setp(ayzf.get_xticklabels(), horizontalalignment="right")
         circle = plt.Circle((dy0, dz0), radius=circ_rad, fill=False)
         ayzf.add_patch(circle)
-        ayzf.set_xlabel('Y offset (arcsec)')
-        ayzf.set_ylabel('Z offset (arcsec)')
+        ayzf.set_xlabel("Y offset (arcsec)")
+        ayzf.set_ylabel("Z offset (arcsec)")
         # set limits to fixed range
         if xy_range is not None:
             ayzf.set_xlim([dy0 - xy_range, dy0 + xy_range])
@@ -680,8 +732,9 @@ class Obi(object):
         if singles:
             plt.tight_layout()
             if save:
-                plotfile = os.path.join(self.tempdir,
-                                        "slot_{}_yzf.png".format(slot_num))
+                plotfile = os.path.join(
+                    self.tempdir, "slot_{}_yzf.png".format(slot_num)
+                )
                 plt.savefig(plotfile)
                 logger.info("Saved plot {}".format(plotfile))
             if close:
@@ -689,44 +742,41 @@ class Obi(object):
 
         if singles:
             if fid_plot:
-                fig3 = plt.figure(figsize=(7.9,2.5))
+                fig3 = plt.figure(figsize=(7.9, 2.5))
             else:
-                fig3 = plt.figure(figsize=(7,2.5))
+                fig3 = plt.figure(figsize=(7, 2.5))
             ay = plt.subplot(1, 1, 1)
-            plot_dict['ay'] = fig3
+            plot_dict["ay"] = fig3
         else:
-            ay = fig.add_axes([.30, .7, .62, .25])
-        axes['dy'] = ay
-        ay.plot(plottime[ok], dy[ok], 'g.')
-        ay.plot(plottime[bad], dy[bad], 'r.')
+            ay = fig.add_axes([0.30, 0.7, 0.62, 0.25])
+        axes["dy"] = ay
+        ay.plot(plottime[ok], dy[ok], "g.")
+        ay.plot(plottime[bad], dy[bad], "r.")
         plt.setp(ay.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(ay.get_xticklabels(), visible=False)
-        ay.set_ylabel('Y offsets(dy) (arcsec)')
+        ay.set_ylabel("Y offsets(dy) (arcsec)")
         ay.set_ylim(ymid - extent, ymid + extent)
         ay.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         plt.draw()
         if len(ai_starts) > 1:
             for t in ai_starts:
-                s_t = (t - time0) / 1000.
-                ay.plot([s_t, s_t], ay.get_ylim(), color='blue',
-                        linestyle='dashed')
+                s_t = (t - time0) / 1000.0
+                ay.plot([s_t, s_t], ay.get_ylim(), color="blue", linestyle="dashed")
         ay.grid()
 
         if y is not None:
             ay2 = ay.twinx()
             ay2.plot(plottime, y)
-            ay2.autoscale(enable=False, axis='x')
+            ay2.autoscale(enable=False, axis="x")
             ay2.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
             ay2y_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
             ay2.yaxis.set_major_formatter(ay2y_formatter)
-            plt.setp(ay2.get_yticklabels(), fontsize=labelfontsize,
-                     color='blue')
-            ay2.set_ylabel('centroid y angle', color='blue')
+            plt.setp(ay2.get_yticklabels(), fontsize=labelfontsize, color="blue")
+            ay2.set_ylabel("centroid y angle", color="blue")
         if singles:
             plt.tight_layout()
             if save:
-                plotfile = os.path.join(self.tempdir,
-                                        "slot_{}_y.png".format(slot_num))
+                plotfile = os.path.join(self.tempdir, "slot_{}_y.png".format(slot_num))
                 plt.savefig(plotfile)
                 logger.info("Saved plot {}".format(plotfile))
             if close:
@@ -734,88 +784,83 @@ class Obi(object):
 
         if singles:
             if fid_plot:
-                fig4 = plt.figure(figsize=(7.9,2.5))
+                fig4 = plt.figure(figsize=(7.9, 2.5))
             else:
-                fig4 = plt.figure(figsize=(7,2.5))
+                fig4 = plt.figure(figsize=(7, 2.5))
             az = plt.subplot(1, 1, 1)
-            plot_dict['az'] = fig4
+            plot_dict["az"] = fig4
         else:
-            az = fig.add_axes([.30, .4, .62, .25], sharex=ay)
-        axes['dz'] = az
-        az.plot(plottime[ok], dz[ok], 'g.')
-        az.plot(plottime[bad], dz[bad], 'r.')
+            az = fig.add_axes([0.30, 0.4, 0.62, 0.25], sharex=ay)
+        axes["dz"] = az
+        az.plot(plottime[ok], dz[ok], "g.")
+        az.plot(plottime[bad], dz[bad], "r.")
         plt.setp(az.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(az.get_xticklabels(), visible=False)
-        az.set_ylabel('Z offsets(dz) (arcsec)')
+        az.set_ylabel("Z offsets(dz) (arcsec)")
         az.set_ylim(zmid - extent, zmid + extent)
         az.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         plt.draw()
         if len(ai_starts) > 1:
             for t in ai_starts:
-                s_t = (t - time0) / 1000.
-                az.plot([s_t, s_t], az.get_ylim(), color='blue',
-                        linestyle='dashed')
+                s_t = (t - time0) / 1000.0
+                az.plot([s_t, s_t], az.get_ylim(), color="blue", linestyle="dashed")
         az.grid()
 
         if z is not None:
             az2 = az.twinx()
             az2.plot(plottime, z)
-            az2.autoscale(enable=False, axis='x')
+            az2.autoscale(enable=False, axis="x")
             az2.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
             az2y_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
             az2.yaxis.set_major_formatter(az2y_formatter)
-            plt.setp(az2.get_yticklabels(), fontsize=labelfontsize,
-                     color='blue')
-            az2.set_ylabel('centroid z angle', color='blue')
+            plt.setp(az2.get_yticklabels(), fontsize=labelfontsize, color="blue")
+            az2.set_ylabel("centroid z angle", color="blue")
         if singles:
             plt.tight_layout()
             if save:
-                plotfile = os.path.join(self.tempdir,
-                                        "slot_{}_z.png".format(slot_num))
+                plotfile = os.path.join(self.tempdir, "slot_{}_z.png".format(slot_num))
                 plt.savefig(plotfile)
                 logger.info("Saved plot {}".format(plotfile))
             if close:
                 plt.close(fig4)
 
         if singles:
-            fig5 = plt.figure(figsize=(7,3))
+            fig5 = plt.figure(figsize=(7, 3))
             am = plt.subplot(1, 1, 1)
-            plot_dict['am'] = fig5
+            plot_dict["am"] = fig5
         else:
-            am = fig.add_axes([.30, .1, .62, .25], sharex=ay)
-        axes['mag'] = am
+            am = fig.add_axes([0.30, 0.1, 0.62, 0.25], sharex=ay)
+        axes["mag"] = am
         plt.setp(am.get_yticklabels(), fontsize=labelfontsize)
         plt.setp(am.get_xticklabels(), fontsize=labelfontsize)
-        am.plot(plottime[ok], mag[ok], color='green')
-        am.plot(plottime[bad], mag[bad], 'r.')
+        am.plot(plottime[ok], mag[ok], color="green")
+        am.plot(plottime[bad], mag[bad], "r.")
         am.set_ylim(am.get_ylim()[::-1])
         if len(ai_starts) > 1:
             for t in ai_starts:
-                s_t = (t - time0) / 1000.
-                am.plot([s_t, s_t], am.get_ylim(), color='blue',
-                        linestyle='dashed')
+                s_t = (t - time0) / 1000.0
+                am.plot([s_t, s_t], am.get_ylim(), color="blue", linestyle="dashed")
         am.grid()
-        am.set_ylabel('Magnitude(mag)')
-        am.set_xlabel('Time(ksec)')
-        am.autoscale(enable=False, axis='x')
+        am.set_ylabel("Magnitude(mag)")
+        am.set_xlabel("Time(ksec)")
+        am.autoscale(enable=False, axis="x")
         am.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
         plt.draw()
         if singles:
             plt.tight_layout()
             if save:
-                plotfile = os.path.join(self.tempdir,
-                                        "slot_{}_m.png".format(slot_num))
+                plotfile = os.path.join(self.tempdir, "slot_{}_m.png".format(slot_num))
                 plt.savefig(plotfile)
                 logger.info("Saved plot {}".format(plotfile))
             if close:
                 plt.close(fig5)
 
         if not singles:
-            plt.suptitle('Obsid %d Slot %d Residuals' % (
-                    self.info()['obsid'], slot_num))
+            plt.suptitle(
+                "Obsid %d Slot %d Residuals" % (self.info()["obsid"], slot_num)
+            )
             if save:
-                plotfile = os.path.join(self.tempdir,
-                                        "slot_{}.png".format(slot_num))
+                plotfile = os.path.join(self.tempdir, "slot_{}.png".format(slot_num))
                 plt.savefig(plotfile)
                 logger.info("Saved plot {}".format(plotfile))
             if close:
@@ -824,27 +869,27 @@ class Obi(object):
         if not fid_plot and not save:
             cenifig = plt.figure(figsize=(12, 10))
             ceniy = cenifig.add_subplot(2, 1, 1, sharex=ay)
-            ceniy.plot(plottime[ok], yag[ok], 'b.')
-            ceniy.plot(plottime[ok], ang_y_sm[ok] * 3600, 'g.')
-            ceniy.set_ylabel('Centroid Y (arcsec)')
-            ceniy.set_xlabel('Time(ksec)')
+            ceniy.plot(plottime[ok], yag[ok], "b.")
+            ceniy.plot(plottime[ok], ang_y_sm[ok] * 3600, "g.")
+            ceniy.set_ylabel("Centroid Y (arcsec)")
+            ceniy.set_xlabel("Time(ksec)")
             ceniz = cenifig.add_subplot(2, 1, 2, sharex=ay)
-            ceniz.plot(plottime[ok], zag[ok], 'b.')
-            ceniz.plot(plottime[ok], ang_z_sm[ok] * 3600, 'g.')
-            ceniz.set_ylabel('Centroid Z (arcsec)')
-            ceniz.set_xlabel('Time(ksec)')
-            ceniy.autoscale(enable=False, axis='x')
-            ceniz.autoscale(enable=False, axis='x')
+            ceniz.plot(plottime[ok], zag[ok], "b.")
+            ceniz.plot(plottime[ok], ang_z_sm[ok] * 3600, "g.")
+            ceniz.set_ylabel("Centroid Z (arcsec)")
+            ceniz.set_xlabel("Time(ksec)")
+            ceniy.autoscale(enable=False, axis="x")
+            ceniz.autoscale(enable=False, axis="x")
             ceniy.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
             ceniz.set_xlim(plottime[0] - timepad, plottime[-1] + timepad)
 
-            plt.suptitle('Slot %d Centroids (aspect sol in blue)' % slot_num)
+            plt.suptitle("Slot %d Centroids (aspect sol in blue)" % slot_num)
 
         return plot_dict
 
-AI_DEFAULT_CONF = {'obc': None,
-                   'alg': 8,
-                   'noacal': None}
+
+AI_DEFAULT_CONF = {"obc": None, "alg": 8, "noacal": None}
+
 
 class AspectInterval(object):
     def __init__(self, aiid, aspdir, opt=None):
@@ -861,9 +906,10 @@ class AspectInterval(object):
     def _get_prop(self, propname, propstring):
         "Read gsprops or fidprops file"
         datadir = self.aspdir
-        logger.debug('Reading %s stars' % propname)
-        gsfile = glob(os.path.join(
-                datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[0]
+        logger.debug("Reading %s stars" % propname)
+        gsfile = glob(os.path.join(datadir, "%s_%s1.fits*" % (self.aiid, propstring)))[
+            0
+        ]
         # don't filter for only good stars at this point
         prop = Table.read(gsfile, unit_parse_strict="silent")
         for col in prop.colnames:
@@ -872,116 +918,121 @@ class AspectInterval(object):
         hdulist = pyfits.open(os.path.join(datadir, gsfile))
         header = hdulist[1].header
         for gs in prop:
-            saveprop = dict(slot=gs['slot'],
-                            id_status=gs['id_status'],
-                            tstart=header['TSTART'],
-                            tstop=header['TSTOP'])
-            if 'type' in gs.dtype.names:
-                saveprop['type'] = gs['type']
+            saveprop = dict(
+                slot=gs["slot"],
+                id_status=gs["id_status"],
+                tstart=header["TSTART"],
+                tstop=header["TSTOP"],
+            )
+            if "type" in gs.dtype.names:
+                saveprop["type"] = gs["type"]
             info.append(saveprop)
         return (prop, info, header)
 
     def _read_ocat_stars(self):
-        import ska_dbi
-        obsid = int(self.asol_header['OBS_ID'])
-        obi = int(self.asol_header['OBI_NUM'])
-        ocat_db = Sqsh(dbi='sybase', server='sqlsao', database='axafocat')
-        stars = ocat_db.fetchall("select * from stars where "
-                                 "obsid = {} and obi = {} "
-                                 "and type != 0".format(obsid, obi))
+        obsid = int(self.asol_header["OBS_ID"])
+        obi = int(self.asol_header["OBI_NUM"])
+        ocat_db = Sqsh(dbi="sybase", server="sqlsao", database="axafocat")
+        stars = ocat_db.fetchall(
+            "select * from stars where "
+            "obsid = {} and obi = {} "
+            "and type != 0".format(obsid, obi)
+        )
         ocat_db.conn.close()
-        if len(np.unique(stars['obi'])) > 1:
-            raise ValueError("Multi-obi observation.  OCAT stars unhelpful to identify missing slot")
+        if len(np.unique(stars["obi"])) > 1:
+            raise ValueError(
+                "Multi-obi observation.  OCAT stars unhelpful to identify missing slot"
+            )
         return stars
 
     def _identify_missing_slot(self, slot):
         datadir = self.aspdir
-        adat_files = glob(os.path.join(datadir, "pcadf*N???_adat{}1.fits*".format(slot)))
+        adat_files = glob(
+            os.path.join(datadir, "pcadf*N???_adat{}1.fits*".format(slot))
+        )
         if not len(adat_files):
             return None
         hdulist = pyfits.open(adat_files[0])
         header = hdulist[1].header
-        if header['IMGTYPE'] == 0:
-            return 'GUIDE'
-        if header['IMGTYPE'] == 1:
-            return 'FID'
-        if header['IMGTYPE'] == 2:
-            return 'MONITOR'
+        if header["IMGTYPE"] == 0:
+            return "GUIDE"
+        if header["IMGTYPE"] == 1:
+            return "FID"
+        if header["IMGTYPE"] == 2:
+            return "MONITOR"
         raise ValueError("Slot {} could not be identified from image data".format(slot))
-
 
     def _read_in_data(self):
         aiid = self.aiid
         datadir = self.aspdir
         opt = self.opt
 
-        logger.info('Processing aspect interval {}'.format(
-                self.aiid))
-        logger.debug('Reading aspect solution and header')
-        #if opt['obc']:
+        logger.info("Processing aspect interval {}".format(self.aiid))
+        logger.debug("Reading aspect solution and header")
+        # if opt['obc']:
         #    asol = read_table(glob(
         #            os.path.join(datadir, "%s_osol1.fits*" % aiid))[0])
-        #else:
-        asol_file = glob(
-            os.path.join(datadir, "%s_asol1.fits*" % aiid))[0]
+        # else:
+        asol_file = glob(os.path.join(datadir, "%s_asol1.fits*" % aiid))[0]
         asol = Table.read(asol_file)
         # Add logic to handle column names in DS 10.8.3 aspect solutions
-        if 'ady' in asol.colnames:
-            colmap = {'ady': 'dy',
-                      'adz': 'dz',
-                      'adtheta': 'dtheta',
-                      'ra_raw': 'ra',
-                      'dec_raw': 'dec',
-                      'roll_raw': 'roll',
-                      'q_att_raw': 'q_att'}
+        if "ady" in asol.colnames:
+            colmap = {
+                "ady": "dy",
+                "adz": "dz",
+                "adtheta": "dtheta",
+                "ra_raw": "ra",
+                "dec_raw": "dec",
+                "roll_raw": "roll",
+                "q_att_raw": "q_att",
+            }
             for col in colmap:
                 asol.remove_column(colmap[col])
                 asol.rename_column(col, colmap[col])
         # Add code to handle first processing of 16091 with
         # non-confirming asol file
-        if ('dtheta' not in asol.dtype.names
-            and 'DTHETA' in asol.dtype.names):
-            asol = Ska.Numpy.add_column(asol, 'dtheta', asol['DTHETA'])
+        if "dtheta" not in asol.dtype.names and "DTHETA" in asol.dtype.names:
+            asol = Ska.Numpy.add_column(asol, "dtheta", asol["DTHETA"])
         hdulist = pyfits.open(asol_file)
         header = hdulist[1].header
         self.asol_header = header
         self.asol = asol
 
-
-        logger.debug('Reading aspect quality')
-        self.aqual = Table.read(glob(
-                os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0], hdu=1)
-        #if opt['noacal']:
+        logger.debug("Reading aspect quality")
+        self.aqual = Table.read(
+            glob(os.path.join(datadir, "%s_aqual1.fits*" % aiid))[0], hdu=1
+        )
+        # if opt['noacal']:
         #    aca_misalign = np.array([[1.0,0,0], [0,1,0],[0,0,1]])
-        #else:
-        logger.debug('Reading ACA and FTS align file')
-        acal = Table.read(glob(
-                os.path.join(datadir, "%s_acal1.fits*" % aiid))[0])
-        self.aca_misalign = acal['aca_misalign'].reshape(3, 3)
-        self.fts_misalign = acal['fts_misalign'].reshape(3, 3)
+        # else:
+        logger.debug("Reading ACA and FTS align file")
+        acal = Table.read(glob(os.path.join(datadir, "%s_acal1.fits*" % aiid))[0])
+        self.aca_misalign = acal["aca_misalign"].reshape(3, 3)
+        self.fts_misalign = acal["fts_misalign"].reshape(3, 3)
         self.acal = acal
 
-        logger.debug('Reading Centroids')
-        cen = Table.read(glob(
-                os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
+        logger.debug("Reading Centroids")
+        cen = Table.read(glob(os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
         # do we want the other algs?
-        self.cen = cen[(cen['alg'] == opt['alg'])
-                  & (cen['time'] >= asol[0]['time'])
-                  & (cen['time'] <= asol[-1]['time'])]
+        self.cen = cen[
+            (cen["alg"] == opt["alg"])
+            & (cen["time"] >= asol[0]["time"])
+            & (cen["time"] <= asol[-1]["time"])
+        ]
         #          & (cen['status'] == 0)
-        self.cenhdulist = pyfits.open(glob(
-                os.path.join(datadir, "%s_acen1.fits*" % aiid))[0])
-        self.integ_time = self.cenhdulist[1].header['INTGTIME']
+        self.cenhdulist = pyfits.open(
+            glob(os.path.join(datadir, "%s_acen1.fits*" % aiid))[0]
+        )
+        self.integ_time = self.cenhdulist[1].header["INTGTIME"]
 
+        (self.gsprop, self.gspr_info, self.h_gspr) = self._get_prop("guide", "gspr")
+        (self.fidprop, self.fidpr_info, self.h_fidpr) = self._get_prop("fid", "fidpr")
 
-        (self.gsprop, self.gspr_info, self.h_gspr) \
-            = self._get_prop('guide', 'gspr')
-        (self.fidprop, self.fidpr_info, self.h_fidpr) \
-            = self._get_prop('fid', 'fidpr')
-
-        missing_slots = [slot for slot in np.unique(self.cen['slot'])
-                         if (slot not in self.gsprop['slot']
-                             and slot not in self.fidprop['slot'])]
+        missing_slots = [
+            slot
+            for slot in np.unique(self.cen["slot"])
+            if (slot not in self.gsprop["slot"] and slot not in self.fidprop["slot"])
+        ]
 
         # Nothing else to do if there are no missing slots
         if not len(missing_slots):
@@ -989,100 +1040,132 @@ class AspectInterval(object):
 
         try:
             ocat_stars = self._read_ocat_stars()
-        except:
-            logger.warning('Could not get OCAT stars from database')
-            logger.warning('Skipping checks for missing slots')
+        except Exception:
+            logger.warning("Could not get OCAT stars from database")
+            logger.warning("Skipping checks for missing slots")
             return
-        tstart = self.asol_header['TSTART']
-        agasc_equinox = DateTime('2000:001:00:00:00.000')
+        tstart = self.asol_header["TSTART"]
+        agasc_equinox = DateTime("2000:001:00:00:00.000")
         dyear = (DateTime(tstart) - agasc_equinox) / 365.25
-        pm_to_degrees = dyear / (3600. * 1000.)
-        missing_info = []
+        pm_to_degrees = dyear / (3600.0 * 1000.0)
         for slot in missing_slots:
-            #stype = self._identify_missing_slot(slot)
-            #if stype is None:
+            # stype = self._identify_missing_slot(slot)
+            # if stype is None:
             #    logger.warning("No image data to identify missing slot {}".format(slot))
             #    logger.warning("Skipping slot")
-            #missing_types.append(stype)
-            if slot not in ocat_stars['slot']:
+            # missing_types.append(stype)
+            if slot not in ocat_stars["slot"]:
                 logger.info("Missing slot not in OCAT.  Skipping...")
                 continue
-            ocat_info = ocat_stars[ocat_stars['slot'] == slot][0]
-            if ocat_info['type'] == 3:
+            ocat_info = ocat_stars[ocat_stars["slot"] == slot][0]
+            if ocat_info["type"] == 3:
                 logger.info("Missing slot is MONITOR.  Skipping...")
                 continue
-            if ocat_info['type'] == 2:
+            if ocat_info["type"] == 2:
                 logger.warning("Missing slot is FID.")
                 mock_prop = dict(
-                                 id_status='OMITTED',
-                                 slot=slot,
-                                 id_string=str(ocat_info['id']),
-                                 id_num=ocat_info['id'],
-                                 mag_i_cmd=0,
-                                 mag_i_avg=0,
-                                 mag_i_min=0,
-                                 mag_i_max=0,
-                                 p_lsi=np.array([0,0,0]),
-                                 )
-                if 'ang_y_nom' in self.fidprop.colnames:
-                    mock_prop['ang_y_nom'] = ocat_info['y_ang']
-                    mock_prop['ang_z_nom'] = ocat_info['z_ang']
+                    id_status="OMITTED",
+                    slot=slot,
+                    id_string=str(ocat_info["id"]),
+                    id_num=ocat_info["id"],
+                    mag_i_cmd=0,
+                    mag_i_avg=0,
+                    mag_i_min=0,
+                    mag_i_max=0,
+                    p_lsi=np.array([0, 0, 0]),
+                )
+                if "ang_y_nom" in self.fidprop.colnames:
+                    mock_prop["ang_y_nom"] = ocat_info["y_ang"]
+                    mock_prop["ang_z_nom"] = ocat_info["z_ang"]
                 self.fidprop.add_row(mock_prop)
-                self.fidpr_info.append(dict(slot=slot,
-                                            tstart=self.asol_header['TSTART'],
-                                            tstop=self.asol_header['TSTOP'],
-                                            id_status='OMITTED'))
+                self.fidpr_info.append(
+                    dict(
+                        slot=slot,
+                        tstart=self.asol_header["TSTART"],
+                        tstop=self.asol_header["TSTOP"],
+                        id_status="OMITTED",
+                    )
+                )
 
-            if ocat_info['type'] == 1:
+            if ocat_info["type"] == 1:
                 import agasc
-                star_info = agasc.get_star(ocat_info['id'], use_supplement=False,
-                                           agasc_file='miniagasc_*')
-                mock_prop = dict(cel_loc_flag=0,
-                                 id_status='OMITTED',
-                                 agasc_id=ocat_info['id'],
-                                 slot=slot,
-                                 type='GUIDE     ',
-                                 spectral_type='NONE      ',
-                                 ra_offset_obs=0,
-                                 dec_offset_obs=0,
-                                 mag_aca_avg=0,
-                                 mag_aca_min=0,
-                                 mag_aca_max=0,
-                                 aspq1_obs=0,
-                                 spoil_radius=0,
-                                 spoil_angle=0,
-                                 spoil_mag_aca=0)
-                for col in ['ra', 'dec', 'pos_err', 'pm_ra', 'pm_dec',
-                            'plx', 'plx_err', 'mag_aca', 'mag_aca_err',
-                            'class', 'mag', 'mag_err', 'mag_band', 'color1',
-                            'color1_err', 'var', 'aspq1', 'aspq2', 'aspq3']:
+
+                star_info = agasc.get_star(
+                    ocat_info["id"], use_supplement=False, agasc_file="miniagasc_*"
+                )
+                mock_prop = dict(
+                    cel_loc_flag=0,
+                    id_status="OMITTED",
+                    agasc_id=ocat_info["id"],
+                    slot=slot,
+                    type="GUIDE     ",
+                    spectral_type="NONE      ",
+                    ra_offset_obs=0,
+                    dec_offset_obs=0,
+                    mag_aca_avg=0,
+                    mag_aca_min=0,
+                    mag_aca_max=0,
+                    aspq1_obs=0,
+                    spoil_radius=0,
+                    spoil_angle=0,
+                    spoil_mag_aca=0,
+                )
+                for col in [
+                    "ra",
+                    "dec",
+                    "pos_err",
+                    "pm_ra",
+                    "pm_dec",
+                    "plx",
+                    "plx_err",
+                    "mag_aca",
+                    "mag_aca_err",
+                    "class",
+                    "mag",
+                    "mag_err",
+                    "mag_band",
+                    "color1",
+                    "color1_err",
+                    "var",
+                    "aspq1",
+                    "aspq2",
+                    "aspq3",
+                ]:
                     mock_prop.update({col: star_info[col.upper()]})
-                ra = star_info['RA']
-                dec = star_info['DEC']
-                if star_info['PM_RA'] != -9999:
-                    ra = ra + star_info['PM_RA'] * pm_to_degrees
-                if star_info['PM_DEC'] != -9999:
-                    dec = dec + star_info['PM_DEC'] * pm_to_degrees
-                mock_prop.update({'pos_eci': [np.cos(np.radians(ra)) * np.cos(np.radians(dec)),
-                                              np.sin(np.radians(ra)) * np.cos(np.radians(dec)),
-                                              np.sin(np.radians(dec))],
-                                  'ra_corr': ra,
-                                  'dec_corr': dec})
+                ra = star_info["RA"]
+                dec = star_info["DEC"]
+                if star_info["PM_RA"] != -9999:
+                    ra = ra + star_info["PM_RA"] * pm_to_degrees
+                if star_info["PM_DEC"] != -9999:
+                    dec = dec + star_info["PM_DEC"] * pm_to_degrees
+                mock_prop.update(
+                    {
+                        "pos_eci": [
+                            np.cos(np.radians(ra)) * np.cos(np.radians(dec)),
+                            np.sin(np.radians(ra)) * np.cos(np.radians(dec)),
+                            np.sin(np.radians(dec)),
+                        ],
+                        "ra_corr": ra,
+                        "dec_corr": dec,
+                    }
+                )
 
                 self.gsprop.add_row(mock_prop)
-                self.gspr_info.append(dict(slot=slot,
-                                           tstart=self.asol_header['TSTART'],
-                                           tstop=self.asol_header['TSTOP'],
-                                           type='GUIDE     ',
-                                           id_status='OMITTED'))
-
-
+                self.gspr_info.append(
+                    dict(
+                        slot=slot,
+                        tstart=self.asol_header["TSTART"],
+                        tstop=self.asol_header["TSTOP"],
+                        type="GUIDE     ",
+                        id_status="OMITTED",
+                    )
+                )
 
     def _read_in_log(self):
         aiid = self.aiid
         datadir = self.aspdir
         try:
-            id_end = re.match(r'\w+(\D\d+N\d{3})', aiid)
+            id_end = re.match(r"\w+(\D\d+N\d{3})", aiid)
             logfiles = glob(os.path.join(datadir, "*%s.log*" % id_end.group(1)))
             logfile = logfiles[0]
             try:
@@ -1090,9 +1173,8 @@ class AspectInterval(object):
             except IOError:
                 lines = open(logfile).readlines()
             self.log = lines
-        except:
+        except Exception:
             logger.info("Did not find/read log file")
-
 
     def _calc_fid_deltas(self):
         asol = self.asol
@@ -1104,31 +1186,32 @@ class AspectInterval(object):
         fidpr_info = self.fidpr_info
         integ_time = self.integ_time
 
-        logger.debug('Calculating fid solution quality')
+        logger.debug("Calculating fid solution quality")
 
-        lsi0_stt = [h_fidpr['LSI0STT%d' % x] for x in [1, 2, 3]]
-        stt0_stf = [h_fidpr['STT0STF%d' % x] for x in [1, 2, 3]]
-        rrc0_fc_x = h_fidpr['RRC0FCX']
+        lsi0_stt = [h_fidpr["LSI0STT%d" % x] for x in [1, 2, 3]]
+        stt0_stf = [h_fidpr["STT0STF%d" % x] for x in [1, 2, 3]]
+        rrc0_fc_x = h_fidpr["RRC0FCX"]
 
         M = np.dot(aca_misalign, fts_misalign)
 
         rot_x = np.zeros([3, 3])
         rot_x[0, 0] = 1
         for fid in fidprop:
-            logger.info("Processing fid %s in slot %d " % (
-                fid['id_string'], fid['slot']))
-            p_lsi = fid['p_lsi']
+            logger.info(
+                "Processing fid %s in slot %d " % (fid["id_string"], fid["slot"])
+            )
+            p_lsi = fid["p_lsi"]
             p_stf = p_lsi + lsi0_stt + stt0_stf
 
-            ok = cen['slot'] == fid['slot']
+            ok = cen["slot"] == fid["slot"]
             ceni = cen[ok]
-            asol_cen_dy = np.interp(ceni['time'], asol['time'], asol['dy'])
-            asol_cen_dz = np.interp(ceni['time'], asol['time'], asol['dz'])
-            asol_cen_dtheta = (np.interp(ceni['time'],
-                                         asol['time'], asol['dtheta'])
-                               * D2R)
+            asol_cen_dy = np.interp(ceni["time"], asol["time"], asol["dy"])
+            asol_cen_dz = np.interp(ceni["time"], asol["time"], asol["dz"])
+            asol_cen_dtheta = (
+                np.interp(ceni["time"], asol["time"], asol["dtheta"]) * D2R
+            )
 
-            rot_x = np.zeros([len(ceni['time']), 3, 3])
+            rot_x = np.zeros([len(ceni["time"]), 3, 3])
             s_th = np.sin(asol_cen_dtheta)
             c_th = np.cos(asol_cen_dtheta)
             rot_x[:, 0, 0] = 1.0
@@ -1145,39 +1228,42 @@ class AspectInterval(object):
             d_aca = np.dot(d_fc, M.transpose())
             yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
             zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
-            dy = ceni['ang_y_sm'] * 3600 - yag
-            dz = ceni['ang_z_sm'] * 3600 - zag
-            dr = sph_dist(yag / 3600,
-                          zag / 3600,
-                          ceni['ang_y_sm'],
-                          ceni['ang_z_sm']) * 3600
-            slot_fidpr = [pr for pr in fidpr_info if pr['slot'] == fid['slot']]
+            dy = ceni["ang_y_sm"] * 3600 - yag
+            dz = ceni["ang_z_sm"] * 3600 - zag
+            dr = (
+                sph_dist(yag / 3600, zag / 3600, ceni["ang_y_sm"], ceni["ang_z_sm"])
+                * 3600
+            )
+            slot_fidpr = [pr for pr in fidpr_info if pr["slot"] == fid["slot"]]
             if not slot_fidpr:
-                raise ValueError("No FIDPR info found for slot %d"
-                                 % fid['slot'])
-            mag = ma.zeros(len(ceni['counts']))
+                raise ValueError("No FIDPR info found for slot %d" % fid["slot"])
+            mag = ma.zeros(len(ceni["counts"]))
             mag[:] = ma.masked
-            good_mag = medfilt(M0 - 2.5
-                               * np.log10(ceni['counts'][ceni['counts'] > 10.0]
-                                          / integ_time
-                                          / C0), 3)
-            mag[ceni['counts'] > 10] = good_mag
-            self.deltas[fid['slot']] = dict(time=ceni['time'],
-                                            dy=dy,
-                                            dz=dz,
-                                            dr=dr,
-                                            yag=yag,
-                                            zag=zag,
-                                            mag=mag,
-                                            qual=ceni['status'],
-                                            ang_y_sm=ceni['ang_y_sm'],
-                                            ang_z_sm=ceni['ang_z_sm'],
-                                            ang_y=ceni['ang_y'],
-                                            ang_z=ceni['ang_z'],
-                                            )
+            good_mag = medfilt(
+                M0
+                - 2.5
+                * np.log10(ceni["counts"][ceni["counts"] > 10.0] / integ_time / C0),
+                3,
+            )
+            mag[ceni["counts"] > 10] = good_mag
+            self.deltas[fid["slot"]] = dict(
+                time=ceni["time"],
+                dy=dy,
+                dz=dz,
+                dr=dr,
+                yag=yag,
+                zag=zag,
+                mag=mag,
+                qual=ceni["status"],
+                ang_y_sm=ceni["ang_y_sm"],
+                ang_z_sm=ceni["ang_z_sm"],
+                ang_y=ceni["ang_y"],
+                ang_z=ceni["ang_z"],
+            )
 
     def _calc_guide_deltas(self):
         from Quaternion import Quat
+
         self.deltas = {}
         asol = self.asol
         cen = self.cen
@@ -1185,100 +1271,90 @@ class AspectInterval(object):
         aca_misalign = self.aca_misalign
         integ_time = self.integ_time
 
-        logger.debug('Interpolating quaternions')
-        q_att = np.array([np.interp(cen['time'],
-                                    asol['time'],
-                                    asol['q_att'][:, ax])
-                          for ax in range(0, 4)]).transpose()
+        logger.debug("Interpolating quaternions")
+        q_att = np.array(
+            [
+                np.interp(cen["time"], asol["time"], asol["q_att"][:, ax])
+                for ax in range(0, 4)
+            ]
+        ).transpose()
         for star in gsprop:
-            logger.info('Processing {} star in slot {}'.format(
-                    star['id_status'], star['slot']))
-            ok = cen['slot'] == star['slot']
+            logger.info(
+                "Processing {} star in slot {}".format(star["id_status"], star["slot"])
+            )
+            ok = cen["slot"] == star["slot"]
             ceni = cen[ok]
-            logger.debug('Found %d centroids ' % len(ceni))
+            logger.debug("Found %d centroids " % len(ceni))
             if len(ceni) < 2:
                 continue
             q_atts = Quat(q=q_att[ok])
             Ts = q_atts.transform
             # use ang_y or ang_y_sm?
-            #inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)
-            d_aca = np.dot(np.dot(aca_misalign, Ts.transpose(0, 2, 1)),
-                           star['pos_eci']).transpose()
+            # inside = np.dot(aca_misalign, Ts.transpose(0,2,1)).transpose(1,0,2)
+            d_aca = np.dot(
+                np.dot(aca_misalign, Ts.transpose(0, 2, 1)), star["pos_eci"]
+            ).transpose()
             yag = np.arctan2(d_aca[:, 1], d_aca[:, 0]) * R2A
             zag = np.arctan2(d_aca[:, 2], d_aca[:, 0]) * R2A
-            dy = ceni['ang_y'] * 3600 - yag
-            dz = ceni['ang_z'] * 3600 - zag
-            dr = sph_dist(yag / 3600,
-                          zag / 3600,
-                          ceni['ang_y'],
-                          ceni['ang_z']) * 3600
-            mag = ma.zeros(len(ceni['counts']))
+            dy = ceni["ang_y"] * 3600 - yag
+            dz = ceni["ang_z"] * 3600 - zag
+            dr = sph_dist(yag / 3600, zag / 3600, ceni["ang_y"], ceni["ang_z"]) * 3600
+            mag = ma.zeros(len(ceni["counts"]))
             mag[:] = ma.masked
-            good_mag = medfilt(M0 - 2.5
-                               * np.log10(ceni['counts'][ceni['counts'] > 10.0]
-                                          / integ_time
-                                          / C0), 3)
-            mag[ceni['counts'] > 10] = good_mag
-            slot_gspr = [pr for pr in self.gspr_info
-                          if pr['slot'] == star['slot']]
+            good_mag = medfilt(
+                M0
+                - 2.5
+                * np.log10(ceni["counts"][ceni["counts"] > 10.0] / integ_time / C0),
+                3,
+            )
+            mag[ceni["counts"] > 10] = good_mag
+            slot_gspr = [pr for pr in self.gspr_info if pr["slot"] == star["slot"]]
             if not slot_gspr:
-                err = "No GSPR info found for slot %d" % star['slot']
+                err = "No GSPR info found for slot %d" % star["slot"]
                 raise ValueError(err)
-            self.deltas[star['slot']]= dict(dy=dy,
-                                            dz=dz,
-                                            dr=dr,
-                                            yag=yag,
-                                            zag=zag,
-                                            time=ceni['time'],
-                                            mag=mag,
-                                            qual=ceni['status'],
-                                            ang_y_sm=ceni['ang_y_sm'],
-                                            ang_z_sm=ceni['ang_z_sm'],
-                                            ang_y=ceni['ang_y'],
-                                            ang_z=ceni['ang_z'],
-                                            )
+            self.deltas[star["slot"]] = dict(
+                dy=dy,
+                dz=dz,
+                dr=dr,
+                yag=yag,
+                zag=zag,
+                time=ceni["time"],
+                mag=mag,
+                qual=ceni["status"],
+                ang_y_sm=ceni["ang_y_sm"],
+                ang_z_sm=ceni["ang_z_sm"],
+                ang_y=ceni["ang_y"],
+                ang_z=ceni["ang_z"],
+            )
 
     def _calc_sim_offset(self):
         mm2a = 20.0
-        abs_sim_dy0 = 10.0
-        abs_sim_dz0 = 10.0
+        # abs_sim_dy0 = 10.0
+        # abs_sim_dz0 = 10.0
         n_med = 21
-        medf_dy = medfilt(self.asol['dy'] * mm2a, kernel_size=n_med)
-        medf_dz = medfilt(self.asol['dz'] * mm2a, kernel_size=n_med)
+        medf_dy = medfilt(self.asol["dy"] * mm2a, kernel_size=n_med)
+        medf_dz = medfilt(self.asol["dz"] * mm2a, kernel_size=n_med)
         d_dy = abs(medf_dy[1:] - medf_dy[:-1])
         d_dz = abs(medf_dz[1:] - medf_dz[:-1])
-        self.sim = dict(time=self.asol['time'][:-1],
-                        medf_dy=medf_dy,
-                        medf_dz=medf_dz,
-                        d_dy=d_dy,
-                        d_dz=d_dz)
+        self.sim = dict(
+            time=self.asol["time"][:-1],
+            medf_dy=medf_dy,
+            medf_dz=medf_dz,
+            d_dy=d_dy,
+            d_dz=d_dz,
+        )
 
 
+high_limits = dict(
+    fid=dict(dy_rms=0.05, dz_rms=0.05, dy_med=0.4, dz_med=0.4, rad_off=0.4),
+    guide=dict(dy_rms=0.4, dz_rms=0.4, rad_off=1.5, frac_dy_big=0.05, frac_dz_big=0.05),
+)
+low_limits = dict(fid=dict(), guide=dict(dy_rms=0.25, dz_rms=0.25))
 
 
-#import unittest
-#from nose.tools import eq_ as
-import operator as op
-from functools import partial
-
-high_limits = dict(fid=dict(dy_rms=0.05,
-                            dz_rms=0.05,
-                            dy_med=0.4,
-                            dz_med=0.4,
-                            rad_off=0.4),
-                   guide=dict(dy_rms=0.4,
-                              dz_rms=0.4,
-                              rad_off=1.5,
-                              frac_dy_big=0.05,
-                              frac_dz_big=0.05))
-low_limits = dict(fid=dict(),
-                  guide=dict(dy_rms=0.25,
-                             dz_rms=0.25))
-
-
-med_cols = ['dy_med', 'dz_med', 'rad_off']
-rms_cols = ['dy_rms', 'dz_rms', 'dy_rms_low', 'dz_rms_low']
-frac_cols = ['frac_dy_big', 'frac_dz_big']
+med_cols = ["dy_med", "dz_med", "rad_off"]
+rms_cols = ["dy_rms", "dz_rms", "dy_rms_low", "dz_rms_low"]
+frac_cols = ["frac_dy_big", "frac_dz_big"]
 
 
 class ObiTest(object):
@@ -1291,27 +1367,31 @@ class ObiTest(object):
         for slot_id in self.obi.slot:
             slot_check = {}
             slot = self.obi.slot[slot_id]
-            hlim = high_limits[slot['type']]
-            llim = low_limits[slot['type']]
+            hlim = high_limits[slot["type"]]
+            llim = low_limits[slot["type"]]
             for check in hlim:
-                stest = dict(name='%s' % (check),
-                             success=slot[check] < hlim[check],
-                             have=slot[check],
-                             limit=hlim[check],
-                             param=check)
-                slot_check[stest['name']] = stest
+                stest = dict(
+                    name="%s" % (check),
+                    success=slot[check] < hlim[check],
+                    have=slot[check],
+                    limit=hlim[check],
+                    param=check,
+                )
+                slot_check[stest["name"]] = stest
             for check in llim:
-                stest = dict(name='%s_low' % (check),
-                             success=slot[check] < llim[check],
-                             have=slot[check],
-                             limit=llim[check],
-                             param=check)
-                slot_check[stest['name']] = stest
+                stest = dict(
+                    name="%s_low" % (check),
+                    success=slot[check] < llim[check],
+                    have=slot[check],
+                    limit=llim[check],
+                    param=check,
+                )
+                slot_check[stest["name"]] = stest
             obi_slot_check[slot_id] = slot_check
         self.checks = obi_slot_check
 
     def slot_table(self):
-        checks = self.checks
+        checks = self.checks  # noqa: F841 variable never used
 
 
 #    def set_disposition(self, disp):
@@ -1363,20 +1443,13 @@ class ObiTest(object):
 #
 #        self.status = status
 
-        #for fslot in obi.fid_slots:
-        #    checks = self.checks[fslot]
-        #    for c in checks:
-        #        lowmatch = re.match('.*_low$', c)
-        #        if not lowmatch and checks[c]['val'] == False:
-        #            status['overall'] = False
-        #            status['slot'][fslot] = False
-
-
-
-
-
-
-
+# for fslot in obi.fid_slots:
+#    checks = self.checks[fslot]
+#    for c in checks:
+#        lowmatch = re.match('.*_low$', c)
+#        if not lowmatch and checks[c]['val'] == False:
+#            status['overall'] = False
+#            status['slot'][fslot] = False
 
 
 #    def fid_checks(self):

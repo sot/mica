@@ -15,35 +15,37 @@ stars from two sources:
         GAIA guide star crossmatch.ipynb
 
 """
+
 import os
 from pathlib import Path
 
 import numpy as np
-
 from astropy.table import Table
 
-HOME = Path(os.environ['HOME'])
-SKA = Path(os.environ['SKA'])
+HOME = Path(os.environ["HOME"])
+SKA = Path(os.environ["SKA"])
 
 agasc_ids = []
 sources = []
 
 # Starcheck bad star list is not installed anywhere so just grab from local git repo
-lines = open(HOME / 'git' / 'starcheck' / 'starcheck' / 'data' / 'agasc.bad', 'r').readlines()
-for line in lines:
-    line = line.strip()
-    if line.startswith('#'):
+lines = open(
+    HOME / "git" / "starcheck" / "starcheck" / "data" / "agasc.bad", "r"
+).readlines()
+for rawline in lines:
+    line = rawline.strip()
+    if line.startswith("#"):
         continue
     agasc_ids.append(line.split()[0])
     sources.append(1)  # source=1 implies this is from the starcheck agasc.bad file
 
 # GAIA
-dat = Table.read(SKA / 'analysis' / 'gaia' / 'agasc_gaia_xmatch_PM_gt_50mas.fits.gz')
-agasc_ids.extend(dat['AGASC_ID'].tolist())
+dat = Table.read(SKA / "analysis" / "gaia" / "agasc_gaia_xmatch_PM_gt_50mas.fits.gz")
+agasc_ids.extend(dat["AGASC_ID"].tolist())
 sources.extend([2] * len(dat))
 
 agasc_ids = np.array(agasc_ids, dtype=np.int32)
 sources = np.array(sources, dtype=np.int16)
 
-out = Table([agasc_ids, sources], names=['agasc_id', 'source'])
-out.write('agasc_supplement.h5', format='hdf5', path='bads')
+out = Table([agasc_ids, sources], names=["agasc_id", "source"])
+out.write("agasc_supplement.h5", format="hdf5", path="bads")

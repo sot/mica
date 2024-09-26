@@ -1,6 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from pathlib import Path
-import tempfile
 
 import numpy as np
 import pytest
@@ -9,9 +8,9 @@ from astropy.table import Table
 from kadi import events
 from Quaternion import Quat, normalize
 from Ska.engarchive import fetch
-from testr import test_helper
+from testr import test_helper  # noqa: F401 imported unused (but used by pytest)
 
-from .. import asp_l1, obsid_archive
+from mica.archive import asp_l1, obsid_archive
 
 HAS_L1_ARCHIVE = Path(asp_l1.CONFIG["data_root"]).exists()
 
@@ -81,7 +80,6 @@ def test_get_atts_time():
 
 @pytest.mark.skipif("not test_helper.on_head_network()", reason="Not on HEAD network")
 def test_update_l1_archive(tmp_path):
-
     config = asp_l1.CONFIG.copy()
     config["data_root"] = tmp_path / "asp1"
     config["temp_root"] = tmp_path / "temp"
@@ -91,11 +89,9 @@ def test_update_l1_archive(tmp_path):
     config["obsid"] = 1
     config["version"] = 4
     archive = obsid_archive.ObsArchive(config)
-    obsids = archive.update()
+    obsids = archive.update()  # noqa: F841 assigned but not used
 
-    with ska_dbi.DBI(
-        dbi="sqlite", server=config["data_root"] / "archfiles.db3"
-    ) as db:
+    with ska_dbi.DBI(dbi="sqlite", server=config["data_root"] / "archfiles.db3") as db:
         dat = Table(db.fetchall("select * from archfiles"))
         dat.sort("filename")
         assert dat[

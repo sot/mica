@@ -47,7 +47,8 @@ venus = [
     18694,
     18695,
     18696,
-    53250]
+    53250,
+]
 
 multi_obi = [
     943,
@@ -79,6 +80,8 @@ weird = [50707]
 
 def bad_obsids():
     """
+    Return bad obsid list
+
     Returns a list of the obsids that are reasonable to exclude from most trending applications.
     The list includes observations of Venus and observations with multiple obis. The observations
     of Venus are problematic for star trending.  The observations with multiple obis may have more

@@ -1,10 +1,10 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from functools import partial
 
-from astropy.table import Table
 import numpy as np
 import pytest
 import requests
+from astropy.table import Table
 
 from mica.archive.cda import (
     get_archive_file_list,
@@ -12,7 +12,7 @@ from mica.archive.cda import (
     get_ocat_web,
     get_proposal_abstract,
 )
-from mica.archive.cda.services import update_ocat_local, URL_CDA_SERVICES
+from mica.archive.cda.services import URL_CDA_SERVICES, update_ocat_local
 
 try:
     requests.get(URL_CDA_SERVICES, timeout=2)
