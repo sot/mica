@@ -588,7 +588,7 @@ def calc_stats(obsid):
     guide_start = manvr.guide_start
     try:
         starcheck = get_starcheck_catalog_at_date(manvr.acq_start)
-    except Exception as err:
+    except Exception:
         # No matching observations for some known observations with problems. Use
         # hard-coded input for get_starcheck_catalog.
         if obsid in [1966]:
