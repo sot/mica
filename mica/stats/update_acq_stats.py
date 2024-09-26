@@ -473,20 +473,15 @@ def _get_obsids_to_update(check_missing=False):
     if check_missing:
         last_tstart = "2007:271:12:00:00"
         kadi_obsids = events.obsids.filter(start=last_tstart)
-        try:
-            h5 = tables.open_file(table_file, "r")
-            tbl = h5.root.data[:]
-            h5.close()
-        except Exception as err:
-            raise ValueError from err
+        with tables.open_file(table_file, "r") as h5:
+            tbl_data = h5.root.data[:]
         # get all obsids that aren't already in tbl
-        obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl["obsid"]]
+        obsids = [o.obsid for o in kadi_obsids if o.obsid not in tbl_data["obsid"]]
     else:
         try:
-            h5 = tables.open_file(table_file, "r")
-            tbl = h5.get_node("/", "data")
+            with tables.open_file(table_file, "r") as h5:
+                tbl = h5.get_node("/", "data")
             last_tstart = tbl.cols.guide_tstart[tbl.colindexes["guide_tstart"][-1]]
-            h5.close()
         except Exception:
             last_tstart = "2002:012:12:00:00"
         kadi_obsids = events.obsids.filter(start=last_tstart)
