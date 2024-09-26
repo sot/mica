@@ -588,7 +588,7 @@ def calc_stats(obsid):
     guide_start = manvr.guide_start
     try:
         starcheck = get_starcheck_catalog_at_date(manvr.acq_start)
-    except Exception:
+    except Exception as err:
         # No matching observations for some known observations with problems. Use
         # hard-coded input for get_starcheck_catalog.
         if obsid in [1966]:
@@ -622,7 +622,7 @@ def calc_stats(obsid):
         else:
             raise ValueError(
                 "Problem looking up starcheck for {}".format(obsid)
-            ) from None
+            ) from err
     if starcheck is None or "cat" not in starcheck or not len(starcheck["cat"]):
         raise ValueError("No starcheck catalog found for {}".format(manvr.get_obsid()))
     starcat_time = DateTime(starcheck["cat"]["mp_starcat_time"][0]).secs
