@@ -268,7 +268,7 @@ class Obi(object):
         logger.info("Saved JSON to {}".format(file))
 
     def slots_to_db(self):
-        if self.info()["aspect_1_id"] is None:
+        if self.info().get("aspect_1_id") is None:
             logger.warning(
                 "Database save not implemented for obsids without aspect_1_ids"
             )
@@ -300,7 +300,7 @@ class Obi(object):
 
     def slots_to_table(self):
         save = self.info()
-        if save["aspect_1_id"] is None:
+        if save.get("aspect_1_id") is None:
             logger.warning("Table save not implemented for obsids without aspect_1_ids")
             return
         mean_aacccdpt = self._get_ccd_temp(save["tstart"], save["tstop"])
