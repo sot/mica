@@ -194,16 +194,15 @@ class Obi(object):
     # this should probably be handled in mica.archive.asp_l1
     @staticmethod
     def _asp1_lookup(obsid, obi, revision):
-        apstat = Sqsh(dbi="sybase", server="sqlsao", database="axafapstat")
-        # take these from the first aspect solution file header
-        aspect_1 = apstat.fetchall(
-            """SELECT * FROM aspect_1
-                                      WHERE obsid = {obsid}
-                                      AND obi = {obi}
-                                      AND revision = {revision}
-                                   """.format(obsid=obsid, obi=obi, revision=revision)
-        )
-        apstat.conn.close()
+        with Sqsh(dbi="sybase", server="sqlsao", database="axafapstat") as apstat:
+            # take these from the first aspect solution file header
+            aspect_1 = apstat.fetchall(
+                """SELECT * FROM aspect_1
+                                        WHERE obsid = {obsid}
+                                        AND obi = {obi}
+                                        AND revision = {revision}
+                                    """.format(obsid=obsid, obi=obi, revision=revision)
+            )
         if len(aspect_1) > 1:
             raise ValueError("More than one entry found for obsid/obi/rev in aspect_1")
         if len(aspect_1) == 0:
@@ -932,13 +931,12 @@ class AspectInterval(object):
     def _read_ocat_stars(self):
         obsid = int(self.asol_header["OBS_ID"])
         obi = int(self.asol_header["OBI_NUM"])
-        ocat_db = Sqsh(dbi="sybase", server="sqlsao", database="axafocat")
-        stars = ocat_db.fetchall(
-            "select * from stars where "
-            "obsid = {} and obi = {} "
-            "and type != 0".format(obsid, obi)
-        )
-        ocat_db.conn.close()
+        with Sqsh(dbi="sybase", server="sqlsao", database="axafocat") as ocat_db:
+            stars = ocat_db.fetchall(
+                "select * from stars where "
+                "obsid = {} and obi = {} "
+                "and type != 0".format(obsid, obi)
+            )
         if len(np.unique(stars["obi"])) > 1:
             raise ValueError(
                 "Multi-obi observation.  OCAT stars unhelpful to identify missing slot"
