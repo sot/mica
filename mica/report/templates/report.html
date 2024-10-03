@@ -167,8 +167,8 @@ manvr['target_Q1'],
 manvr['target_Q2'], 
 manvr['target_Q3'],
 manvr['target_Q4']) }}
-{{ "  MANVR: Angle=  %.2f deg  Duration= %d sec  Slew err= %.1f arcsec"|format(
-manvr['angle_deg'], manvr['duration_sec'], manvr['slew_err_arcsec']) -}}
+{{ "  MANVR: Angle=  %.2f deg  Duration= %d sec"|format(
+manvr['angle_deg'], manvr['duration_sec']) -}}
 {% endfor %}
 </PRE>
 
