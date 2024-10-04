@@ -197,8 +197,9 @@ def get_aca_images(
     The units of the image data are DN, so you need to multiply by 5.0 / INTEG to get
     e-/sec.
 
-    This function returns additional columns that are not in the maude images: -
-    'HD3TLM*': uint8, raw 8-bit header-3 telemetry values - 'IMGSIZE': int32, 4, 6, or 8
+    This function returns additional columns that are not in the maude images:
+    - 'HD3TLM*': uint8, raw 8-bit header-3 telemetry values
+    - 'IMGSIZE': int32, 4, 6, or 8
 
     Parameters
     ----------
