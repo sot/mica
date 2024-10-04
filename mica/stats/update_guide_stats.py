@@ -411,7 +411,7 @@ def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop
         try:
             with tables.open_file(table_file, "r") as h5:
                 tbl = h5.get_node("/", "data")
-            last_tstart = tbl.cols.kalman_tstart[tbl.colindexes["kalman_tstart"][-1]]
+                last_tstart = tbl.cols.kalman_tstart[tbl.colindexes["kalman_tstart"][-1]]
         except Exception:
             last_tstart = start if start is not None else "2002:012:12:00:00"
         kadi_obsids = events.obsids.filter(start=last_tstart, stop=stop)
