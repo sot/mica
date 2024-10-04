@@ -17,7 +17,7 @@ import Ska.arc5gl
 import Ska.File
 import ska_dbi
 import tables
-from astropy.table import MaskedColumn, Table, vstack
+from astropy.table import Table, vstack
 from Chandra.Time import DateTime
 from chandra_aca.aca_image import ACAImage
 from cxotime import CxoTimeLike
@@ -168,7 +168,9 @@ def get_options():
     return opt
 
 
-def _extract_bits_as_uint8(arr: np.ndarray, bit_start: int, bit_stop:int) -> np.ndarray:
+def _extract_bits_as_uint8(
+    arr: np.ndarray, bit_start: int, bit_stop: int
+) -> np.ndarray:
     """Extract UINT8's from a 2-D array of uint8 bit values into a new array.
 
     Input array is Nx8 where N is the number of rows and 8 is the number of bits.
@@ -221,7 +223,6 @@ def get_aca_images(
         # Convert from numpy structured array to astropy table, keeping only good data
         ok = slot_data_raw["QUALITY"] == 0
         slot_data = Table(slot_data_raw[ok])
-
 
         # Add slot number if there are any rows (if statement not needed after
         # https://github.com/astropy/astropy/pull/17102).
