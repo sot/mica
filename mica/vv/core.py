@@ -1087,10 +1087,17 @@ class AspectInterval(object):
 
             if ocat_info["type"] == 1:
                 import agasc
+                from agasc.agasc import IdNotFound
 
-                star_info = agasc.get_star(
-                    ocat_info["id"], use_supplement=False, agasc_file="miniagasc_*"
-                )
+                try:
+                    star_info = agasc.get_star(
+                        ocat_info["id"], use_supplement=False, agasc_file="miniagasc_*"
+                    )
+                except IdNotFound:
+                    agasc_file = agasc.get_agasc_filename("miniagasc_*", version="1p7")
+                    star_info = agasc.get_star(
+                        ocat_info["id"], use_supplement=False, agasc_file=agasc_file
+                    )
                 mock_prop = dict(
                     cel_loc_flag=0,
                     id_status="OMITTED",
