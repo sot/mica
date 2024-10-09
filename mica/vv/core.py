@@ -945,9 +945,7 @@ class AspectInterval(object):
 
     def _identify_missing_slot(self, slot):
         datadir = self.aspdir
-        adat_files = glob(
-            os.path.join(datadir, "pcad*N???_adat{}1.fits*".format(slot))
-        )
+        adat_files = glob(os.path.join(datadir, "pcad*N???_adat{}1.fits*".format(slot)))
         if not len(adat_files):
             return None
         hdulist = pyfits.open(adat_files[0])
