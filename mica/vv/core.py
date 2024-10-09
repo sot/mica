@@ -377,7 +377,7 @@ class Obi(object):
             self.obspar["tstop"] <= header["TSTART"]
         ):
             return None
-        aiid_match = re.search(r"(pcadf\d+[^_]*)_", asol_file)
+        aiid_match = re.search(r"(pcad\w\d+[^_]*)_", asol_file)
         if aiid_match:
             return dict(id=aiid_match.group(1), dir=obsdir)
 
@@ -946,7 +946,7 @@ class AspectInterval(object):
     def _identify_missing_slot(self, slot):
         datadir = self.aspdir
         adat_files = glob(
-            os.path.join(datadir, "pcadf*N???_adat{}1.fits*".format(slot))
+            os.path.join(datadir, "pcad*N???_adat{}1.fits*".format(slot))
         )
         if not len(adat_files):
             return None
