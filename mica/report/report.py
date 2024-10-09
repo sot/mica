@@ -307,6 +307,9 @@ def official_vv_notes(obsid, summary):
 
     all_vv["aspect_review"] = None
 
+    # Convert all_vv to a list of dictionaries
+    all_vv = [dict(row) for row in all_vv]
+
     for report in all_vv:
         aspect_rev = vv_db.fetchone(
             f"select * from vvreview where vvid = {report['vvid']}"
