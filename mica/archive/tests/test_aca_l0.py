@@ -56,8 +56,8 @@ def test_get_aca_images():
     assert set(imgs_mica["COMMPROG_REPEAT"]) == {0, 1}
 
     for colname in imgs_maude.colnames:
-        if colname == "END_INTEG_TIME":
-            # Currently this is off by INTEG/2
+        if colname in ["IMG_VCDUCTR"]:
+            # These derived cols are not matched in mica at this time
             continue
         if imgs_maude[colname].dtype.kind == "f":
             assert np.allclose(
@@ -95,7 +95,11 @@ def test_get_aca_images_empty():
     # zero-length table with the required columns to match maude_decom
     assert len(imgs_mica) == 0
     assert type(imgs_mica) is Table
-    assert set(imgs_maude.colnames).issubset(imgs_mica.colnames)
+    maude_cols = imgs_maude.colnames.copy()
+    for extra_maude_col in ["IMG_VCDUCTR"]:
+        if extra_maude_col in maude_cols:
+            maude_cols.remove(extra_maude_col)
+    assert set(maude_cols).issubset(imgs_mica.colnames)
 
 
 has_l0_2007_archive = os.path.exists(os.path.join(aca_l0.CONFIG["data_root"], "2007"))
