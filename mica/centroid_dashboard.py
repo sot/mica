@@ -689,6 +689,7 @@ def plot_crs_visualization(
         "MAG_ACA",
         "MAG_ACA_ERR",
         "CLASS",
+        "COLOR1",
         "ASPQ1",
         "ASPQ2",
         "ASPQ3",
