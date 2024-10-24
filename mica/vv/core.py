@@ -1089,7 +1089,7 @@ class AspectInterval(object):
                 import agasc
 
                 star_info = agasc.get_star(
-                    ocat_info["id"], use_supplement=False, agasc_file="miniagasc_*"
+                    ocat_info["id"], use_supplement=False, agasc_file="agasc*"
                 )
                 mock_prop = dict(
                     cel_loc_flag=0,
