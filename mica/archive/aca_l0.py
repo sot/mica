@@ -266,7 +266,11 @@ def get_aca_images(
     out.rename_column("PIXTLM", "AAPIXTLM")
     del out["FILENAME"]
     del out["QUALITY"]
+
+    # maude_decom.get_aca_images() provides both VCDUCTR (VCDU for each sub-image) and
+    # IMG_VCDUCTR (VCDU of first sub-image). For combined images, these are identical.
     out["VCDUCTR"] = out["MJF"] * 128 + out["MNF"]
+    out["IMG_VCDUCTR"] = out["VCDUCTR"]
 
     # Split uint8 GLBSTAT and IMGSTAT into individual bits. The stat_bit_names are
     # in MSB order so we need to reverse them below.
