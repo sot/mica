@@ -17,9 +17,10 @@ import Ska.arc5gl
 import Ska.File
 import ska_dbi
 import tables
-from astropy.table import Table
+from astropy.table import Table, vstack
 from Chandra.Time import DateTime
 from chandra_aca.aca_image import ACAImage
+from cxotime import CxoTimeLike
 from numpy import ma
 
 from mica.common import MICA_ARCHIVE, MissingDataError
@@ -61,6 +62,8 @@ ACA_DTYPE = (
     ("MNF", ">i4"),
     ("END_INTEG_TIME", ">f8"),
     ("INTEG", ">f4"),
+    ("PIXTLM", "<U4"),
+    ("BGDTYP", "<U4"),
     ("GLBSTAT", "|u1"),
     ("COMMCNT", "|u1"),
     ("COMMPROG", "|u1"),
@@ -118,6 +121,27 @@ CONFIG = dict(
     cda_table="cda_aca0.h5",
 )
 
+# Names of bits in GLBSTAT and IMGSTAT fields, in order from most to least significant
+GLBSTAT_NAMES = [
+    "HIGH_BGD",
+    "RAM_FAIL",
+    "ROM_FAIL",
+    "POWER_FAIL",
+    "CAL_FAIL",
+    "COMM_CHECKSUM_FAIL",
+    "RESET",
+    "SYNTAX_ERROR",
+]
+
+IMGSTAT_NAMES = [
+    "SAT_PIXEL",
+    "DEF_PIXEL",
+    "QUAD_BOUND",
+    "COMMON_COL",
+    "MULTI_STAR",
+    "ION_RAD",
+]
+
 
 def get_options():
     parser = argparse.ArgumentParser(
@@ -142,6 +166,137 @@ def get_options():
     )
     opt = parser.parse_args()
     return opt
+
+
+def _extract_bits_as_uint8(
+    arr: np.ndarray, bit_start: int, bit_stop: int
+) -> np.ndarray:
+    """Extract UINT8's from a 2-D array of uint8 bit values into a new array.
+
+    Input array is Nx8 where N is the number of rows and 8 is the number of bits.
+    It must be in little-endian order with the most significant bit in the rightmost
+    position of the array.
+    """
+    # This returns a shape of (N, 1) so we need to squeeze it.
+    out = np.packbits(arr[:, bit_start:bit_stop], axis=1, bitorder="little")
+    return out.squeeze()
+
+
+def get_aca_images(
+    start: CxoTimeLike,
+    stop: CxoTimeLike,
+):
+    """
+    Get ACA images from mica L0 archive in same format as maude_decom.get_aca_images.
+
+    This gets a table of images from the mica L0 file archive that includes the same
+    output columns as ``chandra_aca.maude_decom.get_aca_images()``. The images are 8x8
+    and are centered in the 8x8 image, with masks indicating empty pixels (for 4x4 or
+    6x6 data).
+
+    The units of the image data are DN, so you need to multiply by 5.0 / INTEG to get
+    e-/sec.
+
+    This function returns additional columns that are not in the maude images:
+    - 'HD3TLM*': uint8, raw 8-bit header-3 telemetry values
+    - 'IMGSIZE': int32, 4, 6, or 8
+
+    Parameters
+    ----------
+    start : CxoTimeLike
+        Start time of the time range.
+    stop : CxoTimeLike
+        Stop time of the time range.
+
+    Returns
+    -------
+    astropy.table.Table
+        ACA images and accompanying data.
+    """
+    slot_data_list = []
+    for slot in range(8):
+        slot_data_raw = get_slot_data(
+            start,
+            stop,
+            slot=slot,
+            centered_8x8=True,
+        )
+        # Convert from numpy structured array to astropy table, keeping only good data
+        ok = slot_data_raw["QUALITY"] == 0
+        slot_data = Table(slot_data_raw[ok])
+
+        # Add slot number if there are any rows (if statement not needed after
+        # https://github.com/astropy/astropy/pull/17102).
+        # if len(slot_data) > 0:
+        #     slot_data["IMGNUM"] = slot
+
+        for name in ["IMGFID", "IMGFUNC", "IMGNUM"]:
+            slot_data[name] = slot_data[f"{name}1"]
+            for ii in (1, 2, 3, 4):
+                name_ii = f"{name}{ii}"
+                if name_ii in slot_data.colnames:
+                    del slot_data[name_ii]
+
+        slot_data_list.append(slot_data)
+
+    # Combine all slot data into one output table and sort by time and slot
+    out = vstack(slot_data_list)
+    out.sort(keys=["TIME", "IMGNUM"])
+
+    # Rename and rejigger colums to match chandra_aca.maude_decum.get_aca_images
+    is_6x6 = out["IMGSIZE"] == 6
+    is_4x4 = out["IMGSIZE"] == 4
+    for rc in ["ROW", "COL"]:
+        # IMGROW/COL0 are row/col of lower/left of 4x4, 6x6, or 8x8 image
+        # Make these new columns:
+        # IMGROW/COL_A1: row/col of pixel A1 of 4x4, 6x6, or 8x8 image
+        # IMGROW/COL0_8x8: row/col of lower/left of 8x8 image with smaller img centered
+        out[f"IMG{rc}_A1"] = out[f"IMG{rc}0"]
+        out[f"IMG{rc}_A1"][is_6x6] += 1
+        out[f"IMG{rc}0_8X8"] = out[f"IMG{rc}0"]
+        out[f"IMG{rc}0_8X8"][is_6x6] -= 1
+        out[f"IMG{rc}0_8X8"][is_4x4] -= 2
+
+    out["IMGTYPE"] = np.full(shape=len(out), fill_value=4)  # 8x8
+    out["IMGTYPE"][is_6x6] = 1  # 6x6
+    out["IMGTYPE"][is_4x4] = 0  # 4x4
+
+    out.rename_column("IMGRAW", "IMG")
+    out.rename_column("BGDTYP", "AABGDTYP")
+    out.rename_column("PIXTLM", "AAPIXTLM")
+    del out["FILENAME"]
+    del out["QUALITY"]
+
+    # maude_decom.get_aca_images() provides both VCDUCTR (VCDU for each sub-image) and
+    # IMG_VCDUCTR (VCDU of first sub-image). For combined images, these are identical.
+    out["VCDUCTR"] = out["MJF"] * 128 + out["MNF"]
+    out["IMG_VCDUCTR"] = out["VCDUCTR"]
+
+    # Split uint8 GLBSTAT and IMGSTAT into individual bits. The stat_bit_names are
+    # in MSB order so we need to reverse them below.
+    for stat_name, stat_bit_names in (
+        ("GLBSTAT", GLBSTAT_NAMES),
+        ("IMGSTAT", IMGSTAT_NAMES),
+    ):
+        for bit, name in zip(range(8), reversed(stat_bit_names)):
+            out[name] = (out[stat_name] & (1 << bit)) > 0
+
+    # Extract fields from the mica L0 8-bit COMMCNT value which is really three MSIDs.
+    # We need to use .data attribute of MaskedColumn to get a numpy masked array. The
+    # unpackbits function fails on MaskedColumn because it looks for a _mask attribute.
+    bits = np.unpackbits(out["COMMCNT"].data).reshape(-1, 8)
+    bits_rev = bits[:, ::-1]  # MSB is on the right (index=7)
+    out["COMMCNT"] = _extract_bits_as_uint8(bits_rev, 2, 8)
+    out["COMMCNT_CHECKSUM_FAIL"] = bits_rev[:, 0] > 0
+    out["COMMCNT_SYNTAX_ERROR"] = bits_rev[:, 1] > 0
+
+    # Extract fields from the mica L0 8-bit COMMPROG value which is really two MSIDs
+    bits = np.unpackbits(out["COMMPROG"].data).reshape(-1, 8)
+    bits_rev = bits[:, ::-1]
+    out["COMMPROG"] = _extract_bits_as_uint8(bits_rev, 2, 8)
+    out["COMMPROG_REPEAT"] = _extract_bits_as_uint8(bits_rev, 0, 2)
+
+    return out
 
 
 def get_slot_data(
@@ -218,6 +373,10 @@ def get_slot_data(
                 continue
             if fname in chunk.dtype.names:
                 all_rows[fname][idx0:idx1] = chunk[fname]
+            elif fname == "PIXTLM":
+                all_rows[fname][idx0:idx1] = "ORIG"
+            elif fname == "BGDTYP":
+                all_rows[fname][idx0:idx1] = "FLAT"
         if "IMGSIZE" in columns:
             all_rows["IMGSIZE"][idx0:idx1] = f_imgsize
         if "FILENAME" in columns:
