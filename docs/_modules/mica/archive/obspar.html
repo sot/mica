@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.obspar &#8212; mica 4.35.2 documentation</title>
+    <title>mica.archive.obspar &#8212; mica 4.37.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../_static/documentation_options.js?v=49026ed3"></script>
+    <script src="../../../_static/documentation_options.js?v=3928f412"></script>
     <script src="../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.35.2 documentation</a>
+	<a href="../../../index.html">mica 4.37.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -63,18 +63,20 @@
 <span></span><span class="ch">#!/usr/bin/env python</span>
 <span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Script to update Ska file archive obspars.  Module</span>
-<span class="sd">also provides methods to retrieve the directory (or directories)</span>
+<span class="sd">Script to update Ska file archive obspars.</span>
+
+<span class="sd">Module also provides methods to retrieve the directory (or directories)</span>
 <span class="sd">for an obsid.</span>
 
 <span class="sd">This uses the obsid_archive module with a configuration specific</span>
 <span class="sd">to the obspar products.</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">os</span>
+
 <span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
 
 <span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">obsid_archive</span>
 <span class="kn">from</span> <span class="nn">mica.archive.obsid_archive</span> <span class="kn">import</span> <span class="n">parse_obspar</span>
@@ -83,185 +85,187 @@
 <span class="c1"># these keys are available in the obspar and will be included in the</span>
 <span class="c1"># file lookup table (archfiles)</span>
 <span class="n">ARCHFILES_HDR_COLS</span> <span class="o">=</span> <span class="p">[</span>
-<span class="s1">&#39;filename&#39;</span><span class="p">,</span>
-<span class="s1">&#39;obsid&#39;</span><span class="p">,</span>
-<span class="s1">&#39;title&#39;</span><span class="p">,</span>
-<span class="s1">&#39;observer&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ao&#39;</span><span class="p">,</span>
-<span class="s1">&#39;object&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ss_object&#39;</span><span class="p">,</span>
-<span class="s1">&#39;obs_id&#39;</span><span class="p">,</span>
-<span class="s1">&#39;obi_num&#39;</span><span class="p">,</span>
-<span class="s1">&#39;seq_num&#39;</span><span class="p">,</span>
-<span class="s1">&#39;instrume&#39;</span><span class="p">,</span>
-<span class="s1">&#39;grating&#39;</span><span class="p">,</span>
-<span class="s1">&#39;detector&#39;</span><span class="p">,</span>
-<span class="s1">&#39;detnam&#39;</span><span class="p">,</span>
-<span class="s1">&#39;si_mode&#39;</span><span class="p">,</span>
-<span class="s1">&#39;optical_monitor&#39;</span><span class="p">,</span>
-<span class="s1">&#39;raster_scan&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dither&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dither_y_amp&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dither_y_freq&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dither_y_phase&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dither_z_amp&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dither_z_freq&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dither_z_phase&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ra_pnt&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dec_pnt&#39;</span><span class="p">,</span>
-<span class="s1">&#39;roll_pnt&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ra_targ&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dec_targ&#39;</span><span class="p">,</span>
-<span class="s1">&#39;y_det_offset&#39;</span><span class="p">,</span>
-<span class="s1">&#39;z_det_offset&#39;</span><span class="p">,</span>
-<span class="s1">&#39;radial_offset&#39;</span><span class="p">,</span>
-<span class="s1">&#39;defocus&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sim_z_offset&#39;</span><span class="p">,</span>
-<span class="s1">&#39;pre_id&#39;</span><span class="p">,</span>
-<span class="s1">&#39;uninterrupted&#39;</span><span class="p">,</span>
-<span class="s1">&#39;seg_max_num&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ra_nom&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dec_nom&#39;</span><span class="p">,</span>
-<span class="s1">&#39;roll_nom&#39;</span><span class="p">,</span>
-<span class="s1">&#39;date_obs&#39;</span><span class="p">,</span>
-<span class="s1">&#39;date_end&#39;</span><span class="p">,</span>
-<span class="s1">&#39;tstart&#39;</span><span class="p">,</span>
-<span class="s1">&#39;tstop&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sched_start&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sched_stop&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sched_exp_time&#39;</span><span class="p">,</span>
-<span class="s1">&#39;obs_mode&#39;</span><span class="p">,</span>
-<span class="s1">&#39;maneuver&#39;</span><span class="p">,</span>
-<span class="s1">&#39;maneuver_v1&#39;</span><span class="p">,</span>
-<span class="s1">&#39;maneuver_v2&#39;</span><span class="p">,</span>
-<span class="s1">&#39;maneuver_v3&#39;</span><span class="p">,</span>
-<span class="s1">&#39;maneuver_angle&#39;</span><span class="p">,</span>
-<span class="s1">&#39;maneuver_ref&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mjdref&#39;</span><span class="p">,</span>
-<span class="s1">&#39;timezero&#39;</span><span class="p">,</span>
-<span class="s1">&#39;timeunit&#39;</span><span class="p">,</span>
-<span class="s1">&#39;timesys&#39;</span><span class="p">,</span>
-<span class="s1">&#39;timversn&#39;</span><span class="p">,</span>
-<span class="s1">&#39;datamode&#39;</span><span class="p">,</span>
-<span class="s1">&#39;readmode&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccdi0_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccdi1_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccdi2_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccdi3_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccds0_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccds1_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccds2_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccds3_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccds4_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ccds5_on&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dropped_chip_count&#39;</span><span class="p">,</span>
-<span class="s1">&#39;onchip_sum&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sumrow&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sumcol&#39;</span><span class="p">,</span>
-<span class="s1">&#39;subarray&#39;</span><span class="p">,</span>
-<span class="s1">&#39;startrow&#39;</span><span class="p">,</span>
-<span class="s1">&#39;rowcnt&#39;</span><span class="p">,</span>
-<span class="s1">&#39;subarray_frame_time&#39;</span><span class="p">,</span>
-<span class="s1">&#39;duty_cycle&#39;</span><span class="p">,</span>
-<span class="s1">&#39;dtycycle&#39;</span><span class="p">,</span>
-<span class="s1">&#39;exptimea&#39;</span><span class="p">,</span>
-<span class="s1">&#39;exptimeb&#39;</span><span class="p">,</span>
-<span class="s1">&#39;most_efficient&#39;</span><span class="p">,</span>
-<span class="s1">&#39;eventfilter&#39;</span><span class="p">,</span>
-<span class="s1">&#39;phamin&#39;</span><span class="p">,</span>
-<span class="s1">&#39;pharange&#39;</span><span class="p">,</span>
-<span class="s1">&#39;bias_request&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mode&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mission&#39;</span><span class="p">,</span>
-<span class="s1">&#39;telescop&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sim_x&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sim_y&#39;</span><span class="p">,</span>
-<span class="s1">&#39;sim_z&#39;</span><span class="p">,</span>
-<span class="s1">&#39;foc_len&#39;</span><span class="p">,</span>
-<span class="s1">&#39;py_shutter_position&#39;</span><span class="p">,</span>
-<span class="s1">&#39;range_switch_level&#39;</span><span class="p">,</span>
-<span class="s1">&#39;antico_enable&#39;</span><span class="p">,</span>
-<span class="s1">&#39;upper_level_disc&#39;</span><span class="p">,</span>
-<span class="s1">&#39;timing_mode&#39;</span><span class="p">,</span>
-<span class="s1">&#39;trigger_level&#39;</span><span class="p">,</span>
-<span class="s1">&#39;u_blank_hi&#39;</span><span class="p">,</span>
-<span class="s1">&#39;u_blank_low&#39;</span><span class="p">,</span>
-<span class="s1">&#39;v_blank_low&#39;</span><span class="p">,</span>
-<span class="s1">&#39;v_blank_hi&#39;</span><span class="p">,</span>
-<span class="s1">&#39;uld_enable&#39;</span><span class="p">,</span>
-<span class="s1">&#39;zero_block&#39;</span><span class="p">,</span>
-<span class="s1">&#39;blank_enable&#39;</span><span class="p">,</span>
-<span class="s1">&#39;width_enable&#39;</span><span class="p">,</span>
-<span class="s1">&#39;spect_mode&#39;</span><span class="p">,</span>
-<span class="s1">&#39;my_shutter_position&#39;</span><span class="p">,</span>
-<span class="s1">&#39;width_threshold&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mt_a&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mt_aop&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mt_e&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mt_epoch&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mt_i&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mt_ma&#39;</span><span class="p">,</span>
-<span class="s1">&#39;mt_raan&#39;</span><span class="p">,</span>
-<span class="s1">&#39;timeref&#39;</span><span class="p">,</span>
-<span class="s1">&#39;tassign&#39;</span><span class="p">,</span>
-<span class="s1">&#39;origin&#39;</span><span class="p">,</span>
-<span class="s1">&#39;ascdsver&#39;</span><span class="p">,</span>
-<span class="s1">&#39;obi_data&#39;</span><span class="p">,</span>
-<span class="s1">&#39;revision&#39;</span><span class="p">,</span>
-<span class="s1">&#39;obspar_ver&#39;</span><span class="p">,</span>
-<span class="s1">&#39;obspar_type&#39;</span><span class="p">,</span>
-<span class="s1">&#39;obspar_stat&#39;</span><span class="p">]</span>
+    <span class="s2">&quot;filename&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obsid&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;title&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;observer&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ao&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ss_object&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obs_id&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obi_num&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;seq_num&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;instrume&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;grating&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;detector&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;detnam&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;si_mode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;optical_monitor&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;raster_scan&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dither&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dither_y_amp&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dither_y_freq&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dither_y_phase&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dither_z_amp&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dither_z_freq&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dither_z_phase&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ra_pnt&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dec_pnt&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;roll_pnt&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ra_targ&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dec_targ&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;y_det_offset&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;z_det_offset&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;radial_offset&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;defocus&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sim_z_offset&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pre_id&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;uninterrupted&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;seg_max_num&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ra_nom&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dec_nom&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;roll_nom&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;date_obs&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;date_end&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tstart&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tstop&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sched_start&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sched_stop&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sched_exp_time&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obs_mode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;maneuver&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;maneuver_v1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;maneuver_v2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;maneuver_v3&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;maneuver_angle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;maneuver_ref&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mjdref&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timezero&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timeunit&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timesys&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timversn&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;datamode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;readmode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccdi0_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccdi1_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccdi2_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccdi3_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccds0_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccds1_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccds2_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccds3_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccds4_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ccds5_on&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dropped_chip_count&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;onchip_sum&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sumrow&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sumcol&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;subarray&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;startrow&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rowcnt&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;subarray_frame_time&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;duty_cycle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dtycycle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;exptimea&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;exptimeb&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;most_efficient&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;eventfilter&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;phamin&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pharange&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bias_request&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mission&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;telescop&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sim_x&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sim_y&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sim_z&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;foc_len&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;py_shutter_position&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;range_switch_level&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;antico_enable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;upper_level_disc&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timing_mode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;trigger_level&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;u_blank_hi&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;u_blank_low&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;v_blank_low&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;v_blank_hi&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;uld_enable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;zero_block&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;blank_enable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;width_enable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;spect_mode&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;my_shutter_position&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;width_threshold&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mt_a&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mt_aop&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mt_e&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mt_epoch&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mt_i&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mt_ma&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mt_raan&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timeref&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tassign&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;origin&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ascdsver&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obi_data&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;revision&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obspar_ver&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obspar_type&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obspar_stat&quot;</span><span class="p">,</span>
+<span class="p">]</span>
 
-<span class="n">CONFIG</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">data_root</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">,</span> <span class="s1">&#39;obspar&#39;</span><span class="p">),</span>
-              <span class="n">temp_root</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">,</span> <span class="s1">&#39;tempobs&#39;</span><span class="p">),</span>
-              <span class="n">sql_def</span><span class="o">=</span><span class="s1">&#39;obspar_def.sql&#39;</span><span class="p">,</span>
-              <span class="n">apstat_table</span><span class="o">=</span><span class="s1">&#39;obidet_0_5&#39;</span><span class="p">,</span>
-              <span class="n">apstat_id</span><span class="o">=</span><span class="s1">&#39;obidet_0_5_id&#39;</span><span class="p">,</span>
-              <span class="n">label</span><span class="o">=</span><span class="s1">&#39;obspar&#39;</span><span class="p">,</span>
-              <span class="n">small</span><span class="o">=</span><span class="s1">&#39;obspar&#39;</span><span class="p">,</span>
-              <span class="n">small_glob</span><span class="o">=</span><span class="s1">&#39;axaff*par*&#39;</span><span class="p">,</span>
-              <span class="n">small_ver_regex</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;axaff\d</span><span class="si">{5}</span><span class="s1">_\d</span><span class="si">{3}</span><span class="s1">N(\d</span><span class="si">{3}</span><span class="s1">).*&#39;</span><span class="p">,</span>
-              <span class="n">full</span><span class="o">=</span><span class="s1">&#39;obspar&#39;</span><span class="p">,</span>
-              <span class="n">filecheck</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-              <span class="n">cols</span><span class="o">=</span><span class="n">ARCHFILES_HDR_COLS</span><span class="p">,</span>
-              <span class="n">content_types</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;OBSPAR&#39;</span><span class="p">])</span>
+<span class="n">CONFIG</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">data_root</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">,</span> <span class="s2">&quot;obspar&quot;</span><span class="p">),</span>
+    <span class="n">temp_root</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">,</span> <span class="s2">&quot;tempobs&quot;</span><span class="p">),</span>
+    <span class="n">sql_def</span><span class="o">=</span><span class="s2">&quot;obspar_def.sql&quot;</span><span class="p">,</span>
+    <span class="n">apstat_table</span><span class="o">=</span><span class="s2">&quot;obidet_0_5&quot;</span><span class="p">,</span>
+    <span class="n">apstat_id</span><span class="o">=</span><span class="s2">&quot;obidet_0_5_id&quot;</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">&quot;obspar&quot;</span><span class="p">,</span>
+    <span class="n">small</span><span class="o">=</span><span class="s2">&quot;obspar&quot;</span><span class="p">,</span>
+    <span class="n">small_glob</span><span class="o">=</span><span class="s2">&quot;axaff*par*&quot;</span><span class="p">,</span>
+    <span class="n">small_ver_regex</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;axaff\d</span><span class="si">{5}</span><span class="s2">_\d</span><span class="si">{3}</span><span class="s2">N(\d</span><span class="si">{3}</span><span class="s2">).*&quot;</span><span class="p">,</span>
+    <span class="n">full</span><span class="o">=</span><span class="s2">&quot;obspar&quot;</span><span class="p">,</span>
+    <span class="n">filecheck</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">cols</span><span class="o">=</span><span class="n">ARCHFILES_HDR_COLS</span><span class="p">,</span>
+    <span class="n">content_types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;OBSPAR&quot;</span><span class="p">],</span>
+<span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">get_options</span><span class="p">():</span>
     <span class="kn">import</span> <span class="nn">argparse</span>
-    <span class="n">desc</span> <span class="o">=</span> \
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Run the update process to get new obspars, save them in the Ska</span>
-<span class="sd">file archive, and include records of them in the file lookup database.</span>
-<span class="sd">This is intended to be run as a cron task, and in regular processing,</span>
-<span class="sd">the update will fetch and ingest all telemetry since the task&#39;s last run.</span>
-<span class="sd">Options also provided to fetch and ingest specific obsids and versions.</span>
 
-<span class="sd">See the ``CONFIG`` in the obspar.py file and the config description in</span>
-<span class="sd">obsid_archive for more information on the obspar default config if parameters</span>
-<span class="sd">without command-line options need to be changed.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+    <span class="n">desc</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Run the update process to get new obspars, save them in the Ska</span>
+<span class="s2">file archive, and include records of them in the file lookup database.</span>
+<span class="s2">This is intended to be run as a cron task, and in regular processing,</span>
+<span class="s2">the update will fetch and ingest all telemetry since the task&#39;s last run.</span>
+<span class="s2">Options also provided to fetch and ingest specific obsids and versions.</span>
+
+<span class="s2">See the ``CONFIG`` in the obspar.py file and the config description in</span>
+<span class="s2">obsid_archive for more information on the obspar default config if parameters</span>
+<span class="s2">without command-line options need to be changed.</span>
+<span class="s2">&quot;&quot;&quot;</span>
     <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">desc</span><span class="p">)</span>
     <span class="n">defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">CONFIG</span><span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="o">**</span><span class="n">defaults</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--obsid&quot;</span><span class="p">,</span>
-                        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;specific obsid to process&quot;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--version&quot;</span><span class="p">,</span>
-                        <span class="n">default</span><span class="o">=</span><span class="s1">&#39;last&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;specific processing version to retrieve&quot;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--firstrun&quot;</span><span class="p">,</span>
-                        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;for archive init., ignore revisions&quot;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--data-root&quot;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;parent directory for all data&quot;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--temp-root&quot;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;parent temp directory&quot;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--rebuild&quot;</span><span class="p">,</span>
-                        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Allow update to rebuild archive from obsid 1&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--obsid&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;specific obsid to process&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--version&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;last&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;specific processing version to retrieve&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--firstrun&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;for archive init., ignore revisions&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--data-root&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;parent directory for all data&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--temp-root&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;parent temp directory&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--rebuild&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Allow update to rebuild archive from obsid 1&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="n">opt</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">opt</span>
+
 
 <span class="c1"># set up an archive object with default config for use by the other</span>
 <span class="c1"># get_* methods</span>
@@ -311,7 +315,7 @@
 
 
 
-<span class="k">def</span> <span class="nf">get_obspar_file</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">get_obspar_file</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get location of requested obsid&#39;s obspar.</span>
 
@@ -328,7 +332,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">dirs</span> <span class="o">=</span> <span class="n">archive</span><span class="o">.</span><span class="n">get_obs_dirs</span><span class="p">(</span><span class="n">obsid</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">dirs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">version</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>
-        <span class="n">obsparfiles</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirs</span><span class="p">[</span><span class="n">version</span><span class="p">],</span> <span class="s1">&#39;axaff*par*&#39;</span><span class="p">))</span>
+        <span class="n">obsparfiles</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirs</span><span class="p">[</span><span class="n">version</span><span class="p">],</span> <span class="s2">&quot;axaff*par*&quot;</span><span class="p">))</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">obsparfiles</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">obsparfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">return</span> <span class="kc">None</span>
@@ -336,7 +340,7 @@
 
 <div class="viewcode-block" id="get_obspar">
 <a class="viewcode-back" href="../../../api.html#mica.archive.obspar.get_obspar">[docs]</a>
-<span class="k">def</span> <span class="nf">get_obspar</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">get_obspar</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the obspar for obsid.  Return as a dict.</span>
 
@@ -353,11 +357,11 @@
     <span class="n">obsparfile</span> <span class="o">=</span> <span class="n">get_obspar_file</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">obsparfile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">obspar</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;num_ccd_on&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+    <span class="n">obspar</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;num_ccd_on&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
     <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">parse_obspar</span><span class="p">(</span><span class="n">obsparfile</span><span class="p">):</span>
-        <span class="n">obspar</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]})</span>
-        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^ccd[is]\d_on$&#39;</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Y&#39;</span><span class="p">:</span>
-            <span class="n">obspar</span><span class="p">[</span><span class="s1">&#39;num_ccd_on&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">obspar</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]:</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]})</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^ccd[is]\d_on$&quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Y&quot;</span><span class="p">:</span>
+            <span class="n">obspar</span><span class="p">[</span><span class="s2">&quot;num_ccd_on&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
     <span class="k">return</span> <span class="n">obspar</span></div>
 
 
@@ -379,8 +383,7 @@
 <span class="sd">                     defaults to current released version</span>
 <span class="sd">    :returns: full path of files matching query</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">archive</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="n">obsid</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span>
-                             <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">archive</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="n">obsid</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">get_obsids</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -400,15 +403,16 @@
 <span class="sd">                     to those with &#39;default&#39;/released obspars.</span>
 <span class="sd">    :returns: list of obsids</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">files</span> <span class="o">=</span> <span class="n">archive</span><span class="o">.</span><span class="n">_get_file_records</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span>
-                                      <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">archive</span><span class="o">.</span><span class="n">_get_file_records</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
-    <span class="k">return</span> <span class="n">files</span><span class="p">[</span><span class="s1">&#39;obsid&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">files</span><span class="p">[</span><span class="s2">&quot;obsid&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
 
 <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Update the obspar archive.</span>
+
 <span class="sd">    Run the update process to get new obspars, save them in the Ska</span>
 <span class="sd">    file archive, and include new entries in the file lookup database.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -420,9 +424,8 @@
     <span class="n">archive</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
     <span class="n">main</span><span class="p">()</span>
-
 </pre></div>
 
             <div class="clearer"></div>

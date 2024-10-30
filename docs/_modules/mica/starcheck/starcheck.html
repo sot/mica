@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.starcheck.starcheck &#8212; mica 4.35.2 documentation</title>
+    <title>mica.starcheck.starcheck &#8212; mica 4.37.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../_static/documentation_options.js?v=49026ed3"></script>
+    <script src="../../../_static/documentation_options.js?v=3928f412"></script>
     <script src="../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.35.2 documentation</a>
+	<a href="../../../index.html">mica 4.37.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -64,11 +64,10 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
 
+<span class="kn">import</span> <span class="nn">astropy.units</span> <span class="k">as</span> <span class="nn">u</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">ska_dbi</span>
-<span class="kn">import</span> <span class="nn">astropy.units</span> <span class="k">as</span> <span class="nn">u</span>
 <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
-
 <span class="kn">from</span> <span class="nn">cxotime</span> <span class="kn">import</span> <span class="n">CxoTime</span>
 <span class="kn">from</span> <span class="nn">kadi.commands</span> <span class="kn">import</span> <span class="n">get_observations</span>
 
@@ -107,7 +106,9 @@
 
 <span class="k">def</span> <span class="nf">get_dither</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Get the planned dither for an obsid.  Uses mica.starcheck database.  Note that this</span>
+<span class="sd">    Get the planned dither for an obsid.</span>
+
+<span class="sd">    This uses mica.starcheck database.  Note that this</span>
 <span class="sd">    does not have dither values for ERs and for some early mission observations.</span>
 
 <span class="sd">    Observations with dither dither disabled will have yaw and pitch amplitude set</span>
@@ -220,6 +221,8 @@
 <a class="viewcode-back" href="../../../api.html#mica.starcheck.get_starcheck_catalog_at_date">[docs]</a>
 <span class="k">def</span> <span class="nf">get_starcheck_catalog_at_date</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get starcheck catalog dictionary at date.</span>
+
 <span class="sd">    For a given date, return a dictionary describing the starcheck catalog that should</span>
 <span class="sd">    apply. The content of that dictionary is from the database tables that parsed the</span>
 <span class="sd">    starcheck report. A catalog is defined as applying, in this function, to any time</span>
@@ -331,6 +334,8 @@
 <a class="viewcode-back" href="../../../api.html#mica.starcheck.get_mp_dir">[docs]</a>
 <span class="k">def</span> <span class="nf">get_mp_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get mission planning directory for obsid.</span>
+
 <span class="sd">    Get the mission planning directory for an obsid and some status information.</span>
 <span class="sd">    If the obsid catalog was used more than once (multi-obi or rescheduled after</span>
 <span class="sd">    being used in a vehicle-only interval), return the directory and details of</span>
@@ -366,11 +371,10 @@
         <span class="n">sc_date</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;starcat_date&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">sc_date</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;no starcat&quot;</span>
+        <span class="k">elif</span> <span class="n">sc_date</span> <span class="o">&lt;</span> <span class="n">CxoTime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">date</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;ran&quot;</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">sc_date</span> <span class="o">&lt;</span> <span class="n">CxoTime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">date</span><span class="p">:</span>
-                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;ran&quot;</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;approved&quot;</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;approved&quot;</span>
         <span class="n">mp_dir</span> <span class="o">=</span> <span class="n">load_name_to_mp_dir</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;source&quot;</span><span class="p">])</span>
 
     <span class="k">return</span> <span class="n">mp_dir</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">sc_date</span></div>
@@ -408,6 +412,8 @@
 <a class="viewcode-back" href="../../../api.html#mica.starcheck.get_starcheck_catalog">[docs]</a>
 <span class="k">def</span> <span class="nf">get_starcheck_catalog</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">mp_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">starcheck_db</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get starcheck catalog dictionary.</span>
+
 <span class="sd">    For a given obsid, return a dictionary describing the starcheck catalog that should</span>
 <span class="sd">    apply. The content of that dictionary is from the database tables of that parsed the</span>
 <span class="sd">    starcheck report and has keys:</span>

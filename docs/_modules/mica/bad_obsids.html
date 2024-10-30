@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.bad_obsids &#8212; mica 4.35.2 documentation</title>
+    <title>mica.bad_obsids &#8212; mica 4.37.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../_static/documentation_options.js?v=49026ed3"></script>
+    <script src="../../_static/documentation_options.js?v=3928f412"></script>
     <script src="../../_static/doctools.js?v=888ff710"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script type="text/javascript" src="../../_static/sidebar.js"></script>
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../index.html">mica 4.35.2 documentation</a>
+	<a href="../../index.html">mica 4.37.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -109,7 +109,8 @@
     <span class="mi">18694</span><span class="p">,</span>
     <span class="mi">18695</span><span class="p">,</span>
     <span class="mi">18696</span><span class="p">,</span>
-    <span class="mi">53250</span><span class="p">]</span>
+    <span class="mi">53250</span><span class="p">,</span>
+<span class="p">]</span>
 
 <span class="n">multi_obi</span> <span class="o">=</span> <span class="p">[</span>
     <span class="mi">943</span><span class="p">,</span>
@@ -143,6 +144,8 @@
 <a class="viewcode-back" href="../../api.html#mica.bad_obsids.bad_obsids">[docs]</a>
 <span class="k">def</span> <span class="nf">bad_obsids</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return bad obsid list</span>
+
 <span class="sd">    Returns a list of the obsids that are reasonable to exclude from most trending applications.</span>
 <span class="sd">    The list includes observations of Venus and observations with multiple obis. The observations</span>
 <span class="sd">    of Venus are problematic for star trending.  The observations with multiple obis may have more</span>

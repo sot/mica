@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>mica.archive.aca_dark &#8212; mica 4.35.2 documentation</title>
+    <title>mica.archive.aca_dark &#8212; mica 4.37.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="_static/documentation_options.js?v=49026ed3"></script>
+    <script src="_static/documentation_options.js?v=3928f412"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script type="text/javascript" src="_static/sidebar.js"></script>
@@ -52,7 +52,7 @@
 	
       </li>
       <li>
-	<a href="index.html">mica 4.35.2 documentation</a>
+	<a href="index.html">mica 4.37.0 documentation</a>
 	 &#187;
       </li>
       
@@ -68,34 +68,514 @@
             
   <section id="mica-archive-aca-dark">
 <span id="api-aca-dark"></span><h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark</span></code><a class="headerlink" href="#mica-archive-aca-dark" title="Link to this heading">¶</a></h1>
-<section id="mica-archive-aca-dark-dark-cal">
-<span id="api-dark-cal"></span><h2><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark.dark_cal</span></code><a class="headerlink" href="#mica-archive-aca-dark-dark-cal" title="Link to this heading">¶</a></h2>
+<section id="module-mica.archive.aca_dark.dark_cal">
+<span id="mica-archive-aca-dark-dark-cal"></span><span id="api-dark-cal"></span><h2><a class="reference internal" href="#module-mica.archive.aca_dark.dark_cal" title="mica.archive.aca_dark.dark_cal"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark.dark_cal</span></code></a><a class="headerlink" href="#module-mica.archive.aca_dark.dark_cal" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.dark_id_to_date">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">dark_id_to_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dark_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#dark_id_to_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.dark_id_to_date" title="Link to this definition">¶</a></dt>
+<dd><p>Convert <code class="docutils literal notranslate"><span class="pre">dark_id</span></code> (YYYYDOY) to the corresponding CxoTime ‘date’ format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>date</strong> – dark id (YYYYDOY)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>str in CxoTime ‘date’ format</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.date_to_dark_id">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">date_to_dark_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#date_to_dark_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.date_to_dark_id" title="Link to this definition">¶</a></dt>
+<dd><p>Convert <code class="docutils literal notranslate"><span class="pre">date</span></code> to the corresponding YYYYDOY format for a dark cal identifiers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>date</strong> – any CxoTime compatible format</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dark id (YYYYDOY)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.get_dark_cal_dirs">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_dirs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dark_cals_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/proj/sot/ska/data/mica/archive/aca_dark'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_dirs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_dirs" title="Link to this definition">¶</a></dt>
+<dd><p>Get an ordered dict of directory paths containing dark current calibration files.</p>
+<p>The key is the dark cal identifier (YYYYDOY) and the value is the path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dark_cals_dir</strong> – directory containing dark cals.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>ordered dict of absolute directory paths</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.get_dark_cal_id">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'before'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dark_cal_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_id" title="Link to this definition">¶</a></dt>
+<dd><p>Return the dark calibration id corresponding to <code class="docutils literal notranslate"><span class="pre">date</span></code>.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">select</span></code> is <code class="docutils literal notranslate"><span class="pre">'before'</span></code> (default) then use the first calibration which
+occurs before <code class="docutils literal notranslate"><span class="pre">date</span></code>.  Other valid options are <code class="docutils literal notranslate"><span class="pre">'after'</span></code> and <code class="docutils literal notranslate"><span class="pre">'nearest'</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date</strong> – date in any CxoTime format</p></li>
+<li><p><strong>select</strong> – method to select dark cal (before|nearest|after)</p></li>
+<li><p><strong>dark_cal_ids</strong> – list of all dark-cal IDs (optional, the output of get_dark_cal_ids)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dark cal id string (YYYYDOY)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.get_dark_cal_ids">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dark_cals_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/proj/sot/ska/data/mica/archive/aca_dark'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_ids" title="Link to this definition">¶</a></dt>
+<dd><p>Get an ordered dict dates as keys and dark cal identifiers (YYYYDOY) as values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dark_cals_dir</strong> – directory containing dark cals.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>ordered dict of absolute directory paths</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.get_dark_cal_image">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'before'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_ccd_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aca_image</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_negative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_image" title="Link to this definition">¶</a></dt>
+<dd><p>Return the dark calibration image (e-/s) nearest to <code class="docutils literal notranslate"><span class="pre">date</span></code>.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">select</span></code> is <code class="docutils literal notranslate"><span class="pre">'before'</span></code> (default) then use the first calibration which
+occurs before <code class="docutils literal notranslate"><span class="pre">date</span></code>.  Other valid options are <code class="docutils literal notranslate"><span class="pre">'after'</span></code> and <code class="docutils literal notranslate"><span class="pre">'nearest'</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date</strong> – date in any CxoTime format</p></li>
+<li><p><strong>select</strong> – method to select dark cal (before|nearest|after)</p></li>
+<li><p><strong>t_ccd_ref</strong> – rescale dark map to temperature (degC, default=no scaling)</p></li>
+<li><p><strong>aca_image</strong> – return an ACAImage instance instead of ndarray</p></li>
+<li><p><strong>allow_negative</strong> – allow negative values in raw dark map (default=False)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1024 x 1024 ndarray with dark cal image in e-/s</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.get_dark_cal_props">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_props</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">select</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'before'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_image</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_ccd_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aca_image</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_negative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_props"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_props" title="Link to this definition">¶</a></dt>
+<dd><p>Return a dark calibration properties structure for <code class="docutils literal notranslate"><span class="pre">date</span></code></p>
+<p>If <code class="docutils literal notranslate"><span class="pre">select</span></code> is <code class="docutils literal notranslate"><span class="pre">'before'</span></code> (default) then use the first calibration which
+occurs before <code class="docutils literal notranslate"><span class="pre">date</span></code>.  Other valid options are <code class="docutils literal notranslate"><span class="pre">'after'</span></code> and <code class="docutils literal notranslate"><span class="pre">'nearest'</span></code>.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">include_image</span></code> is True then an additional column or key <code class="docutils literal notranslate"><span class="pre">image</span></code> is
+defined which contains the corresponding 1024x1024 dark cal image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date</strong> – date in any CxoTime format</p></li>
+<li><p><strong>select</strong> – method to select dark cal (before|nearest|after)</p></li>
+<li><p><strong>include_image</strong> – include the dark cal images in output (default=False)</p></li>
+<li><p><strong>t_ccd_ref</strong> – rescale dark map to temperature (degC, default=no scaling)</p></li>
+<li><p><strong>aca_image</strong> – return an ACAImage instance instead of ndarray</p></li>
+<li><p><strong>allow_negative</strong> – allow negative values in raw dark map (default=False)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict of dark calibration properties</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_dark.dark_cal.get_dark_cal_props_table">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_dark.dark_cal.</span></span><span class="sig-name descname"><span class="pre">get_dark_cal_props_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_image</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_dark/dark_cal.html#get_dark_cal_props_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_props_table" title="Link to this definition">¶</a></dt>
+<dd><p>Return a table of dark calibration properties between <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code>.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">include_image</span></code> is True then an additional column or key <code class="docutils literal notranslate"><span class="pre">image</span></code> is
+defined which contains the corresponding 1024x1024 dark cal image.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">as_table</span></code> is True (default) then the result is an astropy Table object.
+If False then a list of dicts is returned.  In this case the full contents
+of the properties file including replica properties is available.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> – start time (default=beginning of mission)</p></li>
+<li><p><strong>stop</strong> – stop time (default=now)</p></li>
+<li><p><strong>include_image</strong> – include the dark cal images in output (default=False)</p></li>
+<li><p><strong>as_table</strong> – return a Table instead of a list (default=True)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>astropy Table or list of dark calibration properties</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
-<section id="mica-archive-aca-hdr3">
-<h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_hdr3</span></code><a class="headerlink" href="#mica-archive-aca-hdr3" title="Link to this heading">¶</a></h1>
+<section id="module-mica.archive.aca_hdr3">
+<span id="mica-archive-aca-hdr3"></span><h1><a class="reference internal" href="#module-mica.archive.aca_hdr3" title="mica.archive.aca_hdr3"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_hdr3</span></code></a><a class="headerlink" href="#module-mica.archive.aca_hdr3" title="Link to this heading">¶</a></h1>
+<p>Experimental/alpha code to work with ACA L0 Header 3 data</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="mica.archive.aca_hdr3.MSID">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mica.archive.aca_hdr3.</span></span><span class="sig-name descname"><span class="pre">MSID</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msid_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_bad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_hdr3.html#MSID"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_hdr3.MSID" title="Link to this definition">¶</a></dt>
+<dd><p>ACA header 3 data object.</p>
+<p>ACA header 3 data object to work with header 3 data from
+available 8x8 ACA L0 telemetry:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_hdr3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ccd_temp</span> <span class="o">=</span> <span class="n">aca_hdr3</span><span class="o">.</span><span class="n">MSID</span><span class="p">(</span><span class="s1">&#39;ccd_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:020&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">(</span><span class="n">ccd_temp</span><span class="o">.</span><span class="n">vals</span><span class="p">)</span>
+<span class="go">&#39;numpy.ma.core.MaskedArray&#39;</span>
+</pre></div>
+</div>
+<p>When given an <code class="docutils literal notranslate"><span class="pre">msid</span></code> and <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code> range, the object will
+query the ACA L0 archive to populate the object, which includes the MSID
+values (<code class="docutils literal notranslate"><span class="pre">vals</span></code>) at the given times (<code class="docutils literal notranslate"><span class="pre">times</span></code>).</p>
+<p>The parameter <code class="docutils literal notranslate"><span class="pre">msid_data</span></code> is used to create an MSID object from
+the data of another MSID object.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">filter_bad</span></code> is supplied then only valid data values are stored
+and the <code class="docutils literal notranslate"><span class="pre">vals</span></code> and <code class="docutils literal notranslate"><span class="pre">times</span></code> attributes are <cite>np.ndarray</cite> instead of
+<cite>ma.MaskedArray</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msid</strong> – MSID name</p></li>
+<li><p><strong>start</strong> – Chandra.Time compatible start time</p></li>
+<li><p><strong>stop</strong> – Chandra.Time compatible stop time</p></li>
+<li><p><strong>msid_data</strong> – data dictionary or object from another MSID object</p></li>
+<li><p><strong>filter_bad</strong> – remove missing values</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="mica.archive.aca_hdr3.MSID.filter_bad">
+<span class="sig-name descname"><span class="pre">filter_bad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_hdr3.html#MSID.filter_bad"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_hdr3.MSID.filter_bad" title="Link to this definition">¶</a></dt>
+<dd><p>Filter out any missing values.</p>
+<p>After applying this method the <code class="docutils literal notranslate"><span class="pre">vals</span></code> attributes will be a
+plain np.ndarray object instead of a masked array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>copy</strong> – return a copy of MSID object with bad values filtered</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="mica.archive.aca_hdr3.MSIDset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mica.archive.aca_hdr3.</span></span><span class="sig-name descname"><span class="pre">MSIDset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_hdr3.html#MSIDset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_hdr3.MSIDset" title="Link to this definition">¶</a></dt>
+<dd><p>ACA header 3 data object</p>
+<p>ACA header 3 data object to work with header 3 data from
+available 8x8 ACA L0 telemetry.  An MSIDset works with multiple
+MSIDs simultaneously.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_hdr3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">perigee_data</span> <span class="o">=</span> <span class="n">aca_hdr3</span><span class="o">.</span><span class="n">MSIDset</span><span class="p">([</span><span class="s1">&#39;ccd_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;aca_temp&#39;</span><span class="p">,</span> <span class="s1">&#39;dac&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                                <span class="s1">&#39;2012:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:030&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msids</strong> – list of MSIDs</p></li>
+<li><p><strong>start</strong> – Chandra.Time compatible start time</p></li>
+<li><p><strong>stop</strong> – Chandra.Time compatible stop time</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
-<section id="mica-archive-aca-l0">
-<h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_l0</span></code><a class="headerlink" href="#mica-archive-aca-l0" title="Link to this heading">¶</a></h1>
+<section id="module-mica.archive.aca_l0">
+<span id="mica-archive-aca-l0"></span><h1><a class="reference internal" href="#module-mica.archive.aca_l0" title="mica.archive.aca_l0"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_l0</span></code></a><a class="headerlink" href="#module-mica.archive.aca_l0" title="Link to this heading">¶</a></h1>
 <section id="functions">
 <h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_l0.get_slot_data">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_l0.</span></span><span class="sig-name descname"><span class="pre">get_slot_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">imgsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centered_8x8</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_l0.html#get_slot_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_l0.get_slot_data" title="Link to this definition">¶</a></dt>
+<dd><p>Get slot data.</p>
+<p>For a the given parameters, retrieve telemetry and construct a
+masked array of the MSIDs available in that telemetry.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_l0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">slot_data</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_slot_data</span><span class="p">(</span><span class="s1">&#39;2012:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:002&#39;</span><span class="p">,</span> <span class="n">slot</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">temp_ccd_8x8</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_slot_data</span><span class="p">(</span><span class="s1">&#39;2005:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2005:010&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                                    <span class="n">slot</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">],</span>
+<span class="gp">... </span>                                    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;TIME&#39;</span><span class="p">,</span> <span class="s1">&#39;TEMPCCD&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> – start time of requested interval</p></li>
+<li><p><strong>stop</strong> – stop time of requested interval</p></li>
+<li><p><strong>slot</strong> – slot number integer (in the range 0 -&gt; 7)</p></li>
+<li><p><strong>imgsize</strong> – list of integers of desired image sizes
+(defaults to all -&gt; [4, 6, 8])</p></li>
+<li><p><strong>db</strong> – handle to archive lookup table</p></li>
+<li><p><strong>data_root</strong> – parent directory that contains archfiles.db3
+(for use when db handle not available)</p></li>
+<li><p><strong>columns</strong> – list of desired columns in the ACA0 telemetry
+(defaults to all in 8x8 telemetry)</p></li>
+<li><p><strong>centered_8x8</strong> – boolean flag to reshape the IMGRAW field to (-1, 8, 8)
+(defaults to False)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>data structure for slot</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy masked recarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_l0.get_files">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_l0.</span></span><span class="sig-name descname"><span class="pre">get_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">imgsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_l0.html#get_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_l0.get_files" title="Link to this definition">¶</a></dt>
+<dd><p>Get list of ACA0 files.</p>
+<p>Retrieve list of files from ACA0 archive lookup table that
+match arguments.  The database query returns files with</p>
+<blockquote>
+<div><p>tstart &lt; stop
+and
+tstop &gt; start</p>
+</div></blockquote>
+<p>which returns all files that contain any part of the interval
+between start and stop.  If the obsid argument is provided, the
+archived obspar tstart/tstop (sybase aca.obspar table) are used.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_l0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obsid_files</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="mi">5438</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_files</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s1">&#39;2012:001&#39;</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="s1">&#39;2012:002&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_8x8</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s1">&#39;2011:001&#39;</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="s1">&#39;2011:010&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                            <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obsid</strong> – obsid</p></li>
+<li><p><strong>start</strong> – start time of requested interval</p></li>
+<li><p><strong>stop</strong> – stop time of requested interval</p></li>
+<li><p><strong>slots</strong> – list of integers of desired image slots to retrieve
+(defaults to all -&gt; [0, 1, 2, 3, 4, 5, 6, 7, 8])</p></li>
+<li><p><strong>imgsize</strong> – list of integers of desired image sizes
+(defaults to all -&gt; [4, 6, 8])</p></li>
+<li><p><strong>db</strong> – handle to archive lookup table</p></li>
+<li><p><strong>data_root</strong> – parent directory of Ska aca l0 archive</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>interval files</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.aca_l0.get_l0_images">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.aca_l0.</span></span><span class="sig-name descname"><span class="pre">get_l0_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">imgsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/aca_l0.html#get_l0_images"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.aca_l0.get_l0_images" title="Link to this definition">¶</a></dt>
+<dd><p>Get ACA L0 Images.</p>
+<p>Get ACA L0 images for the given  <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code> times and
+the given <code class="docutils literal notranslate"><span class="pre">slot</span></code>.  Optionally filter on image size via <code class="docutils literal notranslate"><span class="pre">imgsize</span></code>
+or change the default image metadata via <code class="docutils literal notranslate"><span class="pre">columns</span></code>.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_l0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">imgs</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_l0_images</span><span class="p">(</span><span class="s1">&#39;2012:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2012:002&#39;</span><span class="p">,</span> <span class="n">slot</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">imgs</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_l0_images</span><span class="p">(</span><span class="s1">&#39;2005:001&#39;</span><span class="p">,</span> <span class="s1">&#39;2005:002&#39;</span><span class="p">,</span> <span class="n">slot</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The default columns are:
+[‘TIME’, ‘IMGROW0’, ‘IMGCOL0’, ‘BGDAVG’, ‘IMGSTAT’, ‘IMGFUNC1’, ‘IMGSIZE’, ‘IMGSCALE’, ‘INTEG’]</p>
+<p>The image pixel values are given in units of DN.  One can convert to e-/sec
+by multiplying by (5 / INTEG).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> – start time of requested interval</p></li>
+<li><p><strong>stop</strong> – stop time of requested interval</p></li>
+<li><p><strong>slot</strong> – slot number integer (in the range 0 -&gt; 7)</p></li>
+<li><p><strong>imgsize</strong> – list of integers of desired image sizes (default=[4, 6, 8])</p></li>
+<li><p><strong>columns</strong> – image meta-data columns</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of ACAImage objects</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
-<section id="mica-archive-asp-l1">
-<h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.asp_l1</span></code><a class="headerlink" href="#mica-archive-asp-l1" title="Link to this heading">¶</a></h1>
+<section id="module-mica.archive.asp_l1">
+<span id="mica-archive-asp-l1"></span><h1><a class="reference internal" href="#module-mica.archive.asp_l1" title="mica.archive.asp_l1"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.asp_l1</span></code></a><a class="headerlink" href="#module-mica.archive.asp_l1" title="Link to this heading">¶</a></h1>
+<p>Update aspect archive L1 products.</p>
+<p>Script to update Ska file archive aspect L1 products.  Module
+also provides methods to retrieve the directory (or directories)
+for an obsid.</p>
+<p>This uses the obsid_archive module with a configuration specific
+to the aspect L1 products.</p>
 <section id="id1">
 <h2>Functions<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.asp_l1.get_files">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.asp_l1.</span></span><span class="sig-name descname"><span class="pre">get_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">revision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/asp_l1.html#get_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.asp_l1.get_files" title="Link to this definition">¶</a></dt>
+<dd><p>List asp_l1 files for an obsid or a time range.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">asp_l1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obs_files</span> <span class="o">=</span> <span class="n">asp_l1</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="mi">6000</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obs_gspr</span> <span class="o">=</span> <span class="n">asp_l1</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="mi">6000</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GSPROPS&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">range_fidpr</span> <span class="o">=</span> <span class="n">asp_l1</span><span class="o">.</span><span class="n">get_files</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s1">&#39;2012:001&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                               <span class="n">stop</span><span class="o">=</span><span class="s1">&#39;2012:030&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                               <span class="n">content</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;FIDPROPS&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The available content types are: ASPQUAL, ASPSOL, ASPSOLOBI, ACACAL,
+ACA_BADPIX, FIDPROPS, GYROCAL, GSPROPS, and ACACENT.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obsid</strong> – obsid</p></li>
+<li><p><strong>start</strong> – time range start (Chandra.Time compatible)</p></li>
+<li><p><strong>stop</strong> – time range stop (Chandra.Time compatible)</p></li>
+<li><p><strong>revision</strong> – revision integer or ‘last’
+defaults to current released version</p></li>
+<li><p><strong>content</strong> – archive CONTENT type
+defaults to all available ASP1 types</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>full path of files matching query</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.asp_l1.get_dir">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.asp_l1.</span></span><span class="sig-name descname"><span class="pre">get_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/asp_l1.html#get_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.asp_l1.get_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Get ASP L1 directory for default/released products for an obsid.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">asp_l1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asp_l1</span><span class="o">.</span><span class="n">get_dir</span><span class="p">(</span><span class="mi">2121</span><span class="p">)</span>
+<span class="go">&#39;/proj/sot/ska/data/mica/archive/asp1/02/02121&#39;</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obsid</strong> – obsid</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>directory</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>string</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.asp_l1.get_obs_dirs">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.asp_l1.</span></span><span class="sig-name descname"><span class="pre">get_obs_dirs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/asp_l1.html#get_obs_dirs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.asp_l1.get_obs_dirs" title="Link to this definition">¶</a></dt>
+<dd><p>Get all ASP L1 directories for an obsid in the Ska file archive.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">asp_l1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obsdirs</span> <span class="o">=</span> <span class="n">asp_l1</span><span class="o">.</span><span class="n">get_obs_dirs</span><span class="p">(</span><span class="mi">6000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>obsdirs will look something like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="s1">&#39;/proj/sot/ska/data/mica/archive/asp1/06/06000&#39;</span><span class="p">,</span>
+<span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;/proj/sot/ska/data/mica/archive/asp1/06/06000_v02&#39;</span><span class="p">,</span>
+<span class="mi">3</span><span class="p">:</span> <span class="s1">&#39;/proj/sot/ska/data/mica/archive/asp1/06/06000_v03&#39;</span><span class="p">,</span>
+<span class="s1">&#39;last&#39;</span><span class="p">:</span> <span class="s1">&#39;/proj/sot/ska/data/mica/archive/asp1/06/06000&#39;</span><span class="p">,</span>
+<span class="s1">&#39;revisions&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obsid</strong> – obsid</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>map of obsid version to directories</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.asp_l1.get_atts">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.asp_l1.</span></span><span class="sig-name descname"><span class="pre">get_atts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">revision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/asp_l1.html#get_atts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.asp_l1.get_atts" title="Link to this definition">¶</a></dt>
+<dd><p>Get ground aspect attitudes</p>
+<p>Get the ground aspect solution quaternions and times covering obsid or start to stop,
+in the ACA frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Obsid<span class="colon">:</span></dt>
+<dd class="field-odd"><p>obsid</p>
+</dd>
+<dt class="field-even">Start<span class="colon">:</span></dt>
+<dd class="field-even"><p>start time (DateTime compat)</p>
+</dd>
+<dt class="field-odd">Stop<span class="colon">:</span></dt>
+<dd class="field-odd"><p>stop time (DateTime compat)</p>
+</dd>
+<dt class="field-even">Revision<span class="colon">:</span></dt>
+<dd class="field-even"><p>aspect pipeline processing revision (integer version, None, or ‘last’)</p>
+</dd>
+<dt class="field-odd">Filter<span class="colon">:</span></dt>
+<dd class="field-odd"><p>boolean, true means returned values will not include quaternions during times
+when asp_sol_status is non-zero</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Nx4 np.array of quaternions, np.array of N times, list of dict with header
+from each asol file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.archive.asp_l1.get_atts_from_files">
+<span class="sig-prename descclassname"><span class="pre">mica.archive.asp_l1.</span></span><span class="sig-name descname"><span class="pre">get_atts_from_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asol_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acal_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aqual_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/asp_l1.html#get_atts_from_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.asp_l1.get_atts_from_files" title="Link to this definition">¶</a></dt>
+<dd><p>Get ground aspect attitudes from ASP1 source files.</p>
+<p>From ASP1 source files (asol, acal, aqual) get the ground aspect solution quaternions
+and times covering the range of asol_files in the ACA frame.  The asol, acl, and aqual files
+are assumed to have one-to-one correspondence (though the asol to acal times are checked).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Asol_files<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of aspect asol1 files</p>
+</dd>
+<dt class="field-even">Acal_files<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of acal1 files associated with asol_files</p>
+</dd>
+<dt class="field-odd">Aqual_files<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of aqual files associated with asol_files</p>
+</dd>
+<dt class="field-even">Filter<span class="colon">:</span></dt>
+<dd class="field-even"><p>boolean, true means returned values will not include quaternions during times when
+asp_sol_status is non-zero</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Nx4 np.array of quaternions, np.array of N times, list of dict with header
+from each asol file.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
 <section id="mica-archive-obsid-archive">
 <h1><a class="reference internal" href="#module-mica.archive.obsid_archive" title="mica.archive.obsid_archive"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.obsid_archive</span></code></a><a class="headerlink" href="#mica-archive-obsid-archive" title="Link to this heading">¶</a></h1>
 <p>Base Class used in mica.archive.asp_l1 and mica.archive.obspar</p>
-<p id="module-mica.archive.obsid_archive">Generalized module for fetching and archiving obsid-organized
-telemetry such as asp_l1 and obspar products.</p>
+<p id="module-mica.archive.obsid_archive">Generalized module for fetching and archiving obsid-organized telemetry.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mica.archive.obsid_archive.</span></span><span class="sig-name descname"><span class="pre">ObsArchive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive" title="Link to this definition">¶</a></dt>
-<dd><p>Object to store configuration, logging, and processing tasks
+<dd><p>Obsid Archive Class.</p>
+<p>Object to store configuration, logging, and processing tasks
 to fetch obsid telemetry from the CXC archive and store in a Ska
 file archive, while logging the archive files to a file lookup
 database.</p>
@@ -165,14 +645,16 @@ be used to determine product version.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_all_obspar_info">
 <span class="sig-name descname"><span class="pre">get_all_obspar_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">archfiles</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_all_obspar_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_all_obspar_info" title="Link to this definition">¶</a></dt>
-<dd><p>Read obspar and add ‘obsid’ and ‘filename’ keys to the dictionary
+<dd><p>Put together an obspar dictionary.</p>
+<p>Read obspar and add ‘obsid’ and ‘filename’ keys to the dictionary
 i and archfiles are just passed to make the logging prettier.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_arch">
 <span class="sig-name descname"><span class="pre">get_arch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'last'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_arch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_arch" title="Link to this definition">¶</a></dt>
-<dd><p>Retrieve telemetry for an observation from the CXC archive and
+<dd><p>Get CXC archive information for obsid.</p>
+<p>Retrieve telemetry for an observation from the CXC archive and
 store in the Ska file archive.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -193,22 +675,23 @@ store in the Ska file archive.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_arch_info">
 <span class="sig-name descname"><span class="pre">get_arch_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">archfiles</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_arch_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_arch_info" title="Link to this definition">¶</a></dt>
-<dd><p>Get information for a file for the file lookup table/database.
-For obspars, call the get_obspar_info() method.
+<dd><p>Get information for a file for the file lookup table/database.</p>
+<p>For obspars, call the get_obspar_info() method.
 For FITS files, call get_fits_info() method.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_dir">
 <span class="sig-name descname"><span class="pre">get_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_dir" title="Link to this definition">¶</a></dt>
-<dd><p>Return the latest released directory for an obsid
-Return None if there are no ‘default’ / released products.</p>
+<dd><p>Return the latest released directory for an obsid</p>
+<p>Return None if there are no ‘default’ / released products.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_file_ver">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_file_ver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tempdir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fileglob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ver_regex</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_file_ver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_file_ver" title="Link to this definition">¶</a></dt>
-<dd><p>Determine the version/revision of a set of archived files from
+<dd><p>Get file version/revision.</p>
+<p>Determine the version/revision of a set of archived files from
 their file names.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -231,7 +714,8 @@ from the set of files</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_fits_info">
 <span class="sig-name descname"><span class="pre">get_fits_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">archfiles</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_fits_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_fits_info" title="Link to this definition">¶</a></dt>
-<dd><p>Read FITS file <code class="docutils literal notranslate"><span class="pre">f</span></code> with index <code class="docutils literal notranslate"><span class="pre">i</span></code> (position within list of
+<dd><p>Read header fits details.</p>
+<p>Read FITS file <code class="docutils literal notranslate"><span class="pre">f</span></code> with index <code class="docutils literal notranslate"><span class="pre">i</span></code> (position within list of
 filenames <code class="docutils literal notranslate"><span class="pre">archfiles</span></code>) and get dictionary of values to store
 in file lookup database.  This values include all header key/value
 pairs with keys in <code class="docutils literal notranslate"><span class="pre">config[cols]</span></code> plus the header checksum,
@@ -256,8 +740,8 @@ the filename, the year, and day-of-year.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_obs_dirs">
 <span class="sig-name descname"><span class="pre">get_obs_dirs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_obs_dirs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_obs_dirs" title="Link to this definition">¶</a></dt>
-<dd><p>Return a dictionary of the directories available for an obsid.
-This is just done with a glob in the data directories.</p>
+<dd><p>Return a dictionary of the directories available for an obsid.</p>
+<p>This is just done with a glob in the data directories.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -269,7 +753,8 @@ This is just done with a glob in the data directories.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_todo_from_links">
 <span class="sig-name descname"><span class="pre">get_todo_from_links</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">archive_dir</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_todo_from_links"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_todo_from_links" title="Link to this definition">¶</a></dt>
-<dd><p>Return a list of all of the *_last directories in the file archive
+<dd><p>Get list of directories “left to do”.</p>
+<p>Return a list of all of the *_last directories in the file archive
 (and specify revision=default to attempt to get new released products
 for them).</p>
 </dd></dl>
@@ -277,7 +762,8 @@ for them).</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.get_ver_num">
 <span class="sig-name descname"><span class="pre">get_ver_num</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.get_ver_num"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.get_ver_num" title="Link to this definition">¶</a></dt>
-<dd><p>Determine the version number associated with the current released
+<dd><p>Get version number.</p>
+<p>Determine the version number associated with the current released
 products or with the products referenced by “version=last”.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -298,15 +784,13 @@ products or with the products referenced by “version=last”.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.set_env">
 <span class="sig-name descname"><span class="pre">set_env</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.set_env"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.set_env" title="Link to this definition">¶</a></dt>
-<dd><p>Set environment included an arc5gl handle and
-and a handle to the axafapstat database</p>
+<dd><p>Set environment included an arc5gl handle and and a handle to the axafapstat database</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.set_read_env">
 <span class="sig-name descname"><span class="pre">set_read_env</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.set_read_env"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.set_read_env" title="Link to this definition">¶</a></dt>
-<dd><p>Set environment included an arc5gl handle and
-and a handle to the axafapstat database</p>
+<dd><p>Set environment included an arc5gl handle and and a handle to the axafapstat database</p>
 </dd></dl>
 
 <dl class="py method">
@@ -318,7 +802,8 @@ and a handle to the axafapstat database</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mica.archive.obsid_archive.ObsArchive.update_link">
 <span class="sig-name descname"><span class="pre">update_link</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/archive/obsid_archive.html#ObsArchive.update_link"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.archive.obsid_archive.ObsArchive.update_link" title="Link to this definition">¶</a></dt>
-<dd><p>Create links in the obsid data directories to make it easy to find
+<dd><p>Make and update obsdir links.</p>
+<p>Create links in the obsid data directories to make it easy to find
 the current ‘default’/released data, all versions that have been
 archived, and the ‘last’/unreleased/provisional data if available.</p>
 <p>This is designed so that if obsid 5 has released data in version 1
@@ -335,8 +820,8 @@ link      00005_last -&gt; 00005_v02</p>
 </section>
 <section id="module-mica.archive.obspar">
 <span id="mica-archive-obspar"></span><h1><a class="reference internal" href="#module-mica.archive.obspar" title="mica.archive.obspar"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.obspar</span></code></a><a class="headerlink" href="#module-mica.archive.obspar" title="Link to this heading">¶</a></h1>
-<p>Script to update Ska file archive obspars.  Module
-also provides methods to retrieve the directory (or directories)
+<p>Script to update Ska file archive obspars.</p>
+<p>Module also provides methods to retrieve the directory (or directories)
 for an obsid.</p>
 <p>This uses the obsid_archive module with a configuration specific
 to the obspar products.</p>
@@ -419,6 +904,7 @@ to the obspar products.</p>
 </section>
 <section id="module-mica.archive.cda.services">
 <span id="mica-archive-cda-services"></span><h1><a class="reference internal" href="#module-mica.archive.cda.services" title="mica.archive.cda.services"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.cda.services</span></code></a><a class="headerlink" href="#module-mica.archive.cda.services" title="Link to this heading">¶</a></h1>
+<p>Python Chandra Data Archive (CDA) interface.</p>
 <p>Python interface to the Chandra Data Archive (CDA) web services and an
 interface to a local disk copy of the Observation Catalog (Ocat).</p>
 <dl class="py function">
@@ -683,7 +1169,8 @@ Dictionary of proposal abstract</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.bad_obsids.bad_obsids">
 <span class="sig-prename descclassname"><span class="pre">mica.bad_obsids.</span></span><span class="sig-name descname"><span class="pre">bad_obsids</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/bad_obsids.html#bad_obsids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.bad_obsids.bad_obsids" title="Link to this definition">¶</a></dt>
-<dd><p>Returns a list of the obsids that are reasonable to exclude from most trending applications.
+<dd><p>Return bad obsid list</p>
+<p>Returns a list of the obsids that are reasonable to exclude from most trending applications.
 The list includes observations of Venus and observations with multiple obis. The observations
 of Venus are problematic for star trending.  The observations with multiple obis may have more
 than one attitude for the same obsid.</p>
@@ -698,10 +1185,96 @@ used directly if needed.</p>
 
 </section>
 </section>
-<section id="mica-vv">
-<h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code><a class="headerlink" href="#mica-vv" title="Link to this heading">¶</a></h1>
+<section id="module-mica.vv">
+<span id="mica-vv"></span><h1><a class="reference internal" href="#module-mica.vv" title="mica.vv"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code></a><a class="headerlink" href="#module-mica.vv" title="Link to this heading">¶</a></h1>
 <section id="id10">
 <h2>Functions<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.vv.get_vv">
+<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_vv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/vv.html#get_vv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_vv" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve V&amp;V data for an obsid/version.</p>
+<p>This reads the saved JSON and returns the previously-
+calculated V&amp;V data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obsid</strong> – obsid</p></li>
+<li><p><strong>version</strong> – ‘last’, ‘default’, or version number</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict of V&amp;V data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.vv.get_vv_dir">
+<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_vv_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/vv.html#get_vv_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_vv_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Get directory containing V&amp;V products.</p>
+<p>Get directory containing V&amp;V products for a requested obsid/version,
+including plots and json.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obsid</strong> – obsid</p></li>
+<li><p><strong>version</strong> – ‘last’, ‘default’ or version number</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>directory name for obsid/version</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.vv.get_vv_files">
+<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_vv_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/vv.html#get_vv_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_vv_files" title="Link to this definition">¶</a></dt>
+<dd><p>Get list of V&amp;V files available for a requested obsid/version.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obsid</strong> – obsid</p></li>
+<li><p><strong>version</strong> – ‘default’, ‘last’ or version number</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of files</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.vv.get_rms_data">
+<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_rms_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/vv.html#get_rms_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_rms_data" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve/return all data from RMS trending H5 archive</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy array of RMS data for each star/obsid/version</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.vv.get_arch_vv">
+<span class="sig-prename descclassname"><span class="pre">mica.vv.</span></span><span class="sig-name descname"><span class="pre">get_arch_vv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'last'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/vv/process.html#get_arch_vv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.vv.get_arch_vv" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve and load archived V&amp;V.</p>
+<p>Given obsid and version, find archived ASP1 and obspar products and
+run V&amp;V.  Effort is made to find the obspar that was actually used during
+creation of the ASP1 products.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obsid</strong> – obsid</p></li>
+<li><p><strong>version</strong> – ‘last’, ‘default’, or revision number of ASP1 products</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>mica.vv.Obi V&amp;V object</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
 <section id="module-mica.utils">
@@ -731,7 +1304,8 @@ used directly if needed.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_starcheck_catalog">
 <span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_starcheck_catalog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mp_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_starcheck_catalog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_starcheck_catalog" title="Link to this definition">¶</a></dt>
-<dd><p>For a given obsid, return a dictionary describing the starcheck catalog that should
+<dd><p>Get starcheck catalog dictionary.</p>
+<p>For a given obsid, return a dictionary describing the starcheck catalog that should
 apply. The content of that dictionary is from the database tables of that parsed the
 starcheck report and has keys:</p>
 <ul class="simple">
@@ -767,7 +1341,8 @@ default the as-run loads (via <code class="docutils literal notranslate"><span c
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_starcheck_catalog_at_date">
 <span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_starcheck_catalog_at_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_starcheck_catalog_at_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_starcheck_catalog_at_date" title="Link to this definition">¶</a></dt>
-<dd><p>For a given date, return a dictionary describing the starcheck catalog that should
+<dd><p>Get starcheck catalog dictionary at date.</p>
+<p>For a given date, return a dictionary describing the starcheck catalog that should
 apply. The content of that dictionary is from the database tables that parsed the
 starcheck report. A catalog is defined as applying, in this function, to any time
 from the end of the previous dwell through the end of the dwell in which the catalog
@@ -803,7 +1378,8 @@ was used.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="mica.starcheck.get_mp_dir">
 <span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_mp_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_mp_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_mp_dir" title="Link to this definition">¶</a></dt>
-<dd><p>Get the mission planning directory for an obsid and some status information.
+<dd><p>Get mission planning directory for obsid.</p>
+<p>Get the mission planning directory for an obsid and some status information.
 If the obsid catalog was used more than once (multi-obi or rescheduled after
 being used in a vehicle-only interval), return the directory and details of
 the last one used on the spacecraft.</p>
@@ -913,16 +1489,45 @@ get_starcheck_catalog_at_date returned dictionary.</p>
         <div class="sphinxsidebarwrapper"><h3>Page Contents</h3>
 <ul>
 <li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark</span></code></a><ul>
-<li><a class="reference internal" href="#mica-archive-aca-dark-dark-cal"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark.dark_cal</span></code></a></li>
+<li><a class="reference internal" href="#module-mica.archive.aca_dark.dark_cal"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_dark.dark_cal</span></code></a><ul>
+<li><a class="reference internal" href="#mica.archive.aca_dark.dark_cal.dark_id_to_date"><code class="docutils literal notranslate"><span class="pre">dark_id_to_date()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_dark.dark_cal.date_to_dark_id"><code class="docutils literal notranslate"><span class="pre">date_to_dark_id()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_dirs"><code class="docutils literal notranslate"><span class="pre">get_dark_cal_dirs()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_id"><code class="docutils literal notranslate"><span class="pre">get_dark_cal_id()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_ids"><code class="docutils literal notranslate"><span class="pre">get_dark_cal_ids()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_image"><code class="docutils literal notranslate"><span class="pre">get_dark_cal_image()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_props"><code class="docutils literal notranslate"><span class="pre">get_dark_cal_props()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_dark.dark_cal.get_dark_cal_props_table"><code class="docutils literal notranslate"><span class="pre">get_dark_cal_props_table()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#mica-archive-aca-hdr3"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_hdr3</span></code></a></li>
-<li><a class="reference internal" href="#mica-archive-aca-l0"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_l0</span></code></a><ul>
-<li><a class="reference internal" href="#functions">Functions</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#mica-archive-asp-l1"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.asp_l1</span></code></a><ul>
-<li><a class="reference internal" href="#id1">Functions</a></li>
+<li><a class="reference internal" href="#module-mica.archive.aca_hdr3"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_hdr3</span></code></a><ul>
+<li><a class="reference internal" href="#mica.archive.aca_hdr3.MSID"><code class="docutils literal notranslate"><span class="pre">MSID</span></code></a><ul>
+<li><a class="reference internal" href="#mica.archive.aca_hdr3.MSID.filter_bad"><code class="docutils literal notranslate"><span class="pre">MSID.filter_bad()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#mica.archive.aca_hdr3.MSIDset"><code class="docutils literal notranslate"><span class="pre">MSIDset</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-mica.archive.aca_l0"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.aca_l0</span></code></a><ul>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#mica.archive.aca_l0.get_slot_data"><code class="docutils literal notranslate"><span class="pre">get_slot_data()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_l0.get_files"><code class="docutils literal notranslate"><span class="pre">get_files()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.aca_l0.get_l0_images"><code class="docutils literal notranslate"><span class="pre">get_l0_images()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-mica.archive.asp_l1"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.asp_l1</span></code></a><ul>
+<li><a class="reference internal" href="#id1">Functions</a><ul>
+<li><a class="reference internal" href="#mica.archive.asp_l1.get_files"><code class="docutils literal notranslate"><span class="pre">get_files()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.asp_l1.get_dir"><code class="docutils literal notranslate"><span class="pre">get_dir()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.asp_l1.get_obs_dirs"><code class="docutils literal notranslate"><span class="pre">get_obs_dirs()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.asp_l1.get_atts"><code class="docutils literal notranslate"><span class="pre">get_atts()</span></code></a></li>
+<li><a class="reference internal" href="#mica.archive.asp_l1.get_atts_from_files"><code class="docutils literal notranslate"><span class="pre">get_atts_from_files()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><a class="reference internal" href="#mica-archive-obsid-archive"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.archive.obsid_archive</span></code></a><ul>
@@ -968,8 +1573,15 @@ get_starcheck_catalog_at_date returned dictionary.</p>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#mica-vv"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code></a><ul>
-<li><a class="reference internal" href="#id10">Functions</a></li>
+<li><a class="reference internal" href="#module-mica.vv"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.vv</span></code></a><ul>
+<li><a class="reference internal" href="#id10">Functions</a><ul>
+<li><a class="reference internal" href="#mica.vv.get_vv"><code class="docutils literal notranslate"><span class="pre">get_vv()</span></code></a></li>
+<li><a class="reference internal" href="#mica.vv.get_vv_dir"><code class="docutils literal notranslate"><span class="pre">get_vv_dir()</span></code></a></li>
+<li><a class="reference internal" href="#mica.vv.get_vv_files"><code class="docutils literal notranslate"><span class="pre">get_vv_files()</span></code></a></li>
+<li><a class="reference internal" href="#mica.vv.get_rms_data"><code class="docutils literal notranslate"><span class="pre">get_rms_data()</span></code></a></li>
+<li><a class="reference internal" href="#mica.vv.get_arch_vv"><code class="docutils literal notranslate"><span class="pre">get_arch_vv()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-mica.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.utils</span></code></a><ul>
