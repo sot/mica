@@ -225,6 +225,14 @@ def get_aca_images(
         ok = slot_data_raw["QUALITY"] == 0
         slot_data = Table(slot_data_raw[ok])
 
+        # Unmask everything that can be unmasked
+        # Remove mask from columns where no values are masked. IMGRAW is excepted because
+        # the mask reflects the presence of 4x4 or 6x6 images, not entirely missing data
+        # per row.
+        for col in slot_data.itercols():
+            if not np.any(col.mask) and col.name != "IMGRAW":
+                slot_data[col.name] = col.data.data
+
         # Add slot number if there are any rows (if statement not needed after
         # https://github.com/astropy/astropy/pull/17102).
         # if len(slot_data) > 0:
