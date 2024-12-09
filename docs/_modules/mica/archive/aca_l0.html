@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.aca_l0 &#8212; mica 4.37.0 documentation</title>
+    <title>mica.archive.aca_l0 &#8212; mica 4.38.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../_static/documentation_options.js?v=3928f412"></script>
+    <script src="../../../_static/documentation_options.js?v=8f3b5b96"></script>
     <script src="../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.37.0 documentation</a>
+	<a href="../../../index.html">mica 4.38.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -286,6 +286,14 @@
         <span class="c1"># Convert from numpy structured array to astropy table, keeping only good data</span>
         <span class="n">ok</span> <span class="o">=</span> <span class="n">slot_data_raw</span><span class="p">[</span><span class="s2">&quot;QUALITY&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
         <span class="n">slot_data</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">slot_data_raw</span><span class="p">[</span><span class="n">ok</span><span class="p">])</span>
+
+        <span class="c1"># Unmask everything that can be unmasked</span>
+        <span class="c1"># Remove mask from columns where no values are masked. IMGRAW is excepted because</span>
+        <span class="c1"># the mask reflects the presence of 4x4 or 6x6 images, not entirely missing data</span>
+        <span class="c1"># per row.</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">slot_data</span><span class="o">.</span><span class="n">itercols</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span> <span class="ow">and</span> <span class="n">col</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s2">&quot;IMGRAW&quot;</span><span class="p">:</span>
+                <span class="n">slot_data</span><span class="p">[</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span>
 
         <span class="c1"># Add slot number if there are any rows (if statement not needed after</span>
         <span class="c1"># https://github.com/astropy/astropy/pull/17102).</span>
