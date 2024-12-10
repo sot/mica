@@ -245,7 +245,20 @@ def target_summary(obsid):
                 """select * from target where
                                     target.obsid = {}""".format(obsid)
             )
-    return ocat_info
+
+    if ocat_info:
+        # Convert the masked array to a dictionary with None for masked values
+        ocat_info = Table(ocat_info, masked=True)
+        ocat = {}
+        for col in ocat_info.colnames:
+            # if the value isn't masked, put it in the dictionary
+            if not ocat_info[col].mask:
+                ocat[col] = ocat_info[col].data[0]
+            else:
+                ocat[col] = None
+        return ocat
+    else:
+        return None
 
 
 def guess_shortterm(mp_dir):
