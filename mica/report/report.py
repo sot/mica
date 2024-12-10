@@ -231,6 +231,19 @@ def get_obs_temps(obsid):
 
 
 def target_summary(obsid):
+    """
+    Get the target info and proposal number from the axafocat database.
+
+    Parameters
+    ----------
+    obsid : int
+
+    Returns
+    -------
+    dict or None
+        A dictionary with the target info from the axafocat.target table
+        or None if the obsid is not found.
+    """
     with Sqsh(
         dbi="sybase", server="sqlsao", user="aca_ops", database="axafocat"
     ) as ocat_db:
