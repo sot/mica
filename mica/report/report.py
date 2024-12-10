@@ -593,14 +593,14 @@ def main(obsid):
     if summary is not None:
         if summary["lts_lt_plan"] is not None:
             report_status["long_term"] = summary["lts_lt_plan"]
-        if summary["soe_st_sched_date"]:
+        if summary["soe_st_sched_date"] is not None:
             report_status["short_term"] = summary["soe_st_sched_date"]
 
     last_sched = ""
     if not er:
-        if summary["lts_lt_plan"]:
+        if summary["lts_lt_plan"] is not None:
             last_sched = "in LTS for {}".format(str(summary["lts_lt_plan"]))
-        if summary["soe_st_sched_date"]:
+        if summary["soe_st_sched_date"] is not None:
             last_sched = "in ST sched for {}".format(str(summary["soe_st_sched_date"]))
 
     ## Starcheck
