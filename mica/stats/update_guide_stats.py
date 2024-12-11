@@ -373,11 +373,11 @@ def calc_gui_stats(data):
         deltas = {"dy": dy, "dz": dz, "dr": dr}
         stats["dr_5th"] = np.percentile(deltas["dr"], 5)
         stats["dr_95th"] = np.percentile(deltas["dr"], 95)
-        for ax in deltas:
-            stats["{}_mean".format(ax)] = np.mean(deltas[ax])
-            stats["{}_std".format(ax)] = np.std(deltas[ax])
-            stats["{}_max".format(ax)] = np.max(deltas[ax])
-            stats["{}_min".format(ax)] = np.min(deltas[ax])
+        for ax, delta in deltas.items():
+            stats["{}_mean".format(ax)] = np.mean(delta)
+            stats["{}_std".format(ax)] = np.std(delta)
+            stats["{}_max".format(ax)] = np.max(delta)
+            stats["{}_min".format(ax)] = np.min(delta)
         mag = kal["AOACMAG{}".format(slot)]
         stats["aoacmag_min"] = np.min(mag)
         stats["aoacmag_mean"] = np.mean(mag)

@@ -231,6 +231,19 @@ def get_obs_temps(obsid):
 
 
 def target_summary(obsid):
+    """
+    Get the target info and proposal number from the axafocat database.
+
+    Parameters
+    ----------
+    obsid : int
+
+    Returns
+    -------
+    dict or None
+        A dictionary with the target info from the axafocat.target table
+        or None if the obsid is not found.
+    """
     with Sqsh(
         dbi="sybase", server="sqlsao", user="aca_ops", database="axafocat"
     ) as ocat_db:
@@ -245,7 +258,20 @@ def target_summary(obsid):
                 """select * from target where
                                     target.obsid = {}""".format(obsid)
             )
-    return ocat_info
+
+    if ocat_info:
+        # Convert the masked array to a dictionary with None for masked values
+        ocat_info = Table(ocat_info, masked=True)
+        ocat = {}
+        for col in ocat_info.colnames:
+            # if the value isn't masked, put it in the dictionary
+            if not ocat_info[col].mask:
+                ocat[col] = ocat_info[col].data[0]
+            else:
+                ocat[col] = None
+        return ocat
+    else:
+        return None
 
 
 def guess_shortterm(mp_dir):
@@ -580,14 +606,14 @@ def main(obsid):
     if summary is not None:
         if summary["lts_lt_plan"] is not None:
             report_status["long_term"] = summary["lts_lt_plan"]
-        if summary["soe_st_sched_date"]:
+        if summary["soe_st_sched_date"] is not None:
             report_status["short_term"] = summary["soe_st_sched_date"]
 
     last_sched = ""
     if not er:
-        if summary["lts_lt_plan"]:
+        if summary["lts_lt_plan"] is not None:
             last_sched = "in LTS for {}".format(str(summary["lts_lt_plan"]))
-        if summary["soe_st_sched_date"]:
+        if summary["soe_st_sched_date"] is not None:
             last_sched = "in ST sched for {}".format(str(summary["soe_st_sched_date"]))
 
     ## Starcheck

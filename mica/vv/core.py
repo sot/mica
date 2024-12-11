@@ -982,9 +982,9 @@ class AspectInterval(object):
                 "roll_raw": "roll",
                 "q_att_raw": "q_att",
             }
-            for col in colmap:
-                asol.remove_column(colmap[col])
-                asol.rename_column(col, colmap[col])
+            for col, cmap in colmap.items():
+                asol.remove_column(cmap)
+                asol.rename_column(col, cmap)
         # Add code to handle first processing of 16091 with
         # non-confirming asol file
         if "dtheta" not in asol.dtype.names and "DTHETA" in asol.dtype.names:
