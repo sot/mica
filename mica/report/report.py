@@ -259,19 +259,14 @@ def target_summary(obsid):
                                     target.obsid = {}""".format(obsid)
             )
 
-    if ocat_info:
-        # Convert the masked array to a dictionary with None for masked values
-        ocat_info = Table(ocat_info, masked=True)
-        ocat = {}
-        for col in ocat_info.colnames:
-            # if the value isn't masked, put it in the dictionary
-            if not ocat_info[col].mask:
-                ocat[col] = ocat_info[col].data[0]
-            else:
-                ocat[col] = None
-        return ocat
-    else:
-        return None
+    if ocat_info is not None:
+        # ocat_info is an astropy table Row object, so convert it to a dictionary and
+        # replace numpy masked values with None.
+        ocat_info = dict(ocat_info)
+        for key in ocat_info:
+            if ocat_info[key] is np.ma.masked:
+                ocat_info[key] = None
+    return ocat_info
 
 
 def guess_shortterm(mp_dir):
