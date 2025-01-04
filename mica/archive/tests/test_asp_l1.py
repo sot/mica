@@ -102,7 +102,7 @@ def test_update_l1_archive(tmp_path):
             "content",
             "revision",
             "obsid",
-        ].pformat_all() == (
+        ].pformat() == (
             [
                 "             filename             filetime ascdsver caldbver  content   revision obsid",
                 "--------------------------------- -------- -------- -------- ---------- -------- -----",
