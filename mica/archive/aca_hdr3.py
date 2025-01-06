@@ -24,11 +24,19 @@ from mica.common import MissingDataError
 
 def two_byte_sum(byte_msids, scale=1):
     def func(slot_data):
-        return (
-            (slot_data[byte_msids[0]].astype("int") >> 7) * (-1 * 65535)
-            + (slot_data[byte_msids[0]].astype("int") << 8)
-            + (slot_data[byte_msids[1]].astype("int"))
-        ) * scale
+        # For each pair bytes0[i], bytes1[i], return the 16-bit signed integer
+        # corresponding to those two bytes. The input bytes are unsigned.
+        bytes0 = slot_data[byte_msids[0]]
+        bytes1 = slot_data[byte_msids[1]]
+
+        # Make a 2xN array, then transpose to Nx2, then flatten to 2N, then copy to
+        # get values continous in memory.
+        bytes = np.array([bytes0, bytes1], dtype=np.uint8).transpose().flatten().copy()
+
+        # Now view the 2N bytes as N 16-bit signed integers.
+        out = bytes.view(">i2") * scale
+
+        return out
 
     return func
 
