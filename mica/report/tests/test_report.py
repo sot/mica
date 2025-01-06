@@ -1,4 +1,5 @@
 import getpass
+
 import pytest
 
 import mica.report.report
@@ -12,7 +13,7 @@ try:
         server="sqlsao", dbi="sybase", user=user, database="axafvv"
     ) as db:
         HAS_SYBASE_ACCESS = True
-except Exception as e:
+except Exception:
     HAS_SYBASE_ACCESS = False
 
 
