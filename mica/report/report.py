@@ -640,7 +640,6 @@ def main(obsid):
             raise LookupError("Observation has no pointing.")
         if len(obs_sc["cat"]) == 0:
             raise LookupError("Observation has no catalog")
-
         fig, cat, obs = catalog.plot(obsid, mp_dir)
         sc = starcheck.get_starcheck_catalog(obsid, mp_dir)
         fig.savefig(os.path.join(outdir, "starcheck.png"))
