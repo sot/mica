@@ -558,7 +558,7 @@ def main(obsid):
 
     # Set the backend (used for the catalog plot).
     # mica.report is intended to be non-interactive so Agg is fine.
-    matplotlib.use('Agg')
+    matplotlib.use("Agg")
 
     jinja_env = jinja2.Environment(loader=jinja2.PackageLoader("mica.report"))
     jinja_env.line_comment_prefix = "##"
