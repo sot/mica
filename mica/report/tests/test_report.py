@@ -1,6 +1,25 @@
+import getpass
+
+import pytest
+
 import mica.report.report
 
+user = getpass.getuser()
 
+try:
+    import ska_dbi.sqsh
+
+    with ska_dbi.sqsh.Sqsh(
+        server="sqlsao", dbi="sybase", user=user, database="axafvv"
+    ) as db:
+        HAS_SYBASE_ACCESS = True
+except Exception:
+    HAS_SYBASE_ACCESS = False
+
+
+@pytest.mark.skipif(
+    "not HAS_SYBASE_ACCESS", reason="Report test requires Sybase VV access"
+)
 def test_target_summary_or():
     """
     Test the target_summary method for an OR.
@@ -16,6 +35,9 @@ def test_target_summary_or():
     assert summary["soe_st_sched_date"] == "Nov 14 2000 12:49AM"
 
 
+@pytest.mark.skipif(
+    "not HAS_SYBASE_ACCESS", reason="Report test requires Sybase VV access"
+)
 def test_target_summary_er():
     """
     Test that target_summary for an ER obsid returns None"""
