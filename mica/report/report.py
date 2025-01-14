@@ -14,6 +14,7 @@ from pathlib import Path
 import agasc
 import astropy.units as u
 import jinja2
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import ska_dbi
@@ -554,6 +555,10 @@ def main(obsid):
 
     if not os.path.exists(outdir):
         os.makedirs(outdir)
+
+    # Set the backend (used for the catalog plot).
+    # mica.report is intended to be non-interactive so Agg is fine.
+    matplotlib.use("Agg")
 
     jinja_env = jinja2.Environment(loader=jinja2.PackageLoader("mica.report"))
     jinja_env.line_comment_prefix = "##"
