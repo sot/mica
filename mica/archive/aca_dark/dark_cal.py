@@ -141,7 +141,7 @@ def _get_dark_cal_id_scalar(date, select="before", dark_cal_ids=None):
     if ii < 0:
         earliest = CxoTime(dark_cal_secs[0]).date[:8]
         raise MissingDataError(
-            f"No dark cal found before {earliest}" f"(requested dark cal on {date})"
+            f"No dark cal found before {earliest}(requested dark cal on {date})"
         )
 
     try:

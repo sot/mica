@@ -126,8 +126,7 @@ def get_options():
     parser.add_argument(
         "--email",
         action="append",
-        help="email warning recipient, specify multiple times "
-        "for multiple recipients",
+        help="email warning recipient, specify multiple times for multiple recipients",
     )
     opt = parser.parse_args()
     return opt

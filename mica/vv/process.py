@@ -158,7 +158,7 @@ def update(obsids=None):
                 logger.warn(f"Skipping obs:ver {obsid}:{obs['revision']}. Missing data")
                 continue
             update_str = f"""UPDATE aspect_1_proc set vv_complete = {VV_VERSION}
-                              where obsid = {obsid} and revision = {obs['revision']}"""
+                              where obsid = {obsid} and revision = {obs["revision"]}"""
 
             logger.info(update_str)
             with ska_dbi.DBI(dbi="sqlite", server=FILES["asp1_proc_table"]) as db:
