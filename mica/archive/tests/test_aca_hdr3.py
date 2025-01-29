@@ -63,3 +63,25 @@ def test_MSIDset():
             10679,
         ]
     )
+
+
+def test_two_byte_sum():
+    bytes0 = np.ma.array([0x00, 0xF0, 0x0F, 0xFF, 0xFF], dtype=np.uint8)
+    bytes1 = np.ma.array([0x00, 0x0F, 0xF0, 0xFF, 0xFF], dtype=np.uint8)
+    bytes0[-1] = np.ma.masked
+    bytes1[-1] = np.ma.masked
+
+    # Original code prior to PR #315
+    out1 = (
+        (bytes0.astype("int") >> 7) * (-1 * 65535)
+        + (bytes0.astype("int") << 8)
+        + (bytes1.astype("int"))
+    )
+    assert np.all(out1 == np.ma.array([0, -4080, 4080, 0, 0], mask=[0, 0, 0, 0, 1]))
+
+    # New code in PR #315
+    bytes8_2xN = np.ma.vstack([bytes0, bytes1], dtype=np.uint8)
+    bytes8 = bytes8_2xN.transpose().flatten().copy()
+    ints16 = np.ma.array(bytes8.data.view(">i2"), mask=bytes8.mask[::2])
+
+    assert np.all(ints16 == np.ma.array([0, -4081, 4080, -1, 0], mask=[0, 0, 0, 0, 1]))
