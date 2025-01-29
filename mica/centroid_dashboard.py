@@ -1182,7 +1182,7 @@ Next Observation
 
     for row in t_slot:
         string += f"""<tr>
-<td align='right'>{row['slot']}</td>
+<td align='right'>{row["slot"]}</td>
 """
         if row["id"] < 100:
             id_ = ""
@@ -1193,13 +1193,13 @@ Next Observation
             )
 
         string += f"""<td align='right'>{id_}</td>
-<td align='right'>{row['type']}</td>
-<td align='right'>{row['mag']}</td>
-<td align='right'>{row['yang']}</td>
-<td align='right'>{row['zang']}</td>
-<td align='right'>{row['median_mag']:.3f}</td>
-<td align='right'>{row['median_dy']:.2f}</td>
-<td align='right'>{row['median_dz']:.2f}</td>
+<td align='right'>{row["type"]}</td>
+<td align='right'>{row["mag"]}</td>
+<td align='right'>{row["yang"]}</td>
+<td align='right'>{row["zang"]}</td>
+<td align='right'>{row["median_mag"]:.3f}</td>
+<td align='right'>{row["median_dy"]:.2f}</td>
+<td align='right'>{row["median_dz"]:.2f}</td>
 </tr>
 """
     string += f"""</table>

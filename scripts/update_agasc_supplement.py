@@ -38,8 +38,7 @@ def get_options(args=None):
         "--bad-star-source",
         type=int,
         help=(
-            "Source identifier indicating provenance (default=max "
-            "existing source + 1)"
+            "Source identifier indicating provenance (default=max existing source + 1)"
         ),
     )
     parser.add_argument(

@@ -920,9 +920,9 @@ def save_state_in_db(obsid, notes):
     del notes["last_sched"]
 
     idcheck = db.fetchone(
-        "select * from report_proc "
-        "where obsid = '{}' "
-        "and report_version = '{}'".format(obsid, REPORT_VERSION)
+        "select * from report_proc where obsid = '{}' and report_version = '{}'".format(
+            obsid, REPORT_VERSION
+        )
     )
 
     if idcheck is None:
