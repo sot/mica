@@ -7,6 +7,7 @@ import os
 
 import numpy as np
 import pytest
+from astropy.table import Table
 
 from mica.archive import aca_hdr3
 
@@ -63,3 +64,24 @@ def test_MSIDset():
             10679,
         ]
     )
+
+
+def test_two_byte_sum():
+    bytes0 = np.ma.array([0x00, 0xF0, 0x0F, 0xFF, 0xFF], dtype=np.uint8)
+    bytes1 = np.ma.array([0x00, 0x0F, 0xF0, 0xFF, 0xFF], dtype=np.uint8)
+    bytes0[-1] = np.ma.masked
+    bytes1[-1] = np.ma.masked
+
+    # Original code prior to PR #315
+    out1 = (
+        (bytes0.astype("int") >> 7) * (-1 * 65535)
+        + (bytes0.astype("int") << 8)
+        + (bytes1.astype("int"))
+    )
+    assert np.all(out1 == np.ma.array([0, -4080, 4080, 0, 0], mask=[0, 0, 0, 0, 1]))
+
+    # New code in PR #315
+    slot_data = Table([bytes0, bytes1], names=["byte0", "byte1"])
+    ints16 = aca_hdr3.two_byte_sum(["byte0", "byte1"])(slot_data)
+
+    assert np.all(ints16 == np.ma.array([0, -4081, 4080, -1, 0], mask=[0, 0, 0, 0, 1]))

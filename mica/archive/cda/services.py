@@ -430,8 +430,7 @@ def _get_cda_service_text(service, timeout=60, **params):
 
     if not resp.ok:
         raise RuntimeError(
-            f"got error {resp.status_code} for {resp.url}\n"
-            f"{html_to_text(resp.text)}"
+            f"got error {resp.status_code} for {resp.url}\n{html_to_text(resp.text)}"
         )
 
     return resp.text
@@ -630,7 +629,7 @@ def get_ocat_local(
         # accurate enough for this application.
         where = (
             f"arccos(sin({ra * d2r})*sin(ra*{d2r}) + "
-            f"cos({ra * d2r})*cos(ra*{d2r})*cos({dec*d2r}-dec*{d2r}))"
+            f"cos({ra * d2r})*cos(ra*{d2r})*cos({dec * d2r}-dec*{d2r}))"
             f"< {radius / 60 * d2r}"
         )
         where_parts.append(where)
