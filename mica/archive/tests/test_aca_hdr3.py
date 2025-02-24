@@ -7,6 +7,7 @@ import os
 
 import numpy as np
 import pytest
+from astropy.table import Table
 
 from mica.archive import aca_hdr3
 
@@ -80,8 +81,7 @@ def test_two_byte_sum():
     assert np.all(out1 == np.ma.array([0, -4080, 4080, 0, 0], mask=[0, 0, 0, 0, 1]))
 
     # New code in PR #315
-    bytes8_2xN = np.ma.vstack([bytes0, bytes1], dtype=np.uint8)
-    bytes8 = bytes8_2xN.transpose().flatten().copy()
-    ints16 = np.ma.array(bytes8.data.view(">i2"), mask=bytes8.mask[::2])
+    slot_data = Table([bytes0, bytes1], names=["byte0", "byte1"])
+    ints16 = aca_hdr3.two_byte_sum(["byte0", "byte1"])(slot_data)
 
     assert np.all(ints16 == np.ma.array([0, -4081, 4080, -1, 0], mask=[0, 0, 0, 0, 1]))
