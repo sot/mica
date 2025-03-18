@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>mica.archive.aca_dark &#8212; mica 4.38.1 documentation</title>
+    <title>mica.archive.aca_dark &#8212; mica 4.38.2 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="_static/documentation_options.js?v=2b43df8f"></script>
+    <script src="_static/documentation_options.js?v=1cbb55e5"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script type="text/javascript" src="_static/sidebar.js"></script>
@@ -52,7 +52,7 @@
 	
       </li>
       <li>
-	<a href="index.html">mica 4.38.1 documentation</a>
+	<a href="index.html">mica 4.38.2 documentation</a>
 	 &#187;
       </li>
       
@@ -1277,16 +1277,166 @@ creation of the ASP1 products.</p>
 
 </section>
 </section>
-<section id="mica-utils">
-<h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.utils</span></code><a class="headerlink" href="#mica-utils" title="Link to this heading">¶</a></h1>
+<section id="module-mica.utils">
+<span id="mica-utils"></span><h1><a class="reference internal" href="#module-mica.utils" title="mica.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.utils</span></code></a><a class="headerlink" href="#module-mica.utils" title="Link to this heading">¶</a></h1>
 <section id="id11">
 <h2>Functions<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.utils.load_name_to_mp_dir">
+<span class="sig-prename descclassname"><span class="pre">mica.utils.</span></span><span class="sig-name descname"><span class="pre">load_name_to_mp_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">load_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/utils.html#load_name_to_mp_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.utils.load_name_to_mp_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Convert <code class="docutils literal notranslate"><span class="pre">load_name</span></code> like DEC2506C to /2006/DEC2506/oflsc/.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>load_name</strong> – str load name</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>str mica-format mission planning dir</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
-<section id="mica-starcheck">
-<h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.starcheck</span></code><a class="headerlink" href="#mica-starcheck" title="Link to this heading">¶</a></h1>
+<section id="module-mica.starcheck">
+<span id="mica-starcheck"></span><h1><a class="reference internal" href="#module-mica.starcheck" title="mica.starcheck"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.starcheck</span></code></a><a class="headerlink" href="#module-mica.starcheck" title="Link to this heading">¶</a></h1>
 <section id="id12">
 <h2>Functions<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.starcheck.get_starcheck_catalog">
+<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_starcheck_catalog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mp_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_starcheck_catalog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_starcheck_catalog" title="Link to this definition">¶</a></dt>
+<dd><p>Get starcheck catalog dictionary.</p>
+<p>For a given obsid, return a dictionary describing the starcheck catalog that should
+apply. The content of that dictionary is from the database tables of that parsed the
+starcheck report and has keys:</p>
+<ul class="simple">
+<li><p>cat: catalog rows as astropy.table</p></li>
+<li><p>manvr: list of maneuvers to this attitude</p></li>
+<li><p>pred_temp: predicted ACA CCD temperature</p></li>
+<li><p>warnings: list of warnings below catalog in starcheck output</p></li>
+<li><p>obs: dictionary of observation target and pointing information</p></li>
+<li><p>mp_dir: directory with products that are the source of this catalog data</p></li>
+<li><p>status: string describing status of that observation, described below.</p></li>
+</ul>
+<p>Status:</p>
+<ul class="simple">
+<li><p>ran: observation approved and has date before current time</p></li>
+<li><p>approved: observation approved and has date after current time</p></li>
+<li><p>ran_pre_commands: ran, but before commands archive starts</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obsid</strong> – obsid</p></li>
+<li><p><strong>mp_dir</strong> – optional load specifier like ‘FEB1317A’ or ‘/2017/FEB1317/oflsa/’. By
+default the as-run loads (via <code class="docutils literal notranslate"><span class="pre">get_mp_dir()</span></code>) are used.</p></li>
+<li><p><strong>starcheck_db</strong> – optional handle to already-open starcheck database</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dictionary with starcheck content described above</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.starcheck.get_starcheck_catalog_at_date">
+<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_starcheck_catalog_at_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_starcheck_catalog_at_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_starcheck_catalog_at_date" title="Link to this definition">¶</a></dt>
+<dd><p>Get starcheck catalog dictionary at date.</p>
+<p>For a given date, return a dictionary describing the starcheck catalog that should
+apply. The content of that dictionary is from the database tables that parsed the
+starcheck report. A catalog is defined as applying, in this function, to any time
+from the end of the previous dwell through the end of the dwell in which the catalog
+was used.</p>
+<p>Star catalog dictionary with keys:</p>
+<ul class="simple">
+<li><p>cat: catalog rows as astropy.table</p></li>
+<li><p>manvr: list of maneuvers to this attitude</p></li>
+<li><p>pred_temp: predicted ACA CCD temperature</p></li>
+<li><p>warnings: list of warnings below catalog in starcheck output</p></li>
+<li><p>obs: dictionary of observation target and pointing information</p></li>
+<li><p>mp_dir: directory with products that are the source of this catalog data</p></li>
+<li><p>status: string describing status of that observation, described below.</p></li>
+</ul>
+<p>Status:</p>
+<ul class="simple">
+<li><p>ran: observation was observed</p></li>
+<li><p>approved: observation in an approved future schedule</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date</strong> – Chandra.Time compatible date</p></li>
+<li><p><strong>starcheck_db</strong> – optional handle to already-open starcheck database</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dictionary with starcheck content described above</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.starcheck.get_mp_dir">
+<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_mp_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obsid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starcheck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_mp_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_mp_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Get mission planning directory for obsid.</p>
+<p>Get the mission planning directory for an obsid and some status information.
+If the obsid catalog was used more than once (multi-obi or rescheduled after
+being used in a vehicle-only interval), return the directory and details of
+the last one used on the spacecraft.</p>
+<p>Only observations from approved schedules are considered.</p>
+<p>The returned <code class="docutils literal notranslate"><span class="pre">directory</span></code> is a string like “/2006/DEC2506/oflsc/” that
+describes the directory that was used for the products with this star
+catalog.</p>
+<p>The returned <code class="docutils literal notranslate"><span class="pre">status</span></code> has possible values:</p>
+<ul class="simple">
+<li><p>“ran”: observation date before current time</p></li>
+<li><p>“approved”: observation date after current time</p></li>
+<li><p>“no starcat”: observation exists but has no star catalog</p></li>
+</ul>
+<p>The return <code class="docutils literal notranslate"><span class="pre">date</span></code> is the date/time of the <code class="docutils literal notranslate"><span class="pre">MP_STARCAT</span></code> time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obsid</strong> – obsid</p></li>
+<li><p><strong>starcheck_db</strong> – optional handle to already-open starcheck database</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>directory, status, date</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mica.starcheck.get_monitor_windows">
+<span class="sig-prename descclassname"><span class="pre">mica.starcheck.</span></span><span class="sig-name descname"><span class="pre">get_monitor_windows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_obsid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mica/starcheck/starcheck.html#get_monitor_windows"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mica.starcheck.get_monitor_windows" title="Link to this definition">¶</a></dt>
+<dd><p>Use the database of starcheck products to get a list of monitor windows.</p>
+<p>This includes only catalogs that ran or will run.</p>
+<p>NOTE: by default only monitor windows in ER’s are included, set <code class="docutils literal notranslate"><span class="pre">min_obsid=0</span></code>
+to change this.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> – Optional start time for filtering windows as fetched from the
+database</p></li>
+<li><p><strong>stop</strong> – Optional stop time for filtering windows as fetched from the
+database</p></li>
+<li><p><strong>min_obsid</strong> – Minimum obsid value for filtering.  Default of 40000 is
+intended to fetch only ERs</p></li>
+<li><p><strong>config</strong> – config dictionary. If supplied must include ‘starcheck_db’
+key with a dictionary of the required arguments to ska_dbi to connect
+to that database.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>astropy Table of monitor windows.  See
+get_starcheck_catalog_at_date for description of the values of the
+‘status’ column.  The ‘catalog’ column contains the
+get_starcheck_catalog_at_date returned dictionary.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
 <section id="module-mica.stats.acq_stats">
@@ -1434,12 +1584,21 @@ creation of the ASP1 products.</p>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#mica-utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.utils</span></code></a><ul>
-<li><a class="reference internal" href="#id11">Functions</a></li>
+<li><a class="reference internal" href="#module-mica.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.utils</span></code></a><ul>
+<li><a class="reference internal" href="#id11">Functions</a><ul>
+<li><a class="reference internal" href="#mica.utils.load_name_to_mp_dir"><code class="docutils literal notranslate"><span class="pre">load_name_to_mp_dir()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#mica-starcheck"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.starcheck</span></code></a><ul>
-<li><a class="reference internal" href="#id12">Functions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-mica.starcheck"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.starcheck</span></code></a><ul>
+<li><a class="reference internal" href="#id12">Functions</a><ul>
+<li><a class="reference internal" href="#mica.starcheck.get_starcheck_catalog"><code class="docutils literal notranslate"><span class="pre">get_starcheck_catalog()</span></code></a></li>
+<li><a class="reference internal" href="#mica.starcheck.get_starcheck_catalog_at_date"><code class="docutils literal notranslate"><span class="pre">get_starcheck_catalog_at_date()</span></code></a></li>
+<li><a class="reference internal" href="#mica.starcheck.get_mp_dir"><code class="docutils literal notranslate"><span class="pre">get_mp_dir()</span></code></a></li>
+<li><a class="reference internal" href="#mica.starcheck.get_monitor_windows"><code class="docutils literal notranslate"><span class="pre">get_monitor_windows()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-mica.stats.acq_stats"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mica.stats.acq_stats</span></code></a><ul>

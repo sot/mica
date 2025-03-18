@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.vv.process &#8212; mica 4.38.1 documentation</title>
+    <title>mica.vv.process &#8212; mica 4.38.2 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../_static/documentation_options.js?v=2b43df8f"></script>
+    <script src="../../../_static/documentation_options.js?v=1cbb55e5"></script>
     <script src="../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.38.1 documentation</a>
+	<a href="../../../index.html">mica 4.38.2 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -220,7 +220,7 @@
                 <span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipping obs:ver </span><span class="si">{</span><span class="n">obsid</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. Missing data&quot;</span><span class="p">)</span>
                 <span class="k">continue</span>
             <span class="n">update_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;UPDATE aspect_1_proc set vv_complete = </span><span class="si">{</span><span class="n">VV_VERSION</span><span class="si">}</span>
-<span class="s2">                              where obsid = </span><span class="si">{</span><span class="n">obsid</span><span class="si">}</span><span class="s2"> and revision = </span><span class="si">{</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;revision&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                              where obsid = </span><span class="si">{</span><span class="n">obsid</span><span class="si">}</span><span class="s2"> and revision = </span><span class="si">{</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;revision&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span>
 
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">update_str</span><span class="p">)</span>
             <span class="k">with</span> <span class="n">ska_dbi</span><span class="o">.</span><span class="n">DBI</span><span class="p">(</span><span class="n">dbi</span><span class="o">=</span><span class="s2">&quot;sqlite&quot;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="n">FILES</span><span class="p">[</span><span class="s2">&quot;asp1_proc_table&quot;</span><span class="p">])</span> <span class="k">as</span> <span class="n">db</span><span class="p">:</span>
