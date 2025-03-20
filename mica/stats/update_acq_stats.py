@@ -469,9 +469,14 @@ def calc_acq_stats(manvr, vals, times):
 
 
 def _get_obsids_to_update(check_missing=False):
+    # Use the end of AOPCADMD data as the end of the time range for kadi obsids
+    _, aopcadmd_end_time = fetch.get_time_range("AOPCADMD")
+
     if check_missing:
         last_tstart = "2007:271:12:00:00"
-        kadi_obsids = events.obsids.filter(start=last_tstart)
+        kadi_obsids = events.obsids.filter(
+            start=last_tstart, stop__lte=aopcadmd_end_time
+        )
         with tables.open_file(table_file, "r") as h5:
             tbl_data = h5.root.data[:]
         # get all obsids that aren't already in tbl
@@ -483,7 +488,9 @@ def _get_obsids_to_update(check_missing=False):
                 last_tstart = tbl.cols.guide_tstart[tbl.colindexes["guide_tstart"][-1]]
         except Exception:
             last_tstart = "2002:012:12:00:00"
-        kadi_obsids = events.obsids.filter(start=last_tstart)
+        kadi_obsids = events.obsids.filter(
+            start=last_tstart, stop__lte=aopcadmd_end_time
+        )
         # Skip the first obsid (as we already have it in the table)
         obsids = [o.obsid for o in kadi_obsids][1:]
     return obsids
