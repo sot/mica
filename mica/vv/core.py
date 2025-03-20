@@ -388,12 +388,12 @@ class Obi(object):
 
         # Infer an aspect interval from each aspect solution, but
         # exclude the combined aspect solution by CONTENT type.
-        if len(asol_files):
+        if asol_files:
             for file in asol_files:
                 if pyfits.open(file)[1].header["CONTENT"] != "ASPSOLOBI":
                     self.aiids.append(self._aiid_from_asol(file, obsdir))
         ASP_dirs = sorted(glob(os.path.join(obsdir, "ASP_L1_*")))
-        if len(ASP_dirs):
+        if ASP_dirs:
             for dir in ASP_dirs:
                 max_out = max(sorted(glob(os.path.join(dir, "out*"))))
                 asol_files = sorted(glob(os.path.join(max_out, "pcad*asol*")))
@@ -438,7 +438,7 @@ class Obi(object):
                 slotval = [
                     i.deltas[slot][d] for i in self.aspect_intervals if slot in i.deltas
                 ]
-                if len(slotval):
+                if slotval:
                     if isinstance(slotval[0], np.ma.MaskedArray):
                         cslot[d] = ma.concatenate(slotval)
                     else:
@@ -1031,7 +1031,7 @@ class AspectInterval(object):
         ]
 
         # Nothing else to do if there are no missing slots
-        if not len(missing_slots):
+        if not missing_slots:
             return
 
         try:
