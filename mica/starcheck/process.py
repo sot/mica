@@ -29,7 +29,7 @@ FILES = dict(data_root=os.path.join(MICA_ARCHIVE, "starcheck"), sql_def="starche
 def ingest_obs(obs, obs_idx, sc_id, st, db, existing=None):
     if existing is not None:
         existing_obs = [eobs for eobs in existing if eobs["obsid"] == int(obs["obsid"])]
-        if len(existing_obs):
+        if existing_obs:
             logger.debug("Skipping ingest of %s %d" % (st, int(obs["obsid"])))
             return
     obs_d = obs["obs"]
@@ -113,7 +113,7 @@ def get_new_starcheck_files(rootdir, mtime=0):
             prune_dirs(dirs, r"ofls[a-z]$")
         elif depth > 5:
             files = [x for x in raw_files if re.match(r"starcheck\.txt$", x)]
-            if len(files):
+            if files:
                 starchecks.append(os.path.join(root, files[0]))
             while dirs:
                 dirs.pop()
