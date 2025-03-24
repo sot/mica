@@ -478,7 +478,8 @@ def _get_obsids_to_update(check_missing=False):
     #
     # Note that the obsid event interval is the full interval of constant obsid.
     # Obsid commanding is normally in the maneuver between observations.
-    # And note that the normal stop kwarg is inclusive and applied as a filter on the start time.
+    # And note that the normal stop kwarg is inclusive and includes intervals that intersect with
+    # that stop time.
 
     if check_missing:
         last_tstart = "2007:271:12:00:00"
