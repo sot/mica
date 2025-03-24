@@ -400,9 +400,19 @@ def calc_gui_stats(data):
 
 
 def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop=None):
-    # Use the end of AOPCADMD data or a supplied stop time
+    # Use the end of AOPCADMD data or a supplied stop time.
     _, aopcadmd_end_time = fetch.get_time_range("AOPCADMD")
     stop = stop if stop is not None else aopcadmd_end_time
+
+    # There's some duplication below in how stop time is applied, but in both
+    # cases the the kadi obsids are filtered on the stop time of the obsid as less than or equal to
+    # the stop time defined above (the supplied stop time or the end of cxc archive
+    # AOPCADMD data). The kadi obsid events may be complete past the end of
+    # the AOPCADMD data, especially if kadi events are updated using MAUDE data.
+    #
+    # Note that the obsid event interval is the full interval of constant obsid.
+    # Obsid commanding is normally in the maneuver between observations.
+    # And note that the normal stop kwarg is inclusive and applied as a filter on the start time.
 
     if check_missing:
         last_tstart = start if start is not None else "2007:271:12:00:00"

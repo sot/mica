@@ -472,6 +472,14 @@ def _get_obsids_to_update(check_missing=False):
     # Use the end of AOPCADMD data as the end of the time range for kadi obsids
     _, aopcadmd_end_time = fetch.get_time_range("AOPCADMD")
 
+    # There's some duplication below in how stop time is applied, but in both
+    # cases the the kadi obsids are filtered on the stop time of the obsid as less than or equal to
+    # the end of AOPCADMD data as available from the CXC archive.
+    #
+    # Note that the obsid event interval is the full interval of constant obsid.
+    # Obsid commanding is normally in the maneuver between observations.
+    # And note that the normal stop kwarg is inclusive and applied as a filter on the start time.
+
     if check_missing:
         last_tstart = "2007:271:12:00:00"
         kadi_obsids = events.obsids.filter(
