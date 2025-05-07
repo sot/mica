@@ -13,6 +13,7 @@ from astropy.table import Table
 from Chandra.Time import DateTime
 from chandra_aca import dark_model
 from chandra_aca.transform import radec_to_eci
+from cxotime import CxoTime
 from kadi import events
 from Quaternion import Quat
 from Ska.engarchive import fetch, fetch_sci
@@ -417,7 +418,9 @@ def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop
 
     if check_missing:
         last_tstart = start if start is not None else "2007:271:12:00:00"
-        kadi_obsids = events.obsids.filter(start=last_tstart, stop__lte=stop)
+        kadi_obsids = events.obsids.filter(
+            start=last_tstart, stop__lte=CxoTime(stop).date
+        )
         with tables.open_file(table_file, "r") as h5:
             tbl_data = h5.root.data[:]
         # get all obsids that aren't already in tbl
@@ -431,7 +434,9 @@ def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop
                 ]
         except Exception:
             last_tstart = start if start is not None else "2002:012:12:00:00"
-        kadi_obsids = events.obsids.filter(start=last_tstart, stop__lte=stop)
+        kadi_obsids = events.obsids.filter(
+            start=last_tstart, stop__lte=CxoTime(stop).date
+        )
         # Skip the first obsid (as we already have it in the table)
         obsids = [o.obsid for o in kadi_obsids][1:]
     return obsids
