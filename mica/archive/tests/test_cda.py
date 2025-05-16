@@ -405,7 +405,8 @@ def test_get_proposal_abstract():
             "ALMA. Chandra resolution & sensitivity enables the study of "
             "large scale phenomena: (1) influence of the surrounding "
             "environment; (2) interaction between galaxies; (3) influence of "
-            "groups and clusters"
+            "groups and clusters: (4) BH growth and census; (5) star formation "
+            "and stellar populations; (6) feedback from starbursts and AGNs."
         ),
         "principal_investigator": "Martin Elvis",
         "proposal_number": "08900073",

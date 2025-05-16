@@ -267,6 +267,7 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=60):
 
     html = _get_cda_service_text("prop_abstract", timeout=timeout, **params)
     text = html_to_text(html)
+    text += "\nTEXT_END:"
 
     # Return value is a text string with these section header lines. Use them
     # to split the text into sections.
@@ -275,7 +276,7 @@ def get_proposal_abstract(obsid=None, propnum=None, timeout=60):
         "Proposal Number",
         "Principal Investigator",
         "Abstract",
-        "",
+        "TEXT_END",
     ]
     out = {}
     for delim0, delim1 in zip(delims[:-1], delims[1:]):
