@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.cda.services &#8212; mica 4.38.3 documentation</title>
+    <title>mica.archive.cda.services &#8212; mica 4.39.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../../_static/documentation_options.js?v=b8c3d1fc"></script>
+    <script src="../../../../_static/documentation_options.js?v=feee11cf"></script>
     <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script type="text/javascript" src="../../../../_static/sidebar.js"></script>
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../../index.html">mica 4.38.3 documentation</a>
+	<a href="../../../../index.html">mica 4.39.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -334,6 +334,7 @@
 
     <span class="n">html</span> <span class="o">=</span> <span class="n">_get_cda_service_text</span><span class="p">(</span><span class="s2">&quot;prop_abstract&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">html_to_text</span><span class="p">(</span><span class="n">html</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">TEXT_END:&quot;</span>
 
     <span class="c1"># Return value is a text string with these section header lines. Use them</span>
     <span class="c1"># to split the text into sections.</span>
@@ -342,7 +343,7 @@
         <span class="s2">&quot;Proposal Number&quot;</span><span class="p">,</span>
         <span class="s2">&quot;Principal Investigator&quot;</span><span class="p">,</span>
         <span class="s2">&quot;Abstract&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;TEXT_END&quot;</span><span class="p">,</span>
     <span class="p">]</span>
     <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">delim0</span><span class="p">,</span> <span class="n">delim1</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">delims</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">delims</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
