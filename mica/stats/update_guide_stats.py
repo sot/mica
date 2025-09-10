@@ -34,7 +34,7 @@ logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     logger.addHandler(logging.StreamHandler())
 
-STAT_VERSION = 0.6
+STAT_VERSION = 0.7
 
 GUIDE_COLS = {
     "obs": [
@@ -151,8 +151,12 @@ def get_options():
     parser.add_argument("--start", help="start time for processing")
     parser.add_argument("--stop", help="stop time for processing")
     parser.add_argument("--datafile", default="gs.h5")
-    opt = parser.parse_args()
-    return opt
+    parser.add_argument(
+        "--burn-in",
+        action="store_true",
+        help="Calculate over first dither pattern only",
+    )
+    return parser
 
 
 def _deltas_vs_obc_quat(vals, times, catalog):
@@ -442,7 +446,26 @@ def _get_obsids_to_update(check_missing=False, table_file=None, start=None, stop
     return obsids
 
 
-def calc_stats(obsid):
+def get_dither_period(obspar, kalman_start):
+    if "dither_y_freq" and "dither_z_freq" in obspar:
+        # Use the larger of the two dither periods
+        # The frequency is in deg/sec so period is 360/freq
+        period = max(360.0 / obspar["dither_y_freq"], 360.0 / obspar["dither_z_freq"])
+        return period
+    else:
+        # If no dither info in obspar, then get this from kadi command states
+        import kadi.commands.states
+
+        states = kadi.commands.states.get_states(
+            start=kalman_start,
+            stop=CxoTime(kalman_start).secs + 500,
+            state_keys=["dither", "dither_period_pitch", "dither_period_yaw"],
+        )
+        period = max(states[0]["dither_period_pitch"], states[0]["dither_period_yaw"])
+        return period
+
+
+def calc_stats(obsid, burn_in=False):
     obspar = mica.archive.obspar.get_obspar(obsid)
     if not obspar:
         raise ValueError("No obspar for {}".format(obsid))
@@ -500,8 +523,15 @@ def calc_stats(obsid):
     # The NPNT dwell should end when the next maneuver starts, but explicitly confirm via pcadmd
     pcadmd = fetch.Msid("AOPCADMD", manvr.kalman_start, manvr.get_next().tstart + 20)
     next_nman_start = pcadmd.times[pcadmd.vals != "NPNT"][0]
+    proc_stop = CxoTime(next_nman_start).secs
+
+    # If burn_in is requested, then limit the calculation to the first dither pattern
+    if burn_in:
+        period_length = get_dither_period(obspar, manvr.kalman_start)
+        proc_stop = min(CxoTime(manvr.kalman_start).secs + period_length, proc_stop)
+
     vals, star_info = get_data(
-        start=manvr.kalman_start, stop=next_nman_start, obsid=obsid, starcheck=starcheck
+        start=manvr.kalman_start, stop=proc_stop, obsid=obsid, starcheck=starcheck
     )
     gui_stats = calc_gui_stats(vals)
     obsid_info = {
@@ -511,6 +541,7 @@ def calc_stats(obsid):
         "kalman_tstart": DateTime(manvr.kalman_start).secs,
         "npnt_tstop": DateTime(next_nman_start).secs,
         "npnt_datestop": DateTime(next_nman_start).date,
+        "processed_stop": DateTime(proc_stop).date,
         "revision": STAT_VERSION,
     }
     catalog = Table(starcheck["cat"])
@@ -636,7 +667,9 @@ def update(opt):
     for obsid in obsids:
         logger.info("Processing obsid {}".format(obsid))
         try:
-            obsid_info, gui_stats, star_info, guide_catalog, temp = calc_stats(obsid)
+            obsid_info, gui_stats, star_info, guide_catalog, temp = calc_stats(
+                obsid, burn_in=opt.burn_in
+            )
         except Exception as e:
             open(os.path.splitext(opt.datafile)[0] + "_skipped.dat", "a").write(
                 "{}: {}\n".format(obsid, e)
@@ -654,8 +687,9 @@ def update(opt):
 
 
 def main():
-    opt = get_options()
-    update(opt)
+    the_parser = get_options()
+    args = the_parser.parse_args()
+    update(args)
 
 
 if __name__ == "__main__":
