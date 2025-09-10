@@ -397,7 +397,7 @@ class Obi(object):
             for dir in ASP_dirs:
                 max_out = max(sorted(glob(os.path.join(dir, "out*"))))
                 asol_files = sorted(glob(os.path.join(max_out, "pcad*asol*")))
-                if len(asol_files):
+                if len(asol_files) > 0:
                     for file in asol_files:
                         self.aiids.append(self._aiid_from_asol(file, max_out))
 
