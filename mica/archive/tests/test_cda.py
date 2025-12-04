@@ -289,6 +289,24 @@ def test_ocat_filtering(query_func, service):
     assert dat["obsid"] == 4876
 
 
+@pytest.mark.parametrize(
+    "seq_num, z_sim",
+    [
+        ("700958", -8.0),
+        ("700958", -8),
+        (np.str_("700958"), -8.0),
+        ("700958", np.float32(-8.0)),
+    ],
+)
+def test_ocat_filtering_numpy2_types(datafile, seq_num, z_sim):
+    query_func = partial(get_ocat_local, datafile=datafile)
+    dat = query_func(
+        target_name="jet", obsid=4876, observer="Jester", seq_num=seq_num, z_sim=z_sim
+    )
+    assert isinstance(dat, dict)
+    assert dat["obsid"] == 4876
+
+
 def test_ocat_filtering_no_match1(query_func, service):
     dat = query_func(
         target_name="jet",
