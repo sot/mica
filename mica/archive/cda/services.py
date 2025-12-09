@@ -636,7 +636,10 @@ def get_ocat_local(
         where_parts.append(where)
 
     for col_name, value in params.items():
-        where_parts.append(f"{col_name}=={value!r}")
+        if np.issubdtype(type(value), str):  # strings need quoting
+            where_parts.append(f"{col_name}=='{value}'")
+        else:
+            where_parts.append(f"{col_name}=={value}")
 
     if where_parts:
         dat = _table_read_where(datafile, where_parts)
