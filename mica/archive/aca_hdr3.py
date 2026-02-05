@@ -21,8 +21,10 @@ from mica.common import MissingDataError
 # Image type  = <I>
 # Hdr 3 Word  = <W>
 
+TWO_TO_15 = np.uint16(2**15)
 
-def two_byte_sum(byte_msids, scale=1):
+
+def two_byte_sum(byte_msids, scale=1, as_readout_offset=False):
     def func(slot_data) -> np.ma.MaskedArray:
         # For each pair bytes0[i], bytes1[i], return the 16-bit signed integer
         # corresponding to those two bytes. The input bytes are unsigned.
@@ -34,10 +36,17 @@ def two_byte_sum(byte_msids, scale=1):
         bytes8_2xN = np.ma.vstack([bytes0, bytes1], dtype=np.uint8)
         bytes8 = bytes8_2xN.transpose().flatten().copy()
 
-        # Now view the 2N bytes as N 16-bit signed integers.
-        ints16 = np.ma.array(bytes8.data.view(">i2"), mask=bytes8.mask[::2])
+        if as_readout_offset:
+            # 16-bit readout offset values need this magic formula from M. Baski (see
+            # PEA sampled background patch notes). Note that scale is ignored here.
+            uints16 = np.ma.array(bytes8.data.view(">u2"), mask=bytes8.mask[::2])
+            out = (uints16 + TWO_TO_15).view("<i2")
+        else:
+            # Now view the 2N bytes as N 16-bit signed integers.
+            ints16 = np.ma.array(bytes8.data.view(">i2"), mask=bytes8.mask[::2])
+            out = ints16 * scale
 
-        return ints16 * scale
+        return out
 
     return func
 
@@ -323,6 +332,7 @@ The science header pulse period, as measured by the PEA; 1 LSB = 2 microseconds
     "372": {
         "desc": "16-bit zero offset for pixels from CCD quad A",
         "msid": "zero_off16_quad_a",
+        "value": two_byte_sum(["HD3TLM72", "HD3TLM73"], as_readout_offset=True),
         "longdesc": """
 A 16-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
@@ -331,6 +341,7 @@ converter count (nominally 5 electrons)
     "374": {
         "desc": "16-bit zero offset for pixels from CCD quad B",
         "msid": "zero_off16_quad_b",
+        "value": two_byte_sum(["HD3TLM74", "HD3TLM75"], as_readout_offset=True),
         "longdesc": """
 A 16-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
@@ -339,6 +350,7 @@ converter count (nominally 5 electrons)
     "376": {
         "desc": "16-bit zero offset for pixels from CCD quad C",
         "msid": "zero_off16_quad_c",
+        "value": two_byte_sum(["HD3TLM76", "HD3TLM77"], as_readout_offset=True),
         "longdesc": """
 A 16-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
@@ -347,6 +359,7 @@ converter count (nominally 5 electrons)
     "462": {
         "desc": "16-bit zero offset for pixels from CCD quad D",
         "msid": "zero_off16_quad_d",
+        "value": two_byte_sum(["HD3TLM62", "HD3TLM63"], as_readout_offset=True),
         "longdesc": """
 A 16-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
