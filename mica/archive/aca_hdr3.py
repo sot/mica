@@ -1,9 +1,13 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Experimental/alpha code to work with ACA L0 Header 3 data
+Experimental/alpha code to work with ACA L0 Header 3 data.
+
+This module provides tools for reading and processing ACA (Aspect Camera Assembly)
+Level 0 Header 3 telemetry data.
 """
 
 import collections
+import functools
 import warnings
 
 import numpy as np
@@ -17,6 +21,23 @@ TWO_TO_15 = np.uint16(2**15)
 
 
 def two_byte_sum(byte_msids, scale=1, as_readout_offset=False):
+    """
+    Create a function to combine two bytes into a 16-bit signed integer.
+
+    Parameters
+    ----------
+    byte_msids : list of str
+        List of two MSID names representing the byte values to combine.
+    scale : float, optional
+        Scale factor to apply to the result. Default is 1.
+    as_readout_offset : bool, optional
+        If True, apply special readout offset formula. Default is False.
+
+    Returns
+    -------
+    callable
+        Function that takes slot_data and returns combined 16-bit values.
+    """
     def func(slot_data) -> np.ma.MaskedArray:
         # For each pair bytes0[i], bytes1[i], return the 16-bit signed integer
         # corresponding to those two bytes. The input bytes are unsigned.
@@ -99,6 +120,19 @@ ad_func = interp1d(x, a_to_d["tempC"], kind="cubic", bounds_error=False)
 
 
 def ad_temp(msids):
+    """
+    Create a function to convert A/D readings to temperature.
+
+    Parameters
+    ----------
+    msids : list of str
+        List of MSID names for the A/D readings.
+
+    Returns
+    -------
+    callable
+        Function that takes slot_data and returns temperature values.
+    """
     def func(slot_data):
         sum = two_byte_sum(msids)(slot_data)
         # As of scipy 0.17 cannot interpolate a masked array.  In this
@@ -489,40 +523,103 @@ MSID_DEFS = {
 }
 
 
+@functools.lru_cache(maxsize=8)
+def get_hdr3_slot_data(tstart: float, tstop: float, slot: int):
+    """
+    Get data for HDR3 telemetry for slot and time range.
+
+    This allows efficient data access for an MSIDset query that fetches multiple MSIDs
+    (slots) over the same time range.
+
+    Parameters
+    ----------
+    tstart : float
+        Start time in seconds since epoch.
+    tstop : float
+        Stop time in seconds since epoch.
+    slot : int
+        ACA slot number.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of telemetry data for the specified slot and time range.
+    """
+    data = aca_l0.get_slot_data(
+        tstart,
+        tstop + 33,
+        slot,
+        imgsize=[8],
+        columns=ACA_DTYPE_NAMES,
+    )
+    return data
+
+
 class MSID(object):
     """
     ACA header 3 data object.
 
-    ACA header 3 data object to work with header 3 data from
-    available 8x8 ACA L0 telemetry::
+    ACA header 3 data object to work with header 3 data from available 8x8 ACA L0
+    telemetry::
 
       >>> from mica.archive import aca_hdr3
       >>> ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
       >>> type(ccd_temp.vals)
       'numpy.ma.core.MaskedArray'
 
-    When given an ``msid`` and ``start`` and ``stop`` range, the object will
-    query the ACA L0 archive to populate the object, which includes the MSID
-    values (``vals``) at the given times (``times``).
+    When given an ``msid`` and ``start`` and ``stop`` range, the object will query the
+    ACA L0 archive to populate the object, which includes the MSID values (``vals``) at
+    the given times (``times``).
 
-    The parameter ``msid_data`` is used to create an MSID object from
-    the data of another MSID object.
+    The parameter ``msid_data`` is used to create an MSID object from the data of
+    another MSID object.
 
-    When ``filter_bad`` is supplied then only valid data values are stored
-    and the ``vals`` and ``times`` attributes are `np.ndarray` instead of
-    `ma.MaskedArray`.
+    When ``filter_bad`` is supplied then only valid data values are stored and the
+    ``vals`` and ``times`` attributes are `np.ndarray` instead of `ma.MaskedArray`.
 
-    :param msid: MSID name
-    :param start: Chandra.Time compatible start time
-    :param stop: Chandra.Time compatible stop time
-    :param msid_data: data dictionary or object from another MSID object
+    Parameters
+    ----------
+    msid : str
+        MSID name.
+    start : CxoTimeLike
+        Chandra.Time compatible start time.
+    stop : CxoTimeLike
+        Chandra.Time compatible stop time.
+    filter_bad : deprecated
+        This parameter is ignored and will be removed in a future version.
+    clear_cache : bool, optional
+        Clear the cache for HDR3 slot data after reading the data for this MSID. This is
+        useful to set to False when reading multiple MSIDs that are in the same slot and
+        time range, to avoid redundant reads of the same data. Default is True.
+
+    Attributes
+    ----------
+    msid : str
+        MSID name.
+    vals : numpy.ma.MaskedArray
+        MSID values.
+    times : numpy.ndarray
+        Time stamps corresponding to the MSID values.
+    desc : str
+        Short description of the MSID.
+    longdesc : str
+        Long description of the MSID.
+    tstart : float
+        Start time in seconds since epoch.
+    tstop : float
+        Stop time in seconds since epoch.
+    datestart : str
+        Start date string.
+    datestop : str
+        Stop date string.
+    hdr3_msid : dict
+        Header 3 MSID definition dictionary.
     """
 
-    def __init__(self, msid, start, stop, msid_data=None, filter_bad=...):
+    def __init__(self, msid, start, stop, filter_bad=..., clear_cache=True):
         if filter_bad is not ...:
             warnings.warn("'filter_bad' parameter is ignored", UserWarning)
-        if msid_data is None:
-            msid_data = MSIDset([msid], start, stop)[msid]
+
         self.msid: str = msid
         start = CxoTime(start)
         stop = CxoTime(stop)
@@ -531,13 +628,48 @@ class MSID(object):
         self.datestart: str = start.date
         self.datestop: str = stop.date
 
-        # msid_data may be dictionary or object with these
-        # attributes
-        for attr in ("hdr3_msid", "vals", "times", "desc", "longdesc"):
-            if hasattr(msid_data, attr):
-                setattr(self, attr, getattr(msid_data, attr))
-            else:
-                setattr(self, attr, msid_data.get(attr))
+        slot = MSID_DEFS[self.msid]["slot"]
+
+        # Get the 8x8 data with some padding on each end that gets cut later
+        slot_data = get_hdr3_slot_data(self.tstart, self.tstop, slot)
+        if clear_cache:
+            get_hdr3_slot_data.cache_clear()
+
+        # Find samples where the time stamp changes by a value other than 4.1 secs
+        # (which is the value for 8x8 readouts).  In that case there must have been a
+        # break in L0 decom, typically due to a change to 4x4 or 6x6 data.
+        #  t[0] = 1.0
+        #  t[1] = 5.1   <= This record could be bad, as indicated by the gap afterward
+        #  t[2, 3] = 17.4, 21.5
+        # For the diffs add final time stamp of 0.0 so the length matches that of
+        # slot_data. The final slot_data record is always chopped but this is OK.
+        dt = np.diff(np.concatenate([slot_data["TIME"], [0.0]]))
+        ok = np.abs(dt - 4.1) < 1e-3
+        slot_data = slot_data[ok]
+
+        # Chop off the padding
+        i_stop = np.searchsorted(slot_data["TIME"], self.tstop, side="right")
+        slot_data = slot_data[:i_stop]
+
+        # Since we only requested 8x8 image data there should never by any masked
+        # values, so convert to normal ndarray (after checking just to be sure).
+        slot_data_nomask = np.empty(len(slot_data), dtype=slot_data.dtype)
+        for name in slot_data.dtype.names:
+            if np.any(slot_data[name].mask):
+                raise ValueError(f"unexpected masked values in {name} for {slot}")
+            slot_data_nomask[name] = slot_data[name].data
+
+        msid_def = MSID_DEFS[self.msid]
+        if "value" not in msid_def:
+            raise NotImplementedError(
+                f"function to compute {self.msid} from HDR3 telemetry is not defined"
+            )
+
+        self.vals = msid_def["value"](slot_data_nomask)
+        self.desc = msid_def["desc"]
+        self.longdesc = msid_def["longdesc"]
+        self.times = slot_data_nomask["TIME"]
+        self.hdr3_msid = msid_def
 
     def copy(self):
         from copy import deepcopy
@@ -547,6 +679,7 @@ class MSID(object):
     def plot(self, ax=None, **kwargs):
         import matplotlib.pyplot as plt
         from ska_matplotlib import plot_cxctime
+
         if ax is None:
             _, ax = plt.subplots()
 
@@ -556,24 +689,33 @@ class MSID(object):
 
 class Msid(MSID):
     """
-    ACA header 3 data object.
+    ACA header 3 data object (alias for MSID).
 
     ACA header 3 data object to work with header 3 data from available 8x8 ACA L0
-    telemetry.
+    telemetry. This is an alias for the MSID class.
 
+    Parameters
+    ----------
+    msid : str
+        MSID name.
+    start : CxoTimeLike
+        Chandra.Time compatible start time.
+    stop : CxoTimeLike
+        Chandra.Time compatible stop time.
+
+    Notes
+    -----
+    When given an ``msid`` and ``start`` and ``stop`` range, the object will
+    query the ACA L0 archive to populate the object, which includes the MSID
+    values (``vals``) at the given times (``times``). Only valid data values
+    are returned.
+
+    Examples
+    --------
     >>> from mica.archive import aca_hdr3
     >>> ccd_temp = aca_hdr3.Msid('ccd_temp', '2012:001', '2012:020')
     >>> type(ccd_temp.vals)
-    'numpy.ndarray'
-
-    When given an ``msid`` and ``start`` and ``stop`` range, the object will
-    query the ACA L0 archive to populate the object, which includes the MSID
-    values (``vals``) at the given times (``times``).  Only valid data values
-    are returned.
-
-    :param msid: MSID
-    :param start: Chandra.Time compatible start time
-    :param stop: Chandra.Time compatible stop time
+    <class 'numpy.ma.core.MaskedArray'>
     """
 
     def __init__(self, msid, start, stop):
@@ -582,19 +724,37 @@ class Msid(MSID):
 
 class MSIDset(dict):
     """
-    ACA header 3 data object
+    ACA header 3 data object for multiple MSIDs.
 
     ACA header 3 data object to work with header 3 data from
-    available 8x8 ACA L0 telemetry.  An MSIDset works with multiple
+    available 8x8 ACA L0 telemetry. An MSIDset works with multiple
     MSIDs simultaneously.
 
+    Parameters
+    ----------
+    msids : list of str
+        List of MSID names.
+    start : CxoTimeLike
+        CxoTime compatible start time.
+    stop : CxoTimeLike
+        CxoTime compatible stop time.
+
+    Attributes
+    ----------
+    tstart : float
+        Start time in seconds since epoch.
+    tstop : float
+        Stop time in seconds since epoch.
+    datestart : str
+        Start date string.
+    datestop : str
+        Stop date string.
+
+    Examples
+    --------
     >>> from mica.archive import aca_hdr3
     >>> perigee_data = aca_hdr3.MSIDset(['ccd_temp', 'aca_temp', 'dac'],
     ...                                 '2012:001', '2012:030')
-
-    :param msids: list of MSIDs
-    :param start: CxoTime compatible start time
-    :param stop: CxoTime compatible stop time
     """
 
     def __init__(self, msids: list[str], start: CxoTimeLike, stop: CxoTimeLike):
@@ -606,55 +766,9 @@ class MSIDset(dict):
         self.datestart: str = start.date
         self.datestop: str = stop.date
 
-        slot_datas = {}
-        slots = {MSID_DEFS[msid]["slot"] for msid in msids}
-        for slot in slots:
-            # Get the 8x8 data with some padding on each end that gets cut later
-            slot_data = aca_l0.get_slot_data(
-                self.tstart,
-                self.tstop + 33,
-                slot,
-                imgsize=[8],
-                columns=ACA_DTYPE_NAMES,
-            )
-
-            # Find samples where the time stamp changes by a value other than 4.1 secs
-            # (which is the value for 8x8 readouts).  In that case there must have been a
-            # break in L0 decom, typically due to a change to 4x4 or 6x6 data.
-            #  t[0] = 1.0
-            #  t[1] = 5.1   <= This record could be bad, as indicated by the gap afterward
-            #  t[2, 3] = 17.4, 21.5
-            # For the diffs add final time stamp of 0.0 so the length matches that of
-            # slot_data. The final slot_data record is always chopped but this is OK.
-            dt = np.diff(np.concatenate([slot_data["TIME"], [0.0]]))
-            ok = np.abs(dt - 4.1) < 1e-3
-            slot_data = slot_data[ok]
-
-            # Chop off the padding
-            i_stop = np.searchsorted(slot_data["TIME"], self.tstop, side="right")
-            slot_data = slot_data[:i_stop]
-
-            # Since we only requested 8x8 image data there should never by any masked
-            # values, so convert to normal ndarray (after checking just to be sure).
-            slot_data_nomask = np.empty(len(slot_data), dtype=slot_data.dtype)
-            for name in slot_data.dtype.names:
-                if np.any(slot_data[name].mask):
-                    raise ValueError(f"unexpected masked values in {name} for {slot}")
-                slot_data_nomask[name] = slot_data[name].data
-            slot_datas[slot] = slot_data_nomask
-
         for msid in msids:
-            msid_def = MSID_DEFS[msid]
-            slot_data = slot_datas[msid_def["slot"]]
-            if "value" not in msid_def:
-                raise NotImplementedError(
-                    f"function to compute {msid} from HDR3 telemetry is not defined"
-                )
-            msid_data = {
-                "vals": msid_def["value"](slot_data),
-                "desc": msid_def["desc"],
-                "longdesc": msid_def["longdesc"],
-                "times": slot_data["TIME"],
-                "hdr3_msid": msid_def,
-            }
-            self[msid] = MSID(msid, start, stop, msid_data)
+            self[msid] = MSID(msid, start, stop, clear_cache=False)
+
+        # Clear cache for memory after getting all the MSIDs
+        get_hdr3_slot_data.cache_clear()
+
