@@ -4,22 +4,14 @@ Experimental/alpha code to work with ACA L0 Header 3 data
 """
 
 import collections
-import re
+import warnings
 
 import numpy as np
-from Chandra.Time import DateTime
+from cxotime import CxoTime, CxoTimeLike
 from numpy import ma
 from scipy.interpolate import interp1d
-from Ska.Numpy import search_both_sorted
 
 from mica.archive import aca_l0
-from mica.common import MissingDataError
-
-# In case it isn't obvious, for an MSID of HD3TLM<I><W> in ACA image data
-# for slot <S>, that maps to table 11.1 like:
-# Image No.   = <S>
-# Image type  = <I>
-# Hdr 3 Word  = <W>
 
 TWO_TO_15 = np.uint16(2**15)
 
@@ -54,8 +46,6 @@ def two_byte_sum(byte_msids, scale=1, as_readout_offset=False):
 # 8x8 header values (largest possible ACA0 header set)
 ACA_DTYPE = [
     ("TIME", ">f8"),
-    ("QUALITY", ">i4"),
-    ("IMGSIZE", ">i4"),
     ("HD3TLM62", "|u1"),
     ("HD3TLM63", "|u1"),
     ("HD3TLM64", "|u1"),
@@ -68,7 +58,6 @@ ACA_DTYPE = [
     ("HD3TLM75", "|u1"),
     ("HD3TLM76", "|u1"),
     ("HD3TLM77", "|u1"),
-    ("FILENAME", "<U128"),
 ]
 
 ACA_DTYPE_NAMES = [k[0] for k in ACA_DTYPE]
@@ -127,9 +116,14 @@ def ad_temp(msids):
     return func
 
 
-# dictionary that defines the header 3 'MSID's.
-# Also includes a value key that describes how to determine the value
-# of the MSID
+# Define a dictionary that defines the header 3 'MSID's. This includes a value key that
+# describes how to determine the value of the MSID.
+#
+# For an MSID of HD3TLM<I><W> in ACA image data for slot <S>, that maps to table 11.1
+# like:
+# Image No.   = <S>
+# Image type  = <I>
+# Hdr 3 Word  = <W>
 
 HDR3_DEF = {
     "062": {
@@ -490,7 +484,9 @@ The number most recently written to the TEC power control DAC.
     },
 }
 
-MSID_ALIASES = {HDR3_DEF[key]["msid"]: key for key in HDR3_DEF}
+MSID_DEFS = {
+    value["msid"]: value | {"slot": key[0]} for (key, value) in HDR3_DEF.items()
+}
 
 
 class MSID(object):
@@ -520,17 +516,21 @@ class MSID(object):
     :param start: Chandra.Time compatible start time
     :param stop: Chandra.Time compatible stop time
     :param msid_data: data dictionary or object from another MSID object
-    :param filter_bad: remove missing values
     """
 
-    def __init__(self, msid, start, stop, msid_data=None, filter_bad=False):
+    def __init__(self, msid, start, stop, msid_data=None, filter_bad=...):
+        if filter_bad is not ...:
+            warnings.warn("'filter_bad' parameter is ignored", UserWarning)
         if msid_data is None:
             msid_data = MSIDset([msid], start, stop)[msid]
-        self.msid = msid
-        self.tstart = DateTime(start).secs
-        self.tstop = DateTime(stop).secs
-        self.datestart = DateTime(self.tstart).date
-        self.datestop = DateTime(self.tstop).date
+        self.msid: str = msid
+        start = CxoTime(start)
+        stop = CxoTime(stop)
+        self.tstart: float = start.secs
+        self.tstop: float = stop.secs
+        self.datestart: str = start.date
+        self.datestop: str = stop.date
+
         # msid_data may be dictionary or object with these
         # attributes
         for attr in ("hdr3_msid", "vals", "times", "desc", "longdesc"):
@@ -539,31 +539,19 @@ class MSID(object):
             else:
                 setattr(self, attr, msid_data.get(attr))
 
-        # If requested filter out bad values and set self.bad = None
-        if filter_bad:
-            self.filter_bad()
-
     def copy(self):
         from copy import deepcopy
 
         return deepcopy(self)
 
-    def filter_bad(self, copy=False):
-        """Filter out any missing values.
+    def plot(self, ax=None, **kwargs):
+        import matplotlib.pyplot as plt
+        from ska_matplotlib import plot_cxctime
+        if ax is None:
+            _, ax = plt.subplots()
 
-        After applying this method the ``vals`` attributes will be a
-        plain np.ndarray object instead of a masked array.
-
-        :param copy: return a copy of MSID object with bad values filtered
-        """
-        obj = self.copy() if copy else self
-
-        if isinstance(obj.vals, ma.MaskedArray):
-            obj.times = obj.times[~obj.vals.mask]
-            obj.vals = obj.vals.compressed()
-
-        if copy:
-            return obj
+        plot_cxctime(self.times, self.vals, ax=ax, **kwargs)
+        ax.set_title(f"{self.msid.upper()}")
 
 
 class Msid(MSID):
@@ -589,37 +577,10 @@ class Msid(MSID):
     """
 
     def __init__(self, msid, start, stop):
-        super(Msid, self).__init__(msid, start, stop, filter_bad=True)
+        super(Msid, self).__init__(msid, start, stop)
 
 
-def confirm_msid(req_msid):
-    """
-
-    Check to see if the 'MSID' is an alias or is in the HDR3_DEF dictionary.
-
-    If in the aliases, return the unaliased value.
-
-    :param req_msid: requested msid
-    :return: hdr3_def MSID name
-    """
-    if req_msid in MSID_ALIASES:
-        return MSID_ALIASES[req_msid]
-    elif req_msid not in HDR3_DEF:
-        raise MissingDataError("msid %s not found" % req_msid)
-    else:
-        return req_msid
-
-
-def slot_for_msid(msid):
-    """
-    For a given 'MSID' return the slot number that contains those data.
-    """
-    mmatch = re.match(r"(\d)\d\d", msid)
-    slot = int(mmatch.group(1))
-    return slot
-
-
-class MSIDset(collections.OrderedDict):
+class MSIDset(dict):
     """
     ACA header 3 data object
 
@@ -632,23 +593,29 @@ class MSIDset(collections.OrderedDict):
     ...                                 '2012:001', '2012:030')
 
     :param msids: list of MSIDs
-    :param start: Chandra.Time compatible start time
-    :param stop: Chandra.Time compatible stop time
+    :param start: CxoTime compatible start time
+    :param stop: CxoTime compatible stop time
     """
 
-    def __init__(self, msids, start, stop):
+    def __init__(self, msids: list[str], start: CxoTimeLike, stop: CxoTimeLike):
         super(MSIDset, self).__init__()
-        self.tstart = DateTime(start).secs
-        self.tstop = DateTime(stop).secs
-        self.datestart = DateTime(self.tstart).date
-        self.datestop = DateTime(self.tstop).date
+        start = CxoTime(start)
+        stop = CxoTime(stop)
+        self.tstart: float = start.secs
+        self.tstop: float = stop.secs
+        self.datestart: str = start.date
+        self.datestop: str = stop.date
+
         slot_datas = {}
-        slots = set(slot_for_msid(confirm_msid(msid)) for msid in msids)  # noqa: C401 unnecessary generator
+        slots = {MSID_DEFS[msid]["slot"] for msid in msids}
         for slot in slots:
-            # get the 8x8 data
-            tstop = self.tstop + 33.0  # Major frame of padding
+            # Get the 8x8 data with some padding on each end that gets cut later
             slot_data = aca_l0.get_slot_data(
-                self.tstart, tstop, slot, imgsize=[8], columns=ACA_DTYPE_NAMES
+                self.tstart,
+                self.tstop + 33,
+                slot,
+                imgsize=[8],
+                columns=ACA_DTYPE_NAMES,
             )
 
             # Find samples where the time stamp changes by a value other than 4.1 secs
@@ -657,42 +624,37 @@ class MSIDset(collections.OrderedDict):
             #  t[0] = 1.0
             #  t[1] = 5.1   <= This record could be bad, as indicated by the gap afterward
             #  t[2, 3] = 17.4, 21.5
-            # To form the time diffs first add `tstop` to the end so that if 8x8 data
-            # does not extend through `tstop` then the last record gets chopped.
-            dt = np.diff(np.concatenate([slot_data["TIME"], [tstop]]))
-            bad = np.abs(dt - 4.1) > 1e-3
-            slot_data[bad] = ma.masked
+            # For the diffs add final time stamp of 0.0 so the length matches that of
+            # slot_data. The final slot_data record is always chopped but this is OK.
+            dt = np.diff(np.concatenate([slot_data["TIME"], [0.0]]))
+            ok = np.abs(dt - 4.1) < 1e-3
+            slot_data = slot_data[ok]
 
             # Chop off the padding
             i_stop = np.searchsorted(slot_data["TIME"], self.tstop, side="right")
             slot_data = slot_data[:i_stop]
 
-            # explicitly unmask useful columns
-            slot_data["TIME"].mask = ma.nomask
-            slot_data["IMGSIZE"].mask = ma.nomask
-            slot_data["FILENAME"].mask = ma.nomask
-            slot_datas[slot] = slot_data
-        # make a shared time ndarray that is the union of the time sets in the
-        # slots.  The ACA L0 telemetry has the same timestamps across slots,
-        # so the only differences here are caused by different times in
-        # non-TRAK across the slots (usually SRCH differences at the beginning
-        # of the observation)
-        shared_time = np.unique(
-            np.concatenate([slot_datas[slot]["TIME"].data for slot in slots])
-        )
+            # Since we only requested 8x8 image data there should never by any masked
+            # values, so convert to normal ndarray (after checking just to be sure).
+            slot_data_nomask = np.empty(len(slot_data), dtype=slot_data.dtype)
+            for name in slot_data.dtype.names:
+                if np.any(slot_data[name].mask):
+                    raise ValueError(f"unexpected masked values in {name} for {slot}")
+                slot_data_nomask[name] = slot_data[name].data
+            slot_datas[slot] = slot_data_nomask
+
         for msid in msids:
-            hdr3_msid = confirm_msid(msid)
-            slot = slot_for_msid(hdr3_msid)
-            full_data = ma.zeros(len(shared_time), dtype=slot_datas[slot].dtype)
-            full_data.mask = ma.masked
-            fd_idx = search_both_sorted(shared_time, slot_datas[slot]["TIME"])
-            full_data[fd_idx] = slot_datas[slot]
-            # make a data dictionary to feed to the MSID constructor
-            slot_data = {
-                "vals": HDR3_DEF[hdr3_msid]["value"](full_data),
-                "desc": HDR3_DEF[hdr3_msid]["desc"],
-                "longdesc": HDR3_DEF[hdr3_msid]["longdesc"],
-                "times": shared_time,
-                "hdr3_msid": hdr3_msid,
+            msid_def = MSID_DEFS[msid]
+            slot_data = slot_datas[msid_def["slot"]]
+            if "value" not in msid_def:
+                raise NotImplementedError(
+                    f"function to compute {msid} from HDR3 telemetry is not defined"
+                )
+            msid_data = {
+                "vals": msid_def["value"](slot_data),
+                "desc": msid_def["desc"],
+                "longdesc": msid_def["longdesc"],
+                "times": slot_data["TIME"],
+                "hdr3_msid": msid_def,
             }
-            self[msid] = MSID(msid, start, stop, slot_data)
+            self[msid] = MSID(msid, start, stop, msid_data)
