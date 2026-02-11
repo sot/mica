@@ -1,6 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Experimental/alpha code to work with ACA L0 Header 3 data.
+Decom ACA L0 Header 3 data.
 
 This module provides tools for reading and processing ACA (Aspect Camera Assembly)
 Level 0 Header 3 telemetry data.
