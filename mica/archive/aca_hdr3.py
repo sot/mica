@@ -6,13 +6,11 @@ This module provides tools for reading and processing ACA (Aspect Camera Assembl
 Level 0 Header 3 telemetry data.
 """
 
-import collections
 import functools
 import warnings
 
 import numpy as np
 from cxotime import CxoTime, CxoTimeLike
-from numpy import ma
 from scipy.interpolate import interp1d
 
 from mica.archive import aca_l0
@@ -20,7 +18,7 @@ from mica.archive import aca_l0
 TWO_TO_15 = np.uint16(2**15)
 
 
-def two_byte_sum(byte_msids, scale=1, as_readout_offset=False):
+def two_byte_sum(byte_msids, scale=1, as_readout_offset=False) -> callable:
     """
     Create a function to combine two bytes into a 16-bit signed integer.
 
@@ -38,7 +36,7 @@ def two_byte_sum(byte_msids, scale=1, as_readout_offset=False):
     callable
         Function that takes slot_data and returns combined 16-bit values.
     """
-    def func(slot_data) -> np.ma.MaskedArray:
+    def func(slot_data) -> np.ndarray:
         # For each pair bytes0[i], bytes1[i], return the 16-bit signed integer
         # corresponding to those two bytes. The input bytes are unsigned.
         bytes0 = slot_data[byte_msids[0]].astype(np.uint8)
@@ -46,17 +44,17 @@ def two_byte_sum(byte_msids, scale=1, as_readout_offset=False):
 
         # Make a 2xN array, then transpose to Nx2, then flatten to 2N, then copy to
         # get values continous in memory.
-        bytes8_2xN = np.ma.vstack([bytes0, bytes1], dtype=np.uint8)
+        bytes8_2xN = np.vstack([bytes0, bytes1], dtype=np.uint8)
         bytes8 = bytes8_2xN.transpose().flatten().copy()
 
         if as_readout_offset:
             # 16-bit readout offset values need this magic formula from M. Baski (see
             # PEA sampled background patch notes). Note that scale is ignored here.
-            uints16 = np.ma.array(bytes8.data.view(">u2"), mask=bytes8.mask[::2])
+            uints16 = bytes8.view(">u2")
             out = (uints16 + TWO_TO_15).view("<i2")
         else:
             # Now view the 2N bytes as N 16-bit signed integers.
-            ints16 = np.ma.array(bytes8.data.view(">i2"), mask=bytes8.mask[::2])
+            ints16 = bytes8.view(">i2")
             out = ints16 * scale
 
         return out
@@ -135,16 +133,7 @@ def ad_temp(msids):
     """
     def func(slot_data):
         sum = two_byte_sum(msids)(slot_data)
-        # As of scipy 0.17 cannot interpolate a masked array.  In this
-        # case we can temporarily fill with some value that will always
-        # be in the range, then re-mask afterward.
-        masked = isinstance(sum, np.ma.MaskedArray)
-        if masked:
-            mask = sum.mask
-            sum = sum.filled(16000)
         out = ad_func(sum)
-        if masked:
-            out = np.ma.MaskedArray(out, mask=mask)
         return out
 
     return func
@@ -565,7 +554,7 @@ class MSID(object):
       >>> from mica.archive import aca_hdr3
       >>> ccd_temp = aca_hdr3.MSID('ccd_temp', '2012:001', '2012:020')
       >>> type(ccd_temp.vals)
-      'numpy.ma.core.MaskedArray'
+      'numpy.ndarray'
 
     When given an ``msid`` and ``start`` and ``stop`` range, the object will query the
     ACA L0 archive to populate the object, which includes the MSID values (``vals``) at
@@ -573,9 +562,6 @@ class MSID(object):
 
     The parameter ``msid_data`` is used to create an MSID object from the data of
     another MSID object.
-
-    When ``filter_bad`` is supplied then only valid data values are stored and the
-    ``vals`` and ``times`` attributes are `np.ndarray` instead of `ma.MaskedArray`.
 
     Parameters
     ----------
@@ -596,7 +582,7 @@ class MSID(object):
     ----------
     msid : str
         MSID name.
-    vals : numpy.ma.MaskedArray
+    vals : numpy.ndarray
         MSID values.
     times : numpy.ndarray
         Time stamps corresponding to the MSID values.
@@ -715,7 +701,7 @@ class Msid(MSID):
     >>> from mica.archive import aca_hdr3
     >>> ccd_temp = aca_hdr3.Msid('ccd_temp', '2012:001', '2012:020')
     >>> type(ccd_temp.vals)
-    <class 'numpy.ma.core.MaskedArray'>
+    <class 'numpy.ndarray'>
     """
 
     def __init__(self, msid, start, stop):
