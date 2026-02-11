@@ -224,41 +224,41 @@ A/D converter reading for the CCD detector thermistor
 """,
     },
     "076": {
-        "desc": "A/D +5 volt PS",
+        "desc": "A/D +5 volt PS (V)",
         "msid": "ad_5v_ps",
-        "value": two_byte_sum(["HD3TLM76", "HD3TLM77"], scale=0.20518),
+        "value": two_byte_sum(["HD3TLM76", "HD3TLM77"], scale=0.20518e-3),
         "longdesc": """
 A/D converter reading for the +5 volt power supply; 1 LSB=0.30518 mv
 """,
     },
     "162": {
-        "desc": "A/D +15 volt PS",
+        "desc": "A/D +15 volt PS (V)",
         "msid": "ad_15v_ps",
-        "value": two_byte_sum(["HD3TLM62", "HD3TLM63"], scale=0.61035),
+        "value": two_byte_sum(["HD3TLM62", "HD3TLM63"], scale=0.61035e-3),
         "longdesc": """
 A/D converter reading for the +15 volt power supply; 1 LSB=0.61035 mv
 """,
     },
     "164": {
-        "desc": "A/D -15 volt PS",
+        "desc": "A/D -15 volt PS (V)",
         "msid": "ad_m15v_ps",
-        "value": two_byte_sum(["HD3TLM64", "HD3TLM65"], scale=0.61035),
+        "value": two_byte_sum(["HD3TLM64", "HD3TLM65"], scale=0.61035e-3),
         "longdesc": """
 A/D converter reading for the -15 volt power supply; 1 LSB=0.61035 mv
 """,
     },
     "166": {
-        "desc": "A/D +27 volt PS",
+        "desc": "A/D +27 volt PS (V)",
         "msid": "ad_27v_ps",
-        "value": two_byte_sum(["HD3TLM66", "HD3TLM67"], scale=1.04597),
+        "value": two_byte_sum(["HD3TLM66", "HD3TLM67"], scale=1.04597e-3),
         "longdesc": """
 A/D converter reading for the +27 volt power supply; 1 LSB=1.04597 mv
 """,
     },
     "172": {
-        "desc": "A/D analog ground",
+        "desc": "A/D analog ground (V)",
         "msid": "ad_analog_gnd",
-        "value": ad_temp(["HD3TLM72", "HD3TLM73"]),
+        "value": two_byte_sum(["HD3TLM72", "HD3TLM73"], scale=0.30518e-3),
         "longdesc": """
 A/D converter reading for analog ground; 1 LSB=0.30518 mv
 """,
@@ -476,7 +476,7 @@ CCD temperature in units of 1 LSB = 0.01 degrees C.
         "longdesc": """
 The CCD temperature control setpoint; 1 LSB=0.01 degrees C
 """,
-        "value": two_byte_sum(["HD3TLM64", "HD3TLM65"]),
+        "value": two_byte_sum(["HD3TLM64", "HD3TLM65"], scale=0.01),
     },
     "766": {
         "desc": "temperature for position/angle cal",
