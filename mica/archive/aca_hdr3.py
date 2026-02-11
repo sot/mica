@@ -36,6 +36,7 @@ def two_byte_sum(byte_msids, scale=1, as_readout_offset=False) -> callable:
     callable
         Function that takes slot_data and returns combined 16-bit values.
     """
+
     def func(slot_data) -> np.ndarray:
         # For each pair bytes0[i], bytes1[i], return the 16-bit signed integer
         # corresponding to those two bytes. The input bytes are unsigned.
@@ -131,6 +132,7 @@ def ad_temp(msids):
     callable
         Function that takes slot_data and returns temperature values.
     """
+
     def func(slot_data):
         sum = two_byte_sum(msids)(slot_data)
         out = ad_func(sum)
@@ -757,4 +759,3 @@ class MSIDset(dict):
 
         # Clear cache for memory after getting all the MSIDs
         get_hdr3_slot_data.cache_clear()
-
