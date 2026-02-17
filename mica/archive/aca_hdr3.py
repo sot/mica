@@ -228,7 +228,7 @@ A/D converter reading for the CCD detector thermistor
     "076": {
         "desc": "A/D +5 volt PS (V)",
         "msid": "ad_5v_ps",
-        "value": two_byte_sum(["HD3TLM76", "HD3TLM77"], scale=0.20518e-3),
+        "value": two_byte_sum(["HD3TLM76", "HD3TLM77"], scale=0.30518e-3),
         "longdesc": """
 A/D converter reading for the +5 volt power supply; 1 LSB=0.30518 mv
 """,
