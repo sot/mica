@@ -4,13 +4,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.vv.vv &#8212; mica 4.39.2 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <title>mica.vv.vv &#8212; mica 4.40.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../_static/documentation_options.js?v=6d6e1fbc"></script>
-    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/documentation_options.js?v=cb21b19a"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
     <script type="text/javascript" src="../../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.39.2 documentation</a>
+	<a href="../../../index.html">mica 4.40.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -61,18 +61,18 @@
             
   <h1>Source code for mica.vv.vv</h1><div class="highlight"><pre>
 <span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">division</span>
 
-<span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">glob</span><span class="w"> </span><span class="kn">import</span> <span class="n">glob</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">ska_dbi</span>
-<span class="kn">import</span> <span class="nn">tables</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ska_dbi</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tables</span>
 
-<span class="kn">from</span> <span class="nn">mica.common</span> <span class="kn">import</span> <span class="n">MICA_ARCHIVE</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mica.common</span><span class="w"> </span><span class="kn">import</span> <span class="n">MICA_ARCHIVE</span>
 
 <span class="n">FILES</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
     <span class="n">data_root</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">MICA_ARCHIVE</span><span class="p">,</span> <span class="s2">&quot;vv&quot;</span><span class="p">),</span>
@@ -92,7 +92,7 @@
 
 <div class="viewcode-block" id="get_vv_dir">
 <a class="viewcode-back" href="../../../api.html#mica.vv.get_vv_dir">[docs]</a>
-<span class="k">def</span> <span class="nf">get_vv_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_vv_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get directory containing V&amp;V products.</span>
 
@@ -140,7 +140,7 @@
 
 <div class="viewcode-block" id="get_vv_files">
 <a class="viewcode-back" href="../../../api.html#mica.vv.get_vv_files">[docs]</a>
-<span class="k">def</span> <span class="nf">get_vv_files</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_vv_files</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get list of V&amp;V files available for a requested obsid/version.</span>
 
@@ -155,7 +155,7 @@
 
 <div class="viewcode-block" id="get_vv">
 <a class="viewcode-back" href="../../../api.html#mica.vv.get_vv">[docs]</a>
-<span class="k">def</span> <span class="nf">get_vv</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_vv</span><span class="p">(</span><span class="n">obsid</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Retrieve V&amp;V data for an obsid/version.</span>
 
@@ -174,7 +174,7 @@
 
 <div class="viewcode-block" id="get_rms_data">
 <a class="viewcode-back" href="../../../api.html#mica.vv.get_rms_data">[docs]</a>
-<span class="k">def</span> <span class="nf">get_rms_data</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_rms_data</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Retrieve/return all data from RMS trending H5 archive</span>
 
@@ -209,7 +209,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 8.1.3. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 9.1.0. &nbsp;
   </p>
 </footer>
   </body>

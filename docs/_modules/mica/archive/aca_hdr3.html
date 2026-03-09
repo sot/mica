@@ -4,13 +4,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.aca_hdr3 &#8212; mica 4.39.2 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <title>mica.archive.aca_hdr3 &#8212; mica 4.40.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../_static/documentation_options.js?v=6d6e1fbc"></script>
-    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/documentation_options.js?v=cb21b19a"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
     <script type="text/javascript" src="../../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.39.2 documentation</a>
+	<a href="../../../index.html">mica 4.40.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -62,30 +62,44 @@
   <h1>Source code for mica.archive.aca_hdr3</h1><div class="highlight"><pre>
 <span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Experimental/alpha code to work with ACA L0 Header 3 data</span>
+<span class="sd">Decom ACA L0 Header 3 data.</span>
+
+<span class="sd">This module provides tools for reading and processing ACA (Aspect Camera Assembly)</span>
+<span class="sd">Level 0 Header 3 telemetry data.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">collections</span>
-<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">Chandra.Time</span> <span class="kn">import</span> <span class="n">DateTime</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">ma</span>
-<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
-<span class="kn">from</span> <span class="nn">Ska.Numpy</span> <span class="kn">import</span> <span class="n">search_both_sorted</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cxotime</span><span class="w"> </span><span class="kn">import</span> <span class="n">CxoTime</span><span class="p">,</span> <span class="n">CxoTimeLike</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.interpolate</span><span class="w"> </span><span class="kn">import</span> <span class="n">interp1d</span>
 
-<span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">aca_l0</span>
-<span class="kn">from</span> <span class="nn">mica.common</span> <span class="kn">import</span> <span class="n">MissingDataError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mica.archive</span><span class="w"> </span><span class="kn">import</span> <span class="n">aca_l0</span>
 
-<span class="c1"># In case it isn&#39;t obvious, for an MSID of HD3TLM&lt;I&gt;&lt;W&gt; in ACA image data</span>
-<span class="c1"># for slot &lt;S&gt;, that maps to table 11.1 like:</span>
-<span class="c1"># Image No.   = &lt;S&gt;</span>
-<span class="c1"># Image type  = &lt;I&gt;</span>
-<span class="c1"># Hdr 3 Word  = &lt;W&gt;</span>
+<span class="n">TWO_TO_15</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">15</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">two_byte_sum</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">slot_data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">two_byte_sum</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a function to combine two bytes into a 16-bit signed integer.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    byte_msids : list of str</span>
+<span class="sd">        List of two MSID names representing the byte values to combine.</span>
+<span class="sd">    scale : float, optional</span>
+<span class="sd">        Scale factor to apply to the result. Default is 1.</span>
+<span class="sd">    as_readout_offset : bool, optional</span>
+<span class="sd">        If True, apply special readout offset formula. Default is False.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    callable</span>
+<span class="sd">        Function that takes slot_data and returns combined 16-bit values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">func</span><span class="p">(</span><span class="n">slot_data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="c1"># For each pair bytes0[i], bytes1[i], return the 16-bit signed integer</span>
         <span class="c1"># corresponding to those two bytes. The input bytes are unsigned.</span>
         <span class="n">bytes0</span> <span class="o">=</span> <span class="n">slot_data</span><span class="p">[</span><span class="n">byte_msids</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
@@ -93,13 +107,20 @@
 
         <span class="c1"># Make a 2xN array, then transpose to Nx2, then flatten to 2N, then copy to</span>
         <span class="c1"># get values continous in memory.</span>
-        <span class="n">bytes8_2xN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">bytes0</span><span class="p">,</span> <span class="n">bytes1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">bytes8_2xN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">bytes0</span><span class="p">,</span> <span class="n">bytes1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
         <span class="n">bytes8</span> <span class="o">=</span> <span class="n">bytes8_2xN</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-        <span class="c1"># Now view the 2N bytes as N 16-bit signed integers.</span>
-        <span class="n">ints16</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">bytes8</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&gt;i2&quot;</span><span class="p">),</span> <span class="n">mask</span><span class="o">=</span><span class="n">bytes8</span><span class="o">.</span><span class="n">mask</span><span class="p">[::</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">as_readout_offset</span><span class="p">:</span>
+            <span class="c1"># 16-bit readout offset values need this magic formula from M. Baski (see</span>
+            <span class="c1"># PEA sampled background patch notes). Note that scale is ignored here.</span>
+            <span class="n">uints16</span> <span class="o">=</span> <span class="n">bytes8</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&gt;u2&quot;</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="p">(</span><span class="n">uints16</span> <span class="o">+</span> <span class="n">TWO_TO_15</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&lt;i2&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Now view the 2N bytes as N 16-bit signed integers.</span>
+            <span class="n">ints16</span> <span class="o">=</span> <span class="n">bytes8</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&gt;i2&quot;</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">ints16</span> <span class="o">*</span> <span class="n">scale</span>
 
-        <span class="k">return</span> <span class="n">ints16</span> <span class="o">*</span> <span class="n">scale</span>
+        <span class="k">return</span> <span class="n">out</span>
 
     <span class="k">return</span> <span class="n">func</span>
 
@@ -107,8 +128,6 @@
 <span class="c1"># 8x8 header values (largest possible ACA0 header set)</span>
 <span class="n">ACA_DTYPE</span> <span class="o">=</span> <span class="p">[</span>
     <span class="p">(</span><span class="s2">&quot;TIME&quot;</span><span class="p">,</span> <span class="s2">&quot;&gt;f8&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;QUALITY&quot;</span><span class="p">,</span> <span class="s2">&quot;&gt;i4&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;IMGSIZE&quot;</span><span class="p">,</span> <span class="s2">&quot;&gt;i4&quot;</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">&quot;HD3TLM62&quot;</span><span class="p">,</span> <span class="s2">&quot;|u1&quot;</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">&quot;HD3TLM63&quot;</span><span class="p">,</span> <span class="s2">&quot;|u1&quot;</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">&quot;HD3TLM64&quot;</span><span class="p">,</span> <span class="s2">&quot;|u1&quot;</span><span class="p">),</span>
@@ -121,7 +140,6 @@
     <span class="p">(</span><span class="s2">&quot;HD3TLM75&quot;</span><span class="p">,</span> <span class="s2">&quot;|u1&quot;</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">&quot;HD3TLM76&quot;</span><span class="p">,</span> <span class="s2">&quot;|u1&quot;</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">&quot;HD3TLM77&quot;</span><span class="p">,</span> <span class="s2">&quot;|u1&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;FILENAME&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;U128&quot;</span><span class="p">),</span>
 <span class="p">]</span>
 
 <span class="n">ACA_DTYPE_NAMES</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ACA_DTYPE</span><span class="p">]</span>
@@ -162,27 +180,37 @@
 <span class="n">ad_func</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a_to_d</span><span class="p">[</span><span class="s2">&quot;tempC&quot;</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;cubic&quot;</span><span class="p">,</span> <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">ad_temp</span><span class="p">(</span><span class="n">msids</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">slot_data</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">ad_temp</span><span class="p">(</span><span class="n">msids</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a function to convert A/D readings to temperature.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    msids : list of str</span>
+<span class="sd">        List of MSID names for the A/D readings.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    callable</span>
+<span class="sd">        Function that takes slot_data and returns temperature values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">func</span><span class="p">(</span><span class="n">slot_data</span><span class="p">):</span>
         <span class="nb">sum</span> <span class="o">=</span> <span class="n">two_byte_sum</span><span class="p">(</span><span class="n">msids</span><span class="p">)(</span><span class="n">slot_data</span><span class="p">)</span>
-        <span class="c1"># As of scipy 0.17 cannot interpolate a masked array.  In this</span>
-        <span class="c1"># case we can temporarily fill with some value that will always</span>
-        <span class="c1"># be in the range, then re-mask afterward.</span>
-        <span class="n">masked</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">masked</span><span class="p">:</span>
-            <span class="n">mask</span> <span class="o">=</span> <span class="nb">sum</span><span class="o">.</span><span class="n">mask</span>
-            <span class="nb">sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="o">.</span><span class="n">filled</span><span class="p">(</span><span class="mi">16000</span><span class="p">)</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">ad_func</span><span class="p">(</span><span class="nb">sum</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">masked</span><span class="p">:</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out</span>
 
     <span class="k">return</span> <span class="n">func</span>
 
 
-<span class="c1"># dictionary that defines the header 3 &#39;MSID&#39;s.</span>
-<span class="c1"># Also includes a value key that describes how to determine the value</span>
-<span class="c1"># of the MSID</span>
+<span class="c1"># Define a dictionary that defines the header 3 &#39;MSID&#39;s. This includes a value key that</span>
+<span class="c1"># describes how to determine the value of the MSID.</span>
+<span class="c1">#</span>
+<span class="c1"># For an MSID of HD3TLM&lt;I&gt;&lt;W&gt; in ACA image data for slot &lt;S&gt;, that maps to table 11.1</span>
+<span class="c1"># like:</span>
+<span class="c1"># Image No.   = &lt;S&gt;</span>
+<span class="c1"># Image type  = &lt;I&gt;</span>
+<span class="c1"># Hdr 3 Word  = &lt;W&gt;</span>
 
 <span class="n">HDR3_DEF</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;062&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -260,41 +288,41 @@
 <span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="s2">&quot;076&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D +5 volt PS&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D +5 volt PS (V)&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;ad_5v_ps&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM76&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM77&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.20518</span><span class="p">),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM76&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM77&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.30518e-3</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A/D converter reading for the +5 volt power supply; 1 LSB=0.30518 mv</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="s2">&quot;162&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D +15 volt PS&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D +15 volt PS (V)&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;ad_15v_ps&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM62&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM63&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.61035</span><span class="p">),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM62&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM63&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.61035e-3</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A/D converter reading for the +15 volt power supply; 1 LSB=0.61035 mv</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="s2">&quot;164&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D -15 volt PS&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D -15 volt PS (V)&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;ad_m15v_ps&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM64&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM65&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.61035</span><span class="p">),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM64&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM65&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.61035e-3</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A/D converter reading for the -15 volt power supply; 1 LSB=0.61035 mv</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="s2">&quot;166&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D +27 volt PS&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D +27 volt PS (V)&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;ad_27v_ps&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM66&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM67&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.04597</span><span class="p">),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM66&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM67&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.04597e-3</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A/D converter reading for the +27 volt power supply; 1 LSB=1.04597 mv</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="s2">&quot;172&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D analog ground&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;A/D analog ground (V)&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;ad_analog_gnd&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">ad_temp</span><span class="p">([</span><span class="s2">&quot;HD3TLM72&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM73&quot;</span><span class="p">]),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM72&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM73&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.30518e-3</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A/D converter reading for analog ground; 1 LSB=0.30518 mv</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
@@ -385,6 +413,7 @@
     <span class="s2">&quot;372&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;16-bit zero offset for pixels from CCD quad A&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off16_quad_a&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM72&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM73&quot;</span><span class="p">],</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 16-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 1 A/D</span>
 <span class="s2">converter count (nominally 5 electrons)</span>
@@ -393,6 +422,7 @@
     <span class="s2">&quot;374&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;16-bit zero offset for pixels from CCD quad B&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off16_quad_b&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM74&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM75&quot;</span><span class="p">],</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 16-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 1 A/D</span>
 <span class="s2">converter count (nominally 5 electrons)</span>
@@ -401,6 +431,7 @@
     <span class="s2">&quot;376&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;16-bit zero offset for pixels from CCD quad C&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off16_quad_c&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM76&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM77&quot;</span><span class="p">],</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 16-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 1 A/D</span>
 <span class="s2">converter count (nominally 5 electrons)</span>
@@ -409,6 +440,7 @@
     <span class="s2">&quot;462&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;16-bit zero offset for pixels from CCD quad D&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off16_quad_d&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM62&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM63&quot;</span><span class="p">],</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 16-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 1 A/D</span>
 <span class="s2">converter count (nominally 5 electrons)</span>
@@ -508,7 +540,7 @@
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">The CCD temperature control setpoint; 1 LSB=0.01 degrees C</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM64&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM65&quot;</span><span class="p">]),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM64&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM65&quot;</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.01</span><span class="p">),</span>
     <span class="p">},</span>
     <span class="s2">&quot;766&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;temperature for position/angle cal&quot;</span><span class="p">,</span>
@@ -539,220 +571,261 @@
     <span class="p">},</span>
 <span class="p">}</span>
 
-<span class="n">MSID_ALIASES</span> <span class="o">=</span> <span class="p">{</span><span class="n">HDR3_DEF</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;msid&quot;</span><span class="p">]:</span> <span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">HDR3_DEF</span><span class="p">}</span>
+<span class="n">MSID_DEFS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">value</span><span class="p">[</span><span class="s2">&quot;msid&quot;</span><span class="p">]:</span> <span class="n">value</span> <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;slot&quot;</span><span class="p">:</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span> <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">HDR3_DEF</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+<span class="p">}</span>
+
+
+<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_hdr3_slot_data</span><span class="p">(</span><span class="n">tstart</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">tstop</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">slot</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get data for HDR3 telemetry for slot and time range.</span>
+
+<span class="sd">    This allows efficient data access for an MSIDset query that fetches multiple MSIDs</span>
+<span class="sd">    (slots) over the same time range.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tstart : float</span>
+<span class="sd">        Start time in seconds since epoch.</span>
+<span class="sd">    tstop : float</span>
+<span class="sd">        Stop time in seconds since epoch.</span>
+<span class="sd">    slot : int</span>
+<span class="sd">        ACA slot number.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        Array of telemetry data for the specified slot and time range.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_slot_data</span><span class="p">(</span>
+        <span class="n">tstart</span><span class="p">,</span>
+        <span class="n">tstop</span> <span class="o">+</span> <span class="mi">33</span><span class="p">,</span>
+        <span class="n">slot</span><span class="p">,</span>
+        <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">],</span>
+        <span class="n">columns</span><span class="o">=</span><span class="n">ACA_DTYPE_NAMES</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span>
 
 
 <div class="viewcode-block" id="MSID">
 <a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSID">[docs]</a>
-<span class="k">class</span> <span class="nc">MSID</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ACA header 3 data object.</span>
-
-<span class="sd">    ACA header 3 data object to work with header 3 data from</span>
-<span class="sd">    available 8x8 ACA L0 telemetry::</span>
-
-<span class="sd">      &gt;&gt;&gt; from mica.archive import aca_hdr3</span>
-<span class="sd">      &gt;&gt;&gt; ccd_temp = aca_hdr3.MSID(&#39;ccd_temp&#39;, &#39;2012:001&#39;, &#39;2012:020&#39;)</span>
-<span class="sd">      &gt;&gt;&gt; type(ccd_temp.vals)</span>
-<span class="sd">      &#39;numpy.ma.core.MaskedArray&#39;</span>
-
-<span class="sd">    When given an ``msid`` and ``start`` and ``stop`` range, the object will</span>
-<span class="sd">    query the ACA L0 archive to populate the object, which includes the MSID</span>
-<span class="sd">    values (``vals``) at the given times (``times``).</span>
-
-<span class="sd">    The parameter ``msid_data`` is used to create an MSID object from</span>
-<span class="sd">    the data of another MSID object.</span>
-
-<span class="sd">    When ``filter_bad`` is supplied then only valid data values are stored</span>
-<span class="sd">    and the ``vals`` and ``times`` attributes are `np.ndarray` instead of</span>
-<span class="sd">    `ma.MaskedArray`.</span>
-
-<span class="sd">    :param msid: MSID name</span>
-<span class="sd">    :param start: Chandra.Time compatible start time</span>
-<span class="sd">    :param stop: Chandra.Time compatible stop time</span>
-<span class="sd">    :param msid_data: data dictionary or object from another MSID object</span>
-<span class="sd">    :param filter_bad: remove missing values</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">msid_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filter_bad</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">msid_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">msid_data</span> <span class="o">=</span> <span class="n">MSIDset</span><span class="p">([</span><span class="n">msid</span><span class="p">],</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)[</span><span class="n">msid</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">msid</span> <span class="o">=</span> <span class="n">msid</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tstart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
-        <span class="c1"># msid_data may be dictionary or object with these</span>
-        <span class="c1"># attributes</span>
-        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;hdr3_msid&quot;</span><span class="p">,</span> <span class="s2">&quot;vals&quot;</span><span class="p">,</span> <span class="s2">&quot;times&quot;</span><span class="p">,</span> <span class="s2">&quot;desc&quot;</span><span class="p">,</span> <span class="s2">&quot;longdesc&quot;</span><span class="p">):</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">msid_data</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
-                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">msid_data</span><span class="p">,</span> <span class="n">attr</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">msid_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr</span><span class="p">))</span>
-
-        <span class="c1"># If requested filter out bad values and set self.bad = None</span>
-        <span class="k">if</span> <span class="n">filter_bad</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">filter_bad</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
-
-        <span class="k">return</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-<div class="viewcode-block" id="MSID.filter_bad">
-<a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSID.filter_bad">[docs]</a>
-    <span class="k">def</span> <span class="nf">filter_bad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter out any missing values.</span>
-
-<span class="sd">        After applying this method the ``vals`` attributes will be a</span>
-<span class="sd">        plain np.ndarray object instead of a masked array.</span>
-
-<span class="sd">        :param copy: return a copy of MSID object with bad values filtered</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="n">copy</span> <span class="k">else</span> <span class="bp">self</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">vals</span><span class="p">,</span> <span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span><span class="p">):</span>
-            <span class="n">obj</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="o">~</span><span class="n">obj</span><span class="o">.</span><span class="n">vals</span><span class="o">.</span><span class="n">mask</span><span class="p">]</span>
-            <span class="n">obj</span><span class="o">.</span><span class="n">vals</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">vals</span><span class="o">.</span><span class="n">compressed</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="n">copy</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">obj</span></div>
-</div>
-
-
-
-<span class="k">class</span> <span class="nc">Msid</span><span class="p">(</span><span class="n">MSID</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MSID</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    ACA header 3 data object.</span>
 
 <span class="sd">    ACA header 3 data object to work with header 3 data from available 8x8 ACA L0</span>
-<span class="sd">    telemetry.</span>
+<span class="sd">    telemetry::</span>
 
+<span class="sd">      &gt;&gt;&gt; from mica.archive import aca_hdr3</span>
+<span class="sd">      &gt;&gt;&gt; ccd_temp = aca_hdr3.MSID(&#39;ccd_temp&#39;, &#39;2012:001&#39;, &#39;2012:020&#39;)</span>
+<span class="sd">      &gt;&gt;&gt; type(ccd_temp.vals)</span>
+<span class="sd">      &#39;numpy.ndarray&#39;</span>
+
+<span class="sd">    When given an ``msid`` and ``start`` and ``stop`` range, the object will query the</span>
+<span class="sd">    ACA L0 archive to populate the object, which includes the MSID values (``vals``) at</span>
+<span class="sd">    the given times (``times``).</span>
+
+<span class="sd">    The parameter ``msid_data`` is used to create an MSID object from the data of</span>
+<span class="sd">    another MSID object.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    msid : str</span>
+<span class="sd">        MSID name.</span>
+<span class="sd">    start : CxoTimeLike</span>
+<span class="sd">        Chandra.Time compatible start time.</span>
+<span class="sd">    stop : CxoTimeLike</span>
+<span class="sd">        Chandra.Time compatible stop time.</span>
+<span class="sd">    filter_bad : deprecated</span>
+<span class="sd">        This parameter is ignored and will be removed in a future version.</span>
+<span class="sd">    clear_cache : bool, optional</span>
+<span class="sd">        Clear the cache for HDR3 slot data after reading the data for this MSID. This is</span>
+<span class="sd">        useful to set to False when reading multiple MSIDs that are in the same slot and</span>
+<span class="sd">        time range, to avoid redundant reads of the same data. Default is True.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    msid : str</span>
+<span class="sd">        MSID name.</span>
+<span class="sd">    vals : numpy.ndarray</span>
+<span class="sd">        MSID values.</span>
+<span class="sd">    times : numpy.ndarray</span>
+<span class="sd">        Time stamps corresponding to the MSID values.</span>
+<span class="sd">    desc : str</span>
+<span class="sd">        Short description of the MSID.</span>
+<span class="sd">    longdesc : str</span>
+<span class="sd">        Long description of the MSID.</span>
+<span class="sd">    tstart : float</span>
+<span class="sd">        Start time in seconds since epoch.</span>
+<span class="sd">    tstop : float</span>
+<span class="sd">        Stop time in seconds since epoch.</span>
+<span class="sd">    datestart : str</span>
+<span class="sd">        Start date string.</span>
+<span class="sd">    datestop : str</span>
+<span class="sd">        Stop date string.</span>
+<span class="sd">    hdr3_msid : dict</span>
+<span class="sd">        Header 3 MSID definition dictionary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">filter_bad</span><span class="o">=...</span><span class="p">,</span> <span class="n">clear_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">filter_bad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="o">...</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;&#39;filter_bad&#39; parameter is ignored&quot;</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">msid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">msid</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">CxoTime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">CxoTime</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">secs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">stop</span><span class="o">.</span><span class="n">secs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">stop</span><span class="o">.</span><span class="n">date</span>
+
+        <span class="n">slot</span> <span class="o">=</span> <span class="n">MSID_DEFS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">msid</span><span class="p">][</span><span class="s2">&quot;slot&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Get the 8x8 data with some padding on each end that gets cut later</span>
+        <span class="n">slot_data</span> <span class="o">=</span> <span class="n">get_hdr3_slot_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">,</span> <span class="n">slot</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">clear_cache</span><span class="p">:</span>
+            <span class="n">get_hdr3_slot_data</span><span class="o">.</span><span class="n">cache_clear</span><span class="p">()</span>
+
+        <span class="c1"># Find samples where the time stamp changes by a value other than 4.1 secs</span>
+        <span class="c1"># (which is the value for 8x8 readouts).  In that case there must have been a</span>
+        <span class="c1"># break in L0 decom, typically due to a change to 4x4 or 6x6 data.</span>
+        <span class="c1">#  t[0] = 1.0</span>
+        <span class="c1">#  t[1] = 5.1   &lt;= This record could be bad, as indicated by the gap afterward</span>
+        <span class="c1">#  t[2, 3] = 17.4, 21.5</span>
+        <span class="c1"># For the diffs add final time stamp of 0.0 so the length matches that of</span>
+        <span class="c1"># slot_data. The final slot_data record is always chopped but this is OK.</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">slot_data</span><span class="p">[</span><span class="s2">&quot;TIME&quot;</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">]]))</span>
+        <span class="n">ok</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dt</span> <span class="o">-</span> <span class="mf">4.1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-3</span>
+        <span class="n">slot_data</span> <span class="o">=</span> <span class="n">slot_data</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span>
+
+        <span class="c1"># Chop off the padding</span>
+        <span class="n">i_stop</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="s2">&quot;TIME&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
+        <span class="n">slot_data</span> <span class="o">=</span> <span class="n">slot_data</span><span class="p">[:</span><span class="n">i_stop</span><span class="p">]</span>
+
+        <span class="c1"># Since we only requested 8x8 image data there should never by any masked</span>
+        <span class="c1"># values, so convert to normal ndarray (after checking just to be sure).</span>
+        <span class="n">slot_data_nomask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">slot_data</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">slot_data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">slot_data</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">mask</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unexpected masked values in </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">slot</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">slot_data_nomask</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">slot_data</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+
+        <span class="n">msid_def</span> <span class="o">=</span> <span class="n">MSID_DEFS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">msid</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">&quot;value&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">msid_def</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;function to compute </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">msid</span><span class="si">}</span><span class="s2"> from HDR3 telemetry is not defined&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">vals</span> <span class="o">=</span> <span class="n">msid_def</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">](</span><span class="n">slot_data_nomask</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">desc</span> <span class="o">=</span> <span class="n">msid_def</span><span class="p">[</span><span class="s2">&quot;desc&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">longdesc</span> <span class="o">=</span> <span class="n">msid_def</span><span class="p">[</span><span class="s2">&quot;longdesc&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">slot_data_nomask</span><span class="p">[</span><span class="s2">&quot;TIME&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hdr3_msid</span> <span class="o">=</span> <span class="n">msid_def</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+
+        <span class="k">return</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">ska_matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_cxctime</span>
+
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+        <span class="n">plot_cxctime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vals</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">msid</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Msid</span><span class="p">(</span><span class="n">MSID</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ACA header 3 data object (alias for MSID).</span>
+
+<span class="sd">    ACA header 3 data object to work with header 3 data from available 8x8 ACA L0</span>
+<span class="sd">    telemetry. This is an alias for the MSID class.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    msid : str</span>
+<span class="sd">        MSID name.</span>
+<span class="sd">    start : CxoTimeLike</span>
+<span class="sd">        Chandra.Time compatible start time.</span>
+<span class="sd">    stop : CxoTimeLike</span>
+<span class="sd">        Chandra.Time compatible stop time.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    When given an ``msid`` and ``start`` and ``stop`` range, the object will</span>
+<span class="sd">    query the ACA L0 archive to populate the object, which includes the MSID</span>
+<span class="sd">    values (``vals``) at the given times (``times``). Only valid data values</span>
+<span class="sd">    are returned.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; from mica.archive import aca_hdr3</span>
 <span class="sd">    &gt;&gt;&gt; ccd_temp = aca_hdr3.Msid(&#39;ccd_temp&#39;, &#39;2012:001&#39;, &#39;2012:020&#39;)</span>
 <span class="sd">    &gt;&gt;&gt; type(ccd_temp.vals)</span>
-<span class="sd">    &#39;numpy.ndarray&#39;</span>
-
-<span class="sd">    When given an ``msid`` and ``start`` and ``stop`` range, the object will</span>
-<span class="sd">    query the ACA L0 archive to populate the object, which includes the MSID</span>
-<span class="sd">    values (``vals``) at the given times (``times``).  Only valid data values</span>
-<span class="sd">    are returned.</span>
-
-<span class="sd">    :param msid: MSID</span>
-<span class="sd">    :param start: Chandra.Time compatible start time</span>
-<span class="sd">    :param stop: Chandra.Time compatible stop time</span>
+<span class="sd">    &lt;class &#39;numpy.ndarray&#39;&gt;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">Msid</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">filter_bad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">confirm_msid</span><span class="p">(</span><span class="n">req_msid</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">    Check to see if the &#39;MSID&#39; is an alias or is in the HDR3_DEF dictionary.</span>
-
-<span class="sd">    If in the aliases, return the unaliased value.</span>
-
-<span class="sd">    :param req_msid: requested msid</span>
-<span class="sd">    :return: hdr3_def MSID name</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">req_msid</span> <span class="ow">in</span> <span class="n">MSID_ALIASES</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">MSID_ALIASES</span><span class="p">[</span><span class="n">req_msid</span><span class="p">]</span>
-    <span class="k">elif</span> <span class="n">req_msid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">HDR3_DEF</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">MissingDataError</span><span class="p">(</span><span class="s2">&quot;msid </span><span class="si">%s</span><span class="s2"> not found&quot;</span> <span class="o">%</span> <span class="n">req_msid</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">req_msid</span>
-
-
-<span class="k">def</span> <span class="nf">slot_for_msid</span><span class="p">(</span><span class="n">msid</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    For a given &#39;MSID&#39; return the slot number that contains those data.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">mmatch</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(\d)\d\d&quot;</span><span class="p">,</span> <span class="n">msid</span><span class="p">)</span>
-    <span class="n">slot</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mmatch</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">slot</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Msid</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="MSIDset">
 <a class="viewcode-back" href="../../../api.html#mica.archive.aca_hdr3.MSIDset">[docs]</a>
-<span class="k">class</span> <span class="nc">MSIDset</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">OrderedDict</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MSIDset</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ACA header 3 data object</span>
+<span class="sd">    ACA header 3 data object for multiple MSIDs.</span>
 
 <span class="sd">    ACA header 3 data object to work with header 3 data from</span>
-<span class="sd">    available 8x8 ACA L0 telemetry.  An MSIDset works with multiple</span>
+<span class="sd">    available 8x8 ACA L0 telemetry. An MSIDset works with multiple</span>
 <span class="sd">    MSIDs simultaneously.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    msids : list of str</span>
+<span class="sd">        List of MSID names.</span>
+<span class="sd">    start : CxoTimeLike</span>
+<span class="sd">        CxoTime compatible start time.</span>
+<span class="sd">    stop : CxoTimeLike</span>
+<span class="sd">        CxoTime compatible stop time.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tstart : float</span>
+<span class="sd">        Start time in seconds since epoch.</span>
+<span class="sd">    tstop : float</span>
+<span class="sd">        Stop time in seconds since epoch.</span>
+<span class="sd">    datestart : str</span>
+<span class="sd">        Start date string.</span>
+<span class="sd">    datestop : str</span>
+<span class="sd">        Stop date string.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; from mica.archive import aca_hdr3</span>
 <span class="sd">    &gt;&gt;&gt; perigee_data = aca_hdr3.MSIDset([&#39;ccd_temp&#39;, &#39;aca_temp&#39;, &#39;dac&#39;],</span>
 <span class="sd">    ...                                 &#39;2012:001&#39;, &#39;2012:030&#39;)</span>
-
-<span class="sd">    :param msids: list of MSIDs</span>
-<span class="sd">    :param start: Chandra.Time compatible start time</span>
-<span class="sd">    :param stop: Chandra.Time compatible stop time</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msids</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">start</span><span class="p">:</span> <span class="n">CxoTimeLike</span><span class="p">,</span> <span class="n">stop</span><span class="p">:</span> <span class="n">CxoTimeLike</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">MSIDset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tstart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span><span class="o">.</span><span class="n">secs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span> <span class="o">=</span> <span class="n">DateTime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">)</span><span class="o">.</span><span class="n">date</span>
-        <span class="n">slot_datas</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">slots</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">slot_for_msid</span><span class="p">(</span><span class="n">confirm_msid</span><span class="p">(</span><span class="n">msid</span><span class="p">))</span> <span class="k">for</span> <span class="n">msid</span> <span class="ow">in</span> <span class="n">msids</span><span class="p">)</span>  <span class="c1"># noqa: C401 unnecessary generator</span>
-        <span class="k">for</span> <span class="n">slot</span> <span class="ow">in</span> <span class="n">slots</span><span class="p">:</span>
-            <span class="c1"># get the 8x8 data</span>
-            <span class="n">tstop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span> <span class="o">+</span> <span class="mf">33.0</span>  <span class="c1"># Major frame of padding</span>
-            <span class="n">slot_data</span> <span class="o">=</span> <span class="n">aca_l0</span><span class="o">.</span><span class="n">get_slot_data</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">,</span> <span class="n">tstop</span><span class="p">,</span> <span class="n">slot</span><span class="p">,</span> <span class="n">imgsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="n">ACA_DTYPE_NAMES</span>
-            <span class="p">)</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">CxoTime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">CxoTime</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tstart</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">secs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">stop</span><span class="o">.</span><span class="n">secs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">stop</span><span class="o">.</span><span class="n">date</span>
 
-            <span class="c1"># Find samples where the time stamp changes by a value other than 4.1 secs</span>
-            <span class="c1"># (which is the value for 8x8 readouts).  In that case there must have been a</span>
-            <span class="c1"># break in L0 decom, typically due to a change to 4x4 or 6x6 data.</span>
-            <span class="c1">#  t[0] = 1.0</span>
-            <span class="c1">#  t[1] = 5.1   &lt;= This record could be bad, as indicated by the gap afterward</span>
-            <span class="c1">#  t[2, 3] = 17.4, 21.5</span>
-            <span class="c1"># To form the time diffs first add `tstop` to the end so that if 8x8 data</span>
-            <span class="c1"># does not extend through `tstop` then the last record gets chopped.</span>
-            <span class="n">dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">slot_data</span><span class="p">[</span><span class="s2">&quot;TIME&quot;</span><span class="p">],</span> <span class="p">[</span><span class="n">tstop</span><span class="p">]]))</span>
-            <span class="n">bad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dt</span> <span class="o">-</span> <span class="mf">4.1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e-3</span>
-            <span class="n">slot_data</span><span class="p">[</span><span class="n">bad</span><span class="p">]</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">masked</span>
-
-            <span class="c1"># Chop off the padding</span>
-            <span class="n">i_stop</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">slot_data</span><span class="p">[</span><span class="s2">&quot;TIME&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tstop</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
-            <span class="n">slot_data</span> <span class="o">=</span> <span class="n">slot_data</span><span class="p">[:</span><span class="n">i_stop</span><span class="p">]</span>
-
-            <span class="c1"># explicitly unmask useful columns</span>
-            <span class="n">slot_data</span><span class="p">[</span><span class="s2">&quot;TIME&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">nomask</span>
-            <span class="n">slot_data</span><span class="p">[</span><span class="s2">&quot;IMGSIZE&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">nomask</span>
-            <span class="n">slot_data</span><span class="p">[</span><span class="s2">&quot;FILENAME&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">nomask</span>
-            <span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span> <span class="o">=</span> <span class="n">slot_data</span>
-        <span class="c1"># make a shared time ndarray that is the union of the time sets in the</span>
-        <span class="c1"># slots.  The ACA L0 telemetry has the same timestamps across slots,</span>
-        <span class="c1"># so the only differences here are caused by different times in</span>
-        <span class="c1"># non-TRAK across the slots (usually SRCH differences at the beginning</span>
-        <span class="c1"># of the observation)</span>
-        <span class="n">shared_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">][</span><span class="s2">&quot;TIME&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="k">for</span> <span class="n">slot</span> <span class="ow">in</span> <span class="n">slots</span><span class="p">])</span>
-        <span class="p">)</span>
         <span class="k">for</span> <span class="n">msid</span> <span class="ow">in</span> <span class="n">msids</span><span class="p">:</span>
-            <span class="n">hdr3_msid</span> <span class="o">=</span> <span class="n">confirm_msid</span><span class="p">(</span><span class="n">msid</span><span class="p">)</span>
-            <span class="n">slot</span> <span class="o">=</span> <span class="n">slot_for_msid</span><span class="p">(</span><span class="n">hdr3_msid</span><span class="p">)</span>
-            <span class="n">full_data</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shared_time</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">full_data</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">masked</span>
-            <span class="n">fd_idx</span> <span class="o">=</span> <span class="n">search_both_sorted</span><span class="p">(</span><span class="n">shared_time</span><span class="p">,</span> <span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">][</span><span class="s2">&quot;TIME&quot;</span><span class="p">])</span>
-            <span class="n">full_data</span><span class="p">[</span><span class="n">fd_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">slot_datas</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span>
-            <span class="c1"># make a data dictionary to feed to the MSID constructor</span>
-            <span class="n">slot_data</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;vals&quot;</span><span class="p">:</span> <span class="n">HDR3_DEF</span><span class="p">[</span><span class="n">hdr3_msid</span><span class="p">][</span><span class="s2">&quot;value&quot;</span><span class="p">](</span><span class="n">full_data</span><span class="p">),</span>
-                <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="n">HDR3_DEF</span><span class="p">[</span><span class="n">hdr3_msid</span><span class="p">][</span><span class="s2">&quot;desc&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="n">HDR3_DEF</span><span class="p">[</span><span class="n">hdr3_msid</span><span class="p">][</span><span class="s2">&quot;longdesc&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;times&quot;</span><span class="p">:</span> <span class="n">shared_time</span><span class="p">,</span>
-                <span class="s2">&quot;hdr3_msid&quot;</span><span class="p">:</span> <span class="n">hdr3_msid</span><span class="p">,</span>
-            <span class="p">}</span>
-            <span class="bp">self</span><span class="p">[</span><span class="n">msid</span><span class="p">]</span> <span class="o">=</span> <span class="n">MSID</span><span class="p">(</span><span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">slot_data</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="p">[</span><span class="n">msid</span><span class="p">]</span> <span class="o">=</span> <span class="n">MSID</span><span class="p">(</span><span class="n">msid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">clear_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Clear cache for memory after getting all the MSIDs</span>
+        <span class="n">get_hdr3_slot_data</span><span class="o">.</span><span class="n">cache_clear</span><span class="p">()</span></div>
 
 </pre></div>
 
@@ -778,7 +851,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 8.1.3. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 9.1.0. &nbsp;
   </p>
 </footer>
   </body>

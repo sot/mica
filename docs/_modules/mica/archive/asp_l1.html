@@ -4,13 +4,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.asp_l1 &#8212; mica 4.39.2 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <title>mica.archive.asp_l1 &#8212; mica 4.40.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../_static/documentation_options.js?v=6d6e1fbc"></script>
-    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/documentation_options.js?v=cb21b19a"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
     <script type="text/javascript" src="../../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.39.2 documentation</a>
+	<a href="../../../index.html">mica 4.40.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -74,15 +74,15 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
-<span class="kn">from</span> <span class="nn">Quaternion</span> <span class="kn">import</span> <span class="n">Quat</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">astropy.table</span><span class="w"> </span><span class="kn">import</span> <span class="n">Table</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Quaternion</span><span class="w"> </span><span class="kn">import</span> <span class="n">Quat</span>
 
-<span class="kn">from</span> <span class="nn">mica.archive</span> <span class="kn">import</span> <span class="n">asp_l1_proc</span><span class="p">,</span> <span class="n">obsid_archive</span>  <span class="c1"># noqa: F401 imported but unused</span>
-<span class="kn">from</span> <span class="nn">mica.common</span> <span class="kn">import</span> <span class="n">MICA_ARCHIVE</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mica.archive</span><span class="w"> </span><span class="kn">import</span> <span class="n">asp_l1_proc</span><span class="p">,</span> <span class="n">obsid_archive</span>  <span class="c1"># noqa: F401 imported but unused</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mica.common</span><span class="w"> </span><span class="kn">import</span> <span class="n">MICA_ARCHIVE</span>
 
 <span class="c1"># these columns are available in the headers of the fetched telemetry</span>
 <span class="c1"># for this product (ASP L1) and will be included in the file lookup table</span>
@@ -128,8 +128,8 @@
 <span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">get_options</span><span class="p">():</span>
-    <span class="kn">import</span> <span class="nn">argparse</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_options</span><span class="p">():</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
 
     <span class="n">desc</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">Run the update process to get new ASP L1 telemetry, save it in the Ska</span>
@@ -179,7 +179,7 @@
 
 <div class="viewcode-block" id="get_dir">
 <a class="viewcode-back" href="../../../api.html#mica.archive.asp_l1.get_dir">[docs]</a>
-<span class="k">def</span> <span class="nf">get_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_dir</span><span class="p">(</span><span class="n">obsid</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get ASP L1 directory for default/released products for an obsid.</span>
 
@@ -197,7 +197,7 @@
 
 <div class="viewcode-block" id="get_obs_dirs">
 <a class="viewcode-back" href="../../../api.html#mica.archive.asp_l1.get_obs_dirs">[docs]</a>
-<span class="k">def</span> <span class="nf">get_obs_dirs</span><span class="p">(</span><span class="n">obsid</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_obs_dirs</span><span class="p">(</span><span class="n">obsid</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get all ASP L1 directories for an obsid in the Ska file archive.</span>
 
@@ -222,7 +222,7 @@
 
 <div class="viewcode-block" id="get_files">
 <a class="viewcode-back" href="../../../api.html#mica.archive.asp_l1.get_files">[docs]</a>
-<span class="k">def</span> <span class="nf">get_files</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_files</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    List asp_l1 files for an obsid or a time range.</span>
 
@@ -254,7 +254,7 @@
 
 <div class="viewcode-block" id="get_atts">
 <a class="viewcode-back" href="../../../api.html#mica.archive.asp_l1.get_atts">[docs]</a>
-<span class="k">def</span> <span class="nf">get_atts</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_atts</span><span class="p">(</span><span class="n">obsid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get ground aspect attitudes</span>
 
@@ -289,7 +289,7 @@
 
 <div class="viewcode-block" id="get_atts_from_files">
 <a class="viewcode-back" href="../../../api.html#mica.archive.asp_l1.get_atts_from_files">[docs]</a>
-<span class="k">def</span> <span class="nf">get_atts_from_files</span><span class="p">(</span><span class="n">asol_files</span><span class="p">,</span> <span class="n">acal_files</span><span class="p">,</span> <span class="n">aqual_files</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_atts_from_files</span><span class="p">(</span><span class="n">asol_files</span><span class="p">,</span> <span class="n">acal_files</span><span class="p">,</span> <span class="n">aqual_files</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get ground aspect attitudes from ASP1 source files.</span>
 
@@ -349,7 +349,7 @@
 
 
 
-<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Run the ASP L1 update process.</span>
 
@@ -390,7 +390,7 @@
     <a href="#">Back to Top</a></p>
   <p>
     &copy; Copyright 2012, Jean Connelly.<br/>
-    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 8.1.3. &nbsp;
+    Created using <a href="http://www.sphinx-doc.org/en/stable/">Sphinx</a> 9.1.0. &nbsp;
   </p>
 </footer>
   </body>
