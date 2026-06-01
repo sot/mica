@@ -15,10 +15,48 @@ from scipy.interpolate import interp1d
 
 from mica.archive import aca_l0
 
-TWO_TO_15 = np.uint16(2**15)
+
+def _fuzzy_join_times(
+    times_msb: np.ndarray, times_lsb: np.ndarray, tol: float = 2.1
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return matching index pairs from two monotonically increasing time arrays.
+
+    For each element of ``times_msb``, find the nearest element of ``times_lsb`` and
+    keep the pair only if the time difference is within ``tol`` seconds (inner join).
+
+    Parameters
+    ----------
+    times_msb : np.ndarray
+        Monotonically increasing time array (the "left" side of the join).
+    times_lsb : np.ndarray
+        Monotonically increasing time array (the "right" side of the join).
+    tol : float, optional
+        Maximum allowed time difference in seconds for a match. Default is 2.1.
+
+    Returns
+    -------
+    idx_lsb : np.ndarray
+        Indices into ``times_lsb`` for each matched pair.
+    idx_msb : np.ndarray
+        Indices into ``times_msb`` for each matched pair.
+    """
+    idx_lsb = np.searchsorted(times_lsb, times_msb, side="left")
+    idx_lsb = np.clip(idx_lsb, 0, len(times_lsb) - 1)
+    # Check if the previous candidate is closer
+    idx_lsb_prev = np.maximum(idx_lsb - 1, 0)
+    closer_prev = np.abs(times_lsb[idx_lsb_prev] - times_msb) < np.abs(
+        times_lsb[idx_lsb] - times_msb
+    )
+    idx_lsb = np.where(closer_prev, idx_lsb_prev, idx_lsb)
+
+    # Keep only pairs within the tolerance
+    ok = np.abs(times_lsb[idx_lsb] - times_msb) <= tol
+    idx_msb = np.arange(len(times_msb))[ok]
+    idx_lsb = idx_lsb[ok]
+    return idx_lsb, idx_msb
 
 
-def two_byte_sum(byte_msids, scale=1, as_readout_offset=False) -> callable:
+def two_byte_sum(byte_msids, scale=1) -> callable:
     """
     Create a function to combine two bytes into a 16-bit signed integer.
 
@@ -28,8 +66,6 @@ def two_byte_sum(byte_msids, scale=1, as_readout_offset=False) -> callable:
         List of two MSID names representing the byte values to combine.
     scale : float, optional
         Scale factor to apply to the result. Default is 1.
-    as_readout_offset : bool, optional
-        If True, apply special readout offset formula. Default is False.
 
     Returns
     -------
@@ -48,15 +84,93 @@ def two_byte_sum(byte_msids, scale=1, as_readout_offset=False) -> callable:
         bytes8_2xN = np.vstack([bytes0, bytes1], dtype=np.uint8)
         bytes8 = bytes8_2xN.transpose().flatten().copy()
 
-        if as_readout_offset:
-            # 16-bit readout offset values need this magic formula from M. Baski (see
-            # PEA sampled background patch notes). Note that scale is ignored here.
-            uints16 = bytes8.view(">u2")
-            out = (uints16 + TWO_TO_15).view("<i2")
-        else:
-            # Now view the 2N bytes as N 16-bit signed integers.
-            ints16 = bytes8.view(">i2")
-            out = ints16 * scale
+        # Now view the 2N bytes as N 16-bit signed integers.
+        ints16 = bytes8.view(">i2")
+        out = ints16 * scale
+
+        return out
+
+    return func
+
+
+def bytes_array(byte_msids) -> callable:
+    """
+    Create a function to return raw uint8 byte values in an array.
+
+    Parameters
+    ----------
+    byte_msids : list of str
+        List of MSID names representing the byte values to return.
+
+    Returns
+    -------
+    callable
+        Function that takes slot_data and returns an array of raw uint8 byte values.
+    """
+
+    def func(slot_data) -> np.ndarray:
+        m = len(byte_msids)
+        bytes_list = [slot_data[byte_msids[ii]].astype(np.uint8) for ii in range(m)]
+        return bytes_list
+
+    return func
+
+
+def quad_offset_from_bytes(
+    bytes_list: list[np.ndarray[np.uint8]],
+) -> np.ndarray[np.float64]:
+    """Compute quadrant offset values from a list of byte arrays.
+
+    Parameters
+    ----------
+    bytes_list : list of np.ndarray[np.uint8]
+        List of byte arrays representing the quadrant offset values.
+
+    Returns
+    -------
+    np.ndarray[np.float64]
+        Array of computed quadrant offset values.
+    """
+    m = len(bytes_list)
+    # Make a mxN array, then transpose to Nxm, then flatten to mN, then copy to
+    # get values continous in memory.
+    bytes8_mxN = np.vstack(bytes_list, dtype=np.uint8)
+    bytes8 = bytes8_mxN.transpose().flatten().copy()
+
+    # 16- or 32-bit readout offset values need this magic formula from M. Baski (see
+    # PEA sampled background patch notes).
+    uints = bytes8.view(f">u{m}")
+    offset = np.uint16(2**15) if m == 2 else np.uint32(2**31)
+    scale = 1 if m == 2 else float(2**16)
+    out = (uints + offset).view(f"<i{m}") / scale
+    return out
+
+
+def quad_offset(byte_msids) -> callable:
+    """
+    Create a function to combine two or four bytes into a quadrant offset.
+
+    Parameters
+    ----------
+    byte_msids : list of str
+        List of two or four MSID names representing the byte values to combine.
+
+    Returns
+    -------
+    callable
+        Function that takes slot_data and returns quadrant offset values. The offset
+        values are 16-bit signed integers for two byte MSIDs, and 64-bit floats for four
+        byte MSIDs, with the appropriate scaling applied for readout offsets.
+    """
+
+    def func(slot_data) -> np.ndarray:
+        # For each pair bytes0[i], bytes1[i], return the 16-bit signed integer
+        # corresponding to those two bytes. The input bytes are unsigned.
+        m = len(byte_msids)
+        if m not in (2, 4):
+            raise ValueError(f"Expected 2 or 4 byte MSIDs, got {m}")
+        bytes_list = [slot_data[byte_msids[ii]].astype(np.uint8) for ii in range(m)]
+        out = quad_offset_from_bytes(bytes_list)
 
         return out
 
@@ -351,7 +465,7 @@ The science header pulse period, as measured by the PEA; 1 LSB = 2 microseconds
     "372": {
         "desc": "16-bit zero offset for pixels from CCD quad A",
         "msid": "zero_off16_quad_a",
-        "value": two_byte_sum(["HD3TLM72", "HD3TLM73"], as_readout_offset=True),
+        "value": quad_offset(["HD3TLM72", "HD3TLM73"]),
         "longdesc": """
 A 16-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
@@ -360,7 +474,7 @@ converter count (nominally 5 electrons)
     "374": {
         "desc": "16-bit zero offset for pixels from CCD quad B",
         "msid": "zero_off16_quad_b",
-        "value": two_byte_sum(["HD3TLM74", "HD3TLM75"], as_readout_offset=True),
+        "value": quad_offset(["HD3TLM74", "HD3TLM75"]),
         "longdesc": """
 A 16-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
@@ -369,7 +483,7 @@ converter count (nominally 5 electrons)
     "376": {
         "desc": "16-bit zero offset for pixels from CCD quad C",
         "msid": "zero_off16_quad_c",
-        "value": two_byte_sum(["HD3TLM76", "HD3TLM77"], as_readout_offset=True),
+        "value": quad_offset(["HD3TLM76", "HD3TLM77"]),
         "longdesc": """
 A 16-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
@@ -378,7 +492,7 @@ converter count (nominally 5 electrons)
     "462": {
         "desc": "16-bit zero offset for pixels from CCD quad D",
         "msid": "zero_off16_quad_d",
-        "value": two_byte_sum(["HD3TLM62", "HD3TLM63"], as_readout_offset=True),
+        "value": quad_offset(["HD3TLM62", "HD3TLM63"]),
         "longdesc": """
 A 16-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 1 A/D
 converter count (nominally 5 electrons)
@@ -387,6 +501,7 @@ converter count (nominally 5 electrons)
     "464": {
         "desc": "32-bit zero offset for pixels from CCD quad A",
         "msid": "zero_off32_quad_a",
+        "value": quad_offset(["HD3TLM64", "HD3TLM65", "HD3TLM66", "HD3TLM67"]),
         "longdesc": """
 A 32-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 2^-16
 A/D converter counts
@@ -396,6 +511,7 @@ A/D converter counts
     "472": {
         "desc": "32-bit zero offset for pixels from CCD quad B",
         "msid": "zero_off32_quad_b",
+        "value": quad_offset(["HD3TLM72", "HD3TLM73", "HD3TLM74", "HD3TLM75"]),
         "longdesc": """
 A 32-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 2^-16
 A/D converter counts
@@ -404,16 +520,26 @@ A/D converter counts
     },
     "476": {
         "desc": "32-bit zero offset for pixels from CCD quad C",
-        "msid": "zero_off32_quad_c",
+        "msid": "zero_off32_quad_c_msb",
+        "value": bytes_array(["HD3TLM76", "HD3TLM77"]),
         "longdesc": """
-A 32-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 2^-16
-A/D converter counts
+A 32-bit zero offset for pixels read from CCD quadrant C; most significant two bytes.
 """,
-        "nbytes": 4,
+        "nbytes": 2,
+    },
+    "562": {
+        "desc": "32-bit zero offset for pixels from CCD quad C",
+        "msid": "zero_off32_quad_c_lsb",
+        "value": bytes_array(["HD3TLM62", "HD3TLM63"]),
+        "longdesc": """
+A 32-bit zero offset for pixels read from CCD quadrant C; least significant two bytes.
+""",
+        "nbytes": 2,
     },
     "564": {
         "desc": "32-bit zero offset for pixels from CCD quad D",
         "msid": "zero_off32_quad_d",
+        "value": quad_offset(["HD3TLM64", "HD3TLM65", "HD3TLM66", "HD3TLM67"]),
         "longdesc": """
 A 32-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 2^-16
 A/D converter counts
@@ -616,6 +742,10 @@ class MSID(object):
         self.datestart: str = start.date
         self.datestop: str = stop.date
 
+        if msid == "zero_off32_quad_c":
+            self._get_zero_off32_quad_c()
+            return
+
         slot = MSID_DEFS[self.msid]["slot"]
 
         # Get the 8x8 data with some padding on each end that gets cut later
@@ -658,6 +788,37 @@ class MSID(object):
         self.longdesc = msid_def["longdesc"]
         self.times = slot_data_nomask["TIME"]
         self.hdr3_msid = msid_def
+
+    def _get_zero_off32_quad_c(self):
+        # This is a special case for the zero_off32_quad_c MSID, which is not defined by a
+        # function of the slot data, but instead is defined by the combination of two other
+        # MSIDs that are in different slots. So we need to get those two MSIDs and combine
+        # their data to get this MSID.
+
+        msid_msb = MSID("zero_off32_quad_c_msb", self.datestart, self.datestop)
+        msid_lsb = MSID("zero_off32_quad_c_lsb", self.datestart, self.datestop)
+
+        times_msb = msid_msb.times
+        times_lsb = msid_lsb.times
+
+        # Fuzzy inner join on times with a tolerance of 2.1 sec: for each time in
+        # times1, find the nearest time in times2 via searchsorted.
+        idx_lsb, idx_msb = _fuzzy_join_times(times_msb, times_lsb)
+
+        bytes_list = (
+            msid_msb.vals[0][idx_msb],
+            msid_msb.vals[1][idx_msb],
+            msid_lsb.vals[0][idx_lsb],
+            msid_lsb.vals[1][idx_lsb],
+        )
+
+        self.times = times_msb[idx_msb]
+        self.vals = quad_offset_from_bytes(bytes_list)
+
+        self.desc = "32-bit zero offset for pixels from CCD quadrant C"
+        self.longdesc = """A 32-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 2^-16
+A/D converter counts"""
+        self.hdr3_msid = None
 
     def copy(self):
         from copy import deepcopy
