@@ -59,6 +59,11 @@ def test_MSIDset():
         "zero_off16_quad_b": 10710,
         "zero_off16_quad_c": 10710,
         "zero_off16_quad_d": 10267,
+        "zero_off32_quad_a": 10267,
+        "zero_off32_quad_b": 10267,
+        "zero_off32_quad_c_lsb": 2,
+        "zero_off32_quad_c_msb": 2,
+        "zero_off32_quad_d": 10731,
     }
 
 
@@ -68,12 +73,12 @@ def test_two_byte_sum():
     exp = np.array([0, -4081, 4080, -1, 255])
 
     slot_data = Table([bytes0, bytes1], names=["byte0", "byte1"])
-    vals = aca_hdr3.n_byte_sum(["byte0", "byte1"])(slot_data)
+    vals = aca_hdr3.two_byte_sum(["byte0", "byte1"])(slot_data)
     assert vals.dtype == np.int16
     assert np.all(vals == exp)
 
     scale = 2.5
-    vals = aca_hdr3.n_byte_sum(["byte0", "byte1"], scale=scale)(slot_data)
+    vals = aca_hdr3.two_byte_sum(["byte0", "byte1"], scale=scale)(slot_data)
     assert vals.dtype == np.float64
     assert np.all(vals == scale * exp)
 
@@ -144,7 +149,9 @@ def test_fuzzy_join_times_gap_excludes_entry():
 def test_fuzzy_join_times_tolerance_boundary():
     """Entry at exactly tol is included; entry just over tol is excluded."""
     msb = np.array([10.0, 20.0, 30.0])
-    lsb = np.array([10.0, 22.0, 33.0])  # msb[1]-lsb[1]=2.0 (in), msb[2]-lsb[2]=3.0 (out)
+    lsb = np.array(
+        [10.0, 22.0, 33.0]
+    )  # msb[1]-lsb[1]=2.0 (in), msb[2]-lsb[2]=3.0 (out)
     idx_lsb, idx_msb = aca_hdr3._fuzzy_join_times(msb, lsb, tol=2.1)
     np.testing.assert_array_equal(idx_msb, [0, 1])
     np.testing.assert_array_equal(idx_lsb, [0, 1])
