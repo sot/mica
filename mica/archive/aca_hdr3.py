@@ -104,18 +104,19 @@ def bytes_array(byte_msids) -> callable:
     Parameters
     ----------
     byte_msids : list of str
-        List of MSID names representing the byte values to return.
+        List of <m> MSID names representing the byte values to return.
 
     Returns
     -------
     callable
-        Function that takes slot_data and returns an array of raw uint8 byte values.
+        Function that takes slot_data and returns an N x m array of raw uint8 byte
+        values.
     """
 
     def func(slot_data) -> np.ndarray:
         m = len(byte_msids)
         bytes_list = [slot_data[byte_msids[ii]].astype(np.uint8) for ii in range(m)]
-        return bytes_list
+        return np.vstack(bytes_list).transpose()
 
     return func
 
@@ -813,10 +814,10 @@ class MSID(object):
         idx_lsb, idx_msb = _fuzzy_join_times(times_msb, times_lsb)
 
         bytes_list = (
-            msid_msb.vals[0][idx_msb],
-            msid_msb.vals[1][idx_msb],
-            msid_lsb.vals[0][idx_lsb],
-            msid_lsb.vals[1][idx_lsb],
+            msid_msb.vals[:, 0][idx_msb],
+            msid_msb.vals[:, 1][idx_msb],
+            msid_lsb.vals[:, 0][idx_lsb],
+            msid_lsb.vals[:, 1][idx_lsb],
         )
 
         self.times = times_msb[idx_msb]

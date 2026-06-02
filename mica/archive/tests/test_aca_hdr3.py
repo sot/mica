@@ -61,8 +61,8 @@ def test_MSIDset():
         "zero_off16_quad_d": 10267,
         "zero_off32_quad_a": 10267,
         "zero_off32_quad_b": 10267,
-        "zero_off32_quad_c_lsb": 2,
-        "zero_off32_quad_c_msb": 2,
+        "zero_off32_quad_c_lsb": 10731,
+        "zero_off32_quad_c_msb": 10267,
         "zero_off32_quad_d": 10731,
     }
 
