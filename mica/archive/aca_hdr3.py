@@ -40,6 +40,10 @@ def _fuzzy_join_times(
     idx_msb : np.ndarray
         Indices into ``times_msb`` for each matched pair.
     """
+    if len(times_msb) == 0 or len(times_lsb) == 0:
+        empty = np.array([], dtype=np.int64)
+        return empty, empty
+
     idx_lsb = np.searchsorted(times_lsb, times_msb, side="left")
     idx_lsb = np.clip(idx_lsb, 0, len(times_lsb) - 1)
     # Check if the previous candidate is closer
@@ -139,11 +143,14 @@ def quad_offset_from_bytes(
 
     # 16- or 32-bit readout offset values need this magic formula from M. Baski (see
     # PEA sampled background patch notes).
+    if m not in (2, 4):
+        raise ValueError(f"Expected 2 or 4 bytes, got {m}")
+
     uints = bytes8.view(f">u{m}")
-    offset = np.uint16(2**15) if m == 2 else np.uint32(2**31)
-    scale = 1 if m == 2 else float(2**16)
-    out = (uints + offset).view(f"<i{m}") / scale
-    return out
+    if m == 2:
+        return (uints + np.uint16(2**15)).view("<i2")
+    else:
+        return (uints + np.uint32(2**31)).view("<i4") / float(2**16)
 
 
 def quad_offset(byte_msids) -> callable:
