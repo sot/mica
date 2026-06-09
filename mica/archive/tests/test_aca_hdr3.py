@@ -152,7 +152,7 @@ def test_fuzzy_join_times_tolerance_boundary():
     lsb = np.array(
         [10.0, 22.0, 33.0]
     )  # msb[1]-lsb[1]=2.0 (in), msb[2]-lsb[2]=3.0 (out)
-    idx_lsb, idx_msb = aca_hdr3._fuzzy_join_times(msb, lsb, tol=2.1)
+    idx_lsb, idx_msb = aca_hdr3._fuzzy_join_times(msb, lsb, tol=2.0)
     np.testing.assert_array_equal(idx_msb, [0, 1])
     np.testing.assert_array_equal(idx_lsb, [0, 1])
 

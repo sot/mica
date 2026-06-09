@@ -129,12 +129,16 @@ def quad_offset_from_bytes(
     Parameters
     ----------
     bytes_list : list of np.ndarray[np.uint8]
-        List of byte arrays representing the quadrant offset values.
+        List of byte arrays representing the quadrant offset values. List must be either
+        two or four arrays, each of the same length, representing the bytes to combine
+        for each offset value. The byte arrays should be ordered from most significant
+        byte to least significant byte.
 
     Returns
     -------
-    np.ndarray[np.float64]
-        Array of computed quadrant offset values.
+    np.ndarray[np.uint16] | np.ndarray[np.float64]
+        Array of computed quadrant offset values, uint16 for two byte input, float64 for
+        four byte input.
     """
     m = len(bytes_list)
     # Make a mxN array, then transpose to Nxm, then flatten to mN, then copy to
