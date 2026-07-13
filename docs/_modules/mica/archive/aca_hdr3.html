@@ -4,11 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mica.archive.aca_hdr3 &#8212; mica 4.40.0 documentation</title>
+    <title>mica.archive.aca_hdr3 &#8212; mica 4.41.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-astropy.css?v=f4f7060c" />
     
-    <script src="../../../_static/documentation_options.js?v=cb21b19a"></script>
+    <script src="../../../_static/documentation_options.js?v=baf4fbc3"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script type="text/javascript" src="../../../_static/sidebar.js"></script>
@@ -44,7 +44,7 @@
     <h3>Navigation</h3>
     <ul>
       <li>
-	<a href="../../../index.html">mica 4.40.0 documentation</a>
+	<a href="../../../index.html">mica 4.41.0 documentation</a>
 	 &#187;
       </li>
       <li><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
@@ -77,10 +77,52 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">mica.archive</span><span class="w"> </span><span class="kn">import</span> <span class="n">aca_l0</span>
 
-<span class="n">TWO_TO_15</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">15</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fuzzy_join_times</span><span class="p">(</span>
+    <span class="n">times_msb</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">times_lsb</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.1</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return matching index pairs from two monotonically increasing time arrays.</span>
+
+<span class="sd">    For each element of ``times_msb``, find the nearest element of ``times_lsb`` and</span>
+<span class="sd">    keep the pair only if the time difference is within ``tol`` seconds (inner join).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    times_msb : np.ndarray</span>
+<span class="sd">        Monotonically increasing time array (the &quot;left&quot; side of the join).</span>
+<span class="sd">    times_lsb : np.ndarray</span>
+<span class="sd">        Monotonically increasing time array (the &quot;right&quot; side of the join).</span>
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Maximum allowed time difference in seconds for a match. Default is 2.1.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    idx_lsb : np.ndarray</span>
+<span class="sd">        Indices into ``times_lsb`` for each matched pair.</span>
+<span class="sd">    idx_msb : np.ndarray</span>
+<span class="sd">        Indices into ``times_msb`` for each matched pair.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">times_msb</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">times_lsb</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">empty</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">empty</span><span class="p">,</span> <span class="n">empty</span>
+
+    <span class="n">idx_lsb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">times_lsb</span><span class="p">,</span> <span class="n">times_msb</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+    <span class="n">idx_lsb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">idx_lsb</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">times_lsb</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Check if the previous candidate is closer</span>
+    <span class="n">idx_lsb_prev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">idx_lsb</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">closer_prev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">times_lsb</span><span class="p">[</span><span class="n">idx_lsb_prev</span><span class="p">]</span> <span class="o">-</span> <span class="n">times_msb</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
+        <span class="n">times_lsb</span><span class="p">[</span><span class="n">idx_lsb</span><span class="p">]</span> <span class="o">-</span> <span class="n">times_msb</span>
+    <span class="p">)</span>
+    <span class="n">idx_lsb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">closer_prev</span><span class="p">,</span> <span class="n">idx_lsb_prev</span><span class="p">,</span> <span class="n">idx_lsb</span><span class="p">)</span>
+
+    <span class="c1"># Keep only pairs within the tolerance</span>
+    <span class="n">ok</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">times_lsb</span><span class="p">[</span><span class="n">idx_lsb</span><span class="p">]</span> <span class="o">-</span> <span class="n">times_msb</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">tol</span>
+    <span class="n">idx_msb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">times_msb</span><span class="p">))[</span><span class="n">ok</span><span class="p">]</span>
+    <span class="n">idx_lsb</span> <span class="o">=</span> <span class="n">idx_lsb</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">idx_lsb</span><span class="p">,</span> <span class="n">idx_msb</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">two_byte_sum</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">two_byte_sum</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a function to combine two bytes into a 16-bit signed integer.</span>
 
@@ -90,8 +132,6 @@
 <span class="sd">        List of two MSID names representing the byte values to combine.</span>
 <span class="sd">    scale : float, optional</span>
 <span class="sd">        Scale factor to apply to the result. Default is 1.</span>
-<span class="sd">    as_readout_offset : bool, optional</span>
-<span class="sd">        If True, apply special readout offset formula. Default is False.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -110,15 +150,101 @@
         <span class="n">bytes8_2xN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">bytes0</span><span class="p">,</span> <span class="n">bytes1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
         <span class="n">bytes8</span> <span class="o">=</span> <span class="n">bytes8_2xN</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-        <span class="k">if</span> <span class="n">as_readout_offset</span><span class="p">:</span>
-            <span class="c1"># 16-bit readout offset values need this magic formula from M. Baski (see</span>
-            <span class="c1"># PEA sampled background patch notes). Note that scale is ignored here.</span>
-            <span class="n">uints16</span> <span class="o">=</span> <span class="n">bytes8</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&gt;u2&quot;</span><span class="p">)</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="p">(</span><span class="n">uints16</span> <span class="o">+</span> <span class="n">TWO_TO_15</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&lt;i2&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Now view the 2N bytes as N 16-bit signed integers.</span>
-            <span class="n">ints16</span> <span class="o">=</span> <span class="n">bytes8</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&gt;i2&quot;</span><span class="p">)</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">ints16</span> <span class="o">*</span> <span class="n">scale</span>
+        <span class="c1"># Now view the 2N bytes as N 16-bit signed integers.</span>
+        <span class="n">ints16</span> <span class="o">=</span> <span class="n">bytes8</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&gt;i2&quot;</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">ints16</span> <span class="o">*</span> <span class="n">scale</span>
+
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="k">return</span> <span class="n">func</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">bytes_array</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a function to return raw uint8 byte values in an array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    byte_msids : list of str</span>
+<span class="sd">        List of &lt;m&gt; MSID names representing the byte values to return.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    callable</span>
+<span class="sd">        Function that takes slot_data and returns an N x m array of raw uint8 byte</span>
+<span class="sd">        values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">func</span><span class="p">(</span><span class="n">slot_data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">)</span>
+        <span class="n">bytes_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">slot_data</span><span class="p">[</span><span class="n">byte_msids</span><span class="p">[</span><span class="n">ii</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">bytes_list</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">func</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">quad_offset_from_bytes</span><span class="p">(</span>
+    <span class="n">bytes_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute quadrant offset values from a list of byte arrays.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bytes_list : list of np.ndarray[np.uint8]</span>
+<span class="sd">        List of byte arrays representing the quadrant offset values. List must be either</span>
+<span class="sd">        two or four arrays, each of the same length, representing the bytes to combine</span>
+<span class="sd">        for each offset value. The byte arrays should be ordered from most significant</span>
+<span class="sd">        byte to least significant byte.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray[np.uint16] | np.ndarray[np.float64]</span>
+<span class="sd">        Array of computed quadrant offset values, uint16 for two byte input, float64 for</span>
+<span class="sd">        four byte input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bytes_list</span><span class="p">)</span>
+    <span class="c1"># Make a mxN array, then transpose to Nxm, then flatten to mN, then copy to</span>
+    <span class="c1"># get values continous in memory.</span>
+    <span class="n">bytes8_mxN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">bytes_list</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">bytes8</span> <span class="o">=</span> <span class="n">bytes8_mxN</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># 16- or 32-bit readout offset values need this magic formula from M. Baski (see</span>
+    <span class="c1"># PEA sampled background patch notes).</span>
+    <span class="k">if</span> <span class="n">m</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected 2 or 4 bytes, got </span><span class="si">{</span><span class="n">m</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">uints</span> <span class="o">=</span> <span class="n">bytes8</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&gt;u</span><span class="si">{</span><span class="n">m</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">m</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">uints</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">15</span><span class="p">))</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&lt;i2&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">uints</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">31</span><span class="p">))</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;&lt;i4&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">16</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">quad_offset</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a function to combine two or four bytes into a quadrant offset.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    byte_msids : list of str</span>
+<span class="sd">        List of two or four MSID names representing the byte values to combine.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    callable</span>
+<span class="sd">        Function that takes slot_data and returns quadrant offset values. The offset</span>
+<span class="sd">        values are 16-bit signed integers for two byte MSIDs, and 64-bit floats for four</span>
+<span class="sd">        byte MSIDs, with the appropriate scaling applied for readout offsets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">func</span><span class="p">(</span><span class="n">slot_data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="c1"># For each pair bytes0[i], bytes1[i], return the 16-bit signed integer</span>
+        <span class="c1"># corresponding to those two bytes. The input bytes are unsigned.</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">byte_msids</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">m</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected 2 or 4 byte MSIDs, got </span><span class="si">{</span><span class="n">m</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">bytes_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">slot_data</span><span class="p">[</span><span class="n">byte_msids</span><span class="p">[</span><span class="n">ii</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">quad_offset_from_bytes</span><span class="p">(</span><span class="n">bytes_list</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">out</span>
 
@@ -413,7 +539,7 @@
     <span class="s2">&quot;372&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;16-bit zero offset for pixels from CCD quad A&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off16_quad_a&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM72&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM73&quot;</span><span class="p">],</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">quad_offset</span><span class="p">([</span><span class="s2">&quot;HD3TLM72&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM73&quot;</span><span class="p">]),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 16-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 1 A/D</span>
 <span class="s2">converter count (nominally 5 electrons)</span>
@@ -422,7 +548,7 @@
     <span class="s2">&quot;374&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;16-bit zero offset for pixels from CCD quad B&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off16_quad_b&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM74&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM75&quot;</span><span class="p">],</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">quad_offset</span><span class="p">([</span><span class="s2">&quot;HD3TLM74&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM75&quot;</span><span class="p">]),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 16-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 1 A/D</span>
 <span class="s2">converter count (nominally 5 electrons)</span>
@@ -431,7 +557,7 @@
     <span class="s2">&quot;376&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;16-bit zero offset for pixels from CCD quad C&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off16_quad_c&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM76&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM77&quot;</span><span class="p">],</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">quad_offset</span><span class="p">([</span><span class="s2">&quot;HD3TLM76&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM77&quot;</span><span class="p">]),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 16-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 1 A/D</span>
 <span class="s2">converter count (nominally 5 electrons)</span>
@@ -440,7 +566,7 @@
     <span class="s2">&quot;462&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;16-bit zero offset for pixels from CCD quad D&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off16_quad_d&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">two_byte_sum</span><span class="p">([</span><span class="s2">&quot;HD3TLM62&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM63&quot;</span><span class="p">],</span> <span class="n">as_readout_offset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">quad_offset</span><span class="p">([</span><span class="s2">&quot;HD3TLM62&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM63&quot;</span><span class="p">]),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 16-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 1 A/D</span>
 <span class="s2">converter count (nominally 5 electrons)</span>
@@ -449,6 +575,7 @@
     <span class="s2">&quot;464&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;32-bit zero offset for pixels from CCD quad A&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off32_quad_a&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">quad_offset</span><span class="p">([</span><span class="s2">&quot;HD3TLM64&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM65&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM66&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM67&quot;</span><span class="p">]),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 32-bit zero offset for pixels read from CCD quadrant A; 1 LSB = 2^-16</span>
 <span class="s2">A/D converter counts</span>
@@ -458,6 +585,7 @@
     <span class="s2">&quot;472&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;32-bit zero offset for pixels from CCD quad B&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off32_quad_b&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">quad_offset</span><span class="p">([</span><span class="s2">&quot;HD3TLM72&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM73&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM74&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM75&quot;</span><span class="p">]),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 32-bit zero offset for pixels read from CCD quadrant B; 1 LSB = 2^-16</span>
 <span class="s2">A/D converter counts</span>
@@ -466,16 +594,26 @@
     <span class="p">},</span>
     <span class="s2">&quot;476&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;32-bit zero offset for pixels from CCD quad C&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off32_quad_c&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off32_quad_c_msb&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">bytes_array</span><span class="p">([</span><span class="s2">&quot;HD3TLM76&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM77&quot;</span><span class="p">]),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">A 32-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 2^-16</span>
-<span class="s2">A/D converter counts</span>
+<span class="s2">A 32-bit zero offset for pixels read from CCD quadrant C; most significant two bytes.</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;nbytes&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="s2">&quot;nbytes&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;562&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;32-bit zero offset for pixels from CCD quad C&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off32_quad_c_lsb&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">bytes_array</span><span class="p">([</span><span class="s2">&quot;HD3TLM62&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM63&quot;</span><span class="p">]),</span>
+        <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">A 32-bit zero offset for pixels read from CCD quadrant C; least significant two bytes.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;nbytes&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="s2">&quot;564&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="s2">&quot;32-bit zero offset for pixels from CCD quad D&quot;</span><span class="p">,</span>
         <span class="s2">&quot;msid&quot;</span><span class="p">:</span> <span class="s2">&quot;zero_off32_quad_d&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">quad_offset</span><span class="p">([</span><span class="s2">&quot;HD3TLM64&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM65&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM66&quot;</span><span class="p">,</span> <span class="s2">&quot;HD3TLM67&quot;</span><span class="p">]),</span>
         <span class="s2">&quot;longdesc&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">A 32-bit zero offset for pixels read from CCD quadrant D; 1 LSB = 2^-16</span>
 <span class="s2">A/D converter counts</span>
@@ -680,6 +818,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">date</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">stop</span><span class="o">.</span><span class="n">date</span>
 
+        <span class="k">if</span> <span class="n">msid</span> <span class="o">==</span> <span class="s2">&quot;zero_off32_quad_c&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_zero_off32_quad_c</span><span class="p">()</span>
+            <span class="k">return</span>
+
         <span class="n">slot</span> <span class="o">=</span> <span class="n">MSID_DEFS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">msid</span><span class="p">][</span><span class="s2">&quot;slot&quot;</span><span class="p">]</span>
 
         <span class="c1"># Get the 8x8 data with some padding on each end that gets cut later</span>
@@ -722,6 +864,37 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">longdesc</span> <span class="o">=</span> <span class="n">msid_def</span><span class="p">[</span><span class="s2">&quot;longdesc&quot;</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">slot_data_nomask</span><span class="p">[</span><span class="s2">&quot;TIME&quot;</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hdr3_msid</span> <span class="o">=</span> <span class="n">msid_def</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_zero_off32_quad_c</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># This is a special case for the zero_off32_quad_c MSID, which is not defined by a</span>
+        <span class="c1"># function of the slot data, but instead is defined by the combination of two other</span>
+        <span class="c1"># MSIDs that are in different slots. So we need to get those two MSIDs and combine</span>
+        <span class="c1"># their data to get this MSID.</span>
+
+        <span class="n">msid_msb</span> <span class="o">=</span> <span class="n">MSID</span><span class="p">(</span><span class="s2">&quot;zero_off32_quad_c_msb&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span><span class="p">)</span>
+        <span class="n">msid_lsb</span> <span class="o">=</span> <span class="n">MSID</span><span class="p">(</span><span class="s2">&quot;zero_off32_quad_c_lsb&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datestart</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datestop</span><span class="p">)</span>
+
+        <span class="n">times_msb</span> <span class="o">=</span> <span class="n">msid_msb</span><span class="o">.</span><span class="n">times</span>
+        <span class="n">times_lsb</span> <span class="o">=</span> <span class="n">msid_lsb</span><span class="o">.</span><span class="n">times</span>
+
+        <span class="c1"># Fuzzy inner join on times with a tolerance of 2.1 sec: for each time in</span>
+        <span class="c1"># times1, find the nearest time in times2 via searchsorted.</span>
+        <span class="n">idx_lsb</span><span class="p">,</span> <span class="n">idx_msb</span> <span class="o">=</span> <span class="n">_fuzzy_join_times</span><span class="p">(</span><span class="n">times_msb</span><span class="p">,</span> <span class="n">times_lsb</span><span class="p">)</span>
+
+        <span class="n">bytes_list</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">msid_msb</span><span class="o">.</span><span class="n">vals</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">][</span><span class="n">idx_msb</span><span class="p">],</span>
+            <span class="n">msid_msb</span><span class="o">.</span><span class="n">vals</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">][</span><span class="n">idx_msb</span><span class="p">],</span>
+            <span class="n">msid_lsb</span><span class="o">.</span><span class="n">vals</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">][</span><span class="n">idx_lsb</span><span class="p">],</span>
+            <span class="n">msid_lsb</span><span class="o">.</span><span class="n">vals</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">][</span><span class="n">idx_lsb</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">times_msb</span><span class="p">[</span><span class="n">idx_msb</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vals</span> <span class="o">=</span> <span class="n">quad_offset_from_bytes</span><span class="p">(</span><span class="n">bytes_list</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">desc</span> <span class="o">=</span> <span class="s2">&quot;32-bit zero offset for pixels from CCD quadrant C&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">longdesc</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;A 32-bit zero offset for pixels read from CCD quadrant C; 1 LSB = 2^-16</span>
+<span class="s2">A/D converter counts&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hdr3_msid</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
